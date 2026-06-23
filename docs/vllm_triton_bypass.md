@@ -1,0 +1,134 @@
+# vLLM Triton Audio Embedding Bypass
+
+## 问题复述
+
+目标是让 vLLM 服务直接消费 RAG-ASR Triton 返回的 post-projector audio
+embedding，跳过 vLLM 内部 Qwen3-ASR audio encoder，并用同一条请求验证 raw
+audio 路径与 Triton embedding 路径输出一致。
+
+## 关键假设
+
+- 高风险：vLLM 原生 `Qwen3ASRForConditionalGeneration` 不完整支持
+  `audio_embeds`，需要目标仓库 plugin 覆盖注册。
+- 中风险：Triton `PROJECTOR_OUT` 必须已经是 LLM hidden size 维度的
+  post-projector frames。当前 Amphion-1.7B 验证样本为 `(T, 2048)`。
+- 低风险：验证客户端可在 `triton` 环境运行；该环境已有 `tritonclient`、
+  `soundfile` 和 vLLM 的 tensor serialization helper。
+
+## 实现入口
+
+- `src/open_audio_llm/integrations/vllm/plugin/qwen3_asr_embeds.py`
+  为 Qwen3-ASR 增加 `audio_embeds` parser、placeholder 长度、MRoPE 位置
+  fallback 和模型侧 embedding 直通。
+- `src/open_audio_llm/integrations/vllm/plugin/__init__.py`
+  在 `OPEN_AUDIO_LLM_ENABLE_QWEN3_ASR_EMBEDS=1` 时覆盖注册
+  `Qwen3ASRForConditionalGeneration`。
+- `src/open_audio_llm/integrations/vllm/triton_audio_embed.py`
+  提供 Triton HTTP client 和 vLLM `audio_embeds` content block 构造。
+- `examples/serve/vllm/serve.sh`
+  提供 `-e` 与 `-q` 服务启动开关。
+- `examples/serve/vllm/validate_triton_bypass.py`
+  用同一条音频分别请求 raw `input_audio` 和 Triton `audio_embeds`。
+
+## 安装
+
+在 vLLM 服务环境安装目标仓库，确保 vLLM 能发现 `vllm.general_plugins`
+entry point：
+
+```bash
+source /ai_sds_wuzz/MODELS/miniconda3/etc/profile.d/conda.sh
+conda activate vllm
+cd /chenmingjie/mingdong/workspace/open-audio-llm
+python -m pip install -e ".[vllm]"
+```
+
+如果只是运行验证客户端，也可以使用已有 `triton` 环境：
+
+```bash
+source /ai_sds_wuzz/MODELS/miniconda3/etc/profile.d/conda.sh
+conda activate triton
+cd /chenmingjie/mingdong/workspace/open-audio-llm
+python -m pip install -e .
+```
+
+## 启动服务
+
+```bash
+source /ai_sds_wuzz/MODELS/miniconda3/etc/profile.d/conda.sh
+conda activate vllm
+
+cd /chenmingjie/mingdong/workspace/open-audio-llm
+bash examples/serve/vllm/serve.sh \
+  -m /chenmingjie/lx/RAG-ASR/checkpoints/base/amphion_1.7b_merged \
+  -n amphionasr-1.7b \
+  -p 8009 \
+  -g 2 \
+  -t 1 \
+  -e \
+  -q
+```
+
+启动日志应出现类似信息：
+
+```text
+Model architecture Qwen3ASRForConditionalGeneration is already registered,
+and will be overwritten by the new model class
+open_audio_llm.integrations.vllm.plugin.qwen3_asr_embeds:Qwen3ASRForVLLMWithEmbeds.
+```
+
+## 健康检查
+
+```bash
+python - <<'PY'
+import urllib.request
+for name, url in [
+    ("vllm_health", "http://localhost:8009/health"),
+    ("vllm_models", "http://localhost:8009/v1/models"),
+    ("triton_ready", "http://localhost:8000/v2/health/ready"),
+]:
+    with urllib.request.urlopen(url, timeout=5) as r:
+        body = r.read().decode("utf-8", errors="replace")
+    print(name, "OK", body[:300])
+PY
+```
+
+## 最小验证
+
+```bash
+source /ai_sds_wuzz/MODELS/miniconda3/etc/profile.d/conda.sh
+conda activate triton
+cd /chenmingjie/mingdong/workspace/open-audio-llm
+
+python examples/serve/vllm/validate_triton_bypass.py \
+  --base-url http://localhost:8009 \
+  --model amphionasr-1.7b \
+  --audio /chenmingjie/mingdong/data/opensource/Libri2Mix/wav16k/min/test/mix_both/4077-13754-0001_5142-33396-0065.wav \
+  --enrollment /chenmingjie/mingdong/data/opensource/LibriSpeech/test-clean/4077/13751/4077-13751-0001.flac \
+  --triton-url localhost:8000 \
+  --triton-model rag_asr_retrieve \
+  --triton-top-k 0
+```
+
+通过标准：
+
+- `raw_text` 与 `triton_text` 完全一致。
+- `exact_match` 为 `true`。
+- `triton_embeds` 中每条音频有 `frames_shape`，例如 `[49, 2048]`。
+
+## 常见失败与根因
+
+- `You must set --enable-mm-embeds`：服务启动时没有传 `-e`。
+- `Failed to apply Qwen3ASRProcessor`：plugin 没有覆盖 Qwen3-ASR 原生类，
+  通常是没有安装目标仓库、entry point 没加载，或没有传 `-q`。
+- `KeyError: audio_feature_lengths`：请求已进入模型侧，但仍在用原生 MRoPE
+  逻辑；确认日志中覆盖注册的是
+  `open_audio_llm.integrations.vllm.plugin.qwen3_asr_embeds:Qwen3ASRForVLLMWithEmbeds`。
+- `At most N audio(s) may be provided`：客户端把单条 audio embedding 传成
+  3D batch。正确 content block 是一个 2D tensor，shape 为 `(T, hidden_size)`。
+
+## 下一步精度验证
+
+最小验证只证明协议和模型路径可用。要做精度结论，应在同一服务、同一
+Triton hotword pool、相同 prompt 和 `temperature=0` 下扩大样本数，对比
+baseline raw audio 与 Triton bypass 的 transcript、归一化文本、WER/CER 和
+失败率。

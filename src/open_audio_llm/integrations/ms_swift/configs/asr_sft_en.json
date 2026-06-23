@@ -1,0 +1,53 @@
+{
+    "_note": "Continue SFT from v3. Goal: boost English, keep Chinese. No enrollment audio.",
+    "data_name": "v3_en_focus_noenroll_v1",
+    "output_format": "sft",
+    "seed": 42,
+    "num_workers": 128,
+
+    "max_hotwords": 30,
+    "prompt_hotword_prob": 0.8,
+    "prompt_language_prob": 0.0,
+    "answer_hotword_ratio": null,
+    "max_hotword_len": 8,
+    "min_hotword_len": 2,
+    "min_hotword_words": 1,
+    "hard_neg_ratio": 0.7,
+    "miss_prob": 0.05,
+    "online_hard_neg": false,
+    "online_hard_neg_top_k": 30,
+
+    "audio_sanity_check": true,
+    "min_audio_duration_s": 0.1,
+    "max_text_chars": 256,
+    "max_same_char_run": 32,
+    "max_top_char_ratio": 0.85,
+
+    "data_infos": [
+        {
+            "_note": "CommonVoice English (full). ~49% hotword coverage.",
+            "supervisions": "/ai_sds_wuzz/DATA_ASR/common_voice_en/lhotse/hotwords/cv-en_supervisions_train_orig_punc_hotwords.jsonl.gz",
+            "num": -1
+        },
+        {
+            "_note": "GigaSpeech XL English (subsample 300k). ~30% hotword coverage.",
+            "supervisions": "/ai_sds_wuzz/DATA_ASR/GigaSpeech/lhotse/hotwords/gigaspeech_supervisions_XL_punc_hotwords.jsonl.gz",
+            "num": 300000
+        },
+        {
+            "_note": "MagicData Chinese light replay.",
+            "supervisions": "/ai_sds_wuzz/DATA_ASR/MAGICDATA/lhotse/hotwords/magicdata_supervisions_train_punc_hotwords.jsonl.gz",
+            "num": 80000
+        },
+        {
+            "_note": "aidatatang Chinese light replay.",
+            "supervisions": "/ai_sds_wuzz/DATA_ASR/zhvoice/lhotse/hotwords/zhaidatatang_supervisions_all_cleaned_punc_hotwords.jsonl.gz",
+            "num": 40000
+        },
+        {
+            "_note": "THCHS-30 (small, full). Hotword coverage is high (~52%).",
+            "supervisions": "/ai_sds_wuzz/DATA_ASR/data_thchs30/lhotse/hotwords/thchs_30_supervisions_train_punc_hotwords.jsonl.gz",
+            "num": -1
+        }
+    ]
+}

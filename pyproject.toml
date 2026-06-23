@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "open-audio-llm"
+version = "0.1.0"
+description = "Open Audio-LLM framework for composable audio towers, connectors, and causal LMs."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "torch",
+  "transformers>=4.45",
+  "numpy",
+]
+
+[project.optional-dependencies]
+hf = ["safetensors", "soundfile", "librosa", "torchaudio"]
+swift = ["ms-swift>=4.0", "deepspeed", "ujson", "pypinyin"]
+vllm = ["vllm>=0.6.0", "soundfile", "tritonclient[http]"]
+data = ["lhotse", "soundfile", "torchaudio"]
+dev = ["pytest", "ruff"]
+legacy-zipformer = []
+
+[project.scripts]
+open-audio-llm-build-index = "open_audio_llm.scripts.build_sample_index:main"
+open-audio-llm-convert-legacy = "open_audio_llm.scripts.convert_to_hf:main"
+
+[project.entry-points."vllm.general_plugins"]
+open_audio_llm = "open_audio_llm.integrations.vllm.plugin:register"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+open_audio_llm = ["integrations/ms_swift/configs/*.json"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
