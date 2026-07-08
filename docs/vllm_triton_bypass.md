@@ -33,16 +33,31 @@ audio 路径与 Triton embedding 路径输出一致。
 ## 安装
 
 在 vLLM 服务环境安装目标仓库，确保 vLLM 能发现 `vllm.general_plugins`
-entry point：
+entry point。服务环境必须固定 vLLM/PyTorch 的 CUDA 版本；在 CUDA 12.8
+驱动机器上不要直接安装未约束的最新版 vLLM，否则可能解析到 CUDA 13 的
+PyTorch wheel 并在启动时报 `Failed to infer device type`。
 
 ```bash
-source /ai_sds_wuzz/MODELS/miniconda3/etc/profile.d/conda.sh
+source /path/to/miniconda3/etc/profile.d/conda.sh
+conda create -n vllm python=3.12 -y
 conda activate vllm
-cd /chenmingjie/mingdong/workspace/open-audio-llm
-python -m pip install -c constraints/vllm-serving.txt -e ".[vllm-serving]"
+cd /path/to/open-audio-llm
+python -m pip install -U pip
+python -m pip install -e ".[vllm]" -c constraints/vllm-cu128.txt
+python -m pip check
+python - <<'PY'
+import torch
+import vllm
+
+print("torch", torch.__version__, torch.version.cuda)
+print("cuda", torch.cuda.is_available(), torch.cuda.device_count())
+print("vllm", vllm.__version__)
+PY
 ```
 
-Qwen3-ASR serving 使用 vLLM 0.18 已验证线。constraints 文件只写 canonical
+上面的 `.[vllm]` 路径保留远端 CUDA 12.8 通用约束线。Qwen3-ASR serving 和
+Compose 镜像使用 `constraints/vllm-serving.txt` 中的 vLLM 0.18 已验证线。
+constraints 文件只写 canonical
 package pins，不写 extras；需要 HTTP client 时在 install 命令中请求
 `tritonclient[http]`。运行时镜像还必须包含 C 编译器，例如
 `build-essential`，否则 Torch Inductor/Triton 可能在模型 warmup 阶段报
@@ -64,19 +79,19 @@ vLLM、Torch、Transformers 或 CUDA wheel。
 如果只是运行验证客户端，也可以使用已有 `triton` 环境：
 
 ```bash
-source /ai_sds_wuzz/MODELS/miniconda3/etc/profile.d/conda.sh
+source /path/to/miniconda3/etc/profile.d/conda.sh
 conda activate triton
-cd /chenmingjie/mingdong/workspace/open-audio-llm
+cd /path/to/open-audio-llm
 python -m pip install -e .
 ```
 
 ## 启动服务
 
 ```bash
-source /ai_sds_wuzz/MODELS/miniconda3/etc/profile.d/conda.sh
+source /path/to/miniconda3/etc/profile.d/conda.sh
 conda activate vllm
 
-cd /chenmingjie/mingdong/workspace/open-audio-llm
+cd /path/to/open-audio-llm
 bash examples/serve/vllm/serve.sh \
   -m /chenmingjie/lx/RAG-ASR/checkpoints/base/amphion_1.7b_merged \
   -n amphionasr-1.7b \
@@ -114,9 +129,9 @@ PY
 ## 最小验证
 
 ```bash
-source /ai_sds_wuzz/MODELS/miniconda3/etc/profile.d/conda.sh
+source /path/to/miniconda3/etc/profile.d/conda.sh
 conda activate triton
-cd /chenmingjie/mingdong/workspace/open-audio-llm
+cd /path/to/open-audio-llm
 
 python examples/serve/vllm/validate_triton_bypass.py \
   --base-url http://localhost:8009 \

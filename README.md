@@ -23,20 +23,40 @@ AudioProcessor -> AudioTower -> Connector -> SlotMerger -> CausalLM
 基础安装：
 
 ```bash
-cd /chenmingjie/mingdong/workspace/open-audio-llm
+cd /path/to/open-audio-llm
 pip install -e .
 ```
 
-vLLM 部署环境：
+vLLM 部署环境必须先固定 vLLM/PyTorch 的 CUDA 版本。不要在空环境里直接安装
+未约束的最新版 vLLM；例如 `vllm 0.24` 会解析到 CUDA 13 的 PyTorch wheel，
+在只支持 CUDA 12.8 的驱动上会导致 `Failed to infer device type`。
 
 ```bash
-cd /chenmingjie/mingdong/workspace/open-audio-llm
-python -m pip install -c constraints/vllm-serving.txt -e ".[vllm-serving]"
+source /path/to/miniconda3/etc/profile.d/conda.sh
+conda create -n vllm python=3.12 -y
+conda activate vllm
+
+cd /path/to/open-audio-llm
+python -m pip install -U pip
+python -m pip install -e ".[vllm]" -c constraints/vllm-cu128.txt
+python -m pip check
+python - <<'PY'
+import torch
+import vllm
+
+print("torch", torch.__version__, torch.version.cuda)
+print("cuda", torch.cuda.is_available(), torch.cuda.device_count())
+print("vllm", vllm.__version__)
+PY
 ```
 
-Qwen3-ASR serving 依赖 vLLM 0.18 已验证线。最小运行时还需要系统 C 编译器
-（例如 Debian/Ubuntu 的 `build-essential`），否则 Torch Inductor/Triton 可能在
-模型 warmup 时失败。
+通过标准：`torch.version.cuda` 为 `12.8`，`torch.cuda.is_available()` 为 `True`，
+且 `vllm` 为 `0.17.0`。如果宿主机驱动不是 CUDA 12.8，请先按驱动版本调整
+`constraints/vllm-cu128.txt`，再安装。
+
+Qwen3-ASR serving 与 Compose 镜像使用 `constraints/vllm-serving.txt` 中的
+vLLM 0.18 已验证线。该路径还需要系统 C 编译器（例如 Debian/Ubuntu 的
+`build-essential`），否则 Torch Inductor/Triton 可能在模型 warmup 时失败。
 
 训练/数据/开发环境可以按需安装：
 
@@ -63,7 +83,10 @@ audiollm-server 等多服务编排应继续放在部署仓库里。
 启动 OpenAI-compatible vLLM 服务：
 
 ```bash
-cd /chenmingjie/mingdong/workspace/open-audio-llm
+source /path/to/miniconda3/etc/profile.d/conda.sh
+conda activate vllm
+
+cd /path/to/open-audio-llm
 bash examples/serve/vllm/serve.sh \
   -m /path/to/model \
   -p 8000 \
