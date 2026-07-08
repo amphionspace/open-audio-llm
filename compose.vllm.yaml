@@ -11,6 +11,8 @@ services:
     shm_size: 16g
     environment:
       NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      VLLM_GPU_MEMORY_UTILIZATION: "${VLLM_GPU_MEMORY_UTILIZATION:-}"
+      VLLM_MAX_MODEL_LEN: "${VLLM_MAX_MODEL_LEN:-}"
     ports:
       - "${VLLM_PORT:-8009}:${VLLM_PORT:-8009}"
     volumes:

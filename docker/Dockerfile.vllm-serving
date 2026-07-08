@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/open-audio-llm
-COPY . /opt/open-audio-llm
+COPY constraints/vllm-serving.txt /opt/open-audio-llm/constraints/vllm-serving.txt
 
 RUN --mount=type=cache,target=/root/.cache/prefetch-wheels <<'BASH'
 set -eux
@@ -137,12 +137,16 @@ RUN --mount=type=cache,target=/root/.cache/pip \
           flashinfer-python==0.6.6 && \
         python -m pip install ${PIP_FLAGS} --find-links=/root/.cache/prefetch-wheels -c constraints/vllm-serving.txt \
           "vllm[audio]==0.18.0" soundfile "tritonclient[http]" && \
-        python -m pip install ${PIP_FLAGS} -e . --no-deps && \
         exit 0; \
         sleep $((attempt * 5)); \
       done; \
       exit 1 \
     '
+
+COPY . /opt/open-audio-llm
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    python -m pip install ${PIP_FLAGS} -e . --no-deps
 
 RUN <<'BASH'
 set -eux

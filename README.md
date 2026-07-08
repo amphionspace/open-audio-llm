@@ -52,6 +52,8 @@ pip install -e ".[hf,swift,data,dev]"
 export OPEN_AUDIO_LLM_MODEL=/path/to/qwen3-asr-or-compatible-model
 export VLLM_SERVED_MODEL_NAME=amphionasr-1.7b
 export VLLM_PORT=8009
+# Shared GPU hosts may need a lower value, for example 0.2.
+export VLLM_GPU_MEMORY_UTILIZATION=0.9
 docker compose -f compose.vllm.yaml up --build
 ```
 
@@ -81,6 +83,8 @@ bash examples/serve/vllm/serve.sh \
 - `-t`：tensor parallel size。
 - `-d`：data parallel size。
 - `-a`：每条 prompt 允许的最大音频数。
+- `-u`：`gpu-memory-utilization`；共享 GPU 上需要低于 vLLM 默认值。
+- `-l`：`max-model-len`。
 - `-e`：向 vLLM 传 `--enable-mm-embeds`，允许请求传预计算多模态 embedding。
 - `-q`：启用 Qwen3-ASR `audio_embeds` embedding bypass 注册。
 

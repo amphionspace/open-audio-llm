@@ -22,23 +22,25 @@
 #   -q  enable Open Audio-LLM Qwen3-ASR audio_embeds plugin override
 #   -h  print help
 #
-# Extra arguments after "--" are passed through to `vllm serve`.
+# The same knobs can be set through matching VLLM_* environment variables.
+# CLI flags take precedence. Extra arguments after "--" are passed through to
+# `vllm serve`.
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
-MODEL=""
-PORT="8000"
-GPUS=""
-SERVED_NAME=""
-TP_SIZE="1"
-DP_SIZE="1"
-MAX_AUDIO="4"
-GPU_UTIL=""
-MAX_MODEL_LEN=""
-ENABLE_MM_EMBEDS="0"
-ENABLE_QWEN3_ASR_EMBEDS="0"
+MODEL="${OPEN_AUDIO_LLM_MODEL:-}"
+PORT="${VLLM_PORT:-8000}"
+GPUS="${CUDA_VISIBLE_DEVICES:-}"
+SERVED_NAME="${VLLM_SERVED_MODEL_NAME:-}"
+TP_SIZE="${VLLM_TENSOR_PARALLEL_SIZE:-1}"
+DP_SIZE="${VLLM_DATA_PARALLEL_SIZE:-1}"
+MAX_AUDIO="${VLLM_MAX_AUDIO:-4}"
+GPU_UTIL="${VLLM_GPU_MEMORY_UTILIZATION:-}"
+MAX_MODEL_LEN="${VLLM_MAX_MODEL_LEN:-}"
+ENABLE_MM_EMBEDS="${VLLM_ENABLE_MM_EMBEDS:-0}"
+ENABLE_QWEN3_ASR_EMBEDS="${OPEN_AUDIO_LLM_ENABLE_QWEN3_ASR_EMBEDS:-${VLLM_ENABLE_QWEN3_ASR_EMBEDS:-0}}"
 
 usage() { sed -n '2,26p' "$0"; exit "${1:-0}"; }
 
@@ -149,6 +151,17 @@ fi
 if [[ -n "$MAX_MODEL_LEN" ]]; then
   VLLM_ARGS+=(--max-model-len "$MAX_MODEL_LEN")
 fi
+
+unset \
+  VLLM_PORT \
+  VLLM_SERVED_MODEL_NAME \
+  VLLM_TENSOR_PARALLEL_SIZE \
+  VLLM_DATA_PARALLEL_SIZE \
+  VLLM_MAX_AUDIO \
+  VLLM_GPU_MEMORY_UTILIZATION \
+  VLLM_MAX_MODEL_LEN \
+  VLLM_ENABLE_MM_EMBEDS \
+  VLLM_ENABLE_QWEN3_ASR_EMBEDS
 
 echo "[open-audio-llm serve] arch=${ARCH:-<unknown>} model=$MODEL port=$PORT gpus=${GPUS:-<unchanged>} served_name=${SERVED_NAME:-<default>} tp=$TP_SIZE dp=$DP_SIZE max_audio=$MAX_AUDIO util=${GPU_UTIL:-<vllm-default>} max_model_len=${MAX_MODEL_LEN:-<model-default>} enable_mm_embeds=$ENABLE_MM_EMBEDS enable_qwen3_asr_embeds=$ENABLE_QWEN3_ASR_EMBEDS"
 [[ ${#EXTRA_ARGS[@]} -gt 0 ]] && echo "[open-audio-llm serve] extra: ${EXTRA_ARGS[*]}"
