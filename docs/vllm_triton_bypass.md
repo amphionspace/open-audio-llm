@@ -39,8 +39,27 @@ entry point：
 source /ai_sds_wuzz/MODELS/miniconda3/etc/profile.d/conda.sh
 conda activate vllm
 cd /chenmingjie/mingdong/workspace/open-audio-llm
-python -m pip install -e ".[vllm]"
+python -m pip install -c constraints/vllm-serving.txt -e ".[vllm-serving]"
 ```
+
+Qwen3-ASR serving 使用 vLLM 0.18 已验证线。constraints 文件只写 canonical
+package pins，不写 extras；需要 HTTP client 时在 install 命令中请求
+`tritonclient[http]`。运行时镜像还必须包含 C 编译器，例如
+`build-essential`，否则 Torch Inductor/Triton 可能在模型 warmup 阶段报
+`Failed to find C compiler`。
+
+如果要构建可复现镜像，可使用单服务 compose profile：
+
+```bash
+export OPEN_AUDIO_LLM_MODEL=/path/to/qwen3-asr-or-compatible-model
+export VLLM_SERVED_MODEL_NAME=amphionasr-1.7b
+export VLLM_PORT=8009
+docker compose -f compose.vllm.yaml up --build
+```
+
+对应 Dockerfile 会先用可续传下载预取大 wheel，再按
+`constraints/vllm-serving.txt` 安装，避免 pip 在构建时解析到未来的
+vLLM、Torch、Transformers 或 CUDA wheel。
 
 如果只是运行验证客户端，也可以使用已有 `triton` 环境：
 
@@ -117,6 +136,10 @@ python examples/serve/vllm/validate_triton_bypass.py \
 
 ## 常见失败与根因
 
+- `Transformers does not recognize model_type qwen3_asr`：vLLM 版本过旧；
+  使用 `constraints/vllm-serving.txt` 中的 vLLM 0.18 已验证线。
+- `Failed to find C compiler`：运行时缺少 C 编译器；镜像需要安装
+  `build-essential` 或等价包。
 - `You must set --enable-mm-embeds`：服务启动时没有传 `-e`。
 - `Failed to apply Qwen3ASRProcessor`：plugin 没有覆盖 Qwen3-ASR 原生类，
   通常是没有安装目标仓库、entry point 没加载，或没有传 `-q`。

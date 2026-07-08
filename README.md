@@ -31,8 +31,12 @@ vLLM 部署环境：
 
 ```bash
 cd /chenmingjie/mingdong/workspace/open-audio-llm
-pip install -e ".[vllm]"
+python -m pip install -c constraints/vllm-serving.txt -e ".[vllm-serving]"
 ```
+
+Qwen3-ASR serving 依赖 vLLM 0.18 已验证线。最小运行时还需要系统 C 编译器
+（例如 Debian/Ubuntu 的 `build-essential`），否则 Torch Inductor/Triton 可能在
+模型 warmup 时失败。
 
 训练/数据/开发环境可以按需安装：
 
@@ -41,6 +45,18 @@ pip install -e ".[hf,swift,data,dev]"
 ```
 
 ## vLLM 部署
+
+推荐使用仓库提供的单服务部署 profile 构建 vLLM serving 镜像：
+
+```bash
+export OPEN_AUDIO_LLM_MODEL=/path/to/qwen3-asr-or-compatible-model
+export VLLM_SERVED_MODEL_NAME=amphionasr-1.7b
+export VLLM_PORT=8009
+docker compose -f compose.vllm.yaml up --build
+```
+
+该 compose 文件只覆盖本仓库的 vLLM serving 单元；RAG-ASR Triton、
+audiollm-server 等多服务编排应继续放在部署仓库里。
 
 启动 OpenAI-compatible vLLM 服务：
 

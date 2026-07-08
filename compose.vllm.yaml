@@ -1,0 +1,32 @@
+name: open-audio-llm-serving
+
+services:
+  vllm-serving:
+    image: open-audio-llm/vllm-serving:${OPEN_AUDIO_LLM_IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.vllm-serving
+    gpus: all
+    ipc: host
+    shm_size: 16g
+    environment:
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    ports:
+      - "${VLLM_PORT:-8009}:${VLLM_PORT:-8009}"
+    volumes:
+      - "${OPEN_AUDIO_LLM_MODEL:?set OPEN_AUDIO_LLM_MODEL to a model directory}:/models/main:ro"
+    command:
+      - -m
+      - /models/main
+      - -p
+      - "${VLLM_PORT:-8009}"
+      - -n
+      - "${VLLM_SERVED_MODEL_NAME:-open-audio-llm}"
+      - -t
+      - "${VLLM_TENSOR_PARALLEL_SIZE:-1}"
+      - -d
+      - "${VLLM_DATA_PARALLEL_SIZE:-1}"
+      - -a
+      - "${VLLM_MAX_AUDIO:-4}"
+      - -e
+      - -q

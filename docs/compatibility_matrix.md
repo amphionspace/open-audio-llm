@@ -7,5 +7,5 @@
 | LLM | `AutoModelForCausalLM` with `inputs_embeds` | unsupported LMs need adapters |
 | Audio encoders | Qwen3-ASR, Qwen3-Omni adapters | Zipformer legacy adapter |
 | Training | ms-swift SFT/GRPO | legacy `src/train.py` during migration |
-| Serving | vLLM plugin | HF `generate` fallback |
+| Serving | vLLM 0.18 serving profile | HF `generate` fallback |
 | k2 | not required | legacy Zipformer training only |
