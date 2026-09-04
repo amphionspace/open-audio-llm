@@ -1,0 +1,9 @@
+# syntax=docker/dockerfile:1.7
+ARG SERVING_IMAGE=open-audio-llm/vllm-serving:0.18.0
+FROM ${SERVING_IMAGE}
+
+ENV OPEN_AUDIO_LLM_ENABLE_LEGACY_AMPHION_ASR=1
+
+COPY models/amphion-spec /models/amphion-spec
+
+CMD ["-m", "/models/amphion-spec", "-p", "8000", "-n", "AmphionSPEC", "-a", "2", "-u", "0.70", "-l", "16384"]
