@@ -15,6 +15,22 @@ flowchart TD
     causalLM --> output[TextOutput]
 ```
 
+The Catalog training path is deliberately layered:
+
+```mermaid
+flowchart LR
+    catalog[DatasetCatalog] --> cutset[Lhotse CutSet]
+    cutset --> record[AudioRecord]
+    record --> renderer[Versioned Prompt Renderer]
+    renderer --> example[AudioExample]
+    example --> swift[ms-swift adapter]
+```
+
+Lhotse owns audio manifests, segment access, and decoding; the online dataset applies waveform and feature augmentation. `AudioRecord`
+owns stable task facts and ordered audio references. `AudioExample` owns the
+rendered multimodal message. No layer stores machine-specific absolute paths
+as part of its portable contract.
+
 ## Component Contracts
 
 - `AudioTower.forward(features, lengths)` returns `(hidden, hidden_lengths)`.

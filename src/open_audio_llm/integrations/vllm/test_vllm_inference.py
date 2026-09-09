@@ -370,10 +370,9 @@ def build_unified_content(
     Two prompt shapes are supported (see PROMPT_STYLES):
 
     * ``"swift"`` (default) — matches the ms-swift unified template
-      produced by :func:`open_audio_llm.integrations.ms_swift.data.convert.build_unified_instruction`.
+      used by historical ms-swift checkpoints.
       User content: ``Transcribe ... .\\nLanguage: ...\\nHotwords: ...``
-      then audio block. Compatible with ckpts trained via
-      :file:`examples/train/sft/production_swift.sh`.
+      then audio block.
 
     * ``"train"`` — matches :data:`src.train.TASK_PROMPTS` byte-for-byte:
       ``Hotwords:{hw}\\nTranscribe the following audio:[audio]`` with
@@ -651,9 +650,7 @@ def _build_messages_qwen3_asr(
     * **system** — plain text with enrollment notice and/or hotwords
     * **user**   — only ``input_audio`` blocks, no text
 
-    This mirrors the training data format produced by
-    :func:`open_audio_llm.integrations.ms_swift.data.convert.build_qwen3_asr_system`
-    and :func:`build_qwen3_asr_user`.
+    This preserves the message format expected by existing Qwen3-ASR checkpoints.
 
     Wire format sent to ``/v1/chat/completions``::
 
