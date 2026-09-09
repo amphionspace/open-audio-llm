@@ -13,7 +13,7 @@ def is_valid_hotword(value: str, max_len: int = 8, min_len: int = 2) -> bool:
 def build_hotword_pool(records, max_len: int = 8) -> list[str]:
     pool = set()
     for record in records:
-        for hotword in getattr(record, "real_hotwords", []):
+        for hotword in record.record.hotwords:
             if isinstance(hotword, str) and is_valid_hotword(hotword, max_len=max_len):
                 pool.add(hotword)
     return sorted(pool)

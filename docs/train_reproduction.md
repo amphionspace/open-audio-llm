@@ -1,113 +1,59 @@
-# Training Reproduction
+# 训练入口与复现
 
-## Problem Restatement
+训练统一从 Catalog 在线构造数据。示例配置集中在
+[examples/configs](../examples/configs/README.md)，每个参数附中文解释。
 
-Open Audio-LLM must reproduce the AmphionASR training workflows formerly under
-AmphionASR `src/integrations/scripts/train` while keeping runnable recipes
-outside the installable Python package.
+## SFT
 
-## Legacy Mapping
+从仓库根目录启动，先修改 env 中的 MODEL：
 
-| AmphionASR entry | Open Audio-LLM entry | Purpose |
-| --- | --- | --- |
-| `/chenmingjie/mingdong/workspace/AmphionASR/src/integrations/scripts/train/sft_swift.sh` | `examples/train/sft/train.sh` | LoRA SFT smoke or short run |
-| `/chenmingjie/lx/AmphionASR/src/integrations/scripts/train/sft_swift.sh` | `examples/train/sft/production_swift.sh` | Production-style LoRA SFT |
-| `/chenmingjie/lx/AmphionASR/src/integrations/scripts/train/sft_stage1_encoder_aligner.sh` | `examples/train/sft/stage1_encoder_aligner.sh` | Stage 1 encoder + aligner LoRA |
-| `/chenmingjie/lx/AmphionASR/src/integrations/scripts/train/sft_stage2_llm.sh` | `examples/train/sft/stage2_llm.sh` | Stage 2 LLM LoRA |
-| `/chenmingjie/lx/AmphionASR/src/integrations/scripts/train/sft_stage3_joint.sh` | `examples/train/sft/stage3_joint.sh` | Stage 3 joint LoRA |
-| `/chenmingjie/mingdong/workspace/AmphionASR/src/integrations/scripts/train/grpo_swift.sh` | `examples/train/grpo/train.sh` | GRPO smoke or short run |
-| `/chenmingjie/lx/AmphionASR/src/integrations/scripts/train/grpo_swift.sh` | `examples/train/grpo/production_swift.sh` | Production-style GRPO |
-| `/chenmingjie/mingdong/workspace/AmphionASR/src/integrations/scripts/train/run_rollout_server.sh` | `examples/train/rollout/run_rollout_server.sh` | `swift rollout` server for GRPO server mode |
-| `/chenmingjie/mingdong/workspace/AmphionASR/src/integrations/scripts/model/convert_to_hf.sh` | `examples/model/convert_legacy_checkpoint.sh` | Legacy checkpoint to Open Audio-LLM HF directory |
-| `/chenmingjie/lx/AmphionASR/src/integrations/scripts/model/convert_to_hf.sh` | `examples/model/convert_amphionasr_checkpoint.sh` | Legacy AmphionASR converter wrapper |
-| `/chenmingjie/mingdong/workspace/AmphionASR/src/integrations/scripts/model/merge_lora.sh` | `examples/model/merge_lora.sh` | Merge ms-swift LoRA adapter |
-| `/chenmingjie/lx/AmphionASR/src/integrations/scripts/deploy/serve_vllm.sh` | `examples/serve/vllm/serve.sh` | vLLM serve with nested config and Kimi-Audio fix |
-| `/chenmingjie/lx/AmphionASR/src/integrations/scripts/eval/eval_vllm.sh` | `examples/eval/vllm/eval.sh` | vLLM batch evaluation |
-| `/chenmingjie/lx/AmphionASR/src/integrations/scripts/data/convert_sharegpt.sh` | `examples/data/convert_sharegpt.sh` | Lhotse to ShareGPT conversion |
-| `/chenmingjie/lx/AmphionASR/src/integrations/scripts/data/convert_vitw.py` | `examples/data/convert_vitw.py` | Voices-in-the-Wild parquet conversion |
+```bash
+set -a
+source examples/configs/train/sft.env
+set +a
+bash examples/train/sft/train.sh
+```
 
-## Smoke-All Procedure
+快速检查时，在启动前覆盖：
 
-Use AmphionASR workspace assets for the first validation pass. The smoke target
-is at least one successful training step per path, not a full training budget.
+```bash
+export DATA_CONFIG=examples/configs/data/catalog_smoke.yaml
+export MAX_STEPS=2 SAVE_STEPS=2 EVAL_STEPS=2 LOGGING_STEPS=1
+bash examples/train/sft/train.sh
+```
 
-1. Install the training extras:
+`DATA_CONFIG` 控制数据来源、混合与增强；env 控制设备、优化器、保存频率等训练参数。
+SFT 混合能力、动态 batch 和断点恢复见 [在线训练数据](online_training_data.md)。
+恢复时设置 `RESUME_FROM_CHECKPOINT=/path/to/checkpoint-N`，保持原配方与 batch 参数。
 
-   ```bash
-   pip install -e ".[hf,swift,data,vllm,dev]"
-   ```
+原有三阶段训练统一通过冻结参数选择，不再维护三套 JSONL 脚本：
 
-2. Convert or point to an Open Audio-LLM HF checkpoint:
+| 训练阶段 | FREEZE_VIT | FREEZE_ALIGNER | FREEZE_LLM |
+|---|---|---|---|
+| encoder + connector | false | false | true |
+| 仅语言模型 | true | true | false |
+| 联合训练 | false | false | false |
 
-   ```bash
-   bash examples/model/convert_legacy_checkpoint.sh \
-     -c /path/to/legacy.pt \
-     -w /path/to/encoder.pth \
-     -C /path/to/encoder_config.json \
-     -l /path/to/base_llm \
-     -o runs/converted_open_audio_llm
-   ```
+阶段切换前先用 `examples/model/merge_lora.sh` 合并对应 adapter，将下一阶段 MODEL
+指向合并模型。阶段间开始新训练；同一阶段中断才使用 RESUME_FROM_CHECKPOINT。
 
-3. Prepare tiny SFT and GRPO JSONL files from existing AmphionASR data. For
-   smoke validation, each file can contain a single short audio sample.
+## GRPO
 
-4. Run SFT smoke:
+```bash
+set -a
+source examples/configs/train/grpo.env
+set +a
+bash examples/train/grpo/train.sh
+```
 
-   ```bash
-   set -a
-   source configs/train/sft_smoke.env
-   set +a
-   bash examples/train/sft/train.sh
-   ```
+示例默认本地生成；仍须将 MODEL 替换为本项目模型。GRPO 使用普通 Catalog
+数据配方，不支持 SFT 专属 samples/reps、动态 batch 或 SpecAugment。
+如使用独立 rollout server，先配置 `examples/configs/train/rollout.env` 并启动
+`examples/train/rollout/run_rollout_server.sh`，再设置 GRPO 的 USE_VLLM、服务地址和端口。
+训练与 rollout 使用不同 GPU，调整 NPROC_PER_NODE 与可见卡数一致。
 
-5. Merge the SFT adapter:
+## 验证范围
 
-   ```bash
-   bash examples/model/merge_lora.sh runs/open_audio_llm_sft_smoke/checkpoint-1
-   ```
-
-6. Optionally start rollout server for GRPO server mode:
-
-   ```bash
-   bash examples/train/rollout/run_rollout_server.sh \
-     -m runs/open_audio_llm_sft_smoke/checkpoint-1_merged \
-     -p 8006
-   ```
-
-   The rollout script prepares a lightweight `${MODEL}_vllm_rollout` directory
-   by linking checkpoint files and overriding `architectures` to
-   `TransformersForCausalLM` for vLLM 0.18. The original merged checkpoint is
-   left unchanged.
-
-7. Run GRPO smoke:
-
-   ```bash
-   set -a
-   source configs/train/grpo_smoke.env
-   set +a
-   bash examples/train/grpo/train.sh
-   ```
-
-## Pass Criteria
-
-- Checkpoint conversion writes `config.json`, `model.safetensors`, tokenizer
-  files, feature extractor files, and an `open_audio_llm/` source copy.
-- `config.json` contains `auto_map` entries pointing to `open_audio_llm`.
-- SFT reaches at least one training step and writes an adapter checkpoint.
-- LoRA merge writes a merged model directory.
-- Rollout server starts and reaches a healthy listening state. For ms-swift
-  rollout, `GET /health/` should return `{"status":"ok"}` and
-  `POST /get_engine_type/` should return `LLMEngine`.
-- GRPO reaches at least one training step and logs all three rewards:
-  `asr_format_reward`, `asr_accuracy_reward`, and `hotword_reward`.
-
-## Known Limits
-
-- Zipformer/k2 is not a mainline training path for new Open Audio-LLM recipes.
-- Static ShareGPT conversion is the fastest compatibility route; dynamic
-  `sample_index` plus `LhotseSwiftDataset` remains the longer-term data path.
-- Full parity with legacy `/chenmingjie/mingdong/workspace/AmphionASR/src/train.py`
-  is out of scope for this reproduction pass.
-- The current rollout recipe uses vLLM's generic Transformers backend for
-  server startup and GRPO weight-sync smoke tests. Real audio requests still
-  need a dedicated vLLM multimodal executor.
+数据链路测试覆盖音频按需读取、精确切段、在线增强、消息槽位顺序、混合比例、
+分片轮换、DDP batch 计划及预取后的采样位置恢复。GPU 2、3 上已验证小规模 SFT
+和中途恢复后 adapter 张量一致；这些检查不代表完整语料的 WER/CER 效果。

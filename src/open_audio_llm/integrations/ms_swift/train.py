@@ -1,0 +1,128 @@
+"""Train directly from Catalog manifests without an offline ShareGPT export."""
+
+from __future__ import annotations
+
+import sys
+from dataclasses import dataclass
+
+from swift.arguments import RLHFArguments, SftArguments
+from swift.pipelines.train.rlhf import SwiftRLHF
+from swift.pipelines.train.sft import SwiftSft
+from transformers import TrainerCallback
+
+from open_audio_llm.data.catalog_dataset import CatalogSwiftDataset, read_data_config
+
+
+class CatalogArgumentsMixin:
+    def __post_init__(self):
+        if not self.data_config:
+            raise ValueError("--data_config is required")
+        if (
+            self.dataset
+            or self.val_dataset
+            or self.cached_dataset
+            or self.cached_val_dataset
+        ):
+            raise ValueError(
+                "Use train/validation in --data_config instead of dataset/cache arguments"
+            )
+        self._catalog_config = read_data_config(self.data_config)
+        # SftArguments requires dataset identities, but the pipeline below owns
+        # loading; these config references never go through the HF JSON loader.
+        self.dataset = [self.data_config]
+        self.val_dataset = (
+            [self.data_config] if self._catalog_config.get("validation") else []
+        )
+        self.split_dataset_ratio = 0
+        self.lazy_tokenize = True
+        super().__post_init__()
+        if (
+            self.packing
+            or self.padding_free
+            or getattr(self, "group_by_length", False)
+            or self.streaming
+        ):
+            raise ValueError(
+                "Catalog training uses on-demand map-style samples; disable packing, padding_free, group_by_length and streaming"
+            )
+
+
+@dataclass
+class CatalogSftArguments(CatalogArgumentsMixin, SftArguments):
+    data_config: str | None = None
+
+
+@dataclass
+class CatalogRLHFArguments(CatalogArgumentsMixin, RLHFArguments):
+    data_config: str | None = None
+
+
+class DatasetEpochCallback(TrainerCallback):
+    def __init__(self, dataset):
+        self.dataset = dataset
+
+    def on_epoch_begin(self, args, state, control, **kwargs):
+        self.dataset.set_epoch(int(state.epoch or 0))
+
+
+class CatalogTrainingMixin:
+    def _prepare_dataset(self):
+        grpo = getattr(self.args, "rlhf_type", None) == "grpo"
+        if hasattr(self.args, "rlhf_type") and not grpo:
+            raise ValueError("Catalog RLHF entry currently supports GRPO")
+        config = self.args._catalog_config
+        train = CatalogSwiftDataset(
+            config, encode=None if grpo else self.template.encode, grpo=grpo
+        )
+        validation = None
+        if config.get("validation"):
+            raw_eval = grpo or getattr(self.args, "predict_with_generate", False)
+            validation = CatalogSwiftDataset(
+                config,
+                training=False,
+                encode=None if raw_eval else self.template.encode,
+                grpo=grpo,
+            )
+        return train, validation
+
+    def train(self, trainer):
+        if getattr(self.args, "rlhf_type", None) == "grpo":
+            config = self.args._catalog_config
+            if config.get("batching") or any(
+                any(
+                    key in source
+                    for key in ("weight", "samples", "reps", "shard_rotation")
+                )
+                for source in config["train"]
+            ):
+                raise ValueError(
+                    "Catalog mux/duration batching is SFT-only; GRPO uses its generation-group sampler"
+                )
+            trainer.add_callback(DatasetEpochCallback(trainer.train_dataset))
+        else:
+            from .catalog_loader import install_catalog_loader
+
+            install_catalog_loader(trainer, self._get_resume_checkpoint(trainer))
+        return super().train(trainer)
+
+
+class CatalogSft(CatalogTrainingMixin, SwiftSft):
+    args_class = CatalogSftArguments
+
+
+class CatalogGRPO(CatalogTrainingMixin, SwiftRLHF):
+    args_class = CatalogRLHFArguments
+
+
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] not in {"sft", "grpo"}:
+        raise SystemExit(
+            "Usage: python -m open_audio_llm.integrations.ms_swift.train {sft,grpo} --data_config CONFIG [swift arguments]"
+        )
+    mode = sys.argv[1]
+    cls = CatalogSft if mode == "sft" else CatalogGRPO
+    cls(sys.argv[2:]).main()
+
+
+if __name__ == "__main__":
+    main()

@@ -11,17 +11,30 @@ export NPROC_PER_NODE="${NPROC_PER_NODE:-1}"
 export MASTER_PORT="${MASTER_PORT:-29501}"
 
 MODEL="${MODEL:?Set MODEL to an Open Audio-LLM HF checkpoint}"
-DATASET="${DATASET:?Set DATASET to a ShareGPT SFT JSONL file}"
+DATA_CONFIG="${DATA_CONFIG:?Set DATA_CONFIG to a Catalog training YAML config}"
+export AUDIO_DATA_CONTRACT_ROOT="${AUDIO_DATA_CONTRACT_ROOT:-$(dirname "$REPO_ROOT")/audio-data-contract}"
+export AUDIO_DATA_CATALOG="${AUDIO_DATA_CATALOG:-$AUDIO_DATA_CONTRACT_ROOT/catalog}"
+export AUDIO_DATA_ROOTS_FILE="${AUDIO_DATA_ROOTS_FILE:-$AUDIO_DATA_CONTRACT_ROOT/roots.json}"
 OUTPUT_DIR="${OUTPUT_DIR:-runs/open_audio_llm_sft_smoke}"
 DEEPSPEED="${DEEPSPEED:-zero2}"
 MAX_STEPS="${MAX_STEPS:-1}"
+resume_args=()
+if [[ -n "${RESUME_FROM_CHECKPOINT:-}" ]]; then
+  resume_args=(--resume_from_checkpoint "$RESUME_FROM_CHECKPOINT")
+fi
 
-swift sft \
+python -m torch.distributed.run \
+  --nproc_per_node "$NPROC_PER_NODE" --master_port "$MASTER_PORT" \
+  --module open_audio_llm.integrations.ms_swift.train sft \
   --model "$MODEL" \
   --external_plugins "$REPO_ROOT/src/open_audio_llm/integrations/ms_swift/register_audio_llm.py" \
-  --dataset "$DATASET" \
+  --data_config "$DATA_CONFIG" \
+  "${resume_args[@]}" \
+  --dataloader_num_workers "${DATALOADER_NUM_WORKERS:-0}" \
   --freeze_vit "${FREEZE_VIT:-true}" \
   --freeze_aligner "${FREEZE_ALIGNER:-false}" \
+  --freeze_llm "${FREEZE_LLM:-false}" \
+  --tuner_type "${TUNER_TYPE:-lora}" \
   --deepspeed "$DEEPSPEED" \
   --torch_dtype "${TORCH_DTYPE:-bfloat16}" \
   --lora_rank "${LORA_RANK:-64}" \
