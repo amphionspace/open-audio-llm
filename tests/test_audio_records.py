@@ -44,3 +44,17 @@ def test_interleaving_derives_audio_order():
     assert swift["messages"][0]["content"] == "A<audio>B<audio><audio>"
     assert swift["audios"] == ["/cut-b.wav", "/cut-a.wav", "/cut-c.wav"]
     assert swift["audio_slot_count"] == 3
+
+
+def test_catalog_record_hotwords_populate_distractor_pool():
+    from open_audio_llm.data.hotwords import build_hotword_pool
+    from open_audio_llm.data.records import ResolvedAudioRecord
+
+    record = AudioRecord(
+        id="hotword-record",
+        task="asr_hotwords",
+        audio_slots=(AudioSlot("primary", AudioRef("demo", "1", "train", "cut")),),
+        target="hello world",
+        hotwords=("hello", "world"),
+    )
+    assert build_hotword_pool([ResolvedAudioRecord(record)]) == ["hello", "world"]
