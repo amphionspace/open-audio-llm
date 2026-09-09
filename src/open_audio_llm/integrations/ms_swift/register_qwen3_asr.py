@@ -46,7 +46,7 @@ Training and vLLM-inference token sequences are therefore identical::
     {transcription text}
     <|im_end|>
 
-Training data format (ShareGPT JSONL)::
+Runtime sample format expected by this native-model template::
 
     {
       "messages": [
@@ -97,6 +97,7 @@ from functools import partial
 from typing import Any, Dict, List, Literal, Optional
 
 import torch
+import torch.nn.functional as F
 from transformers import PreTrainedModel
 
 from swift.model import (
@@ -111,6 +112,8 @@ from swift.model import (
 from swift.template import Template, TemplateMeta, register_template
 from swift.template.vision_utils import load_audio, load_batch
 from swift.utils import get_env_args, get_logger
+
+from open_audio_llm.data.augment import augment_features
 
 # ---------------------------------------------------------------------------
 # Audio token count helpers (mirrors Qwen3ASRProcessor logic)
@@ -130,35 +133,13 @@ def _get_feat_extract_output_lengths(n_frames: int) -> int:
     return int(output_lengths)
 
 
-# Module-level cache: audio_path → n_audio_tokens
-_AUDIO_TOKEN_COUNT_CACHE: Dict[str, int] = {}
+def _get_n_audio_tokens(wav, hop_length: int, max_length: int) -> int:
+    """Count placeholders from the same decoded waveform used for features."""
+    # Fixed-window padding keeps the final partial hop in the attention mask.
+    # Speed perturbation frequently produces these non-aligned lengths.
+    n_frames = min((len(wav) + hop_length - 1) // hop_length, max_length)
+    return max(1, _get_feat_extract_output_lengths(n_frames))
 
-
-def _get_n_audio_tokens(audio_path: str, sampling_rate: int, hop_length: int, max_length: int) -> int:
-    """Return the number of ``<|audio_pad|>`` tokens for *audio_path*.
-
-    MUST use the same audio loading path as ``_encode`` (swift's load_audio / librosa)
-    to get the exact same decoded sample count.  Do NOT use soundfile.info() even as a
-    fast path: soundfile reads raw encoded frames for formats like MP3, which can differ
-    from the librosa-decoded sample count by tens to hundreds of samples.  That mismatch
-    shifts n_frames by 1 and—when it crosses a jump point in _get_feat_extract_output_lengths—
-    produces one extra <|audio_pad|> token, triggering the masked_scatter assertion.
-
-    WhisperFeatureExtractor computes feature_attention_mask.sum() as
-        n_samples // hop_length   (floor division)
-    for a single-audio call (which is how _encode calls it), so we use the same formula.
-    """
-    if audio_path in _AUDIO_TOKEN_COUNT_CACHE:
-        return _AUDIO_TOKEN_COUNT_CACHE[audio_path]
-
-    # Decode audio via the same path as _encode to get the identical sample count.
-    wav = load_audio(audio_path, sampling_rate=sampling_rate)
-    n_samples = len(wav)
-
-    n_frames = min(n_samples // hop_length, max_length)
-    n_tokens = max(1, _get_feat_extract_output_lengths(n_frames))
-    _AUDIO_TOKEN_COUNT_CACHE[audio_path] = n_tokens
-    return n_tokens
 
 logger = get_logger()
 
@@ -319,7 +300,7 @@ class Qwen3ASRTemplate(Template):
         self.sampling_rate = get_env_args('sampling_rate', int, fe.sampling_rate)
         # hop_length / max_length used by _get_n_audio_tokens() in replace_tag
         self._hop_length = getattr(fe, 'hop_length', 160)
-        self._max_length = getattr(fe, 'max_length', 3000)
+        self._max_length = getattr(fe, 'nb_max_frames', 3000)
 
     @property
     def feature_extractor(self):
@@ -332,56 +313,73 @@ class Qwen3ASRTemplate(Template):
         inputs,
     ) -> list:
         assert media_type == 'audio'
-        audio_path = inputs.audios[index]
+        wavs = getattr(inputs, '_audio_llm_waveforms', None)
+        wav = (wavs[index] if wavs is not None else
+               load_audio(inputs.audios[index], sampling_rate=self.sampling_rate))
         # Expand <|audio_pad|> to exactly the number of tokens the audio encoder
         # will produce, so that masked_scatter in forward() can replace every
         # placeholder position with a real audio frame embedding.
         # (One placeholder → only 1 frame used → audio ignored → loss stuck at ~3.)
         n_tokens = _get_n_audio_tokens(
-            audio_path,
-            sampling_rate=self.sampling_rate,
+            wav,
             hop_length=self._hop_length,
             max_length=self._max_length,
         )
         return ['<|audio_start|>'] + ['<|audio_pad|>'] * n_tokens + ['<|audio_end|>']
 
     def _encode(self, inputs) -> Dict[str, Any]:
-        encoded = super()._encode(inputs)
-        if inputs.audios:
-            try:
-                audios = load_batch(
-                    inputs.audios,
-                    load_func=partial(load_audio, sampling_rate=self.sampling_rate),
-                )
-            except Exception as e:
-                raise ValueError(
-                    f'Qwen3ASRTemplate: load_audio failed for '
-                    f'{inputs.audios!r}: {e}') from e
-
-            audio_inputs = self.feature_extractor(
-                audios,
-                sampling_rate=self.sampling_rate,
-                return_attention_mask=True,
-                return_tensors='pt',
+        if not inputs.audios:
+            return super()._encode(inputs)
+        try:
+            audios = load_batch(
+                inputs.audios,
+                load_func=partial(load_audio, sampling_rate=self.sampling_rate),
             )
-            # feature_attention_mask: (B, T) bool mask — 1=valid frame, 0=padding.
-            # This is what Qwen3ASRForConditionalGeneration.forward() expects.
-            feature_attention_mask = audio_inputs['attention_mask']
+        except Exception as e:
+            raise ValueError(
+                f'Qwen3ASRTemplate: load_audio failed for '
+                f'{inputs.audios!r}: {e}') from e
 
-            # Guard against zero-length audio (silently truncated files).
-            feat_lens = feature_attention_mask.sum(dim=-1)
-            if (feat_lens <= 0).any():
-                raise ValueError(
-                    f'Qwen3ASRTemplate: zero-length audio '
-                    f'(feat_lens={feat_lens.tolist()}) for audios={inputs.audios!r}')
+        # replace_tag and feature extraction share this decode. Keep the
+        # waveforms off extra_kwargs so they cannot leak into training rows.
+        inputs._audio_llm_waveforms = audios
+        try:
+            encoded = super()._encode(inputs)
+        finally:
+            del inputs._audio_llm_waveforms
 
-            # Keep input_features in the native (B, n_mels, T) format from the feature extractor.
-            # Qwen3ASRThinkerForConditionalGeneration.get_audio_features() iterates over the batch
-            # and slices each audio as input_feature[:, :feature_len] — i.e., (n_mels, T) → ✓
-            # Do NOT transpose here (Amphion-4B transposes because its encoder handles (B,T,F)
-            # internally, but Qwen3-ASR's encoder expects (n_mels, T) directly).
-            encoded['input_features'] = audio_inputs['input_features']
-            encoded['feature_attention_mask'] = feature_attention_mask
+        audio_inputs = self.feature_extractor(
+            audios,
+            sampling_rate=self.sampling_rate,
+            return_attention_mask=True,
+            return_tensors='pt',
+        )
+        # feature_attention_mask: (B, T) bool mask — 1=valid frame, 0=padding.
+        # This is what Qwen3ASRForConditionalGeneration.forward() expects.
+        feature_attention_mask = audio_inputs['attention_mask']
+
+        # Guard against zero-length audio (silently truncated files).
+        feat_lens = feature_attention_mask.sum(dim=-1)
+        if (feat_lens <= 0).any():
+            raise ValueError(
+                f'Qwen3ASRTemplate: zero-length audio '
+                f'(feat_lens={feat_lens.tolist()}) for audios={inputs.audios!r}')
+
+        # Keep input_features in the native (B, n_mels, T) format from the feature extractor.
+        # Qwen3ASRThinkerForConditionalGeneration.get_audio_features() iterates over the batch
+        # and slices each audio as input_feature[:, :feature_len] — i.e., (n_mels, T) → ✓
+        # Do NOT transpose here (Amphion-4B transposes because its encoder handles (B,T,F)
+        # internally, but Qwen3-ASR's encoder expects (n_mels, T) directly).
+        max_frames = int(feat_lens.max().item())
+        encoded['input_features'] = (
+            augment_features(
+                audio_inputs['input_features'][..., :max_frames], feat_lens,
+                (getattr(inputs, 'extra_kwargs', None) or {}).get('audio_augmentation'),
+            ).contiguous()
+        )
+        encoded['feature_attention_mask'] = (
+            feature_attention_mask[..., :max_frames].contiguous()
+        )
         return encoded
 
     def _data_collator(
@@ -400,6 +398,15 @@ class Qwen3ASRTemplate(Template):
             if b.get('feature_attention_mask') is not None
         ]
         if input_features:
+            max_frames = max(features.shape[-1] for features in input_features)
+            input_features = [
+                F.pad(features, (0, max_frames - features.shape[-1]))
+                for features in input_features
+            ]
+            feature_attention_mask = [
+                F.pad(mask, (0, max_frames - mask.shape[-1]))
+                for mask in feature_attention_mask
+            ]
             res['input_features'] = torch.concat(input_features)
             res['feature_attention_mask'] = torch.concat(feature_attention_mask)
         return res
