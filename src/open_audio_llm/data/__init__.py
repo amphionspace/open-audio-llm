@@ -1,5 +1,7 @@
-"""Data boundary and dynamic dataset utilities."""
+"""Catalog-backed online training data."""
 
-from .sample_index import SampleIndexRecord
+from audio_data_contract import AudioExample, AudioRecord
 
-__all__ = ["SampleIndexRecord"]
+from .records import ResolvedAudioRecord
+
+__all__ = ["AudioExample", "AudioRecord", "ResolvedAudioRecord"]

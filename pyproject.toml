@@ -23,12 +23,11 @@ vllm-serving = [
   "soundfile==0.12.1",
   "tritonclient[http]==2.70.0",
 ]
-data = ["lhotse", "soundfile", "torchaudio"]
+data = ["audio-data-contract>=0.1.0", "PyYAML>=6", "lhotse", "soundfile", "torchaudio", "scipy"]
 dev = ["pytest", "ruff"]
 legacy-zipformer = []
 
 [project.scripts]
-open-audio-llm-build-index = "open_audio_llm.scripts.build_sample_index:main"
 open-audio-llm-convert-legacy = "open_audio_llm.scripts.convert_to_hf:main"
 
 [project.entry-points."vllm.general_plugins"]

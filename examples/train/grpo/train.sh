@@ -12,7 +12,10 @@ export MASTER_PORT="${MASTER_PORT:-29501}"
 export NCCL_DEBUG="${NCCL_DEBUG:-INFO}"
 
 MODEL="${MODEL:?Set MODEL to an Open Audio-LLM HF checkpoint}"
-DATASET="${DATASET:?Set DATASET to a ShareGPT GRPO JSONL file}"
+DATA_CONFIG="${DATA_CONFIG:?Set DATA_CONFIG to a Catalog training YAML config}"
+export AUDIO_DATA_CONTRACT_ROOT="${AUDIO_DATA_CONTRACT_ROOT:-$(dirname "$REPO_ROOT")/audio-data-contract}"
+export AUDIO_DATA_CATALOG="${AUDIO_DATA_CATALOG:-$AUDIO_DATA_CONTRACT_ROOT/catalog}"
+export AUDIO_DATA_ROOTS_FILE="${AUDIO_DATA_ROOTS_FILE:-$AUDIO_DATA_CONTRACT_ROOT/roots.json}"
 OUTPUT_DIR="${OUTPUT_DIR:-runs/open_audio_llm_grpo_smoke}"
 MAX_STEPS="${MAX_STEPS:-1}"
 
@@ -27,10 +30,13 @@ if [[ "${USE_VLLM:-false}" == "true" ]]; then
   )
 fi
 
-swift rlhf \
+python -m torch.distributed.run \
+  --nproc_per_node "$NPROC_PER_NODE" --master_port "$MASTER_PORT" \
+  --module open_audio_llm.integrations.ms_swift.train grpo \
   --rlhf_type grpo \
   --model "$MODEL" \
-  --dataset "$DATASET" \
+  --data_config "$DATA_CONFIG" \
+  --dataloader_num_workers "${DATALOADER_NUM_WORKERS:-0}" \
   --output_dir "$OUTPUT_DIR" \
   --external_plugins \
     "$REPO_ROOT/src/open_audio_llm/integrations/ms_swift/register_audio_llm.py" \

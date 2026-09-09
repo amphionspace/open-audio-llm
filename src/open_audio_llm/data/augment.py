@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
-from typing import Any, Callable
 
+import numpy as np
 
 
 @dataclass
@@ -36,17 +36,41 @@ class AugmentConfig:
             raise ValueError("SpecAugment mask widths must be non-negative")
 
 
-AugmentFn = Callable[[dict[str, Any], random.Random], dict[str, Any]]
+def augment_waveform(
+    audio, sampling_rate, rng, config, noise_loader=None, rir_loader=None
+):
+    """Apply waveform transforms in memory using only the sample's RNG."""
+    from fractions import Fraction
 
+    from scipy.signal import fftconvolve, resample_poly
 
-def apply_augmentations(
-    sample: dict[str, Any],
-    rng: random.Random,
-    hooks: list[AugmentFn] | None = None,
-) -> dict[str, Any]:
-    for hook in hooks or []:
-        sample = hook(sample, rng)
-    return sample
+    audio = np.asarray(audio, dtype=np.float32).copy()
+    if rng.random() < config.speed_prob:
+        factor = rng.choice(config.speed_factors)
+        ratio = Fraction(1 / factor).limit_denominator(1000)
+        audio = resample_poly(audio, ratio.numerator, ratio.denominator)
+    if rng.random() < config.rir_prob:
+        if rir_loader is None:
+            raise ValueError("rir_prob requires a Catalog RIR source")
+        impulse = rir_loader(rng, sampling_rate)
+        energy = np.sqrt(np.sum(impulse**2))
+        if energy > 0:
+            audio = fftconvolve(audio, impulse / energy)[: len(audio)]
+    if rng.random() < config.noise_prob:
+        if noise_loader is None:
+            raise ValueError("noise_prob requires a Catalog noise source")
+        noise = noise_loader(rng, sampling_rate)
+        if len(noise) < len(audio):
+            noise = np.tile(noise, (len(audio) + len(noise) - 1) // len(noise))
+        start = rng.randrange(len(noise) - len(audio) + 1)
+        noise = noise[start : start + len(audio)]
+        signal_power, noise_power = np.mean(audio**2), np.mean(noise**2)
+        if noise_power > 0:
+            snr = rng.uniform(*config.noise_snr_db)
+            audio = audio + noise * np.sqrt(
+                signal_power / (noise_power * 10 ** (snr / 10))
+            )
+    return np.asarray(audio, dtype=np.float32)
 
 
 def augment_features(features, lengths, policy):

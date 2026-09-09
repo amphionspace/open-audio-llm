@@ -1,0 +1,67 @@
+# SFT 多来源训练。参数说明见同目录 README.md。
+# 本配方每轮选取 1 万条英文、1 万条中文；中文重复两次。
+
+seed: 42
+sampling_rate: 16000
+
+# 数据来源：固定 Catalog 版本，按 epoch 轮换 samples 大小的分片。
+# min/max_duration 是单条原始主音频的秒数范围。
+train:
+  - dataset_id: librispeech
+    version: icefall-20260908
+    split: train
+    task: asr
+    min_duration: 0.5
+    max_duration: 25.0
+    samples: 10000
+    reps: 1
+    shard_rotation: true
+
+  - dataset_id: aishell
+    version: icefall-20260908
+    split: train
+    task: asr
+    min_duration: 0.5
+    max_duration: 25.0
+    samples: 10000
+    reps: 2
+    shard_rotation: true
+
+# 固定 dev 子集用于快速验证，不执行训练增强。
+validation:
+  - dataset_id: librispeech
+    version: icefall-20260908
+    split: dev
+    max_duration: 25.0
+    max_samples: 64
+
+# 每卡最多 60 秒、8 条；时长预算包含所有音频槽位及最慢变速。
+batching:
+  max_duration: 60.0
+  max_samples: 8
+  num_buckets: 30
+  buffer_size: 10000
+  drop_last: false
+
+# 热词任务使用的候选词采样策略。
+hotwords:
+  max_hotwords: 30
+  hotword_prompt_prob: 0.8
+  hotword_miss_prob: 0.0
+
+# 在线增强：启用变速和 SpecAugment，加噪与混响默认关闭。
+augmentation:
+  speed_prob: 0.9
+  speed_factors: [0.9, 1.0, 1.1]
+
+  spec_aug_prob: 0.5
+  time_mask_width: 30
+  frequency_mask_width: 16
+
+  noise_prob: 0.0
+  noise_snr_db: [5.0, 20.0]
+  rir_prob: 0.0
+
+# 开启加噪或混响前，填写对应的 Catalog 资源来源。
+noise_sources: []
+rir_sources: []

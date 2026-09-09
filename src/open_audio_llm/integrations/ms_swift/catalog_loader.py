@@ -1,0 +1,102 @@
+"""Connect Catalog sampling to ms-swift's SFT loop without double sharding."""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+from types import MethodType
+
+import torch
+from accelerate.data_loader import DataLoaderShard
+from transformers import TrainerCallback
+
+from open_audio_llm.data.catalog_sampler import CatalogBatchSampler
+
+
+class CatalogSamplerCallback(TrainerCallback):
+    def __init__(self, sampler):
+        self.sampler = sampler
+
+    def on_substep_end(self, args, state, control, **kwargs):
+        self.sampler.mark_consumed()
+
+    def on_step_end(self, args, state, control, **kwargs):
+        self.sampler.mark_consumed()
+
+    def on_save(self, args, state, control, **kwargs):
+        if state.is_world_process_zero:
+            path = (
+                Path(args.output_dir)
+                / f"checkpoint-{state.global_step}"
+                / "catalog_sampler.json"
+            )
+            path.write_text(json.dumps(self.sampler.state_dict(), indent=2) + "\n")
+
+
+def install_catalog_loader(trainer, resume_checkpoint=None):
+    """The sampler owns DDP batch partitioning and checkpoint data position."""
+    args = trainer.args
+    if args.max_steps <= 0:
+        raise ValueError(
+            "Catalog dynamic batching requires an explicit positive max_steps"
+        )
+    if trainer.template.sequence_parallel_size > 1:
+        raise ValueError(
+            "Catalog duration batching supports data parallel SFT, not sequence parallelism"
+        )
+    if args.deepspeed and args.deepspeed.get("tensor_parallel"):
+        raise ValueError(
+            "Catalog duration batching does not support tensor parallelism"
+        )
+    sampler = CatalogBatchSampler(
+        trainer.train_dataset,
+        batch_size=trainer._train_batch_size,
+        rank=args.process_index,
+        world_size=args.world_size,
+        shuffle=args.train_dataloader_shuffle,
+    )
+    if resume_checkpoint:
+        path = Path(resume_checkpoint) / "catalog_sampler.json"
+        if not path.is_file():
+            raise ValueError(
+                f"Sampler state missing: {path}; use the old model as initialization for a new run"
+            )
+        sampler.load_state_dict(json.loads(path.read_text()))
+    # The saved consumed cursor replaces HF's global_step-based batch skipping.
+    args.ignore_data_skip = True
+    trainer.catalog_sampler = sampler
+    trainer.add_callback(CatalogSamplerCallback(sampler))
+
+    def get_train_dataloader(self, skip_batches=0):
+        if skip_batches:
+            raise ValueError("Catalog sampler already restores the checkpoint cursor")
+        params = {
+            "batch_sampler": sampler,
+            "collate_fn": self.data_collator,
+            "num_workers": args.dataloader_num_workers,
+            "pin_memory": args.dataloader_pin_memory,
+            # Fresh workers after resume must not advance the model's CPU RNG.
+            "generator": torch.Generator().manual_seed(self.train_dataset.seed),
+        }
+        if args.dataloader_num_workers:
+            params.update(
+                persistent_workers=args.dataloader_persistent_workers,
+                prefetch_factor=args.dataloader_prefetch_factor,
+            )
+        return DataLoaderShard(
+            self.train_dataset, device=self.accelerator.device, **params
+        )
+
+    initial_values = trainer.set_initial_training_values
+
+    def set_initial_training_values(self, *positional, **kwargs):
+        values = initial_values(*positional, **kwargs)
+        # Epoch batch counts can change with shard rotation and bucketing.
+        # Stop at max_steps, never at an extrapolated first-epoch count.
+        return (sys.maxsize, *values[1:])
+
+    trainer.get_train_dataloader = MethodType(get_train_dataloader, trainer)
+    trainer.set_initial_training_values = MethodType(
+        set_initial_training_values, trainer
+    )
