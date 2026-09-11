@@ -151,7 +151,11 @@ class OnlineAudioDataset(Dataset):
         hotword_prompt_prob: float = 0.8,
         hotword_miss_prob: float = 0.0,
         training: bool = True,
+        message_format: str = "generic",
     ):
+        if message_format not in {"generic", "qwen3_asr"}:
+            raise ValueError(f"Unsupported message format: {message_format}")
+        self.message_format = message_format
         self.records = records
         self.training = training
         self.seed = seed
@@ -159,7 +163,10 @@ class OnlineAudioDataset(Dataset):
         self.max_hotwords = max_hotwords
         self.hotword_prompt_prob = hotword_prompt_prob
         self.hotword_miss_prob = hotword_miss_prob
-        self.hotword_pool = build_hotword_pool(self.records)
+        self.hotword_pool = (
+            records.hotword_pool if hasattr(records, "hotword_pool")
+            else build_hotword_pool(self.records)
+        )
 
     def set_epoch(self, epoch: int) -> None:
         self._epoch.fill_(int(epoch) if self.training else 0)
@@ -209,4 +216,12 @@ class OnlineAudioDataset(Dataset):
         )
         sample["duration"] = resolved.duration
         sample["dataset_id"] = resolved.dataset_id
+        if self.message_format == "qwen3_asr":
+            from .qwen3_asr import concat_ts_audio, native_messages
+
+            sample["messages"] = native_messages(record, hotwords)
+            sample["solution"] = sample["messages"][-1]["content"]
+            if record.task == "ts_asr":
+                sample["audios"] = [concat_ts_audio(sample["audios"], self.sampling_rate)]
+                sample["audio_slot_count"] = 1
         return sample

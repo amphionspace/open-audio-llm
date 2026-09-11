@@ -13,6 +13,7 @@ class ResolvedAudioRecord:
     """Runtime view of a portable AudioRecord; audio is resolved on demand."""
 
     record: AudioRecord
+    cuts: dict[str, Any] | None = None
 
     @property
     def dataset_id(self) -> str:

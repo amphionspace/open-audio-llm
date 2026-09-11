@@ -56,6 +56,8 @@ def install_catalog_loader(trainer, resume_checkpoint=None):
         world_size=args.world_size,
         shuffle=args.train_dataloader_shuffle,
     )
+    if (sampler.batch_merge * args.gradient_accumulation_steps) % sampler.merge_window:
+        raise ValueError("batching.merge_window must fit complete gradient-accumulation updates")
     if resume_checkpoint:
         path = Path(resume_checkpoint) / "catalog_sampler.json"
         if not path.is_file():
@@ -67,13 +69,19 @@ def install_catalog_loader(trainer, resume_checkpoint=None):
     args.ignore_data_skip = True
     trainer.catalog_sampler = sampler
     trainer.add_callback(CatalogSamplerCallback(sampler))
+    collator = trainer.data_collator
+    if getattr(trainer.train_dataset, "collect_metrics", False):
+        from .performance import PerformanceCollator, install_performance_logging
+
+        collator = PerformanceCollator(collator)
+        trainer.catalog_performance = install_performance_logging(trainer)
 
     def get_train_dataloader(self, skip_batches=0):
         if skip_batches:
             raise ValueError("Catalog sampler already restores the checkpoint cursor")
         params = {
             "batch_sampler": sampler,
-            "collate_fn": self.data_collator,
+            "collate_fn": collator,
             "num_workers": args.dataloader_num_workers,
             "pin_memory": args.dataloader_pin_memory,
             # Fresh workers after resume must not advance the model's CPU RNG.

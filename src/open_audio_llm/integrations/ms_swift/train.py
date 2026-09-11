@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import sys
+import time
+import logging
+import torch
 from dataclasses import dataclass
 
 from swift.arguments import RLHFArguments, SftArguments
@@ -50,6 +53,9 @@ class CatalogArgumentsMixin:
 @dataclass
 class CatalogSftArguments(CatalogArgumentsMixin, SftArguments):
     data_config: str | None = None
+    performance_logging: bool = True
+    audio_encoder_parallel: bool = False
+    retention_teacher: str | None = None
 
 
 @dataclass
@@ -67,12 +73,20 @@ class DatasetEpochCallback(TrainerCallback):
 
 class CatalogTrainingMixin:
     def _prepare_dataset(self):
+        started = time.perf_counter()
         grpo = getattr(self.args, "rlhf_type", None) == "grpo"
         if hasattr(self.args, "rlhf_type") and not grpo:
             raise ValueError("Catalog RLHF entry currently supports GRPO")
         config = self.args._catalog_config
+        message_format = (
+            "qwen3_asr"
+            if getattr(self.args, "model_type", None) == "amphion_asr_1.7b"
+            else "generic"
+        )
         train = CatalogSwiftDataset(
-            config, encode=None if grpo else self.template.encode, grpo=grpo
+            config, encode=None if grpo else self.template.encode, grpo=grpo,
+            message_format=message_format,
+            collect_metrics=getattr(self.args, "performance_logging", False),
         )
         validation = None
         if config.get("validation"):
@@ -82,14 +96,20 @@ class CatalogTrainingMixin:
                 training=False,
                 encode=None if raw_eval else self.template.encode,
                 grpo=grpo,
+                message_format=message_format,
             )
+        logging.getLogger(__name__).warning(
+            "Catalog metadata ready: train=%d validation=%d load_seconds=%.3f",
+            len(train), len(validation) if validation is not None else 0,
+            time.perf_counter() - started,
+        )
         return train, validation
 
     def train(self, trainer):
         original_create_optimizer = None
         if getattr(self.args, "rlhf_type", None) == "grpo":
             config = self.args._catalog_config
-            if config.get("batching") or any(
+            if config.get("batching") or config.get("replay") is not None or any(
                 any(
                     key in source
                     for key in ("weight", "samples", "reps", "shard_rotation")
@@ -116,12 +136,26 @@ class CatalogTrainingMixin:
         else:
             from .catalog_loader import install_catalog_loader
 
+            if self.args._catalog_config.get("objective", {}).get("sample_mean"):
+                from .retention import install_retention_objective
+
+                install_retention_objective(trainer, self.args)
             install_catalog_loader(trainer, self._get_resume_checkpoint(trainer))
+        restore_audio = None
+        if getattr(self.args, "audio_encoder_parallel", False):
+            from .audio_batching import enable_parallel_audio
+
+            restore_audio = enable_parallel_audio(trainer.model)
         try:
             return super().train(trainer)
         finally:
             if original_create_optimizer is not None:
                 trainer.create_optimizer = original_create_optimizer
+            if restore_audio is not None:
+                restore_audio()
+            performance = getattr(trainer, "catalog_performance", None)
+            if performance is not None:
+                performance.close()
 
 
 class CatalogSft(CatalogTrainingMixin, SwiftSft):
@@ -139,7 +173,11 @@ def main():
         )
     mode = sys.argv[1]
     cls = CatalogSft if mode == "sft" else CatalogGRPO
-    cls(sys.argv[2:]).main()
+    try:
+        cls(sys.argv[2:]).main()
+    finally:
+        if torch.distributed.is_initialized():
+            torch.distributed.destroy_process_group()
 
 
 if __name__ == "__main__":

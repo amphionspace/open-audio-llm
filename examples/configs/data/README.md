@@ -3,6 +3,9 @@
 [catalog_mixed.yaml](catalog_mixed.yaml) 按“数据来源 → 验证 → 组批 → 增强”阅读。
 YAML 保留配方意图和关键约束，具体参数在这里查询；重复来源共用相同定义。
 
+原生 Qwen3-ASR 热词训练使用 [qwen3_asr_hotwords.yaml](qwen3_asr_hotwords.yaml)，
+启动与评估方法见 [原生模型配方](../../train/qwen3-asr/README.md)。
+
 ## 基础设置
 
 | 参数 | 含义 |
@@ -34,6 +37,24 @@ YAML 保留配方意图和关键约束，具体参数在这里查询；重复来
 
 混合示例使用 samples/reps。改用显式 weight 时，给每个训练来源设置 weight，
 并删除 samples/reps/shard_rotation；这两套混合配置不能同时使用。
+
+### 固定配额回放
+
+TS-ASR 配方见 [qwen3_asr_ts_replay.yaml](qwen3_asr_ts_replay.yaml) 与
+[启动和验收说明](../../train/qwen3-asr/TS_ASR.md)。配置顶层 `replay` 后，
+`weight` 改为每个窗口的样本配额权重；未启用 replay 的配方保持原来的有限交织语义。
+
+```yaml
+replay:
+  epoch_samples: 20000
+  window_samples: 200
+```
+
+两个字段均为正整数，epoch_samples 必须是 window_samples 的整数倍。每个来源都要设置
+正数 weight，不能与 samples/reps/shard_rotation 混用。比例按最大余数法取整；
+若窗口太小导致某来源配额为零则报错。来源内部随机无放回遍历，跨 epoch 延续位置，
+遍历完才重新打乱回放。窗口控制全局样本数，不控制 token 或音频时长比例。
+replay 模式使用 window_samples 作为分桶窗口，覆盖 batching.buffer_size。
 
 ## 组批
 

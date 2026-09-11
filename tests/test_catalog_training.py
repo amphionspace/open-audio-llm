@@ -32,6 +32,51 @@ from open_audio_llm.data.augment import (
 from open_audio_llm.data.catalog_dataset import CatalogSwiftDataset, read_data_config
 
 
+@pytest.mark.parametrize("cached", [False, True])
+def test_native_ts_reads_registered_audio_index_and_budgets_concat(catalog_config, tmp_path, cached):
+    import gzip
+    from dataclasses import replace
+
+    from open_audio_llm.data.catalog_sampler import CatalogBatchSampler
+
+    row = {"cut_id": "speech", "root_alias": "data", "relative_path": "speech.wav",
+           "sample_rate": 16000, "channels": 1, "num_frames": 16000, "duration": 1.0}
+    with gzip.open(tmp_path / "index.jsonl.gz", "wt") as stream:
+        stream.write(json.dumps(row) + "\n")
+    record = AudioRecord("ts", "ts_asr", tuple(
+        AudioSlot(name, AudioRef("ts", "1", "train", "speech", start=0.25))
+        for name in ("enrollment", "mixture")
+    ), "hello", language="en")
+    write_records([record, replace(record, id="negative", target="")], tmp_path / "ts.jsonl.gz")
+    spec = DatasetSpec(
+        dataset_id="ts", version="1", languages=("en",), tasks=("ts_asr",),
+        artifacts=(ArtifactRef("records", "audio-records", "data", "ts.jsonl.gz"),
+                   ArtifactRef("index", "audio-index", "data", "index.jsonl.gz")),
+        splits={"train": {"records_artifacts": ["records"], "audio_index_artifact": "index"}},
+    )
+    with Path(catalog_config["catalog"]).open("a") as stream:
+        stream.write("\n" + json.dumps(spec.to_dict()))
+    catalog_config.update(
+        train=[{"dataset_id": "ts", "version": "1", "split": "train", "min_duration": 0.5}],
+        augmentation={}, batching={"max_duration": 7},
+    )
+    if cached:
+        catalog_config["metadata_cache"] = str(tmp_path / "cache")
+    dataset = CatalogSwiftDataset(catalog_config, message_format="qwen3_asr", collect_metrics=True)
+    assert len(dataset) == 2  # Missing inline durations must not filter out TS records.
+    sampler = CatalogBatchSampler(dataset)
+    assert list(sampler.slots) == [1, 1]
+    assert sampler.durations == pytest.approx([6.75, 6.75], abs=0.001)
+    sample = dataset[0]
+    assert sample["audio_slot_count"] == 1 and len(sample["audios"]) == 1
+    assert sample["duration"] == 6.75
+    assert sample["_performance"]["audio_seconds"] == 6.75
+    audio, _ = sf.read(BytesIO(sample["audios"][0]))
+    assert np.count_nonzero(audio[3 * 16000:6 * 16000]) == 0
+    assert dataset[1]["solution"] == "language None<asr_text>"
+    assert len(dataset.resolver._audio_indexes) == 1
+
+
 @pytest.fixture
 def catalog_config(tmp_path):
     sr = 16000
@@ -174,10 +219,13 @@ def test_persistent_workers_receive_epoch(catalog_config):
     try:
         first_epoch = list(loader)
         first = first_epoch[0]["audios"]
-        assert first == dataset[0]["audios"]
+        np.testing.assert_array_equal(sf.read(BytesIO(first[0]))[0],
+                                      sf.read(BytesIO(dataset[0]["audios"][0]))[0])
         dataset.set_epoch(2)
         second_epoch = list(loader)
-        assert second_epoch[0]["audios"] == dataset[0]["audios"] != first
+        second = sf.read(BytesIO(second_epoch[0]["audios"][0]))[0]
+        np.testing.assert_array_equal(second, sf.read(BytesIO(dataset[0]["audios"][0]))[0])
+        assert not np.array_equal(second, sf.read(BytesIO(first[0]))[0])
     finally:
         loader._iterator._shutdown_workers()
 
@@ -357,6 +405,7 @@ def test_catalog_loader_does_not_advance_model_rng(catalog_config):
             process_index=0,
             world_size=1,
             train_dataloader_shuffle=True,
+            gradient_accumulation_steps=1,
             dataloader_num_workers=0,
             dataloader_pin_memory=False,
         ),
@@ -498,3 +547,119 @@ def test_catalog_to_real_template_and_model_backward(catalog_config):
         p.grad is not None and torch.isfinite(p.grad).all()
         for p in model.connector.parameters()
     )
+
+
+def test_native_qwen_pipeline_renders_before_encoding(catalog_config):
+    pytest.importorskip("qwen_asr")
+    from open_audio_llm.integrations.ms_swift.train import CatalogTrainingMixin
+
+    pipeline = CatalogTrainingMixin()
+    pipeline.args = SimpleNamespace(
+        _catalog_config=catalog_config, model_type="amphion_asr_1.7b"
+    )
+    pipeline.template = SimpleNamespace(encode=lambda row: row)
+    train, validation = pipeline._prepare_dataset()
+    for dataset in (train, validation):
+        row = dataset[0]
+        assert row["messages"][1] == {"role": "user", "content": "<audio>"}
+        assert row["messages"][-1]["content"] == "language English<asr_text>hello"
+        assert row["solution"] == row["messages"][-1]["content"]
+
+
+@pytest.mark.parametrize("cached,incomplete", [(False, False), (True, False), (True, True)])
+def test_hotword_eval_uses_dataset_audio_and_checks_prediction_count(
+    catalog_config, tmp_path, monkeypatch, cached, incomplete
+):
+    qwen_asr = pytest.importorskip("qwen_asr")
+    from open_audio_llm.eval.qwen3_asr import main
+
+    config = dict(catalog_config, evaluation=catalog_config["train"])
+    if cached:
+        config["metadata_cache"] = str(tmp_path / "cache")
+    path = tmp_path / "eval.json"
+    path.write_text(json.dumps(config))
+    output = tmp_path / "evaluation"
+    model = torch.nn.Module()
+    model.generation_config = SimpleNamespace(use_cache=False, do_sample=True)
+    model.thinker = torch.nn.Module()
+    model.thinker.generation_config = SimpleNamespace(use_cache=False, do_sample=True)
+    model.thinker.model = SimpleNamespace(config=SimpleNamespace(use_cache=False))
+    original, rate = sf.read(tmp_path / "speech.wav", dtype="float32")
+    expected = [original[:4000], original[4800:8800]]
+    calls = []
+
+    def transcribe(audio, context):
+        assert len(audio) == len(context) == 2
+        for waveform, sampling_rate in audio:
+            assert sampling_rate == rate
+            assert waveform.dtype == np.float32
+            assert any(np.allclose(waveform, segment) for segment in expected)
+        assert not model.training and not model.thinker.training
+        assert model.thinker.model.config.use_cache
+        for module in (model, model.thinker):
+            assert module.generation_config.use_cache
+            assert not module.generation_config.do_sample
+        calls.append(context)
+        return [SimpleNamespace(text="hello", language="English")] * (1 if incomplete else 2)
+
+    monkeypatch.setattr(qwen_asr.Qwen3ASRModel, "from_pretrained", lambda *a, **kw: SimpleNamespace(
+        model=model, transcribe=transcribe,
+    ))
+    monkeypatch.setattr("sys.argv", [
+        "qwen3_asr", "--model", "unused", "--data_config", str(path),
+        "--output_dir", str(output), "--samples_per_source", "2", "--batch_size", "2",
+    ])
+    if incomplete:
+        with pytest.raises(RuntimeError, match="incomplete batch"):
+            main()
+        assert not (output / "summary.json").exists()
+    else:
+        main()
+        summary = json.loads((output / "summary.json").read_text())
+        assert len(calls) == 2
+        for condition in ("no_hotwords", "hotwords"):
+            assert summary[f"speech/{condition}"]["utterances"] == 2
+            assert summary[f"speech/{condition}"]["error_rate"] == 0
+
+
+def test_performance_logging_preserves_online_sample(catalog_config):
+    plain = CatalogSwiftDataset(catalog_config)
+    measured = CatalogSwiftDataset(catalog_config, collect_metrics=True)
+    expected = plain[(0, 0, 5)]
+    actual = measured[(0, 0, 5)]
+    metrics = actual.pop('_performance')
+    assert actual == expected
+    assert metrics['audio_seconds'] == sf.info(BytesIO(expected['audios'][0])).duration
+    assert metrics['prepare_s'] >= metrics['decode_s']
+    assert metrics['prepare_cpu_s'] >= 0
+
+
+def test_indexed_metadata_preserves_audio_sampling_and_resume(catalog_config, tmp_path, monkeypatch):
+    import pickle
+
+    from open_audio_llm.data.catalog_sampler import CatalogBatchSampler
+
+    original = CatalogSwiftDataset(catalog_config, message_format='qwen3_asr')
+    old = CatalogBatchSampler(original)
+    old_batches = list(old)
+    old.mark_consumed()
+    state = old.state_dict()
+    catalog_config = {**catalog_config, 'metadata_cache': str(tmp_path / 'cache')}
+    indexed = CatalogSwiftDataset(catalog_config, message_format='qwen3_asr')
+    new = CatalogBatchSampler(indexed)
+    assert new.signature == old.signature
+    assert list(new) == old_batches
+    new.load_state_dict(state)
+    assert list(new) == old_batches[1:]
+    np.testing.assert_array_equal(sf.read(BytesIO(indexed[0]['audios'][0]))[0],
+                                  sf.read(BytesIO(original[0]['audios'][0]))[0])
+    assert pickle.loads(pickle.dumps(indexed.records))[1].record == original.records[1].record
+    monkeypatch.setattr(CatalogSwiftDataset, '_source_records', lambda *a: pytest.fail('rebuilt warm index'))
+    warm = CatalogSwiftDataset(catalog_config, message_format='qwen3_asr')
+    np.testing.assert_array_equal(sf.read(BytesIO(warm[0]['audios'][0]))[0],
+                                  sf.read(BytesIO(original[0]['audios'][0]))[0])
+    assert not warm._audio_cuts
+    # Changing replay quotas must not rescan the audio manifests.
+    catalog_config['train'] = [{**source, 'weight': 3} for source in catalog_config['train']]
+    reweighted = CatalogSwiftDataset(catalog_config, message_format='qwen3_asr')
+    assert reweighted.records[0].record == indexed.records[0].record
