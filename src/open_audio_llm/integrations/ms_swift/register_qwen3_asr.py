@@ -254,7 +254,6 @@ class Qwen3ASRLoader(ModelLoader):
         return super().get_config(model_dir)
 
     def get_model(self, model_dir: str, *args, **kwargs) -> PreTrainedModel:
-        import sys
         from pathlib import Path
         from transformers import AutoModel
 
