@@ -51,6 +51,23 @@ class AudioLLMTemplate(Template):
 
     placeholder_tokens = ["<speech>"]
 
+    def generate(self, model, *args, **kwargs):
+        output = super().generate(model, *args, **kwargs)
+        if kwargs.get("input_features") is None or kwargs.get("feature_lens") is None:
+            return output
+        # AudioLLM returns only completions when generating from audio embeddings.
+        # Restore the text prefix expected by ms-swift's get_generate_ids.
+        sequences = output if isinstance(output, torch.Tensor) else output.sequences
+        input_ids = kwargs["input_ids"]
+        input_ids = input_ids.repeat_interleave(
+            sequences.shape[0] // input_ids.shape[0], dim=0
+        )
+        sequences = torch.cat([input_ids, sequences], dim=-1)
+        if isinstance(output, torch.Tensor):
+            return sequences
+        output.sequences = sequences
+        return output
+
     def init_env_args(self) -> None:
         if hasattr(super(), "init_env_args"):
             super().init_env_args()
