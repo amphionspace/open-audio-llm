@@ -86,6 +86,7 @@ class CatalogTrainingMixin:
         return train, validation
 
     def train(self, trainer):
+        original_create_optimizer = None
         if getattr(self.args, "rlhf_type", None) == "grpo":
             config = self.args._catalog_config
             if config.get("batching") or any(
@@ -99,11 +100,28 @@ class CatalogTrainingMixin:
                     "Catalog mux/duration batching is SFT-only; GRPO uses its generation-group sampler"
                 )
             trainer.add_callback(DatasetEpochCallback(trainer.train_dataset))
+            if trainer.args.deepspeed and trainer.args.optimizer in (None, "default"):
+                # DeepSpeed removes empty LoRA parameter groups. Do this before
+                # each scheduler creation, including DeepSpeed re-initialization.
+                original_create_optimizer = trainer.create_optimizer
+
+                def create_optimizer():
+                    optimizer = original_create_optimizer()
+                    optimizer.param_groups[:] = [
+                        group for group in optimizer.param_groups if group["params"]
+                    ]
+                    return optimizer
+
+                trainer.create_optimizer = create_optimizer
         else:
             from .catalog_loader import install_catalog_loader
 
             install_catalog_loader(trainer, self._get_resume_checkpoint(trainer))
-        return super().train(trainer)
+        try:
+            return super().train(trainer)
+        finally:
+            if original_create_optimizer is not None:
+                trainer.create_optimizer = original_create_optimizer
 
 
 class CatalogSft(CatalogTrainingMixin, SwiftSft):
