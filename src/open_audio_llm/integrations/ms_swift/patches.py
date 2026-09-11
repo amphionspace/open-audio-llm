@@ -24,6 +24,7 @@ GRPO_NON_MODEL_KEYS = frozenset(
         "task",
         "dataset_id",
         "duration",
+        "audio_slot_count",
     }
 )
 

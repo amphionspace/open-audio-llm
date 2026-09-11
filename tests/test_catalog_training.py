@@ -190,6 +190,42 @@ def test_grpo_reuses_group_audio_and_keeps_reference_out_of_prompt(catalog_confi
     assert "hello" in group[0]["solution"]
 
 
+def test_grpo_deepspeed_scheduler_keeps_parameter_groups_aligned():
+    from open_audio_llm.integrations.ms_swift.train import CatalogTrainingMixin
+
+    parameter = torch.nn.Parameter(torch.ones(1))
+
+    def create_optimizer():
+        return torch.optim.AdamW([{"params": [parameter]}, {"params": []}], lr=0.01)
+
+    class ParentPipeline:
+        def train(self, trainer):
+            optimizer = trainer.create_optimizer()
+            scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda step: 0.5)
+            # DeepSpeed drops empty groups when it wraps the existing optimizer.
+            optimizer.param_groups[:] = [g for g in optimizer.param_groups if g["params"]]
+            parameter.sum().backward()
+            optimizer.step()
+            scheduler.step()
+            assert len(scheduler.base_lrs) == len(optimizer.param_groups) == 1
+            assert optimizer.param_groups[0]["lr"] == 0.005
+            assert parameter.item() < 1
+
+    class Pipeline(CatalogTrainingMixin, ParentPipeline):
+        pass
+
+    pipeline = Pipeline()
+    pipeline.args = SimpleNamespace(rlhf_type="grpo", _catalog_config={"train": [{}]})
+    trainer = SimpleNamespace(
+        args=SimpleNamespace(deepspeed="zero2", optimizer=None),
+        train_dataset=[],
+        add_callback=lambda callback: None,
+        create_optimizer=create_optimizer,
+    )
+    pipeline.train(trainer)
+    assert trainer.create_optimizer is create_optimizer
+
+
 def test_spec_augment_preserves_lengths_and_padding():
     features = torch.ones(2, 8, 20)
     lengths = torch.tensor([10, 20])
