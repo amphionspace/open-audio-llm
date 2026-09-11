@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import os
-from dataclasses import asdict
+import time
+import hashlib
+from dataclasses import asdict, replace
 from fractions import Fraction
 from io import BytesIO
 from pathlib import Path
@@ -22,6 +24,28 @@ from .augment import AugmentConfig, augment_waveform
 from .catalog_resolver import LhotseCatalogAudioResolver
 from .online_dataset import TASK_TEMPLATES, OnlineAudioDataset
 from .records import ResolvedAudioRecord
+
+
+def in_ts_partition(record, selection):
+    """Keep all targets and 2/3-speaker derivatives of a seed utterance together."""
+    if record.task != "ts_asr":
+        raise ValueError("TS holdout applies only to ts_asr records")
+    source_id = record.metadata["source_record_id"]
+    mixture_id = source_id.split("|")[-2]
+    dataset_id = record.audio_slots[-1].ref.dataset_id
+    if dataset_id == "aishellmix":
+        family = "_".join(mixture_id.split("_")[:2])
+    elif dataset_id == "librimix":
+        family = mixture_id.split("_")[0]
+    else:
+        raise ValueError(f"Unknown TS mixture family format: {dataset_id}")
+    modulus = selection["modulus"]
+    part = selection["part"]
+    if type(modulus) is not int or modulus < 2 or part not in {"train", "dev"}:
+        raise ValueError("TS holdout requires modulus >= 2 and part train/dev")
+    key = f"{selection['seed']}:{dataset_id}:{family}".encode()
+    held_out = int.from_bytes(hashlib.sha256(key).digest()[:8], "big") % modulus == 0
+    return held_out if part == "dev" else not held_out
 
 
 def read_data_config(path):
@@ -59,18 +83,22 @@ def load_mono(cut, sampling_rate):
 
 
 class CatalogSwiftDataset(OnlineAudioDataset):
-    """Keep sample facts in memory; decode fresh audio on each __getitem__."""
+    """Read facts from memory or a shared index; decode audio on each __getitem__."""
 
-    def __init__(self, config, *, training=True, encode=None, grpo=False):
+    def __init__(self, config, *, training=True, encode=None, grpo=False, message_format="generic", collect_metrics=False):
+        self.collect_metrics = collect_metrics
+        self.metadata_cache = os.environ.get("AUDIO_DATA_METADATA_CACHE") or config.get("metadata_cache")
         self.resolver = LhotseCatalogAudioResolver(
             config["catalog"],
             config["roots"],
+            index_cache=self.metadata_cache,
         )
         self.sampling_rate = int(config.get("sampling_rate", 16000))
         self.augmentation = AugmentConfig(**config.get("augmentation", {}))
         self.encode = encode
         self.grpo = grpo
         self.training = training
+        self.message_format = message_format
         self._audio_cuts = {}
         self.config = config
         self.source_ranges = []
@@ -96,11 +124,17 @@ class CatalogSwiftDataset(OnlineAudioDataset):
 
                 if not math.isfinite(source["weight"]) or source["weight"] <= 0:
                     raise ValueError("weight must be positive and finite")
-            start = len(records)
-            records.extend(self._source_records(source))
-            if len(records) == start:
-                raise ValueError(f"Empty source: {source}")
-            self.source_ranges.append(range(start, len(records)))
+            if not self.metadata_cache:
+                start = len(records)
+                records.extend(self._source_records(source))
+                if len(records) == start:
+                    raise ValueError(f"Empty source: {source}")
+                self.source_ranges.append(range(start, len(records)))
+        if self.metadata_cache:
+            from .catalog_cache import CatalogRecordIndex
+
+            records = CatalogRecordIndex(self, self.metadata_cache)
+            self.source_ranges = [range(start, end) for start, end in zip([0, *records.ends[:-1]], records.ends)]
         if not records:
             raise ValueError(
                 "Catalog selection contains no training/validation samples"
@@ -122,6 +156,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         super().__init__(
             records=records,
             training=training,
+            message_format=message_format,
             seed=int(config.get("seed", 42)),
             **config.get("hotwords", {}),
         )
@@ -139,21 +174,33 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         spec = self.resolver.catalog.get(source["dataset_id"], source["version"])
         split_name = source["split"]
         split = spec.splits[split_name]
-        if "records_artifact" in split:
-            path = resolve_artifact(
-                self.resolver.catalog,
-                spec.dataset_id,
-                spec.version,
-                split["records_artifact"],
-                self.resolver.roots,
+        if "records_artifact" in split or "records_artifacts" in split:
+            names = split.get("records_artifacts") or [split["records_artifact"]]
+            rows = (
+                ResolvedAudioRecord(record)
+                for name in names
+                for record in load_records(resolve_artifact(
+                    self.resolver.catalog, spec.dataset_id, spec.version,
+                    name, self.resolver.roots,
+                ))
             )
-            rows = (ResolvedAudioRecord(record) for record in load_records(path))
         else:
             cuts = self.resolver.iter_cuts(spec.dataset_id, spec.version, split_name)
             rows = self._cut_records(cuts, source, spec)
         count = 0
         for row in rows:
-            duration = row.duration or 0
+            if source.get("ts_holdout") and not in_ts_partition(row.record, source["ts_holdout"]):
+                continue
+            # Portable TS records omit durations: read indexed metadata, not audio.
+            if row.duration is None:
+                slots = tuple(
+                    replace(slot, ref=replace(
+                        slot.ref, duration=self.resolver.get_duration(slot.ref),
+                    )) if slot.ref.duration is None else slot
+                    for slot in row.record.audio_slots
+                )
+                row = ResolvedAudioRecord(replace(row.record, audio_slots=slots))
+            duration = row.duration
             if duration < source.get("min_duration", 0) or duration > source.get(
                 "max_duration", float("inf")
             ):
@@ -182,7 +229,8 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                 duration=cut.duration,
                 purpose=name,
             )
-            self._audio_cuts[(ref.dataset_id, ref.version, ref.split, ref.cut_id)] = cut
+            if not self.metadata_cache:
+                self._audio_cuts[(ref.dataset_id, ref.version, ref.split, ref.cut_id)] = cut
             slots = []
             if custom.get("enrollment_cut_id"):
                 slots.append(
@@ -214,7 +262,8 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                         "labels",
                         {k: v for k, v in custom.items() if k.endswith("_label")},
                     ),
-                )
+                ),
+                cuts={name: cut} if self.metadata_cache else None,
             )
 
     def _resolve_audio(self, resolved, rng):
@@ -223,14 +272,18 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         result = {}
         for slot in resolved.record.audio_slots:
             ref = slot.ref
-            cut = self._audio_cuts.get(
+            cut = (resolved.cuts or {}).get(slot.name) or self._audio_cuts.get(
                 (ref.dataset_id, ref.version, ref.split, ref.cut_id)
             )
             if cut is None:
                 cut = self.resolver.get_cut(ref)
             elif ref.start is not None or ref.duration is not None:
                 cut = cut.truncate(offset=ref.start or 0.0, duration=ref.duration)
+            started = time.perf_counter()
             audio = load_mono(cut, self.sampling_rate)
+            if self.collect_metrics:
+                self._sample_metrics["decode_s"] += time.perf_counter() - started
+            started = time.perf_counter()
             if self.training:
                 audio = augment_waveform(
                     audio,
@@ -240,6 +293,9 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                     noise_loader=lambda r, sr: load_mono(r.choice(self.noise_cuts), sr),
                     rir_loader=lambda r, sr: load_mono(r.choice(self.rir_cuts), sr),
                 )
+            if self.collect_metrics:
+                self._sample_metrics["wave_augment_s"] += time.perf_counter() - started
+                self._sample_metrics["audio_seconds"] += len(audio) / self.sampling_rate
             # ms-swift accepts WAV bytes on both training and rollout paths.
             # FLOAT preserves augmentation values without PCM clipping/quantization.
             buffer = BytesIO()
@@ -250,8 +306,14 @@ class CatalogSwiftDataset(OnlineAudioDataset):
     def __getitem__(self, idx):
         import soundfile as sf
 
+        started = time.perf_counter()
+        cpu_started = time.process_time()
+        if self.collect_metrics:
+            self._sample_metrics = dict(decode_s=0.0, wave_augment_s=0.0, audio_seconds=0.0)
         sample = super().__getitem__(idx)
         sample["duration"] = sf.info(BytesIO(sample["audios"][-1])).duration
+        if self.collect_metrics and self.message_format == "qwen3_asr" and sample["task"] == "ts_asr":
+            self._sample_metrics["audio_seconds"] = sample["duration"]
         if self.grpo:
             sample["messages"] = [
                 m for m in sample["messages"] if m["role"] != "assistant"
@@ -261,4 +323,23 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                 "seed": f"{self.seed}:{idx if isinstance(idx, tuple) else (self.epoch, idx)}:features",
                 "config": asdict(self.augmentation),
             }
-        return self.encode(sample) if self.encode is not None else sample
+        encode_started = time.perf_counter()
+        result = self.encode(sample) if self.encode is not None else sample
+        if self.config.get("objective", {}).get("sample_mean"):
+            # Metadata is consumed by the training loss, never model.forward.
+            if sample["task"] == "asr":
+                result["catalog_task"] = 0
+            elif sample["task"] == "ts_asr":
+                target = sample["solution"].split("<asr_text>", 1)[1]
+                result["catalog_task"] = 1 if target.strip() else 2
+            else:
+                raise ValueError("Replay objective supports ordinary ASR and TS-ASR")
+        if self.collect_metrics:
+            result["_performance"] = {
+                **self._sample_metrics,
+                "encode_s": time.perf_counter() - encode_started,
+                "prepare_s": time.perf_counter() - started,
+                "prepare_cpu_s": time.process_time() - cpu_started,
+                "dataset_id": sample["dataset_id"],
+            }
+        return result

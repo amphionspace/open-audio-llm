@@ -126,3 +126,93 @@ def test_duration_budget_accounts_for_speed_and_all_slots():
     ds.augmentation = AugmentConfig(speed_prob=1, speed_factors=[0.5])
     with pytest.raises(ValueError, match="exceeds"):
         CatalogBatchSampler(ds)
+
+
+def test_replay_keeps_window_quotas_after_small_source_exhausts():
+    # Vastly different corpus sizes must not change the 50/20/30 mix.
+    ds = dataset([{"weight": 50}, {"weight": 20}, {"weight": 30}], [3, 80, 120],
+                 batching={"num_buckets": 4, "max_samples": 3},
+                 durations=[1.0] * 3 + [2.0] * 80 + [8.0] * 120)
+    ds.config["replay"] = {"epoch_samples": 200, "window_samples": 20}
+    ids = indexes(CatalogBatchSampler(ds))
+    assert len(ids) == 200
+    for start in range(0, len(ids), 20):
+        groups = Counter(0 if i < 3 else 1 if i < 83 else 2 for i in ids[start:start + 20])
+        assert groups == {0: 10, 1: 4, 2: 6}
+
+
+def test_replay_covers_source_before_repeating_across_epochs_and_resumes():
+    ds = dataset([{"weight": 1}], [10])
+    ds.config["replay"] = {"epoch_samples": 4, "window_samples": 2}
+    sampler = CatalogBatchSampler(ds)
+    seen = []
+    for epoch in range(3):
+        sampler.set_epoch(epoch)
+        seen.extend(indexes(sampler))
+    assert set(seen[:8]) < set(range(10))
+    assert len(set(seen[:10])) == 10
+    assert seen[:4] != list(range(4))  # Random full-source selection, not a prefix.
+    plan = list(sampler)
+    sampler.mark_consumed()
+    restored = CatalogBatchSampler(ds)
+    restored.load_state_dict(sampler.state_dict())
+    restored.set_epoch(0)
+    assert list(restored) == plan[1:]
+    assert len({key for batch in plan for key in batch}) == 4
+
+
+def test_replay_ddp_reconstructs_global_plan():
+    ds = dataset([{"weight": 1}, {"weight": 1}], [2, 18])
+    ds.config["replay"] = {"epoch_samples": 20, "window_samples": 4}
+    ranks = [list(CatalogBatchSampler(ds, rank=r, world_size=2)) for r in range(2)]
+    assert [batch for pair in zip(*ranks) for batch in pair] == list(CatalogBatchSampler(ds))
+
+
+@pytest.mark.parametrize("replay,weights,match", [
+    ({"epoch_samples": 5, "window_samples": 2}, [1, 1], "divisible"),
+    ({"epoch_samples": 10, "window_samples": 2}, [1000, 1], "every source"),
+    ({"epoch_samples": 10, "window_samples": 2}, [0, 1], "positive weight"),
+])
+def test_replay_rejects_unrepresentable_quotas(replay, weights, match):
+    ds = dataset([{"weight": w} for w in weights], [2, 2])
+    ds.config["replay"] = replay
+    with pytest.raises(ValueError, match=match):
+        CatalogBatchSampler(ds)
+
+
+def test_merge_preserves_legacy_cursor_and_replay_order():
+    ds = dataset([{'weight': 1}], [80], batching={'max_samples': 2, 'num_buckets': 1})
+    ds.config['replay'] = {'epoch_samples': 20, 'window_samples': 10}
+    old = CatalogBatchSampler(ds)
+    batches = list(old)
+    for _ in range(3):
+        old.mark_consumed()
+    state = old.state_dict()
+    ds.config['batching']['batch_merge'] = 2
+    merged = CatalogBatchSampler(ds)
+    assert merged.signature == old.signature
+    merged.load_state_dict(state)
+    assert [k for b in merged for k in b] == [k for b in batches[3:] for k in b]
+    merged.mark_consumed()
+    assert merged.state_dict()['consumed'] == 5
+    pool = merged._replay_pools[0][1]
+    merged.set_epoch(1)
+    list(merged)
+    assert merged._replay_pools[0][1] is pool
+
+
+def test_duration_pairing_preserves_update_samples_and_checkpoint_cursor():
+    ds = dataset([{}], [32], durations=[1.0]*8+[10.0]*8+[2.0]*8+[9.0]*8,
+                 batching={'max_samples': 8, 'num_buckets': 1, 'batch_merge': 2, 'merge_window': 4})
+    sampler = CatalogBatchSampler(ds, shuffle=False)
+    # Explicit native batches isolate the merge scheduling from source shuffling.
+    sampler._plan = [[(0, i, i) for i in range(start, start+8)] for start in [0,8,16,24]]
+    batches = list(sampler)
+    assert {k[1] for k in batches[0]} == set(range(8)) | set(range(16,24))
+    assert {k[1] for k in batches[1]} == set(range(8,16)) | set(range(24,32))
+    assert sorted(k[1] for b in batches for k in b) == list(range(32))
+    sampler.mark_consumed()
+    with pytest.raises(ValueError, match='optimizer-update boundary'):
+        sampler.state_dict()
+    sampler.mark_consumed()
+    assert sampler.state_dict()['consumed'] == 4

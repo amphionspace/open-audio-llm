@@ -1,0 +1,70 @@
+# 保守起点：中文普通 ASR 50%，英文普通 ASR 20%，TS-ASR 30%。
+# weight 在 replay 模式下决定每个窗口的样本配额，不随来源大小改变。
+seed: 42
+sampling_rate: 16000
+replay:
+  epoch_samples: 20000
+  window_samples: 200
+
+train:
+  - {dataset_id: wenetspeech, version: icefall-20260908, split: train, task: asr, min_duration: 0.5, max_duration: 20, weight: 20}
+  - {dataset_id: aishell, version: icefall-20260908, split: train, task: asr, min_duration: 0.5, max_duration: 20, weight: 10}
+  - {dataset_id: aishell2, version: icefall-20260908, split: train, task: asr, min_duration: 0.5, max_duration: 20, weight: 10}
+  - {dataset_id: kespeech, version: icefall-20260908, split: train, task: asr, min_duration: 0.5, max_duration: 20, weight: 5}
+  - {dataset_id: aishell4, version: icefall-20260908, split: train, task: asr, min_duration: 0.5, max_duration: 20, weight: 5}
+  - {dataset_id: librispeech, version: icefall-20260908, split: train, task: asr, min_duration: 0.5, max_duration: 20, weight: 10}
+  - {dataset_id: gigaspeech, version: icefall-20260908, split: train, task: asr, min_duration: 0.5, max_duration: 20, weight: 10}
+
+  # 使用已注册的 AudioRecord + audio-index；目标不存在的负例占总量 4%。
+  - {dataset_id: aishellmix, version: pack3-current-audio-record-20260910, split: train_2spk, min_duration: 0.5, max_duration: 20, weight: 7}
+  - {dataset_id: aishellmix, version: pack3-current-audio-record-20260910, split: train_3spk, min_duration: 0.5, max_duration: 20, weight: 6}
+  - {dataset_id: aishellmix, version: pack3-current-audio-record-20260910, split: train_neg, min_duration: 0.5, max_duration: 20, weight: 2}
+  - {dataset_id: librimix, version: 960-current-audio-record-20260910, split: train_2spk, min_duration: 0.5, max_duration: 20, weight: 7}
+  - {dataset_id: librimix, version: 960-current-audio-record-20260910, split: train_3spk, min_duration: 0.5, max_duration: 20, weight: 6}
+  - {dataset_id: librimix, version: 960-current-audio-record-20260910, split: train_neg, min_duration: 0.5, max_duration: 20, weight: 2}
+
+# 开发集可用于反复选择 checkpoint；不从 TS 同源混音中随机切验证样本。
+validation:
+  - {dataset_id: aishell, version: icefall-20260908, split: dev, task: asr, max_duration: 20, max_samples: 256}
+  - {dataset_id: wenetspeech, version: icefall-20260908, split: dev, task: asr, max_duration: 20, max_samples: 256}
+  - {dataset_id: kespeech, version: icefall-20260908, split: dev, task: asr, max_duration: 20, max_samples: 256}
+  - {dataset_id: librispeech, version: icefall-20260908, split: dev, task: asr, max_duration: 20, max_samples: 256}
+
+batching:
+  max_duration: 120
+  max_samples: 8
+  # Merge pairs after DDP partitioning; effective caps are 16 samples / 240 seconds.
+  # Keep the original sampler plan and checkpoint cursor; use gradient accumulation 2.
+  batch_merge: 2
+  merge_window: 4
+  num_buckets: 4
+  drop_last: false
+
+# 大部分回放保留原始波形；TS 拼接发生在波形增强之后，静音始终为 3 秒。
+# 20 / 0.9 + 3 + 3 < 30 秒，避免截掉混音尾部却保留完整答案。
+augmentation:
+  speed_prob: 0.25
+  speed_factors: [0.9, 1.0, 1.1]
+  spec_aug_prob: 0.15
+  time_mask_width: 20
+  frequency_mask_width: 8
+
+# 最终验收单独报告各域；训练和 checkpoint 选择均不读取这些 test split。
+evaluation:
+  - {dataset_id: aishell, version: icefall-20260908, split: test, task: asr, max_duration: 20}
+  - {dataset_id: aishell2, version: icefall-20260908, split: test, task: asr, max_duration: 20}
+  - {dataset_id: kespeech, version: icefall-20260908, split: test, task: asr, max_duration: 20}
+  - {dataset_id: wenetspeech, version: icefall-20260908, split: test_net, task: asr, max_duration: 20}
+  - {dataset_id: wenetspeech, version: icefall-20260908, split: test_meeting, task: asr, max_duration: 20}
+  - {dataset_id: fleurs_zh, version: icefall-20260908, split: test, task: asr, max_duration: 20}
+  - {dataset_id: librispeech, version: icefall-20260908, split: test_clean, task: asr, max_duration: 20}
+  - {dataset_id: librispeech, version: icefall-20260908, split: test_other, task: asr, max_duration: 20}
+  - {dataset_id: gigaspeech, version: icefall-20260908, split: test, task: asr, max_duration: 20}
+  - {dataset_id: aishellmix, version: original-audio-record-20260910, split: test_2mix, max_duration: 20}
+  - {dataset_id: aishellmix, version: original-audio-record-20260910, split: test_3mix, max_duration: 20}
+  - {dataset_id: aishellmix, version: original-audio-record-20260910, split: test_2mix_neg, max_duration: 20}
+  - {dataset_id: aishellmix, version: original-audio-record-20260910, split: test_3mix_neg, max_duration: 20}
+  - {dataset_id: librimix, version: 960-current-audio-record-20260910, split: test_2mix, max_duration: 20}
+  - {dataset_id: librimix, version: 960-current-audio-record-20260910, split: test_3mix, max_duration: 20}
+  - {dataset_id: librimix, version: 960-current-audio-record-20260910, split: test_2mix_neg, max_duration: 20}
+  - {dataset_id: librimix, version: 960-current-audio-record-20260910, split: test_3mix_neg, max_duration: 20}

@@ -43,7 +43,7 @@ Training and vLLM-inference token sequences are therefore identical::
     <|audio_start|><|audio_pad|>...<|audio_pad|><|audio_end|>  ← target (N₂ pad tokens)
     <|im_end|>
     <|im_start|>assistant
-    {transcription text}
+    language English<asr_text>{transcription text}
     <|im_end|>
 
 Runtime sample format expected by this native-model template::
@@ -52,7 +52,7 @@ Runtime sample format expected by this native-model template::
       "messages": [
         {"role": "system",    "content": "Given the speaker's voice in the first audio.\\nHotwords: xxx"},
         {"role": "user",      "content": "<audio><audio>"},   ← ms-swift expands each <audio> → N pad tokens
-        {"role": "assistant", "content": "转写文本"}
+        {"role": "assistant", "content": "language Chinese<asr_text>转写文本"}
       ],
       "audios": ["enroll.wav", "target.wav"]
     }
@@ -212,7 +212,26 @@ class Qwen3ASRLoader(ModelLoader):
         # top-level model for training.
         from qwen_asr.core.transformers_backend.modeling_qwen3_asr import (
             Qwen3ASRForConditionalGeneration as _Cls,
+            Qwen3ASRAudioEncoder as _AudioCls,
         )
+        # qwen-asr 0.0.6 exposes a stale conv1 accessor although its first
+        # convolution is conv2d1. Swift also disables input hooks on frozen
+        # towers where no hook was installed in the first place.
+        def _get_audio_input_embeddings(self):
+            return self.conv2d1
+
+        def _set_audio_input_embeddings(self, value):
+            self.conv2d1 = value
+
+        def _disable_audio_input_require_grads(self):
+            hook = getattr(self, '_require_grads_hook', None)
+            if hook is not None:
+                hook.remove()
+                del self._require_grads_hook
+
+        _AudioCls.get_input_embeddings = _get_audio_input_embeddings
+        _AudioCls.set_input_embeddings = _set_audio_input_embeddings
+        _AudioCls.disable_input_require_grads = _disable_audio_input_require_grads
         if not getattr(_Cls, '_swift_patched', False):
             def _get_input_embeddings(self):
                 return self.thinker.get_input_embeddings()
@@ -389,6 +408,8 @@ class Qwen3ASRTemplate(Template):
         padding_to: Optional[int] = None,
     ) -> Dict[str, Any]:
         res = super()._data_collator(batch, padding_to=padding_to)
+        if any('catalog_task' in b for b in batch):
+            res['catalog_task'] = torch.tensor([b['catalog_task'] for b in batch], dtype=torch.long)
         input_features = [
             b['input_features'] for b in batch
             if b.get('input_features') is not None
@@ -441,7 +462,7 @@ register_template(
         # turn and puts NO text in the user turn.
         prefix=['<|im_start|>system\n{{SYSTEM}}<|im_end|>\n'],
         # User turn: ONLY audio placeholder tokens — no text.
-        # convert.py's build_qwen3_asr_user() produces "<audio>" or "<audio><audio>".
+        # Runtime messages contain one placeholder per audio slot.
         prompt=['<|im_start|>user\n{{QUERY}}<|im_end|>\n<|im_start|>assistant\n'],
         chat_sep=['<|im_end|>\n'],
         suffix=['<|im_end|>'],
