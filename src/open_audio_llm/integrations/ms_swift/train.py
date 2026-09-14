@@ -55,7 +55,10 @@ class CatalogSftArguments(CatalogArgumentsMixin, SftArguments):
     data_config: str | None = None
     performance_logging: bool = True
     audio_encoder_parallel: bool = False
+    audio_encoder_batching: bool = False
     retention_teacher: str | None = None
+    retention_eval_script: str | None = None
+    retention_eval_interval: int = 2000
 
 
 @dataclass
@@ -106,6 +109,8 @@ class CatalogTrainingMixin:
         return train, validation
 
     def train(self, trainer):
+        if getattr(self.args, 'audio_encoder_batching', False) and getattr(self.args, 'audio_encoder_parallel', False):
+            raise ValueError('Choose either audio_encoder_batching or audio_encoder_parallel')
         original_create_optimizer = None
         if getattr(self.args, "rlhf_type", None) == "grpo":
             config = self.args._catalog_config
@@ -141,8 +146,19 @@ class CatalogTrainingMixin:
 
                 install_retention_objective(trainer, self.args)
             install_catalog_loader(trainer, self._get_resume_checkpoint(trainer))
+            if getattr(self.args, 'retention_eval_script', None):
+                from .retention_eval import RetentionEvaluationCallback
+
+                trainer.add_callback(RetentionEvaluationCallback(
+                    self.args.retention_eval_script, self.args.retention_eval_interval,
+                ))
         restore_audio = None
-        if getattr(self.args, "audio_encoder_parallel", False):
+        if getattr(self.args, "audio_encoder_batching", False):
+            from .audio_batching import enable_batched_audio
+
+            # Keep the frozen retention teacher's numerical target unchanged.
+            restore_audio = enable_batched_audio(trainer.model)
+        elif getattr(self.args, "audio_encoder_parallel", False):
             from .audio_batching import enable_parallel_audio
 
             restore_audio = enable_parallel_audio(trainer.model)

@@ -86,8 +86,8 @@ def install_retention_objective(trainer, args):
     # normal inference defaults even when gradient checkpointing is enabled.
     thinker.model.config.use_cache = True
     thinker.generation_config.use_cache = True
-    if any(p.requires_grad for p in thinker.audio_tower.parameters()):
-        raise ValueError("Keep the audio encoder frozen for full-LLM replay")
+    if any(p.requires_grad for p in thinker.audio_tower.parameters()) and args.audio_encoder_parallel:
+        raise ValueError("Trainable audio encoder requires audio_encoder_parallel=false")
     if not all(p.requires_grad for p in thinker.model.parameters()) or not thinker.lm_head.weight.requires_grad:
         raise ValueError("All LLM parameters, including embeddings and output head, must be trainable")
     # AdamW needs FP32 master weights/moments for small full-model updates.
@@ -166,6 +166,10 @@ def install_retention_objective(trainer, args):
         "replay_kl_weight": coefficient,
         "trainable_parameters": sum(p.numel() for p in student.parameters() if p.requires_grad),
         "frozen_parameters": sum(p.numel() for p in student.parameters() if not p.requires_grad),
+        "audio_trainable_parameters": sum(p.numel() for p in thinker.audio_tower.parameters() if p.requires_grad),
+        "llm_trainable_parameters": sum(p.numel() for name, p in thinker.named_parameters()
+                                        if p.requires_grad and name.startswith(("model.", "lm_head."))),
+        "learning_rates": {"llm": args.learning_rate, "encoder": args.vit_lr, "aligner": args.aligner_lr},
         "master_dtype": "float32", "compute_dtype": "bfloat16",
         "teacher_trainable_parameters": sum(p.numel() for p in teacher.parameters() if p.requires_grad),
     }

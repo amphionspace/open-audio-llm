@@ -1,7 +1,23 @@
 # 在线训练数据
 
-训练直接消费 `audio-data-contract` 的 Catalog。数据配置使用 YAML；已有音频与
-标注清单即可使用，不需要生成 ShareGPT、增强音频或预编码特征。
+训练直接消费 `audio-data-contract` 的 Catalog。数据配置使用 YAML，优先使用
+适用的 clean 版本，不需要生成 ShareGPT、增强音频或预编码特征。
+
+## 后训练清洗要求
+
+有适用于同一训练任务和划分的 clean 版本时，配方显式选择该固定版本并设置
+`require_clean_pass: true`。Lhotse 按 `custom.clean.pass` 为布尔 `true` 且时间范围
+有效过滤；AudioRecord 按 `metadata.clean.pass` 为布尔 `true` 过滤。失败、缺少标记
+或伪布尔值不通过；整个所选 clean 来源没有合格记录则报错，不偷偷混入失败样本。
+
+没有适用 clean 版本时允许使用原训练集，省略 `require_clean_pass` 或设为 `false`。
+不会因缺少标记、包含多路音频或 Catalog 标记未重新审核而阻断这些来源。
+只有 clean 测试集不代表存在 clean 训练版本，不能把测试集拿来训练。当前配方固定
+引用版本，不在运行时按名字猜测或自动切换版本，避免改变数据和采样恢复语义。
+
+清洗通过和数据格式/文件完整性校验是不同事实，不把未审核数据描述为已清洗。
+显式 clean 过滤不会复用旧的未过滤 AudioRecord 缓存。此策略同样适用于 SFT 和 GRPO。
+固定开发/测试集保留原样用于能力对照，缓存预构建区分训练和验证模式。
 
 ```text
 Catalog + roots → Lhotse cut / AudioRecord 元数据

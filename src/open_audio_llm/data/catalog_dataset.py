@@ -111,6 +111,8 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         if explicit and not all("weight" in s for s in sources):
             raise ValueError("Specify weight for every source")
         for source in sources:
+            if type(source.get("require_clean_pass", False)) is not bool:
+                raise ValueError("require_clean_pass must be a boolean")
             for key in ("samples", "reps", "max_samples"):
                 value = source.get(key)
                 if value is not None and (type(value) is not int or value <= 0):
@@ -184,6 +186,11 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                     name, self.resolver.roots,
                 ))
             )
+            if source.get("require_clean_pass"):
+                # Portable records must attest the entire example, including
+                # every audio slot; a dataset name or file-integrity check is insufficient.
+                rows = (row for row in rows
+                        if (row.record.metadata.get("clean") or {}).get("pass") is True)
         else:
             cuts = self.resolver.iter_cuts(spec.dataset_id, spec.version, split_name)
             rows = self._cut_records(cuts, source, spec)
@@ -216,6 +223,18 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                 break
 
     def _cut_records(self, cuts, source, spec):
+        if source.get("require_clean_pass"):
+            def clean_supervisions(cut):
+                def eligible(supervision):
+                    custom = {**(cut.custom or {}), **(supervision.custom or {})}
+                    clean = custom.get("clean") or {}
+                    return (clean.get("pass") is True and supervision.duration > 0
+                            and supervision.start >= 0 and supervision.end <= cut.duration)
+                return cut.filter_supervisions(eligible)
+
+            # A cleaned WenetSpeech W label can extend past its recording. Filter
+            # before trimming: Lhotse otherwise drops the label and asserts on an empty cut.
+            cuts = cuts.map(clean_supervisions)
         for cut in cuts.trim_to_supervisions(keep_overlapping=False):
             supervision = cut.supervisions[0]
             custom = {**(cut.custom or {}), **(supervision.custom or {})}
