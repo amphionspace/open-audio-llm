@@ -10,6 +10,12 @@ TS_CONCAT_SYSTEM = (
     "and then a mixture. Transcribe only the enrolled speaker from the mixture. "
     "If the enrolled speaker is not present, output nothing."
 )
+SOT_SYSTEM = (
+    "Transcribe every speaker in the mixture. Output one line per speaker as "
+    "[S1] text, [S2] text, and so on, ordered by when each speaker first speaks. "
+    "Keep all utterances from the same speaker on the same line. "
+    "Include every speaker, including overlapping speech."
+)
 
 
 def native_language(language: str) -> str:
@@ -49,6 +55,9 @@ def native_messages(record: AudioRecord, hotwords: str) -> list[dict[str, str]]:
     if record.task == "ts_asr":
         if [s.name for s in record.audio_slots] != ["enrollment", "mixture"]:
             raise ValueError("Native TS-ASR requires enrollment then mixture slots")
+    elif record.task == "speaker_attributed_asr":
+        if [slot.name for slot in record.audio_slots] != ["mixture"]:
+            raise ValueError("Speaker-attributed ASR requires one mixture slot")
     elif record.task not in {"asr", "asr_hotwords"} or len(record.audio_slots) != 1:
         raise ValueError("Native Qwen3-ASR training supports single-audio ASR/hotword tasks")
     language = native_language(record.language)
@@ -60,6 +69,8 @@ def native_messages(record: AudioRecord, hotwords: str) -> list[dict[str, str]]:
     else:
         language = "None"
     context = TS_CONCAT_SYSTEM if record.task == "ts_asr" else ""
+    if record.task == "speaker_attributed_asr":
+        context = SOT_SYSTEM
     if record.task == "asr_hotwords" and hotwords != "N/A":
         context = f"Hotwords: {hotwords}"
     return [

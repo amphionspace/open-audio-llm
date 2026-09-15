@@ -28,6 +28,19 @@ def test_native_context_and_labels():
     assert native_messages(replace(record(), task="asr"), "Alice")[0]["content"] == ""
 
 
+def test_all_speaker_prompt_keeps_one_mixture_and_complete_speaker_labels():
+    from open_audio_llm.data.qwen3_asr import SOT_SYSTEM
+
+    sot = replace(record('zh', '[S1] 你好\n[S2] 再见\n[S3] 谢谢'), task='speaker_attributed_asr',
+                  audio_slots=(AudioSlot('mixture', AudioRef('sot', '1', 'train', 'audio')),))
+    messages = native_messages(sot, 'ignored')
+    assert messages[0]['content'] == SOT_SYSTEM
+    assert messages[1]['content'] == '<audio>'
+    assert messages[2]['content'] == 'language Chinese<asr_text>' + sot.target
+    with pytest.raises(ValueError, match='one mixture'):
+        native_messages(replace(sot, audio_slots=record().audio_slots), 'N/A')
+
+
 @pytest.mark.parametrize("language", ["Mandarin", "Southwestern"])
 def test_native_kespeech_catalog_language(language):
     messages = native_messages(record(language, "你好世界"), "N/A")

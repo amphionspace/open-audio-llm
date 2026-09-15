@@ -25,6 +25,11 @@ def summarize(rows):
     metrics = {}
     for source, items in groups.items():
         chinese = native_language(items[0]["language"]) == "Chinese"
+        if items[0]["task"] == "speaker_attributed_asr":
+            from .sot import summarize_sot
+
+            metrics[source] = summarize_sot(items, chinese)
+            continue
         errors = units = negatives = false_alarms = positives = misses = 0
         for row in items:
             ref, hyp = normalize(row["reference"]), normalize(row["prediction"])
@@ -92,12 +97,13 @@ def main():
     parser.add_argument("--samples_per_source", type=int, default=256,
                         help="Fixed random subset per source; 0 evaluates all eligible records")
     parser.add_argument("--batch_size", type=int, default=8)
+    parser.add_argument("--max_new_tokens", type=int, default=256)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--baseline", type=Path, help="Baseline summary.json from this command")
     parser.add_argument("--max_cer_increase", type=float, default=0.0,
                         help="Absolute CER allowance: 0.005 means 0.5 percentage points")
     args = parser.parse_args()
-    if args.samples_per_source < 0 or args.batch_size <= 0:
+    if args.samples_per_source < 0 or args.batch_size <= 0 or args.max_new_tokens <= 0:
         parser.error("samples_per_source must be non-negative; batch_size must be positive")
 
     import soundfile as sf
@@ -123,7 +129,7 @@ def main():
             )
         for index in indexes:
             record = dataset.records[index].record
-            if record.task not in {"asr", "ts_asr"}:
+            if record.task not in {"asr", "ts_asr", "speaker_attributed_asr"}:
                 raise ValueError("Use the hotword evaluator for contextual ASR")
             selected.append((f"{key}/{record.task}/{record.language}", index))
     fingerprint = hashlib.sha256()
@@ -132,7 +138,7 @@ def main():
                                       sort_keys=True, ensure_ascii=False).encode())
     protocol = {
         "version": 1, "records_sha256": fingerprint.hexdigest(),
-        "sampling_rate": dataset.sampling_rate, "max_new_tokens": 256,
+        "sampling_rate": dataset.sampling_rate, "max_new_tokens": args.max_new_tokens,
         "normalization": "NFKC-lower-punctuation-symbols-space; zh characters/en words",
         "split_group": args.split_group, "batch_size": args.batch_size,
         "seed": args.seed,
@@ -146,7 +152,7 @@ def main():
     model = Qwen3ASRModel.from_pretrained(
         args.model, dtype=torch.bfloat16, device_map="cuda:0",
         attn_implementation="sdpa", max_inference_batch_size=args.batch_size,
-        max_new_tokens=256,
+        max_new_tokens=args.max_new_tokens,
     )
     if args.adapter:
         from peft import PeftModel

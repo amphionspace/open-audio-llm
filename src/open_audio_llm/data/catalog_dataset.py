@@ -111,6 +111,9 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         if explicit and not all("weight" in s for s in sources):
             raise ValueError("Specify weight for every source")
         for source in sources:
+            excluded = source.get("exclude_speakers", [])
+            if not isinstance(excluded, list) or not all(isinstance(item, str) for item in excluded):
+                raise ValueError("exclude_speakers must be a list of speaker IDs")
             if type(source.get("require_clean_pass", False)) is not bool:
                 raise ValueError("require_clean_pass must be a boolean")
             for key in ("samples", "reps", "max_samples"):
@@ -177,6 +180,8 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         split_name = source["split"]
         split = spec.splits[split_name]
         if "records_artifact" in split or "records_artifacts" in split:
+            if source.get("exclude_speakers"):
+                raise ValueError("exclude_speakers requires Lhotse supervision speaker IDs")
             names = split.get("records_artifacts") or [split["records_artifact"]]
             rows = (
                 ResolvedAudioRecord(record)
@@ -223,6 +228,11 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                 break
 
     def _cut_records(self, cuts, source, spec):
+        excluded = set(source.get("exclude_speakers", []))
+        if excluded:
+            def exclude_heldout(cut):
+                return cut.filter_supervisions(lambda supervision: supervision.speaker not in excluded)
+            cuts = cuts.map(exclude_heldout)
         if source.get("require_clean_pass"):
             def clean_supervisions(cut):
                 def eligible(supervision):
@@ -351,8 +361,10 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             elif sample["task"] == "ts_asr":
                 target = sample["solution"].split("<asr_text>", 1)[1]
                 result["catalog_task"] = 1 if target.strip() else 2
+            elif sample["task"] == "speaker_attributed_asr":
+                result["catalog_task"] = 3
             else:
-                raise ValueError("Replay objective supports ordinary ASR and TS-ASR")
+                raise ValueError("Replay objective supports ordinary, target-speaker and speaker-attributed ASR")
         if self.collect_metrics:
             result["_performance"] = {
                 **self._sample_metrics,

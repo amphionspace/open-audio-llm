@@ -20,6 +20,10 @@ from .hotwords import build_hotword_pool, sample_hotwords
 from .records import ResolvedAudioRecord, to_swift_record
 
 TASK_TEMPLATES = {
+    "speaker_attributed_asr": PromptTemplate(
+        "open-audio-llm/speaker-attributed-asr", "1",
+        ((PromptText("Transcribe every speaker, grouped by speaker:"), PromptAudio("mixture")),),
+    ),
     "asr": PromptTemplate(
         "open-audio-llm/asr",
         "1",
