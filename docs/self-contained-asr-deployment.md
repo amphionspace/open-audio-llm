@@ -1,15 +1,15 @@
 # 自包含 ASR 模型部署
 
-本仓库工作区包含两套部署模型，但模型目录由 `.gitignore` 排除，不会进入 Git：
+先在本仓库工作区的以下目录放置完整模型。模型目录由 `.gitignore` 排除，
+克隆仓库不会下载权重：
 
 | 服务 | 本地目录 | vLLM architecture | 对外模型名 |
 |---|---|---|---|
 | Qwen3-ASR | `models/qwen3-asr-1.7b` | `Qwen3ASRForConditionalGeneration` | `Qwen/Qwen3-ASR-1.7B` |
 | AmphionSPEC | `models/amphion-spec` | `AmphionASRForConditionalGeneration` | `AmphionSPEC` |
 
-AmphionSPEC 来源目录是
-`/home/ubuntu/models/hf/Amphion/qwen3omni_captioner_1-5b_sepc`。它是当前服务实际加载的
-情感模型，包含约 7.4 GiB 权重、tokenizer、processor 和模型侧 Python 文件。
+AmphionSPEC 使用兼容 `AmphionASRForConditionalGeneration` 的情感模型导出，
+目录应包含权重、tokenizer、processor 和模型侧 Python 文件。
 
 ## Plugin 边界
 
@@ -54,6 +54,9 @@ docker compose -f compose.asr-models.yaml up
 
 - Qwen3-ASR：`http://127.0.0.1:8011`
 - AmphionSPEC：`http://127.0.0.1:9001`
+
+Compose 端口仅绑定本机回环地址，服务未配置 API 鉴权。需要远程访问时，先配置
+带鉴权的代理或受控网络入口，再显式调整端口发布；Kubernetes Service 默认为集群内访问。
 
 ## Kubernetes
 

@@ -6,6 +6,12 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_local_services_are_not_published_to_external_interfaces() -> None:
+    compose = yaml.safe_load((ROOT / "compose.asr-models.yaml").read_text())
+    for service in compose["services"].values():
+        assert all(port.startswith("127.0.0.1:") for port in service["ports"])
+
+
 def test_local_models_are_ignored_but_available_to_container_builds() -> None:
     gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
     dockerignore = (ROOT / ".dockerignore").read_text(encoding="utf-8").splitlines()

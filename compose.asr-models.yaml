@@ -12,7 +12,7 @@ services:
     environment:
       CUDA_VISIBLE_DEVICES: "${QWEN_GPU:-0}"
     ports:
-      - "${QWEN3_ASR_PORT:-8011}:8000"
+      - "127.0.0.1:${QWEN3_ASR_PORT:-8011}:8000"
 
   amphion-spec:
     image: open-audio-llm/amphion-spec:${MODEL_IMAGE_TAG:-local}
@@ -25,4 +25,4 @@ services:
     environment:
       CUDA_VISIBLE_DEVICES: "${AMPHION_SPEC_GPU:-1}"
     ports:
-      - "${AMPHION_SPEC_PORT:-9001}:8000"
+      - "127.0.0.1:${AMPHION_SPEC_PORT:-9001}:8000"
