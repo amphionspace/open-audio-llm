@@ -212,3 +212,5 @@ bash examples/model/convert_amphionasr_checkpoint.sh \
 - `docs/vllm_triton_bypass.md`：vLLM Qwen3-ASR Triton embedding bypass。
 - `docs/compatibility_matrix.md`：默认支持和可选路径。
 - `docs/legacy_deps.md`：k2 和 Zipformer legacy 依赖策略。
+- `docs/self-contained-asr-deployment.md`：本地 Qwen3-ASR 与 AmphionSPEC 模型、
+  plugin、镜像及 Kubernetes 部署方法。
