@@ -1,0 +1,184 @@
+"""Train directly from Catalog manifests without an offline ShareGPT export."""
+
+from __future__ import annotations
+
+import sys
+import time
+import logging
+import torch
+from dataclasses import dataclass
+
+from swift.arguments import RLHFArguments, SftArguments
+from swift.pipelines.train.rlhf import SwiftRLHF
+from swift.pipelines.train.sft import SwiftSft
+from transformers import TrainerCallback
+
+from open_audio_llm.data.catalog_dataset import CatalogSwiftDataset, read_data_config
+
+
+class CatalogArgumentsMixin:
+    def __post_init__(self):
+        if not self.data_config:
+            raise ValueError("--data_config is required")
+        if (
+            self.dataset
+            or self.val_dataset
+            or self.cached_dataset
+            or self.cached_val_dataset
+        ):
+            raise ValueError(
+                "Use train/validation in --data_config instead of dataset/cache arguments"
+            )
+        self._catalog_config = read_data_config(self.data_config)
+        # SftArguments requires dataset identities, but the pipeline below owns
+        # loading; these config references never go through the HF JSON loader.
+        self.dataset = [self.data_config]
+        self.val_dataset = (
+            [self.data_config] if self._catalog_config.get("validation") else []
+        )
+        self.split_dataset_ratio = 0
+        self.lazy_tokenize = True
+        super().__post_init__()
+        if (
+            self.packing
+            or self.padding_free
+            or getattr(self, "group_by_length", False)
+            or self.streaming
+        ):
+            raise ValueError(
+                "Catalog training uses on-demand map-style samples; disable packing, padding_free, group_by_length and streaming"
+            )
+
+
+@dataclass
+class CatalogSftArguments(CatalogArgumentsMixin, SftArguments):
+    data_config: str | None = None
+    performance_logging: bool = True
+    audio_encoder_parallel: bool = False
+    retention_teacher: str | None = None
+
+
+@dataclass
+class CatalogRLHFArguments(CatalogArgumentsMixin, RLHFArguments):
+    data_config: str | None = None
+
+
+class DatasetEpochCallback(TrainerCallback):
+    def __init__(self, dataset):
+        self.dataset = dataset
+
+    def on_epoch_begin(self, args, state, control, **kwargs):
+        self.dataset.set_epoch(int(state.epoch or 0))
+
+
+class CatalogTrainingMixin:
+    def _prepare_dataset(self):
+        started = time.perf_counter()
+        grpo = getattr(self.args, "rlhf_type", None) == "grpo"
+        if hasattr(self.args, "rlhf_type") and not grpo:
+            raise ValueError("Catalog RLHF entry currently supports GRPO")
+        config = self.args._catalog_config
+        message_format = (
+            "qwen3_asr"
+            if getattr(self.args, "model_type", None) == "amphion_asr_1.7b"
+            else "generic"
+        )
+        train = CatalogSwiftDataset(
+            config, encode=None if grpo else self.template.encode, grpo=grpo,
+            message_format=message_format,
+            collect_metrics=getattr(self.args, "performance_logging", False),
+        )
+        validation = None
+        if config.get("validation"):
+            raw_eval = grpo or getattr(self.args, "predict_with_generate", False)
+            validation = CatalogSwiftDataset(
+                config,
+                training=False,
+                encode=None if raw_eval else self.template.encode,
+                grpo=grpo,
+                message_format=message_format,
+            )
+        logging.getLogger(__name__).warning(
+            "Catalog metadata ready: train=%d validation=%d load_seconds=%.3f",
+            len(train), len(validation) if validation is not None else 0,
+            time.perf_counter() - started,
+        )
+        return train, validation
+
+    def train(self, trainer):
+        original_create_optimizer = None
+        if getattr(self.args, "rlhf_type", None) == "grpo":
+            config = self.args._catalog_config
+            if config.get("batching") or config.get("replay") is not None or any(
+                any(
+                    key in source
+                    for key in ("weight", "samples", "reps", "shard_rotation")
+                )
+                for source in config["train"]
+            ):
+                raise ValueError(
+                    "Catalog mux/duration batching is SFT-only; GRPO uses its generation-group sampler"
+                )
+            trainer.add_callback(DatasetEpochCallback(trainer.train_dataset))
+            if trainer.args.deepspeed and trainer.args.optimizer in (None, "default"):
+                # DeepSpeed removes empty LoRA parameter groups. Do this before
+                # each scheduler creation, including DeepSpeed re-initialization.
+                original_create_optimizer = trainer.create_optimizer
+
+                def create_optimizer():
+                    optimizer = original_create_optimizer()
+                    optimizer.param_groups[:] = [
+                        group for group in optimizer.param_groups if group["params"]
+                    ]
+                    return optimizer
+
+                trainer.create_optimizer = create_optimizer
+        else:
+            from .catalog_loader import install_catalog_loader
+
+            if self.args._catalog_config.get("objective", {}).get("sample_mean"):
+                from .retention import install_retention_objective
+
+                install_retention_objective(trainer, self.args)
+            install_catalog_loader(trainer, self._get_resume_checkpoint(trainer))
+        restore_audio = None
+        if getattr(self.args, "audio_encoder_parallel", False):
+            from .audio_batching import enable_parallel_audio
+
+            restore_audio = enable_parallel_audio(trainer.model)
+        try:
+            return super().train(trainer)
+        finally:
+            if original_create_optimizer is not None:
+                trainer.create_optimizer = original_create_optimizer
+            if restore_audio is not None:
+                restore_audio()
+            performance = getattr(trainer, "catalog_performance", None)
+            if performance is not None:
+                performance.close()
+
+
+class CatalogSft(CatalogTrainingMixin, SwiftSft):
+    args_class = CatalogSftArguments
+
+
+class CatalogGRPO(CatalogTrainingMixin, SwiftRLHF):
+    args_class = CatalogRLHFArguments
+
+
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] not in {"sft", "grpo"}:
+        raise SystemExit(
+            "Usage: python -m open_audio_llm.integrations.ms_swift.train {sft,grpo} --data_config CONFIG [swift arguments]"
+        )
+    mode = sys.argv[1]
+    cls = CatalogSft if mode == "sft" else CatalogGRPO
+    try:
+        cls(sys.argv[2:]).main()
+    finally:
+        if torch.distributed.is_initialized():
+            torch.distributed.destroy_process_group()
+
+
+if __name__ == "__main__":
+    main()

@@ -16,7 +16,7 @@ and data interfaces onto Hugging Face, ms-swift, and vLLM under
 - `k2` is not a default dependency of this project.
 - Legacy `src/train.py` remains the reference for multi-task pretraining until
   the dynamic ms-swift data pipeline reaches parity.
-- Static ShareGPT conversion remains a baseline, not the final data pipeline.
+- Training now reads Catalog manifests online; offline ShareGPT conversion has been removed.
 
 ## Capability Ownership
 
@@ -27,7 +27,7 @@ and data interfaces onto Hugging Face, ms-swift, and vLLM under
 | vLLM serving | `integrations.vllm` | replace ASR-specific plugin |
 | ASR/hotword rewards | `integrations.ms_swift.rewards` | port existing logic |
 | Dynamic data pipeline | `data` package | port from `src/asr_datamodule.py` |
-| ESC foreground mix | `data.esc_mix` | port from `src/esc_mixing.py` |
+| Waveform / feature augmentation | `data.augment` | online transforms |
 | Full multi-task pretraining | staged migration | legacy `src/train.py` until parity |
 | Zipformer training | none | deprecated |
 
@@ -35,7 +35,7 @@ and data interfaces onto Hugging Face, ms-swift, and vLLM under
 
 The new project is k2-free when a fresh environment can run:
 
-1. sample index construction,
+1. Catalog data loading,
 2. HF model save/load,
 3. ms-swift SFT/GRPO smoke tests,
 4. vLLM import/serve smoke tests,

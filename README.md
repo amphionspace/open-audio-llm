@@ -132,12 +132,25 @@ bash examples/serve/vllm/serve.sh \
 
 ## 训练与转换
 
+训练直接读取 `audio-data-contract` Catalog 中的音频清单，取样时构造输入并执行
+on-the-fly 增强，不需要离线生成 ShareGPT JSONL 或增强后的 WAV。
+先安装本地契约包：`pip install -e /222042021/mingdong/workspace/audio-data-contract`，
+再安装训练依赖：`pip install -e ".[swift,data,hf]"`。
+
+通过 `DATA_CONFIG` 选择 YAML 数据配方；SFT 支持来源权重、samples/reps、epoch
+分片轮换、按时长与槽位动态组 batch，以及采样位置断点恢复。混合示例见
+[catalog_mixed.yaml](examples/configs/data/catalog_mixed.yaml)。启动脚本默认读取相邻 `audio-data-contract`
+仓库的 `catalog/` 和本机 `roots.json`，也可用 `AUDIO_DATA_CATALOG`、
+`AUDIO_DATA_ROOTS_FILE` 覆盖。配置与增强说明见 [在线训练数据](docs/online_training_data.md)。
+
 smoke SFT：
 
 ```bash
 set -a
-source configs/train/sft_smoke.env
+source examples/configs/train/sft.env
 set +a
+export DATA_CONFIG=examples/configs/data/catalog_smoke.yaml
+export MAX_STEPS=2 SAVE_STEPS=2 EVAL_STEPS=2 LOGGING_STEPS=1
 bash examples/train/sft/train.sh
 ```
 
@@ -145,7 +158,7 @@ smoke GRPO：
 
 ```bash
 set -a
-source configs/train/grpo_smoke.env
+source examples/configs/train/grpo.env
 set +a
 bash examples/train/grpo/train.sh
 ```
@@ -173,8 +186,10 @@ bash examples/model/convert_amphionasr_checkpoint.sh \
 
 - `src/open_audio_llm/`：唯一 Python package。
 - `src/open_audio_llm/integrations/`：唯一 integrations 实现位置。
-- `examples/`：可运行脚本和配方。
-- `docs/`：迁移说明、架构说明和验证记录。
+- `examples/configs/`：逐项注释的数据 YAML 与训练 env 示例。
+- `examples/train/`：统一 SFT / GRPO / rollout 启动入口。
+- `examples/model/`、`examples/serve/`、`examples/eval/`：模型转换、推理和评测脚本。
+- `docs/`：当前架构与使用说明；`docs/archive/` 保存历史记录。
 
 仓库中不再保留顶层 `src/integrations/`。旧 AmphionASR 的 integrations 能力已经合并到
 `src/open_audio_llm/integrations/` 和 `examples/`。
@@ -186,9 +201,9 @@ bash examples/model/convert_amphionasr_checkpoint.sh \
 - `docs/architecture.md`：组件契约和模型组合。
 - `docs/data_boundary.md`：离线样本事实与在线训练随机性的边界。
 - `docs/migration_from_amphionasr.md`：从 AmphionASR 迁移的边界和归属。
-- `docs/project_context.md`：源项目和目标项目上下文。
+- `docs/archive/project_context.md`：源项目和目标项目上下文。
 - `docs/remaining_work.md`：剩余工作和下一步。
-- `docs/train_reproduction.md`：训练复现和脚本映射。
+- `docs/train_reproduction.md`：当前训练入口与复现步骤。
 - `docs/vllm_triton_bypass.md`：vLLM Qwen3-ASR Triton embedding bypass。
 - `docs/compatibility_matrix.md`：默认支持和可选路径。
 - `docs/legacy_deps.md`：k2 和 Zipformer legacy 依赖策略。

@@ -7,6 +7,9 @@ from functools import partial
 from typing import Any
 
 import torch
+import torch.nn.functional as F
+
+from open_audio_llm.data.augment import augment_features
 
 try:  # pragma: no cover - optional ms-swift dependency
     from swift.template import Template
@@ -47,6 +50,23 @@ class AudioLLMTemplate(Template):
     """ms-swift template that extracts audio features for AudioLLM models."""
 
     placeholder_tokens = ["<speech>"]
+
+    def generate(self, model, *args, **kwargs):
+        output = super().generate(model, *args, **kwargs)
+        if kwargs.get("input_features") is None or kwargs.get("feature_lens") is None:
+            return output
+        # AudioLLM returns only completions when generating from audio embeddings.
+        # Restore the text prefix expected by ms-swift's get_generate_ids.
+        sequences = output if isinstance(output, torch.Tensor) else output.sequences
+        input_ids = kwargs["input_ids"]
+        input_ids = input_ids.repeat_interleave(
+            sequences.shape[0] // input_ids.shape[0], dim=0
+        )
+        sequences = torch.cat([input_ids, sequences], dim=-1)
+        if isinstance(output, torch.Tensor):
+            return sequences
+        output.sequences = sequences
+        return output
 
     def init_env_args(self) -> None:
         if hasattr(super(), "init_env_args"):
@@ -96,7 +116,15 @@ class AudioLLMTemplate(Template):
         attention_mask = audio_inputs.pop("attention_mask")
         encoded["feature_lens"] = attention_mask.sum(dim=-1).long()
         # WhisperFeatureExtractor returns (B, n_mels, T); the model consumes B,T,F.
-        encoded["input_features"] = audio_inputs["input_features"].transpose(1, 2)
+        max_frames = int(encoded["feature_lens"].max().item())
+        features = augment_features(
+            audio_inputs["input_features"][..., :max_frames],
+            encoded["feature_lens"],
+            (getattr(inputs, "extra_kwargs", None) or {}).get("audio_augmentation"),
+        )
+        encoded["input_features"] = (
+            features.transpose(1, 2).contiguous()
+        )
         return encoded
 
     def _data_collator(
@@ -124,6 +152,11 @@ class AudioLLMTemplate(Template):
                 f"got {sorted(slot_counts)}"
             )
         slot_count = slot_counts.pop()
+        max_frames = max(features.shape[1] for features in feature_batches)
+        feature_batches = [
+            F.pad(features, (0, 0, 0, max_frames - features.shape[1]))
+            for features in feature_batches
+        ]
         if slot_count == 1:
             result["input_features"] = torch.cat(feature_batches, dim=0)
             result["feature_lens"] = torch.cat(length_batches, dim=0)

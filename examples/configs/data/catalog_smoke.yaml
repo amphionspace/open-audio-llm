@@ -1,0 +1,20 @@
+# SFT / GRPO 共用的最小数据示例，不使用 SFT 专属的混合和特征增强参数。
+seed: 42  # 在线音频增强和热词采样随机种子。
+sampling_rate: 16000  # 统一音频采样率，单位 Hz。
+train:  # 训练来源；启动脚本从相邻 audio-data-contract 读取 Catalog 和 roots。
+  - dataset_id: librispeech  # Catalog 中的数据集 ID。
+    version: icefall-20260908  # 固定的数据版本。
+    split: train  # 训练划分名称。
+    min_duration: 0.5  # 单条原始主音频最短时长，秒。
+    max_duration: 25.0  # 单条原始主音频最长时长，秒；保留慢速增强余量。
+    max_samples: 8  # 固定取前 8 条合格样本，缩短冒烟测试。
+validation:  # 显式验证来源；不进行在线增强或随机热词采样。
+  - dataset_id: librispeech  # 验证数据集 ID。
+    version: icefall-20260908  # 验证数据版本。
+    split: dev  # 使用 dev 划分，与训练分离。
+    min_duration: 0.5  # 验证主音频最短时长，秒。
+    max_duration: 25.0  # 验证主音频最长时长，秒。
+    max_samples: 2  # 仅取前 2 条合格验证样本。
+augmentation:  # 在线波形增强配置；未写出的增强概率默认 0。
+  speed_prob: 0.9  # 训练样本执行变速的概率，范围 [0,1]。
+  speed_factors: [0.9, 1.0, 1.1]  # 等概率选择的速度倍数；小于 1 更慢。
