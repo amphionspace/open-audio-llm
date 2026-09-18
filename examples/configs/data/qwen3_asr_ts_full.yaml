@@ -1,3 +1,6 @@
+# SpeakerVAD handles absent-target rejection; TS uses enrolled-speaker overlap positives.
+# Use clean training versions where available; other sources remain usable.
+# Only the three clean ASR sources require clean.pass=true; evaluation labels stay fixed.
 augmentation:
   frequency_mask_width: 8
   spec_aug_prob: 0.15
@@ -68,14 +71,6 @@ evaluation:
   max_duration: 20
   split: test_3mix
   version: original-audio-record-20260910
-- dataset_id: aishellmix
-  max_duration: 20
-  split: test_2mix_neg
-  version: original-audio-record-20260910
-- dataset_id: aishellmix
-  max_duration: 20
-  split: test_3mix_neg
-  version: original-audio-record-20260910
 - dataset_id: librimix
   max_duration: 20
   split: test_2mix
@@ -83,14 +78,6 @@ evaluation:
 - dataset_id: librimix
   max_duration: 20
   split: test_3mix
-  version: 960-current-audio-record-20260910
-- dataset_id: librimix
-  max_duration: 20
-  split: test_2mix_neg
-  version: 960-current-audio-record-20260910
-- dataset_id: librimix
-  max_duration: 20
-  split: test_3mix_neg
   version: 960-current-audio-record-20260910
 objective:
   sample_mean: true
@@ -102,27 +89,36 @@ replay:
 sampling_rate: 16000
 seed: 42
 train:
-- dataset_id: wenetspeech
+- dataset_id: wenetspeech_clean
   max_duration: 20
   min_duration: 0.5
   split: train
   task: asr
-  version: icefall-20260908
+  version: clean-v3-20260828
   weight: 20
+  require_clean_pass: true
+- dataset_id: wenetspeech
+  version: clean-weak-v1-20260904
+  split: train
+  task: asr
+  min_duration: 0.5
+  max_duration: 20
+  require_clean_pass: true
+  weight: 5
 - dataset_id: aishell
   max_duration: 20
   min_duration: 0.5
   split: train
   task: asr
   version: icefall-20260908
-  weight: 7
+  weight: 5
 - dataset_id: aishell2
   max_duration: 20
   min_duration: 0.5
   split: train
   task: asr
   version: icefall-20260908
-  weight: 7
+  weight: 5
 - dataset_id: kespeech
   max_duration: 20
   min_duration: 0.5
@@ -136,7 +132,7 @@ train:
   split: train
   task: asr
   version: icefall-20260908
-  weight: 6
+  weight: 5
 - dataset_id: librispeech
   max_duration: 20
   min_duration: 0.5
@@ -150,7 +146,15 @@ train:
   split: train
   task: asr
   version: icefall-20260908
-  weight: 5
+  weight: 2
+- dataset_id: commonvoice_en_clean
+  version: clean-v1-20260805
+  split: train
+  task: asr
+  min_duration: 0.5
+  max_duration: 20
+  require_clean_pass: true
+  weight: 3
 - dataset_id: aishellmix
   max_duration: 20
   min_duration: 0.5
@@ -160,7 +164,7 @@ train:
     part: train
     seed: 42
   version: pack3-current-audio-record-20260910
-  weight: 5
+  weight: 7
 - dataset_id: aishellmix
   max_duration: 20
   min_duration: 0.5
@@ -170,17 +174,7 @@ train:
     part: train
     seed: 42
   version: pack3-current-audio-record-20260910
-  weight: 9
-- dataset_id: aishellmix
-  max_duration: 20
-  min_duration: 0.5
-  split: train_neg
-  ts_holdout:
-    modulus: 100
-    part: train
-    seed: 42
-  version: pack3-current-audio-record-20260910
-  weight: 6
+  weight: 13
 - dataset_id: librimix
   max_duration: 20
   min_duration: 0.5
@@ -190,7 +184,7 @@ train:
     part: train
     seed: 42
   version: 960-current-audio-record-20260910
-  weight: 5
+  weight: 7
 - dataset_id: librimix
   max_duration: 20
   min_duration: 0.5
@@ -200,17 +194,7 @@ train:
     part: train
     seed: 42
   version: 960-current-audio-record-20260910
-  weight: 9
-- dataset_id: librimix
-  max_duration: 20
-  min_duration: 0.5
-  split: train_neg
-  ts_holdout:
-    modulus: 100
-    part: train
-    seed: 42
-  version: 960-current-audio-record-20260910
-  weight: 6
+  weight: 13
 validation:
 - dataset_id: aishell
   max_duration: 20
@@ -256,16 +240,6 @@ validation:
     seed: 42
   version: pack3-current-audio-record-20260910
   max_samples: 128
-- dataset_id: aishellmix
-  max_duration: 20
-  min_duration: 0.5
-  split: train_neg
-  ts_holdout:
-    modulus: 100
-    part: dev
-    seed: 42
-  version: pack3-current-audio-record-20260910
-  max_samples: 128
 - dataset_id: librimix
   max_duration: 20
   min_duration: 0.5
@@ -280,16 +254,6 @@ validation:
   max_duration: 20
   min_duration: 0.5
   split: train_3spk
-  ts_holdout:
-    modulus: 100
-    part: dev
-    seed: 42
-  version: 960-current-audio-record-20260910
-  max_samples: 128
-- dataset_id: librimix
-  max_duration: 20
-  min_duration: 0.5
-  split: train_neg
   ts_holdout:
     modulus: 100
     part: dev
