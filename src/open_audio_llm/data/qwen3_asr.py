@@ -60,7 +60,15 @@ def native_messages(record: AudioRecord, hotwords: str) -> list[dict[str, str]]:
             raise ValueError("Speaker-attributed ASR requires one mixture slot")
     elif record.task not in {"asr", "asr_hotwords"} or len(record.audio_slots) != 1:
         raise ValueError("Native Qwen3-ASR training supports single-audio ASR/hotword tasks")
-    language = native_language(record.language)
+    mixed = record.task == 'speaker_attributed_asr' and record.language == 'zh-en'
+    if mixed:
+        # Keep the native single-language header; the record retains both languages.
+        primary = record.metadata.get('primary_language')
+        if primary not in ('zh', 'en'):
+            raise ValueError('Mixed SOT needs a zh/en primary_language in metadata')
+        language = native_language(primary)
+    else:
+        language = native_language(record.language)
     # Reject unknown language codes rather than teaching them as output tokens.
     from qwen_asr.inference.utils import validate_language
 
@@ -71,6 +79,8 @@ def native_messages(record: AudioRecord, hotwords: str) -> list[dict[str, str]]:
     context = TS_CONCAT_SYSTEM if record.task == "ts_asr" else ""
     if record.task == "speaker_attributed_asr":
         context = SOT_SYSTEM
+        if mixed:
+            context += ' Keep each speaker\'s original language, including Chinese and English. Do not translate.'
     if record.task == "asr_hotwords" and hotwords != "N/A":
         context = f"Hotwords: {hotwords}"
     return [

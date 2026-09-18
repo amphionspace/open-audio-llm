@@ -41,6 +41,18 @@ def test_all_speaker_prompt_keeps_one_mixture_and_complete_speaker_labels():
         native_messages(replace(sot, audio_slots=record().audio_slots), 'N/A')
 
 
+@pytest.mark.parametrize('primary,header', [('zh', 'Chinese'), ('en', 'English')])
+def test_bilingual_sot_preserves_both_languages_and_uses_native_primary_header(primary, header):
+    sot = replace(record('zh-en', '[S1] 你好\n[S2] Good morning'), task='speaker_attributed_asr',
+                  audio_slots=(AudioSlot('mixture', AudioRef('sot', '2', 'train', 'audio')),),
+                  metadata={'primary_language': primary})
+    messages = native_messages(sot, 'N/A')
+    assert messages[-1]['content'] == f'language {header}<asr_text>' + sot.target
+    assert 'Do not translate' in messages[0]['content']
+    with pytest.raises(ValueError, match='primary_language'):
+        native_messages(replace(sot, metadata={}), 'N/A')
+
+
 @pytest.mark.parametrize("language", ["Mandarin", "Southwestern"])
 def test_native_kespeech_catalog_language(language):
     messages = native_messages(record(language, "你好世界"), "N/A")

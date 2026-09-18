@@ -3,7 +3,6 @@
 
 import argparse
 import copy
-import itertools
 import json
 from pathlib import Path
 
@@ -22,24 +21,30 @@ def prepare(data_root, catalog_path, roots_path, output):
     roots['multispeaker_synthetic'] = str(data_root.resolve())
     root_file = output / 'roots.json'
     root_file.write_text(json.dumps(roots, indent=2) + '\n')
-    cells = list(itertools.product(['zh', 'en'], [3, 4, 5], ['staggered', 'dense']))
     artifacts = {item['name']: item for item in synthetic['artifacts']}
     sot = {key: [] for key in ('train', 'dev', 'test')}
-    for split in sot:
+    for split, sources in sot.items():
         original = synthetic['splits'][split]
-        for language, speakers, profile in cells:
+        cells = {}
+        for name in original['records_artifacts']:
+            parts = Path(artifacts[name]['relative_path']).parts
+            language, speakers, profile = parts[1], int(parts[2].removesuffix('spk')), parts[3]
+            cells.setdefault((language, speakers, profile), []).append(name)
+        for (language, speakers, profile), names in sorted(cells.items()):
             prefix = f'{split}/{language}/{speakers}spk/{profile}/'
-            names = [name for name in original['records_artifacts']
-                     if artifacts[name]['relative_path'].startswith(prefix)]
-            if not names:
-                raise ValueError(f'Missing synthesis cell: {prefix}')
+            if not all(artifacts[name]['relative_path'].startswith(prefix) for name in names):
+                raise ValueError(f'Invalid synthesis cell: {prefix}')
             alias = f'{split}_{language}_{speakers}spk_{profile}'
             synthetic['splits'][alias] = {
                 'group': split, 'records_artifacts': names,
                 'audio_index_artifact': original['audio_index_artifact'],
             }
-            sot[split].append({'dataset_id': synthetic['dataset_id'], 'version': synthetic['version'],
-                               'split': alias, 'max_duration': 28})
+            source = {'dataset_id': synthetic['dataset_id'], 'version': synthetic['version'],
+                      'split': alias, 'max_duration': 28}
+            if split == 'train':
+                count = sum(artifacts[name]['metadata']['record_count'] for name in names)
+                source['weight'] = 60 * count / original['statistics']['records']
+            sources.append(source)
     ordinary = [
         {'dataset_id': 'wenetspeech_clean', 'version': 'clean-v3-20260828', 'weight': 20, 'require_clean_pass': True},
         {'dataset_id': 'aishell', 'version': 'icefall-20260908', 'weight': 5},
@@ -65,12 +70,13 @@ def prepare(data_root, catalog_path, roots_path, output):
     config = {
         'catalog': str(catalog_file.resolve()), 'roots': str(root_file.resolve()),
         'sampling_rate': 16000, 'seed': 42,
-        'replay': {'epoch_samples': 20000, 'window_samples': 200},
-        'objective': {'sample_mean': True, 'separate_prefix': False, 'replay_kl_weight': 1.0},
+        # 2,500 represents all v2 cell weights and the five ASR sources exactly.
+        'replay': {'epoch_samples': 20000, 'window_samples': 2500},
+        'objective': {'sample_mean': True, 'separate_prefix': False, 'replay_kl_weight': 2.0},
         'augmentation': {'speed_prob': 0.25, 'speed_factors': [0.95, 1.0, 1.05],
                          'spec_aug_prob': 0.1, 'frequency_mask_width': 8, 'time_mask_width': 20},
         'batching': {'max_samples': 6, 'max_duration': 90, 'num_buckets': 4, 'drop_last': False},
-        'train': [{**source, 'weight': 5} for source in sot['train']] + ordinary,
+        'train': sot['train'] + ordinary,
         'validation': [{**source, 'max_samples': 16} for source in sot['dev'] + asr_dev],
         'evaluation': sot['test'],
     }
@@ -81,6 +87,7 @@ def prepare(data_root, catalog_path, roots_path, output):
         (output / filename).write_text(yaml.safe_dump(selected, allow_unicode=True, sort_keys=False))
     audit = {'sot_train_samples': synthetic['splits']['train']['statistics']['records'],
              'weights': {'sot': 60, 'chinese_asr': 30, 'english_asr': 10},
+             'sot_cells': len(sot['train']),
              'excluded_replay_speakers': {source['dataset_id']: len(source.get('exclude_speakers', [])) for source in ordinary},
              'source': str(data_root.resolve())}
     (output / 'data-audit.json').write_text(json.dumps(audit, indent=2) + '\n')
