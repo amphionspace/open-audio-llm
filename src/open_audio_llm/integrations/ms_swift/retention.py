@@ -140,7 +140,7 @@ def install_retention_objective(trainer, args):
         mode = "train" if model.training else "eval"
         metrics = self.custom_metrics[mode]
         # Create the same metrics on every rank even when a batch lacks a task.
-        for task, name in enumerate(("asr", "ts_positive", "ts_negative")):
+        for task, name in enumerate(("asr", "ts_positive", "ts_negative", "sot")):
             metric = metrics[f"ce_{name}"]
             selected = ce.detach()[tasks == task]
             if selected.numel():

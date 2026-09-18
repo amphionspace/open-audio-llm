@@ -278,6 +278,49 @@ def test_cache_preparation_preserves_unfiltered_validation(catalog_config):
     assert _prepare_source(catalog_config, source, "qwen3_asr", training=True) == ("speech", "dev", 2)
 
 
+@pytest.mark.parametrize('cached', [False, True])
+def test_speaker_holdout_is_removed_from_replay_and_invalidates_old_cache(catalog_config, tmp_path, cached):
+    for index in range(2):
+        path = tmp_path / f'cuts{index}.jsonl.gz'
+        cut = next(iter(CutSet.from_file(path)))
+        cut.supervisions[0].speaker = f'speaker{index}'
+        CutSet.from_cuts([cut]).to_file(path)
+    if cached:
+        catalog_config['metadata_cache'] = str(tmp_path / 'cache')
+    assert len(CatalogSwiftDataset(catalog_config)) == 2
+    catalog_config['train'][0]['exclude_speakers'] = ['speaker1']
+    filtered = CatalogSwiftDataset(catalog_config)
+    assert len(filtered) == 1 and filtered.records[0].record.audio_slots[0].ref.cut_id == 's0'
+
+
+@pytest.mark.parametrize('cached', [False, True])
+def test_sot_catalog_uses_mixture_without_enrollment_and_excludes_teacher_kl(catalog_config, tmp_path, cached):
+    target = '[S1] 第一人\n[S2] 第二人\n[S3] 第三人'
+    record = AudioRecord('sot-example', 'speaker_attributed_asr',
+        (AudioSlot('mixture', AudioRef('speech', '1', 'train', 's0', duration=.25)),), target, language='zh')
+    write_records([record], tmp_path / 'sot.jsonl.gz')
+    spec = DatasetSpec('sot', '1', ('zh',), ('speaker_attributed_asr',),
+        (ArtifactRef('records', 'audio-records', 'data', 'sot.jsonl.gz'),),
+        {'train': {'records_artifact': 'records'}})
+    with Path(catalog_config['catalog']).open('a') as stream:
+        stream.write('\n' + json.dumps(spec.to_dict()))
+    catalog_config.update(train=[{'dataset_id': 'sot', 'version': '1', 'split': 'train'}],
+                          augmentation={}, objective={'sample_mean': True})
+    if cached:
+        catalog_config['metadata_cache'] = str(tmp_path / 'cache')
+    dataset = CatalogSwiftDataset(catalog_config, message_format='qwen3_asr')
+    sample = dataset[0]
+    assert sample['catalog_task'] == 3 and sample['audio_slot_count'] == 1
+    assert sample['duration'] == .25 and sample['solution'].endswith(target)
+    assert len(sf.read(BytesIO(sample['audios'][0]))[0]) == 4000
+    from open_audio_llm.integrations.ms_swift.retention import sample_losses
+
+    ordinary = torch.tensor([sample['catalog_task']]) == 0
+    losses, ce, kl = sample_losses(torch.zeros(1, 4), torch.tensor([0]), torch.tensor([0]),
+                                    torch.tensor([1]), ordinary=ordinary)
+    assert not ordinary.any() and kl.item() == 0 and torch.equal(losses, ce)
+
+
 def test_catalog_audio_is_lazy_and_never_writes_intermediates(
     catalog_config, tmp_path, monkeypatch
 ):
@@ -489,7 +532,13 @@ def test_mux_worker_prefetch_resume_preserves_audio(catalog_config):
         restored = CatalogBatchSampler(dataset)
         restored.load_state_dict(state)
         actual = [dataset[batch[0]]["audios"] for batch in restored]
-        assert expected == actual
+        # FLOAT WAV's PEAK chunk carries wall-clock time; compare decoded samples.
+        for expected_sample, actual_sample in zip(expected, actual, strict=True):
+            for expected_audio, actual_audio in zip(expected_sample, actual_sample, strict=True):
+                expected_wave, expected_rate = sf.read(BytesIO(expected_audio))
+                actual_wave, actual_rate = sf.read(BytesIO(actual_audio))
+                assert expected_rate == actual_rate
+                np.testing.assert_array_equal(expected_wave, actual_wave)
         # Each repetition has a different deterministic augmentation seed.
         assert len({audios[0] for audios in actual}) == len(actual)
     finally:

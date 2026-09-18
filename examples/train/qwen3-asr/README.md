@@ -1,6 +1,7 @@
 # Qwen3-ASR-1.7B 热词微调
 
 TS-ASR 与中文通用识别能力保持使用独立的 [TS-ASR 回放配方](TS_ASR.md)。
+1～5 人分别输出文字及中英混合转写见 [全说话人转写](SOT.md)。
 
 使用原生 Qwen3-ASR 权重和 Catalog 数据，在取样时解码音频、采样候选热词并增强，不生成 ShareGPT 文件。`amphion_asr_1.7b` 是现有插件的注册名，实际模型仍是 Qwen3-ASR。
 
