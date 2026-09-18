@@ -33,7 +33,43 @@ from open_audio_llm.data.catalog_dataset import CatalogSwiftDataset, read_data_c
 
 
 @pytest.mark.parametrize("cached", [False, True])
-def test_native_ts_reads_registered_audio_index_and_budgets_concat(catalog_config, tmp_path, cached):
+@pytest.mark.parametrize("second_clean", [False, None, "true", 1])
+def test_clean_training_uses_only_explicit_pass_and_invalidates_cache(catalog_config, tmp_path, cached, second_clean):
+    for index, passed in enumerate([True, second_clean]):
+        path = tmp_path / f"cuts{index}.jsonl.gz"
+        cut = next(iter(CutSet.from_file(path)))
+        cut.supervisions[0].text = "clean transcript" if index == 0 else "unchecked transcript"
+        cut.supervisions[0].custom = {"clean": {"pass": passed}} if passed is not None else {}
+        CutSet.from_cuts([cut]).to_file(path)
+    if cached:
+        catalog_config["metadata_cache"] = str(tmp_path / "clean-cache")
+    unfiltered = CatalogSwiftDataset(
+        {**catalog_config, "validation": [{**catalog_config["train"][0], "require_clean_pass": False}]},
+        training=False,
+    )
+    assert len(unfiltered) == 2
+    catalog_config["train"][0]["require_clean_pass"] = True
+    filtered = CatalogSwiftDataset(catalog_config)
+    assert len(filtered) == 1
+    assert filtered.records[0].record.target == "clean transcript"
+
+
+@pytest.mark.parametrize("cached", [False, True])
+def test_clean_labels_outside_recording_are_removed_before_trimming(catalog_config, tmp_path, cached):
+    segments = list(SupervisionSet.from_file(tmp_path / "supervisions.jsonl.gz"))
+    for segment in segments:
+        segment.custom = {"clean": {"pass": True}}
+    segments[1].start, segments[1].duration = .9, .25  # The recording is only 1 second.
+    SupervisionSet.from_segments(segments).to_file(tmp_path / "supervisions.jsonl.gz")
+    catalog_config["train"][0].update(split="dev", require_clean_pass=True)
+    if cached:
+        catalog_config["metadata_cache"] = str(tmp_path / "clean-cache")
+    dataset = CatalogSwiftDataset(catalog_config)
+    assert len(dataset) == 1 and dataset.records[0].record.audio_slots[0].ref.cut_id == "s0"
+
+
+@pytest.mark.parametrize("cached", [False, True])
+def test_native_ts_reads_registered_audio_index_and_budgets_concat(catalog_config, tmp_path, cached, monkeypatch):
     import gzip
     from dataclasses import replace
 
@@ -46,8 +82,12 @@ def test_native_ts_reads_registered_audio_index_and_budgets_concat(catalog_confi
     record = AudioRecord("ts", "ts_asr", tuple(
         AudioSlot(name, AudioRef("ts", "1", "train", "speech", start=0.25))
         for name in ("enrollment", "mixture")
-    ), "hello", language="en")
-    write_records([record, replace(record, id="negative", target="")], tmp_path / "ts.jsonl.gz")
+    ), "hello", language="en", metadata={"clean": {"pass": True}})
+    records = [record, replace(record, id="negative", target="")]
+    records += [replace(record, id=f"unchecked-{i}",
+                        metadata={"clean": {"pass": value}} if value is not None else {})
+                for i, value in enumerate((False, None, "true", 1))]
+    write_records(records, tmp_path / "ts.jsonl.gz")
     spec = DatasetSpec(
         dataset_id="ts", version="1", languages=("en",), tasks=("ts_asr",),
         artifacts=(ArtifactRef("records", "audio-records", "data", "ts.jsonl.gz"),
@@ -57,13 +97,34 @@ def test_native_ts_reads_registered_audio_index_and_budgets_concat(catalog_confi
     with Path(catalog_config["catalog"]).open("a") as stream:
         stream.write("\n" + json.dumps(spec.to_dict()))
     catalog_config.update(
-        train=[{"dataset_id": "ts", "version": "1", "split": "train", "min_duration": 0.5}],
+        train=[{"dataset_id": "ts", "version": "1", "split": "train", "min_duration": 0.5,
+                "require_clean_pass": True}],
         augmentation={}, batching={"max_duration": 7},
     )
     if cached:
         catalog_config["metadata_cache"] = str(tmp_path / "cache")
+        # Reproduce the old portable cache: flag=true was recorded in its key
+        # while unapproved records were still indexed.
+        from open_audio_llm.data import catalog_cache
+
+        identity = catalog_cache.source_identity
+        source_records = CatalogSwiftDataset._source_records
+
+        def legacy_identity(*args):
+            result = identity(*args)
+            result.pop("clean_record_filter")
+            return result
+
+        with monkeypatch.context() as patch:
+            patch.setattr(catalog_cache, "source_identity", legacy_identity)
+            patch.setattr(CatalogSwiftDataset, "_source_records",
+                          lambda self, source: source_records(self, {**source, "require_clean_pass": False}))
+            legacy = CatalogSwiftDataset(catalog_config, message_format="qwen3_asr")
+            assert len(legacy) == 6
     dataset = CatalogSwiftDataset(catalog_config, message_format="qwen3_asr", collect_metrics=True)
     assert len(dataset) == 2  # Missing inline durations must not filter out TS records.
+    if cached:
+        assert dataset.records.sources[0].path != legacy.records.sources[0].path
     sampler = CatalogBatchSampler(dataset)
     assert list(sampler.slots) == [1, 1]
     assert sampler.durations == pytest.approx([6.75, 6.75], abs=0.001)
@@ -75,6 +136,10 @@ def test_native_ts_reads_registered_audio_index_and_budgets_concat(catalog_confi
     assert np.count_nonzero(audio[3 * 16000:6 * 16000]) == 0
     assert dataset[1]["solution"] == "language None<asr_text>"
     assert len(dataset.resolver._audio_indexes) == 1
+    # A source without an applicable clean version remains usable, including TS.
+    raw_config = {**catalog_config, "train": [{**catalog_config["train"][0], "require_clean_pass": False}]}
+    raw = CatalogSwiftDataset(raw_config, message_format="qwen3_asr")
+    assert len(raw) == 6 and raw[2]["audio_slot_count"] == 1
 
 
 @pytest.fixture
@@ -92,6 +157,7 @@ def catalog_config(tmp_path):
             channel=0,
             text="hello",
             language="en",
+            custom={"clean": {"pass": True}},
         )
         for i in range(2)
     ]
@@ -161,7 +227,7 @@ def catalog_config(tmp_path):
         "roots": str(tmp_path / "roots.json"),
         "seed": 42,
         "sampling_rate": sr,
-        "train": [{"dataset_id": "speech", "version": "1", "split": "train"}],
+        "train": [{"dataset_id": "speech", "version": "1", "split": "train", "require_clean_pass": True}],
         "validation": [{"dataset_id": "speech", "version": "1", "split": "dev"}],
         "noise_sources": [{"dataset_id": "noise", "version": "1", "split": "train"}],
         "rir_sources": [{"dataset_id": "rir", "version": "1", "split": "train"}],
@@ -172,6 +238,44 @@ def catalog_config(tmp_path):
             "rir_prob": 1,
         },
     }
+
+
+@pytest.mark.parametrize("flag", [None, False])
+@pytest.mark.parametrize("cached", [False, True])
+def test_nonclean_training_is_allowed_without_clean_requirement(catalog_config, tmp_path, flag, cached):
+    source = catalog_config["train"][0]
+    if flag is None:
+        source.pop("require_clean_pass")
+    else:
+        source["require_clean_pass"] = flag
+    for index in range(2):
+        path = tmp_path / f"cuts{index}.jsonl.gz"
+        cut = next(iter(CutSet.from_file(path)))
+        cut.supervisions[0].custom = {}
+        CutSet.from_cuts([cut]).to_file(path)
+    path = Path(catalog_config["catalog"])
+    specs = [json.loads(line) for line in path.read_text().splitlines()]
+    specs[0]["provenance"] = {"quality_status": "source_annotations_preserved_not_reaudited"}
+    path.write_text("\n".join(json.dumps(spec) for spec in specs))
+    if cached:
+        catalog_config["metadata_cache"] = str(tmp_path / "raw-cache")
+    dataset = CatalogSwiftDataset(catalog_config)
+    assert len(dataset) == 2 and "hello" in dataset[0]["solution"]
+
+
+@pytest.mark.parametrize("flag", ["true", 1])
+def test_clean_requirement_must_be_boolean(catalog_config, flag):
+    catalog_config["train"][0]["require_clean_pass"] = flag
+    with pytest.raises(ValueError, match="require_clean_pass must be a boolean"):
+        CatalogSwiftDataset(catalog_config)
+
+
+def test_cache_preparation_preserves_unfiltered_validation(catalog_config):
+    from open_audio_llm.data.catalog_cache import _prepare_source
+
+    source = {**catalog_config["validation"][0], "require_clean_pass": False}
+    assert _prepare_source(catalog_config, source, "qwen3_asr", training=False) == ("speech", "dev", 2)
+    assert _prepare_source(catalog_config, source, "qwen3_asr", training=True) == ("speech", "dev", 2)
 
 
 def test_catalog_audio_is_lazy_and_never_writes_intermediates(
@@ -443,6 +547,7 @@ def test_portable_records_artifact_preserves_segment_refs(catalog_config, tmp_pa
         ),
         "hello",
         language="en",
+        metadata={"clean": {"pass": True}},
     )
     write_records([record], tmp_path / "records.jsonl")
     spec = DatasetSpec(
@@ -456,7 +561,7 @@ def test_portable_records_artifact_preserves_segment_refs(catalog_config, tmp_pa
     with Path(catalog_config["catalog"]).open("a") as stream:
         stream.write("\n" + json.dumps(spec.to_dict()))
     catalog_config["train"].append(
-        {"dataset_id": "records", "version": "1", "split": "train"}
+        {"dataset_id": "records", "version": "1", "split": "train", "require_clean_pass": True}
     )
     catalog_config["augmentation"] = {}
     dataset = CatalogSwiftDataset(catalog_config)

@@ -133,6 +133,10 @@ def source_identity(dataset, source):
                 paths.append(path)
     return {
         "format": 1,
+        # Earlier portable indexes ignored require_clean_pass. Never reuse them
+        # for clean-only training, even if their old source flag was true.
+        **({"clean_record_filter": 1} if source.get("require_clean_pass") and
+           ("records_artifact" in split or "records_artifacts" in split) else {}),
         "spec": spec.to_dict(),
         # Replay quotas do not change the indexed records or their audio cost.
         "source": {k: v for k, v in source.items() if k != "weight"},
@@ -334,11 +338,11 @@ class CatalogRecordIndex:
             return digest.hexdigest()
 
 
-def _prepare_source(config, source, message_format):
+def _prepare_source(config, source, message_format, training=True):
     from .catalog_dataset import CatalogSwiftDataset
 
-    selected = {**config, "train": [source]}
-    dataset = CatalogSwiftDataset(selected, message_format=message_format)
+    selected = {**config, "train" if training else "validation": [source]}
+    dataset = CatalogSwiftDataset(selected, training=training, message_format=message_format)
     return source["dataset_id"], source["split"], len(dataset)
 
 
@@ -361,13 +365,14 @@ def main():
         parser.error("Set AUDIO_DATA_METADATA_CACHE or metadata_cache")
     if args.workers <= 0:
         parser.error("workers must be positive")
-    sources = [*config["train"], *config.get("validation", [])]
+    sources = [(source, True) for source in config["train"]]
+    sources += [(source, False) for source in config.get("validation", [])]
     with ProcessPoolExecutor(
         max_workers=args.workers, mp_context=multiprocessing.get_context("spawn")
     ) as pool:
         futures = [
-            pool.submit(_prepare_source, config, source, args.message_format)
-            for source in sources
+            pool.submit(_prepare_source, config, source, args.message_format, training)
+            for source, training in sources
         ]
         for future in as_completed(futures):
             print("Catalog index ready:", *future.result(), flush=True)

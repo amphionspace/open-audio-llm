@@ -83,7 +83,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", required=True)
     parser.add_argument("--adapter")
-    parser.add_argument("--audio_encoder_parallel", action="store_true")
+    audio_mode = parser.add_mutually_exclusive_group()
+    audio_mode.add_argument("--audio_encoder_parallel", action="store_true")
+    audio_mode.add_argument("--audio_encoder_batching", action="store_true")
     parser.add_argument("--data_config", required=True)
     parser.add_argument("--output_dir", required=True)
     parser.add_argument("--split_group", choices=["validation", "evaluation"], default="validation")
@@ -156,7 +158,11 @@ def main():
         default=str, indent=2,
     ))
     restore_audio = None
-    if args.audio_encoder_parallel:
+    if args.audio_encoder_batching:
+        from open_audio_llm.integrations.ms_swift.audio_batching import enable_batched_audio
+
+        restore_audio = enable_batched_audio(model.model)
+    elif args.audio_encoder_parallel:
         from open_audio_llm.integrations.ms_swift.audio_batching import enable_parallel_audio
 
         restore_audio = enable_parallel_audio(model.model)

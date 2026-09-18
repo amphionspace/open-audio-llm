@@ -150,9 +150,9 @@ logger = get_logger()
 register_model_arch(
     MultiModelKeys(
         'amphion_asr_1.7b',
-        language_model='thinker.model',
+        language_model=['thinker.model', 'thinker.lm_head'],
         vision_tower='thinker.audio_tower',
-        # proj1/proj2 live inside audio_tower, so no separate aligner key.
+        aligner=['thinker.audio_tower.proj1', 'thinker.audio_tower.proj2'],
     ))
 
 

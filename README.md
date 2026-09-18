@@ -132,6 +132,10 @@ bash examples/serve/vllm/serve.sh \
 
 ## 训练与转换
 
+本项目用于 Audio-LLM 后训练，有适用的 clean 训练版本时优先使用，并设置
+`require_clean_pass: true` 过滤未通过条目；没有 clean 版本时允许使用原训练集，
+不因此阻断 TS、普通 ASR 或热词训练。配方固定版本引用，保留清洗来源的可追溯性。
+
 训练直接读取 `audio-data-contract` Catalog 中的音频清单，取样时构造输入并执行
 on-the-fly 增强，不需要离线生成 ShareGPT JSONL 或增强后的 WAV。
 先安装本地契约包：`pip install -e /222042021/mingdong/workspace/audio-data-contract`，
@@ -198,6 +202,7 @@ bash examples/model/convert_amphionasr_checkpoint.sh \
 
 ## 文档
 
+- [TS-ASR 回放与联合训练](examples/train/qwen3-asr/TS_ASR.md)：clean 优先数据、encoder 批处理和中文保持验收。
 - `docs/architecture.md`：组件契约和模型组合。
 - `docs/data_boundary.md`：离线样本事实与在线训练随机性的边界。
 - `docs/migration_from_amphionasr.md`：从 AmphionASR 迁移的边界和归属。

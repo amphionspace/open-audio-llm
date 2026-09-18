@@ -21,12 +21,16 @@ YAML 保留配方意图和关键约束，具体参数在这里查询；重复来
 ## 数据来源
 
 `train` 是训练来源列表，`validation` 是显式验证来源列表。验证关闭训练增强与随机热词。
+有适用的 clean 训练版本时优先选择，并设置 `require_clean_pass: true` 过滤；
+没有时允许使用现有原版本，省略该选项或设为 false，不阻断 TS 和热词等训练。
+该开关不会给原始数据补发清洗证明，也不会自动替换数据版本。
 
 | 来源参数 | 含义 |
 |---|---|
 | `dataset_id` | Catalog 中登记的数据集 ID。 |
 | `version` | 数据集的固定版本。 |
 | `split` | 该版本登记的划分，如 train、dev。 |
+| `require_clean_pass` | 可选，默认 false；clean 来源设为 true，按 Lhotse `custom.clean.pass` / AudioRecord `metadata.clean.pass` 的布尔 true 过滤。 |
 | `task` | 在线指令模板，如普通转写 asr、热词转写 asr_hotwords。 |
 | `min_duration` / `max_duration` | 单条原始主音频的最短 / 最长时长，单位秒；须为慢速增强预留模型窗口。 |
 | `samples` | 每轮选取数量上限；不足时取全部，省略时使用全部。 |
