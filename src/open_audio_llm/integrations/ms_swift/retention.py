@@ -10,8 +10,42 @@ from types import MethodType
 
 import torch
 import torch.nn.functional as F
+from torch.autograd.function import once_differentiable
 
 LOG = logging.getLogger(__name__)
+# One FP32 block is about 74 MiB for Qwen3-ASR's 151,936-token vocabulary.
+_LOSS_CHUNK_TOKENS = 128
+
+
+class _ChunkedCrossEntropy(torch.autograd.Function):
+    """Recompute softmax by block instead of saving a full FP32 vocabulary tensor."""
+
+    @staticmethod
+    def forward(ctx, logits, targets):
+        ctx.save_for_backward(logits, targets)
+        result = logits.new_empty(len(targets), dtype=torch.float32)
+        for start in range(0, len(targets), _LOSS_CHUNK_TOKENS):
+            end = start + _LOSS_CHUNK_TOKENS
+            result[start:end] = F.cross_entropy(
+                logits[start:end].float(), targets[start:end], reduction="none")
+        return result
+
+    @staticmethod
+    @once_differentiable
+    def backward(ctx, grad_output):
+        logits, targets = ctx.saved_tensors
+        # Write directly into the result: concatenating per-block gradients would
+        # briefly allocate a second full token-by-vocabulary gradient matrix.
+        gradient = torch.empty_like(logits)
+        for start in range(0, len(targets), _LOSS_CHUNK_TOKENS):
+            end = start + _LOSS_CHUNK_TOKENS
+            target = targets[start:end]
+            valid = target != -100
+            probability = logits[start:end].float().softmax(-1)
+            probability[torch.arange(len(target), device=target.device), target.clamp_min(0)] -= valid.to(probability.dtype)
+            probability.mul_((grad_output[start:end] * valid).unsqueeze(-1))
+            gradient[start:end].copy_(probability)
+        return gradient, None
 
 
 def supervised_forward(model, head, inputs, labels):
@@ -38,7 +72,7 @@ def average_answer_parts(values, rows, counts, prefix=None):
 
 def sample_losses(logits, targets, rows, counts, teacher_logits=None, ordinary=None, kl_weight=1.0, prefix=None):
     """Average tokens within examples, then combine CE and KL on ordinary ASR only."""
-    token_ce = F.cross_entropy(logits.float(), targets, reduction="none")
+    token_ce = _ChunkedCrossEntropy.apply(logits, targets)
     ce = average_answer_parts(token_ce, rows, counts, prefix)
     kl = ce.new_zeros(len(counts))
     if teacher_logits is not None:

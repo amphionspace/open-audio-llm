@@ -19,6 +19,7 @@ from lhotse.serialization import deserialize_item
 
 from .hotwords import is_valid_hotword
 from .records import ResolvedAudioRecord
+from .sot import TIMESTAMP_FORMAT
 
 _META = np.dtype([("offset", "<u8"), ("duration", "<f8"), ("slots", "<u2")])
 _PACK = struct.Struct("<QdH")
@@ -106,6 +107,8 @@ def source_identity(dataset, source):
     spec = dataset.resolver.catalog.get(source["dataset_id"], source["version"])
     split = spec.splits[source["split"]]
     paths = []
+    if source.get("sot_timestamps"):
+        paths.append(Path(source["sot_alignment_index"]))
     for name, value in split.items():
         names = (
             [value]
@@ -133,6 +136,8 @@ def source_identity(dataset, source):
                 paths.append(path)
     return {
         "format": 1,
+        **({"sot_timestamp_format": TIMESTAMP_FORMAT}
+           if source.get("sot_timestamps") else {}),
         # Earlier portable indexes ignored require_clean_pass. Never reuse them
         # for clean-only training, even if their old source flag was true.
         **({"clean_record_filter": 1} if source.get("require_clean_pass") and
@@ -152,6 +157,8 @@ def source_identity(dataset, source):
 def sampling_cost(row, dataset):
     speed = dataset.augmentation
     slowest = min(1.0, *speed.speed_factors) if speed.speed_prob else 1.0
+    if row.record.metadata.get("sot_output_format") == TIMESTAMP_FORMAT:
+        slowest = 1.0
     native_ts = (
         getattr(dataset, "message_format", None) == "qwen3_asr"
         and row.record.task == "ts_asr"

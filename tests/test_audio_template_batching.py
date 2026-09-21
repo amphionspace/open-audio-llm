@@ -20,7 +20,6 @@ def audio_template(request, monkeypatch):
     template = object.__new__(cls)
     template.sampling_rate = 16000
     template._hop_length = 160
-    template._max_length = 3000
     monkeypatch.setattr(module.Template, "_data_collator", lambda *a, **kw: {})
     monkeypatch.setattr(module.Template, "_encode", lambda *a, **kw: {})
     return module, template
@@ -74,7 +73,7 @@ def test_variable_length_batch_preserves_frames_lengths_and_slots(
     )
 
 
-@pytest.mark.parametrize("n_samples", [3200, 1281, 16001])
+@pytest.mark.parametrize("n_samples", [3200, 1281, 16001, 16000 * 31 + 1])
 def test_encode_preserves_extractor_values_and_decodes_once(
     audio_template, monkeypatch, n_samples
 ):
@@ -83,7 +82,6 @@ def test_encode_preserves_extractor_values_and_decodes_once(
     module, template = audio_template
     extractor = WhisperFeatureExtractor(feature_size=128, chunk_length=1)
     template._feature_extractor = extractor
-    template._max_length = extractor.nb_max_frames
     wav = np.random.default_rng(42).normal(size=n_samples).astype(np.float32)
     decoded = []
 
@@ -103,8 +101,13 @@ def test_encode_preserves_extractor_values_and_decodes_once(
     monkeypatch.setattr(module.Template, "_encode", encode)
     inputs = SimpleNamespace(audios=["sample.wav"])
     result = template._encode(inputs)
+    extraction = {}
+    if module is not generic:
+        extraction = dict(truncation=False, padding='max_length',
+                          max_length=max(extractor.n_samples, ((n_samples + 159) // 160) * 160))
     reference = extractor(
-        [wav], sampling_rate=16000, return_attention_mask=True, return_tensors="pt"
+        [wav], sampling_rate=16000, return_attention_mask=True, return_tensors="pt",
+        **extraction,
     )
     frames = int(reference["attention_mask"].sum())
     expected = reference["input_features"][..., :frames]
@@ -112,6 +115,7 @@ def test_encode_preserves_extractor_values_and_decodes_once(
         expected = expected.transpose(1, 2)
         assert result["feature_lens"].tolist() == [frames]
     else:
+        assert frames == (n_samples + 159) // 160
         assert result["tags"].count(
             "<|audio_pad|>"
         ) == module._get_feat_extract_output_lengths(frames)

@@ -15,6 +15,7 @@ def dataset(sources, sizes, durations=None, slots=None, batching=None):
         SimpleNamespace(
             record=SimpleNamespace(
                 id=str(i),
+                metadata={},
                 audio_slots=[
                     SimpleNamespace(ref=SimpleNamespace(duration=durations[i]))
                 ]

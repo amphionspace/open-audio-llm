@@ -191,6 +191,8 @@ class OnlineAudioDataset(Dataset):
         )
         resolved = self.records[record_idx]
         record = resolved.record
+        if record.metadata.get("sot_output_format") and self.message_format != "qwen3_asr":
+            raise ValueError("Timestamped SOT requires message_format=qwen3_asr")
         seed = f"{self.seed}:{epoch}:{record_idx}"
         if occurrence is not None:
             seed += f":{occurrence}"

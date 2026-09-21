@@ -74,6 +74,15 @@ def _speaker_attribution(references, hypotheses, cost, unattributed):
     return attribution_summary([counts], sum(map(len, references)))
 
 
+def transcription_units(text, chinese, mixed=False):
+    text = normalize(text)
+    if mixed:
+        # Chinese characters and whitespace-delimited English words count once.
+        text = re.sub(r'([\u3400-\u4dbf\u4e00-\u9fff\U00020000-\U0002fa1f])', r' \1 ', text)
+        return text.split()
+    return list(text.replace(" ", "")) if chinese else text.split()
+
+
 def score_speakers(reference, prediction, chinese, mixed=False):
     references, reference_valid = parse_speakers(reference)
     hypotheses, valid = parse_speakers(prediction)
@@ -81,12 +90,7 @@ def score_speakers(reference, prediction, chinese, mixed=False):
         raise ValueError("SOT reference must contain ordered, nonempty speaker labels")
 
     def units(text):
-        text = normalize(text)
-        if mixed:
-            # Chinese characters and whitespace-delimited English words count once.
-            text = re.sub(r'([\u3400-\u4dbf\u4e00-\u9fff\U00020000-\U0002fa1f])', r' \1 ', text)
-            return text.split()
-        return list(text.replace(" ", "")) if chinese else text.split()
+        return transcription_units(text, chinese, mixed)
 
     references = [units(text) for text in references]
     hypotheses = [units(text) for text in hypotheses]
@@ -106,6 +110,12 @@ def score_speakers(reference, prediction, chinese, mixed=False):
 
 
 def summarize_sot(items, chinese):
+    from open_audio_llm.data.sot import TIMESTAMP_FORMAT
+
+    if any(row.get("sot_output_format") == TIMESTAMP_FORMAT for row in items):
+        from .sot_timestamps import summarize_timed_sot
+
+        return summarize_timed_sot(items, chinese)
     mixed = items[0]['language'] == 'zh-en'
     scores = [score_speakers(row["reference"], row["prediction"], chinese, mixed=mixed) for row in items]
     errors = sum(row["errors"] for row in scores)

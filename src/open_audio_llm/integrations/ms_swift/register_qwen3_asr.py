@@ -133,11 +133,11 @@ def _get_feat_extract_output_lengths(n_frames: int) -> int:
     return int(output_lengths)
 
 
-def _get_n_audio_tokens(wav, hop_length: int, max_length: int) -> int:
+def _get_n_audio_tokens(wav, hop_length: int) -> int:
     """Count placeholders from the same decoded waveform used for features."""
     # Fixed-window padding keeps the final partial hop in the attention mask.
     # Speed perturbation frequently produces these non-aligned lengths.
-    n_frames = min((len(wav) + hop_length - 1) // hop_length, max_length)
+    n_frames = (len(wav) + hop_length - 1) // hop_length
     return max(1, _get_feat_extract_output_lengths(n_frames))
 
 
@@ -316,9 +316,8 @@ class Qwen3ASRTemplate(Template):
                 )
             self._feature_extractor = fe
         self.sampling_rate = get_env_args('sampling_rate', int, fe.sampling_rate)
-        # hop_length / max_length used by _get_n_audio_tokens() in replace_tag
+        # Use the same hop size for placeholder counts and feature padding.
         self._hop_length = getattr(fe, 'hop_length', 160)
-        self._max_length = getattr(fe, 'nb_max_frames', 3000)
 
     @property
     def feature_extractor(self):
@@ -341,7 +340,6 @@ class Qwen3ASRTemplate(Template):
         n_tokens = _get_n_audio_tokens(
             wav,
             hop_length=self._hop_length,
-            max_length=self._max_length,
         )
         return ['<|audio_start|>'] + ['<|audio_pad|>'] * n_tokens + ['<|audio_end|>']
 
@@ -366,11 +364,21 @@ class Qwen3ASRTemplate(Template):
         finally:
             del inputs._audio_llm_waveforms
 
+        # Preserve the old short-audio window while retaining complete long audio.
+        # A whole final hop keeps feature frames and attention masks aligned.
+        padded_samples = max(
+            self.feature_extractor.n_samples,
+            max((len(wav) + self._hop_length - 1) // self._hop_length
+                for wav in audios) * self._hop_length,
+        )
         audio_inputs = self.feature_extractor(
             audios,
             sampling_rate=self.sampling_rate,
             return_attention_mask=True,
             return_tensors='pt',
+            padding='max_length',
+            max_length=padded_samples,
+            truncation=False,
         )
         # feature_attention_mask: (B, T) bool mask — 1=valid frame, 0=padding.
         # This is what Qwen3ASRForConditionalGeneration.forward() expects.

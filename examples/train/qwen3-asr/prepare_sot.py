@@ -8,9 +8,13 @@ from pathlib import Path
 
 import yaml
 from audio_data_contract import DatasetSpec, load_catalog
+from open_audio_llm.data.sot_alignment import fingerprint
 
 
-def prepare(data_root, catalog_path, roots_path, output):
+def prepare(data_root, catalog_path, roots_path, output, alignment_index=None):
+    if alignment_index:
+        alignment_index = alignment_index.resolve()
+        alignment_hash = fingerprint(alignment_index)
     output.mkdir(parents=True, exist_ok=True)
     synthetic = json.loads((data_root / 'catalog.jsonl').read_text())
     if synthetic['provenance']['status'] != 'complete':
@@ -41,6 +45,9 @@ def prepare(data_root, catalog_path, roots_path, output):
             }
             source = {'dataset_id': synthetic['dataset_id'], 'version': synthetic['version'],
                       'split': alias, 'max_duration': 28}
+            if alignment_index:
+                source.update(sot_timestamps=True, sot_alignment_index=str(alignment_index),
+                              sot_alignment_sha256=alignment_hash)
             if split == 'train':
                 count = sum(artifacts[name]['metadata']['record_count'] for name in names)
                 source['weight'] = 60 * count / original['statistics']['records']
@@ -88,6 +95,8 @@ def prepare(data_root, catalog_path, roots_path, output):
     audit = {'sot_train_samples': synthetic['splits']['train']['statistics']['records'],
              'weights': {'sot': 60, 'chinese_asr': 30, 'english_asr': 10},
              'sot_cells': len(sot['train']),
+             'sot_timestamps': bool(alignment_index),
+             'sot_alignment_sha256': alignment_hash if alignment_index else None,
              'excluded_replay_speakers': {source['dataset_id']: len(source.get('exclude_speakers', [])) for source in ordinary},
              'source': str(data_root.resolve())}
     (output / 'data-audit.json').write_text(json.dumps(audit, indent=2) + '\n')
@@ -98,8 +107,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('data-root', 'catalog', 'roots', 'output'):
         parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--alignment-index', type=Path,
+                        help='Frozen source alignment index for utterance timestamps')
     args = parser.parse_args()
-    prepare(args.data_root, args.catalog, args.roots, args.output)
+    prepare(args.data_root, args.catalog, args.roots, args.output, alignment_index=args.alignment_index)
 
 
 if __name__ == '__main__':

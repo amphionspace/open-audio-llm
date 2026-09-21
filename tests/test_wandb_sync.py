@@ -118,3 +118,31 @@ def test_attribution_methods_must_match():
     second["speaker_attribution"]["method"] = "different_method"
     with pytest.raises(ValueError, match="different"):
         aggregate_metrics([first, second])
+
+
+def test_timestamp_aggregation_uses_segment_counts_and_keeps_seconds():
+    first, second = metric(), metric()
+    first['timestamps'] = dict(method='text_assignment_utterance_boundaries_v1', collar_seconds=.5,
+        reference_segments=2, predicted_segments=1, matched_segments=1, within_collar_segments=1,
+        boundary_absolute_error_seconds=.4)
+    second['timestamps'] = dict(method='text_assignment_utterance_boundaries_v1', collar_seconds=.5,
+        reference_segments=8, predicted_segments=9, matched_segments=8, within_collar_segments=5,
+        boundary_absolute_error_seconds=5.)
+    result = aggregate_metrics([first, second])
+    assert result['timestamp_precision'] == result['timestamp_recall'] == result['timestamp_f1'] == 60
+    assert result['timestamp_matched_reference_fraction'] == 90
+    assert result['timestamp_boundary_mae_seconds'] == pytest.approx(.3)
+    second['timestamps']['collar_seconds'] = .25
+    with pytest.raises(ValueError, match='different timestamp'):
+        aggregate_metrics([first, second])
+
+
+def test_timestamp_reference_coverage_uses_record_counts():
+    first, second = metric(), metric()
+    second['utterances'] = 8
+    first['timestamp_reference_coverage'] = dict(available_utterances=1, total_utterances=2, fraction=.5)
+    second['timestamp_reference_coverage'] = dict(available_utterances=8, total_utterances=8, fraction=1.)
+    result = aggregate_metrics([first, second])
+    assert result['timestamp_reference_records'] == 9
+    assert result['timestamp_total_records'] == 10
+    assert result['timestamp_reference_coverage'] == 90
