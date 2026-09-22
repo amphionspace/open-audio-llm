@@ -103,7 +103,7 @@ class AudioIndex:
         return {"path": self.path, "_connection": None, "_pid": None}
 
 
-def source_identity(dataset, source):
+def _legacy_source_identity(dataset, source):
     spec = dataset.resolver.catalog.get(source["dataset_id"], source["version"])
     split = spec.splits[source["split"]]
     paths = []
@@ -154,6 +154,77 @@ def source_identity(dataset, source):
     }
 
 
+def source_identity(dataset, source):
+    identity = _legacy_source_identity(dataset, source)
+    split = identity["spec"]["splits"][source["split"]]
+    artifacts = set()
+    for name, value in split.items():
+        if name.endswith("_artifact"):
+            artifacts.add(value)
+        elif name.endswith("_artifacts"):
+            artifacts.update(value)
+    aliases = {artifact["root_alias"] for artifact in identity["spec"]["artifacts"]
+               if artifact["name"] in artifacts}
+    identity["roots"] = {alias: identity["roots"][alias] for alias in sorted(aliases)}
+    # Mapping traversal order is immaterial. Ordered shard lists remain in spec:
+    # changing them still changes record order and therefore the cache identity.
+    identity["files"] = sorted(identity["files"])
+    return identity
+
+
+def _identity_key(identity):
+    return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+
+
+def _legacy_paths(dataset, source, root):
+    identity = _legacy_source_identity(dataset, source)
+    return [Path(root) / _identity_key(value) for value in
+            (identity, {**identity, "source": source})]
+
+
+def _reuse_completed(destination, candidates):
+    if destination.exists():
+        return
+    for candidate in candidates:
+        if (candidate / "complete.json").is_file():
+            try:
+                destination.symlink_to(candidate.resolve(), target_is_directory=True)
+            except FileExistsError:
+                pass
+            return
+
+
+def reuse_indexes(config, previous_config, root, message_format="qwen3_asr"):
+    """Register old completed indexes only after comparing their actual inputs."""
+    from types import SimpleNamespace
+    from .augment import AugmentConfig
+    from .catalog_resolver import LhotseCatalogAudioResolver
+
+    def context(recipe):
+        return SimpleNamespace(
+            resolver=LhotseCatalogAudioResolver(recipe["catalog"], recipe["roots"]),
+            sampling_rate=int(recipe.get("sampling_rate", 16000)),
+            message_format=message_format,
+            augmentation=AugmentConfig(**recipe.get("augmentation", {})),
+        )
+
+    previous, current = context(previous_config), context(config)
+    candidates = {}
+    for source in previous_config["train"] + previous_config.get("validation", []):
+        key = _identity_key(source_identity(previous, source))
+        candidates.setdefault(key, []).extend(
+            [Path(root) / key, *_legacy_paths(previous, source, root)])
+    reused = []
+    for source in config["train"] + config.get("validation", []):
+        key = _identity_key(source_identity(current, source))
+        destination = Path(root) / key
+        _reuse_completed(destination, candidates.get(key, []))
+        if (destination / "complete.json").is_file():
+            reused.append({"dataset_id": source["dataset_id"], "split": source["split"],
+                           "key": key, "path": str(destination.resolve())})
+    return reused
+
+
 def sampling_cost(row, dataset):
     speed = dataset.augmentation
     slowest = min(1.0, *speed.speed_factors) if speed.speed_prob else 1.0
@@ -181,18 +252,10 @@ def sampling_cost(row, dataset):
 class SourceRecordIndex:
     def __init__(self, dataset, source, root):
         identity = source_identity(dataset, source)
-        self.key = hashlib.sha256(
-            json.dumps(identity, sort_keys=True).encode()
-        ).hexdigest()
+        self.key = _identity_key(identity)
         self.path = Path(root) / self.key
-        legacy_identity = {**identity, "source": source}
-        legacy_key = hashlib.sha256(json.dumps(legacy_identity, sort_keys=True).encode()).hexdigest()
-        legacy_path = Path(root) / legacy_key
-        if legacy_path != self.path and (legacy_path / "complete.json").is_file():
-            try:
-                self.path.symlink_to(legacy_path.name, target_is_directory=True)
-            except FileExistsError:
-                pass
+        Path(root).mkdir(parents=True, exist_ok=True)
+        _reuse_completed(self.path, _legacy_paths(dataset, source, root))
         self.path.mkdir(parents=True, exist_ok=True)
         # The completion marker is written last. A failed build is never opened.
         with (self.path / "build.lock").open("a") as lock:
@@ -364,6 +427,11 @@ def main():
     parser.add_argument("--data_config", required=True)
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--message_format", default="qwen3_asr")
+    parser.add_argument("--reuse-config", help="Previous recipe whose completed indexes may be reused")
+    parser.add_argument("--preflight-report", type=Path,
+                        help="Also check the real sampler and decode duration extremes before reporting success")
+    parser.add_argument("--batch-size", type=int, default=8)
+    parser.add_argument("--world-size", type=int, default=2)
     args = parser.parse_args()
     config = read_data_config(args.data_config)
     if not (
@@ -372,6 +440,16 @@ def main():
         parser.error("Set AUDIO_DATA_METADATA_CACHE or metadata_cache")
     if args.workers <= 0:
         parser.error("workers must be positive")
+    if args.batch_size <= 0 or args.world_size <= 0:
+        parser.error("batch-size and world-size must be positive")
+    reused = []
+    if args.reuse_config:
+        # The current run's exported roots must not override the previous recipe.
+        previous = read_data_config(args.reuse_config, use_env=False)
+        reused = reuse_indexes(config, previous,
+                               os.environ.get("AUDIO_DATA_METADATA_CACHE") or config["metadata_cache"],
+                               args.message_format)
+        print("Verified reusable Catalog indexes:", len(reused), flush=True)
     sources = [(source, True) for source in config["train"]]
     sources += [(source, False) for source in config.get("validation", [])]
     with ProcessPoolExecutor(
@@ -383,6 +461,17 @@ def main():
         ]
         for future in as_completed(futures):
             print("Catalog index ready:", *future.result(), flush=True)
+    if args.preflight_report:
+        from .catalog_preflight import check_data
+
+        report = check_data(config, message_format=args.message_format,
+                            batch_size=args.batch_size, world_size=args.world_size)
+        report["verified_reused_indexes"] = reused
+        args.preflight_report.parent.mkdir(parents=True, exist_ok=True)
+        temporary = args.preflight_report.with_suffix(".tmp")
+        temporary.write_text(json.dumps(report, indent=2) + "\n")
+        temporary.replace(args.preflight_report)
+        print("Catalog data preflight passed:", args.preflight_report, flush=True)
 
 
 if __name__ == "__main__":

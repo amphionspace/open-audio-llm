@@ -240,6 +240,160 @@ def catalog_config(tmp_path):
     }
 
 
+def test_cache_ignores_unused_roots_and_mapping_order(catalog_config, tmp_path, monkeypatch):
+    catalog_config['metadata_cache'] = str(tmp_path / 'cache')
+    catalog_config['train'][0]['split'] = 'dev'
+    first = CatalogSwiftDataset(catalog_config)
+    roots = Path(catalog_config['roots'])
+    roots.write_text(json.dumps({'unrelated': '/unused/new-data', 'data': str(tmp_path)}))
+    catalog = Path(catalog_config['catalog'])
+    specs = [json.loads(line) for line in catalog.read_text().splitlines()]
+    specs[0]['splits']['dev'] = dict(reversed(list(specs[0]['splits']['dev'].items())))
+    catalog.write_text('\n'.join(json.dumps(s, sort_keys=True) for s in specs))
+    monkeypatch.setattr(CatalogSwiftDataset, '_source_records',
+                        lambda *a: pytest.fail('unchanged source rebuilt'))
+    second = CatalogSwiftDataset(catalog_config)
+    assert first.records.sources[0].key == second.records.sources[0].key
+    assert first.records[0].record == second.records[0].record
+
+
+@pytest.mark.parametrize('change', ['root', 'file', 'version', 'clean', 'exclude',
+                                  'duration', 'speed', 'sampling_rate', 'message_format', 'shard_order'])
+def test_cache_identity_changes_for_index_inputs(catalog_config, tmp_path, change):
+    import os
+    import shutil
+    from open_audio_llm.data.catalog_cache import source_identity
+
+    dataset = CatalogSwiftDataset(catalog_config)
+    source = dict(dataset.sources[0])
+    before = source_identity(dataset, source)
+    if change == 'root':
+        other = tmp_path / 'other'
+        other.mkdir()
+        for i in range(2):
+            shutil.copy2(tmp_path / f'cuts{i}.jsonl.gz', other)
+        dataset.resolver.roots['data'] = other
+    elif change == 'file':
+        path = tmp_path / 'cuts0.jsonl.gz'
+        stat = path.stat()
+        os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1))
+    elif change in {'version', 'shard_order'}:
+        specs = [json.loads(line) for line in Path(catalog_config['catalog']).read_text().splitlines()]
+        if change == 'version':
+            specs[0]['version'] = '2'
+            source['version'] = '2'
+        else:
+            specs[0]['splits']['train']['cuts_artifacts'].reverse()
+        Path(catalog_config['catalog']).write_text('\n'.join(json.dumps(s) for s in specs))
+        from audio_data_contract import load_catalog
+        dataset.resolver.catalog = load_catalog(catalog_config['catalog'])
+    elif change == 'clean':
+        source['require_clean_pass'] = False
+    elif change == 'exclude':
+        source['exclude_speakers'] = ['heldout']
+    elif change == 'duration':
+        source['max_duration'] = .2
+    elif change == 'speed':
+        dataset.augmentation = AugmentConfig(speed_prob=1, speed_factors=[.5])
+    elif change == 'sampling_rate':
+        dataset.sampling_rate = 8000
+    else:
+        dataset.message_format = 'qwen3_asr'
+    assert before != source_identity(dataset, source)
+
+
+def test_verified_legacy_cache_reuse_survives_new_roots_and_order(catalog_config, tmp_path, monkeypatch):
+    from copy import deepcopy
+    from open_audio_llm.data import catalog_cache
+
+    config = deepcopy(catalog_config)
+    config['metadata_cache'] = str(tmp_path / 'cache')
+    config['train'][0]['split'] = 'dev'
+    Path(config['roots']).write_text(json.dumps({'data': str(tmp_path), 'unused': '/old'}))
+    previous = deepcopy(config)
+    for field in ['catalog', 'roots']:
+        path = tmp_path / ('previous-' + Path(config[field]).name)
+        path.write_bytes(Path(config[field]).read_bytes())
+        previous[field] = str(path)
+    with monkeypatch.context() as patch:
+        patch.setattr(catalog_cache, 'source_identity', catalog_cache._legacy_source_identity)
+        old = CatalogSwiftDataset(previous)
+    Path(config['roots']).write_text(json.dumps({'data': str(tmp_path), 'unused': '/new'}))
+    specs = [json.loads(line) for line in Path(config['catalog']).read_text().splitlines()]
+    specs[0]['splits']['dev'] = dict(reversed(list(specs[0]['splits']['dev'].items())))
+    Path(config['catalog']).write_text('\n'.join(json.dumps(s) for s in specs))
+    # Different processing parameters cannot claim the old cache.
+    changed = {**config, 'sampling_rate': 8000}
+    assert not catalog_cache.reuse_indexes(changed, previous, config['metadata_cache'], 'generic')
+    reused = catalog_cache.reuse_indexes(config, previous, config['metadata_cache'], 'generic')
+    assert reused
+    monkeypatch.setattr(CatalogSwiftDataset, '_source_records',
+                        lambda *a: pytest.fail('verified legacy index rebuilt'))
+    current = CatalogSwiftDataset(config)
+    assert current.records.sources[0].path.resolve() == old.records.sources[0].path.resolve()
+    assert current.records[0].record == old.records[0].record
+
+
+def test_preflight_uses_real_quotas_before_decoding(catalog_config, monkeypatch):
+    from open_audio_llm.data.catalog_preflight import check_data
+
+    catalog_config['augmentation'] = {}
+    source = catalog_config['train'][0]
+    catalog_config['train'] = [{**source, 'weight': 99.99}, {**source, 'weight': .01}]
+    catalog_config['replay'] = {'epoch_samples': 10000, 'window_samples': 5000}
+    with monkeypatch.context() as patch:
+        patch.setattr(CatalogSwiftDataset, '__getitem__', lambda *a: pytest.fail('decoded before quota check'))
+        with pytest.raises(ValueError, match='every source'):
+            check_data(catalog_config)
+    catalog_config['replay']['window_samples'] = 10000
+    report = check_data(catalog_config)
+    assert report['status'] == 'passed'
+    assert [s['quota'] for s in report['sources']] == [9999, 1]
+    assert report['sampler_state']['consumed'] == 0
+    assert {s['selection'] for s in report['decoded_examples']} == {'train', 'validation'}
+
+
+def test_previous_recipe_paths_are_not_overridden_by_current_run(catalog_config, tmp_path, monkeypatch):
+    path = tmp_path / 'recipe.json'
+    path.write_text(json.dumps(catalog_config))
+    monkeypatch.setenv('AUDIO_DATA_ROOTS_FILE', '/new/run/roots.json')
+    assert read_data_config(path, use_env=False)['roots'] == catalog_config['roots']
+    assert read_data_config(path)['roots'] == '/new/run/roots.json'
+
+
+@pytest.mark.parametrize('preflight_exit', [0, 37])
+def test_launch_checks_data_before_ddp(tmp_path, preflight_exit):
+    import os
+    import subprocess
+
+    calls = tmp_path / 'calls.jsonl'
+    python = tmp_path / 'python'
+    python.write_text('''#!/usr/bin/env python3
+import json, os, sys
+with open(os.environ['PREFLIGHT_TEST_CALLS'], 'a') as stream:
+    stream.write(json.dumps(sys.argv[1:]) + '\\n')
+if 'open_audio_llm.data.catalog_cache' in sys.argv:
+    raise SystemExit(int(os.environ['PREFLIGHT_TEST_EXIT']))
+''')
+    python.chmod(0o755)
+    env = {**os.environ, 'PYTHON': str(python), 'DATA_CONFIG': str(tmp_path / 'data.yaml'),
+           'MODEL': 'unused-model', 'OUTPUT_DIR': str(tmp_path / 'training'),
+           'NPROC_PER_NODE': '2', 'PREFLIGHT_TEST_CALLS': str(calls),
+           'PREFLIGHT_TEST_EXIT': str(preflight_exit)}
+    script = Path(__file__).resolve().parents[1] / 'examples/train/qwen3-asr/train_tsasr.sh'
+    result = subprocess.run(['bash', str(script), '--per_device_train_batch_size', '4',
+                             '--per_device_train_batch_size=2'], env=env, capture_output=True)
+    recorded = [json.loads(line) for line in calls.read_text().splitlines()]
+    assert result.returncode == preflight_exit, result.stderr.decode()
+    assert 'open_audio_llm.data.catalog_cache' in recorded[0]
+    assert recorded[0][recorded[0].index('--batch-size') + 1] == '2'
+    assert '--preflight-report' in recorded[0]
+    if preflight_exit:
+        assert len(recorded) == 1
+    else:
+        assert len(recorded) == 2 and 'torch.distributed.run' in recorded[1]
+
+
 @pytest.mark.parametrize("flag", [None, False])
 @pytest.mark.parametrize("cached", [False, True])
 def test_nonclean_training_is_allowed_without_clean_requirement(catalog_config, tmp_path, flag, cached):

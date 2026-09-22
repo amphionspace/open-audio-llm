@@ -50,7 +50,7 @@ def in_ts_partition(record, selection):
     return held_out if part == "dev" else not held_out
 
 
-def read_data_config(path):
+def read_data_config(path, *, use_env=True):
     path = Path(path).expanduser().resolve()
     config = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(config, dict):
@@ -59,7 +59,7 @@ def read_data_config(path):
         ("catalog", "AUDIO_DATA_CATALOG"),
         ("roots", "AUDIO_DATA_ROOTS_FILE"),
     ):
-        value = os.environ.get(env) or config.get(field)
+        value = (os.environ.get(env) if use_env else None) or config.get(field)
         if not value:
             raise ValueError(f"Set {env} or {field!r} in {path}")
         selected = Path(value).expanduser()

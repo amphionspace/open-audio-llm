@@ -63,6 +63,43 @@ dev/test 说话人，v2 复用 v1 的源池划分，避免旧训练污染新开�
 基座 KL 权重为 2，仅约束普通 ASR；这些措施需要通过固定普通 ASR 评测验证，
 不能保证中文能力完全不退化。
 
+### 更换训练配方前的数据检查
+
+旧训练继续运行时，先固定新配方、Catalog、roots 和源码快照，并执行下面的数据检查。
+该命令不加载模型，不启动试训；它核对可复用缓存，准备缺失索引，实例化真实
+`CatalogBatchSampler` 检查配额，再读取每个训练/验证来源的最短和最长样本。
+
+```bash
+CUDA_VISIBLE_DEVICES='' python -m open_audio_llm.data.catalog_cache \
+  --data_config /path/to/new-run/train-data.yaml \
+  --reuse-config /path/to/old-run/train-data.yaml \
+  --workers 4 --world-size 2 --batch-size 8 \
+  --preflight-report /path/to/new-run/data-preflight.json
+```
+
+`AUDIO_DATA_METADATA_CACHE` 指向已有缓存目录；`--batch-size` 与正式启动参数一致。
+旧配方使用其文件中固定的 Catalog/roots，不受新任务导出的同名环境变量覆盖。
+只有索引输入、版本、过滤和处理参数一致的已完成缓存才会复用，不清空旧目录。
+新增无关路径别名或调整字典键顺序不再重建旧语料；有序 shard 列表的顺序仍属于输入。
+
+必须等命令成功，检查报告中的每桶 `quota`、`quotas_by_dataset` 和读取结果，再等旧任务
+保存完整 checkpoint、停止旧任务、以其权重启动新配方。数据检查失败时旧训练继续运行。
+正式启动入口也会在 DDP 前执行同一检查；可设置 `PREVIOUS_DATA_CONFIG` 指向旧配方。
+配比按样本条数计算。窗口太小时检查会失败，不会静默删除小分桶或修改权重。
+本次事件配方使用 10,000 条窗口：新事件 3,500、旧合成 500、真实会议 4,000、普通 ASR 2,000。
+
+### 冻结源码和 W&B 同步
+
+`source-provenance.json` 可以只包含 `source_origin` 和 `files`（相对路径到 SHA-256 的映射）；
+同步器也读取已有的 `files_sha256`、`run_files_sha256`。没有精确 Git 版本时不要求
+`git_commit`。`git_commit` 仅用于确实对应该提交的源码；冻结目录包含提交之外的改动时，
+将原始基线记录为 `base_git_commit`，以冻结文件哈希标识实际版本。不得用同步工作区的
+HEAD 替代来源。修改同步入口时保留旧入口及其哈希，训练源码快照保持不变。
+
+同步失败后只恢复同步进程，继续使用同一个 W&B run ID。同步器先读取远端 `sync_event`
+历史，再补录未确认的本地事件；单写入进程锁防止两个同步器同时上传。
+交付前检查远端实际 step/loss 至少两次，确认持续增长，并检查历史事件没有重复。
+
 ## 中英输入与评分
 
 中英同场为不同人分别说中文、英文，所有正文保留原语言，不覆盖同一人的句内切换。

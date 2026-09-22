@@ -96,7 +96,7 @@ def test_incomplete_or_failed_evaluations_are_not_uploaded(tmp_path):
     assert "evaluation:100" in collect_events(tmp_path)
 
 
-def test_config_excludes_secrets_and_private_sample_metadata(tmp_path):
+def write_config(tmp_path):
     (tmp_path / "training").mkdir()
     (tmp_path / "training/args.json").write_text(json.dumps({
         "learning_rate": 1e-5, "api_key": "secret-sentinel", "model": "/private/model"}))
@@ -106,11 +106,56 @@ def test_config_excludes_secrets_and_private_sample_metadata(tmp_path):
         "train": [{"dataset_id": "sot", "version": "v1", "split": "train",
                    "weight": 60, "exclude_speakers": ["private-person"]}],
         "objective": {"replay_kl_weight": 2}, "replay": {}, "batching": {}}))
+
+
+def test_config_excludes_secrets_and_private_sample_metadata(tmp_path):
+    write_config(tmp_path)
     config = run_config(tmp_path)
     assert config["learning_rate"] == 1e-5
     assert config["resume_step"] == 100 and config["optimizer_reinitialized"]
     for private in ("secret-sentinel", "/private/model", "private-person"):
         assert private not in json.dumps(config)
+
+
+@pytest.mark.parametrize("provenance", [
+    {"source_origin": "/frozen/source", "files": {"source/train.py": "file-digest"}},
+    {"base_git_commit": "base-revision", "files": {"source/train.py": "file-digest"}},
+    {"git_commit": "exact-revision", "files_sha256": {"source/train.py": "file-digest"},
+     "run_files_sha256": {"track.py": "tracker-digest"}},
+])
+def test_frozen_provenance_does_not_require_or_invent_a_commit(tmp_path, provenance):
+    import hashlib
+
+    write_config(tmp_path)
+    path = tmp_path / "source-provenance.json"
+    path.write_text(json.dumps(provenance))
+    config = run_config(tmp_path)
+    assert config["source_git_commit"] == provenance.get("git_commit")
+    assert config["source_base_git_commit"] == provenance.get("base_git_commit")
+    assert config["source_file_hashes"]["source/train.py"] == "file-digest"
+    assert config["source_snapshot_sha256"] == hashlib.sha256(path.read_bytes()).hexdigest()
+    if "source_origin" in provenance:
+        assert config["source_origin"] == provenance["source_origin"]
+
+
+def test_restart_reads_remote_acknowledgements_before_backfill(tmp_path, monkeypatch):
+    from open_audio_llm.scripts import sync_wandb
+
+    rows = []
+    run = SimpleNamespace(entity="team", project="test", id="run", url="local",
+                          summary={}, define_metric=lambda *a, **k: None, log=rows.append)
+    client = MagicMock()
+    client.init.return_value.__enter__.return_value = run
+    client.Api.return_value.run.return_value.scan_history.return_value = [{"sync_event": "train:5"}]
+    monkeypatch.setitem(sys.modules, "wandb", client)
+    monkeypatch.setattr(sync_wandb, "run_config", lambda root: {})
+    monkeypatch.setattr(sync_wandb, "collect_events", lambda root: {
+        "train:5": {"global_step": 5, "train/loss": .4},
+        "train:10": {"global_step": 10, "train/loss": .3}})
+    monkeypatch.setattr(sys, "argv", ["sync_wandb", "--run-dir", str(tmp_path), "--entity", "team"])
+    sync_wandb.main()
+    assert rows == [{"sync_event": "train:10", "global_step": 10, "train/loss": .3}]
+    assert run.summary["sync_event_count"] == 2
 
 
 def test_attribution_methods_must_match():
