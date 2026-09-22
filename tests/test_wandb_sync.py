@@ -158,6 +158,31 @@ def test_restart_reads_remote_acknowledgements_before_backfill(tmp_path, monkeyp
     assert run.summary["sync_event_count"] == 2
 
 
+@pytest.mark.parametrize('local_snapshot', [False, True])
+def test_recovery_prefers_its_actual_snapshot_over_parent(tmp_path, local_snapshot):
+    import hashlib
+
+    write_config(tmp_path)
+    parent = tmp_path / 'parent'
+    parent.mkdir()
+    inherited = parent / 'source-provenance.json'
+    inherited.write_text(json.dumps({'git_commit': 'parent-revision',
+                                    'files': {'source/train.py': 'parent-digest'}}))
+    (tmp_path / 'recovery.json').write_text(json.dumps({
+        'source_run': str(parent), 'source_checkpoint': str(parent / 'checkpoint-500')}))
+    expected = inherited
+    if local_snapshot:
+        expected = tmp_path / 'source-provenance.json'
+        expected.write_text(json.dumps({'base_git_commit': 'parent-revision',
+                                       'files': {'source/train.py': 'local-digest'}}))
+    config = run_config(tmp_path)
+    assert config['parent_checkpoint'] == 'checkpoint-500'
+    assert config['source_git_commit'] == (None if local_snapshot else 'parent-revision')
+    assert config['source_file_hashes']['source/train.py'] == ('local-digest' if local_snapshot else 'parent-digest')
+    assert config['source_snapshot_sha256'] == hashlib.sha256(expected.read_bytes()).hexdigest()
+    assert config['source_origin'] == str(expected.parent / 'source')
+
+
 def test_attribution_methods_must_match():
     first, second = metric(), metric()
     second["speaker_attribution"]["method"] = "different_method"

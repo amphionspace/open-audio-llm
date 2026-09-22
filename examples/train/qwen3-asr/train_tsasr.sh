@@ -18,8 +18,12 @@ previous_arg=""
 for arg in "$@"; do
   if [[ "$previous_arg" == "--per_device_train_batch_size" ]]; then
     preflight_batch_size="$arg"
+  elif [[ "$previous_arg" == "--data_config" ]]; then
+    export DATA_CONFIG="$arg"
   elif [[ "$arg" == --per_device_train_batch_size=* ]]; then
     preflight_batch_size="${arg#*=}"
+  elif [[ "$arg" == --data_config=* ]]; then
+    export DATA_CONFIG="${arg#*=}"
   fi
   previous_arg="$arg"
 done

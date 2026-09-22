@@ -362,7 +362,8 @@ def test_previous_recipe_paths_are_not_overridden_by_current_run(catalog_config,
 
 
 @pytest.mark.parametrize('preflight_exit', [0, 37])
-def test_launch_checks_data_before_ddp(tmp_path, preflight_exit):
+@pytest.mark.parametrize('config_style', ['separate', 'equals'])
+def test_launch_checks_data_before_ddp(tmp_path, preflight_exit, config_style):
     import os
     import subprocess
 
@@ -381,17 +382,21 @@ if 'open_audio_llm.data.catalog_cache' in sys.argv:
            'NPROC_PER_NODE': '2', 'PREFLIGHT_TEST_CALLS': str(calls),
            'PREFLIGHT_TEST_EXIT': str(preflight_exit)}
     script = Path(__file__).resolve().parents[1] / 'examples/train/qwen3-asr/train_tsasr.sh'
+    recipe = str(tmp_path / 'selected-data.yaml')
+    override = ['--data_config', recipe] if config_style == 'separate' else ['--data_config=' + recipe]
     result = subprocess.run(['bash', str(script), '--per_device_train_batch_size', '4',
-                             '--per_device_train_batch_size=2'], env=env, capture_output=True)
+                             '--per_device_train_batch_size=2', *override], env=env, capture_output=True)
     recorded = [json.loads(line) for line in calls.read_text().splitlines()]
     assert result.returncode == preflight_exit, result.stderr.decode()
     assert 'open_audio_llm.data.catalog_cache' in recorded[0]
     assert recorded[0][recorded[0].index('--batch-size') + 1] == '2'
     assert '--preflight-report' in recorded[0]
+    assert recorded[0][recorded[0].index('--data_config') + 1] == recipe
     if preflight_exit:
         assert len(recorded) == 1
     else:
         assert len(recorded) == 2 and 'torch.distributed.run' in recorded[1]
+        assert recorded[1][-len(override):] == override
 
 
 @pytest.mark.parametrize("flag", [None, False])

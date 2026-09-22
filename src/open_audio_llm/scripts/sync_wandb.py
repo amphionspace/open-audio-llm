@@ -187,14 +187,18 @@ def run_config(root):
         origin = Path(phase["source_run"])
         config["parent_run"] = origin.name
         config["parent_checkpoint"] = Path(phase["source_checkpoint"]).name
-    provenance = origin / "source-provenance.json"
+    # A recovery can carry its own frozen snapshot (including run-specific
+    # fixes). Parent provenance is only a fallback when no local record exists.
+    provenance = root / "source-provenance.json"
+    if not provenance.exists():
+        provenance = origin / "source-provenance.json"
     if provenance.exists():
         metadata = json.loads(provenance.read_text())
         # A frozen file snapshot need not correspond to a Git commit. Never
         # substitute the sync checkout's HEAD or a parent run's base revision.
         config["source_git_commit"] = metadata.get("git_commit")
         config["source_base_git_commit"] = metadata.get("base_git_commit")
-        config["source_origin"] = metadata.get("source_origin", str(origin / "source"))
+        config["source_origin"] = metadata.get("source_origin", str(provenance.parent / "source"))
         config["source_run"] = metadata.get("source_run")
         config["source_file_hashes"] = {
             **metadata.get("files_sha256", {}),
