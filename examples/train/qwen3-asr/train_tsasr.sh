@@ -12,9 +12,31 @@ export AUDIO_DATA_METADATA_CACHE="${AUDIO_DATA_METADATA_CACHE:-$REPO_ROOT/runs/c
 export PYTHONPATH="$REPO_ROOT/src:$AUDIO_DATA_CONTRACT_ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
 export OMP_NUM_THREADS="${OMP_NUM_THREADS:-2}"
 export OPENBLAS_NUM_THREADS="${OPENBLAS_NUM_THREADS:-1}"
-# Build once before starting DDP, so metadata parsing cannot time out its collectives.
+# Match train.sh's default and the final caller override.
+preflight_batch_size=8
+previous_arg=""
+for arg in "$@"; do
+  if [[ "$previous_arg" == "--per_device_train_batch_size" ]]; then
+    preflight_batch_size="$arg"
+  elif [[ "$previous_arg" == "--data_config" ]]; then
+    export DATA_CONFIG="$arg"
+  elif [[ "$arg" == --per_device_train_batch_size=* ]]; then
+    preflight_batch_size="${arg#*=}"
+  elif [[ "$arg" == --data_config=* ]]; then
+    export DATA_CONFIG="${arg#*=}"
+  fi
+  previous_arg="$arg"
+done
+reuse_args=()
+if [[ -n "${PREVIOUS_DATA_CONFIG:-}" ]]; then
+  reuse_args=(--reuse-config "$PREVIOUS_DATA_CONFIG")
+fi
+# Finish metadata, sampler quotas and audio reads before allocating DDP GPUs.
 "${PYTHON:-python}" -m open_audio_llm.data.catalog_cache \
-  --data_config "$DATA_CONFIG" --workers "${METADATA_WORKERS:-4}"
+  --data_config "$DATA_CONFIG" --workers "${METADATA_WORKERS:-4}" \
+  --preflight-report "$OUTPUT_DIR/data-preflight.json" \
+  --batch-size "$preflight_batch_size" --world-size "${NPROC_PER_NODE:-2}" \
+  "${reuse_args[@]}"
 exec bash "$SCRIPT_DIR/train.sh" \
   --lora_rank 64 --lora_alpha 128 --learning_rate 2e-5 \
   --max_length 2048 --gradient_accumulation_steps 2 \

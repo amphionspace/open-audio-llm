@@ -24,6 +24,8 @@ from .augment import AugmentConfig, augment_waveform
 from .catalog_resolver import LhotseCatalogAudioResolver
 from .online_dataset import TASK_TEMPLATES, OnlineAudioDataset
 from .records import ResolvedAudioRecord
+from .sot import TIMESTAMP_FORMAT, with_sot_timestamps
+from .sot_alignment import AlignmentIndex
 
 
 def in_ts_partition(record, selection):
@@ -48,7 +50,7 @@ def in_ts_partition(record, selection):
     return held_out if part == "dev" else not held_out
 
 
-def read_data_config(path):
+def read_data_config(path, *, use_env=True):
     path = Path(path).expanduser().resolve()
     config = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(config, dict):
@@ -57,7 +59,7 @@ def read_data_config(path):
         ("catalog", "AUDIO_DATA_CATALOG"),
         ("roots", "AUDIO_DATA_ROOTS_FILE"),
     ):
-        value = os.environ.get(env) or config.get(field)
+        value = (os.environ.get(env) if use_env else None) or config.get(field)
         if not value:
             raise ValueError(f"Set {env} or {field!r} in {path}")
         selected = Path(value).expanduser()
@@ -100,6 +102,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         self.training = training
         self.message_format = message_format
         self._audio_cuts = {}
+        self._sot_alignments = {}
         self.config = config
         self.source_ranges = []
         records = []
@@ -111,6 +114,18 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         if explicit and not all("weight" in s for s in sources):
             raise ValueError("Specify weight for every source")
         for source in sources:
+            if type(source.get("sot_timestamps", False)) is not bool:
+                raise ValueError("sot_timestamps must be a boolean")
+            if source.get("sot_timestamps"):
+                if message_format != "qwen3_asr":
+                    raise ValueError("Timestamped SOT requires message_format=qwen3_asr")
+                path = source.get("sot_alignment_index")
+                if not path or not Path(path).is_file():
+                    raise ValueError("sot_timestamps requires an existing sot_alignment_index")
+                if path not in self._sot_alignments:
+                    self._sot_alignments[path] = AlignmentIndex(path, source.get("sot_alignment_sha256"))
+                if source.get("sot_alignment_sha256") and self._sot_alignments[path].sha256 != source["sot_alignment_sha256"]:
+                    raise ValueError("Conflicting checksums for sot_alignment_index")
             excluded = source.get("exclude_speakers", [])
             if not isinstance(excluded, list) or not all(isinstance(item, str) for item in excluded):
                 raise ValueError("exclude_speakers must be a list of speaker IDs")
@@ -219,6 +234,9 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                 continue
             if row.record.task not in TASK_TEMPLATES:
                 raise ValueError(f"Unsupported task template: {row.record.task}")
+            if source.get("sot_timestamps"):
+                row = replace(row, record=with_sot_timestamps(
+                    row.record, self._sot_alignments[source["sot_alignment_index"]]))
             yield row
             count += 1
             limit = source.get("max_samples")
@@ -314,11 +332,15 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                 self._sample_metrics["decode_s"] += time.perf_counter() - started
             started = time.perf_counter()
             if self.training:
+                augmentation = self.augmentation
+                if resolved.record.metadata.get("sot_output_format") == TIMESTAMP_FORMAT:
+                    # Aligned times are fixed; time warping and delayed RIRs invalidate them.
+                    augmentation = replace(augmentation, speed_prob=0.0, rir_prob=0.0)
                 audio = augment_waveform(
                     audio,
                     self.sampling_rate,
                     rng,
-                    self.augmentation,
+                    augmentation,
                     noise_loader=lambda r, sr: load_mono(r.choice(self.noise_cuts), sr),
                     rir_loader=lambda r, sr: load_mono(r.choice(self.rir_cuts), sr),
                 )

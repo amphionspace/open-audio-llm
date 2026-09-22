@@ -189,6 +189,9 @@ def main():
                     row = {"source": source, "id": record.id, "task": record.task,
                            "language": record.language, "reference": record.target,
                            "prediction": prediction.text, "predicted_language": prediction.language}
+                    if record.metadata.get("sot_output_format"):
+                        row.update(sot_output_format=record.metadata["sot_output_format"],
+                                   duration=record.audio_slots[0].ref.duration)
                     stream.write(json.dumps(row, ensure_ascii=False) + "\n")
                     rows.append(row)
                 stream.flush()

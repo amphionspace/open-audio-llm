@@ -2,6 +2,8 @@
 
 from audio_data_contract import AudioRecord
 
+from .sot import TIMESTAMP_FORMAT, TIMESTAMP_SYSTEM
+
 # Matches the reference TS-ASR recipe; training and evaluation share these.
 ENROLL_SECONDS = 3
 SILENCE_SECONDS = 3
@@ -78,7 +80,8 @@ def native_messages(record: AudioRecord, hotwords: str) -> list[dict[str, str]]:
         language = "None"
     context = TS_CONCAT_SYSTEM if record.task == "ts_asr" else ""
     if record.task == "speaker_attributed_asr":
-        context = SOT_SYSTEM
+        context = (TIMESTAMP_SYSTEM if record.metadata.get("sot_output_format") == TIMESTAMP_FORMAT
+                   else SOT_SYSTEM)
         if mixed:
             context += ' Keep each speaker\'s original language, including Chinese and English. Do not translate.'
     if record.task == "asr_hotwords" and hotwords != "N/A":

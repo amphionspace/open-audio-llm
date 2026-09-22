@@ -10,6 +10,57 @@ from open_audio_llm.data.catalog_dataset import in_ts_partition
 from open_audio_llm.integrations.ms_swift.retention import sample_losses, supervised_forward
 
 
+@pytest.mark.parametrize('dtype', [torch.float32, torch.bfloat16])
+@pytest.mark.parametrize('separate_prefix', [False, True])
+def test_chunked_ce_preserves_dense_objective_and_gradients(dtype, separate_prefix):
+    from open_audio_llm.integrations.ms_swift.retention import average_answer_parts
+
+    torch.manual_seed(19)
+    student = torch.randn(389, 31, dtype=dtype, requires_grad=True)
+    teacher = torch.randn(130, 31, dtype=dtype, requires_grad=True)
+    targets = torch.randint(31, (389,))
+    rows = torch.tensor([0] * 130 + [1] * 258 + [2])
+    counts = torch.tensor([130, 258, 1])
+    ordinary = rows == 0
+    prefix = torch.arange(389) % 7 == 0 if separate_prefix else None
+    ce = average_answer_parts(F.cross_entropy(student.float(), targets, reduction='none'),
+                              rows, counts, prefix)
+    token_kl = F.kl_div(student[ordinary].float().log_softmax(-1),
+                        teacher.detach().float().softmax(-1), reduction='none').sum(-1)
+    kl = average_answer_parts(token_kl, rows[ordinary], counts,
+                              None if prefix is None else prefix[ordinary])
+    expected = ce + 2 * kl
+    weight = torch.tensor([0.3, 0.6, 0.1])
+    expected_gradient = torch.autograd.grad((expected * weight).sum(), student)[0]
+    actual, actual_ce, actual_kl = sample_losses(student, targets, rows, counts,
+                                                teacher, ordinary, 2, prefix)
+    for value, reference in zip((actual, actual_ce, actual_kl), (expected, ce, kl)):
+        torch.testing.assert_close(value, reference)
+    (actual * weight).sum().backward()
+    torch.testing.assert_close(student.grad, expected_gradient, atol=2e-6, rtol=0.01 if dtype == torch.bfloat16 else 1e-5)
+    assert teacher.grad is None
+
+
+def test_chunked_ce_does_not_retain_full_softmax_and_ignores_masked_targets():
+    from open_audio_llm.integrations.ms_swift.retention import _ChunkedCrossEntropy
+
+    logits = torch.randn(259, 17, requires_grad=True)
+    targets = torch.randint(17, (259,))
+    targets[::13] = -100
+    saved = []
+    def remember(tensor):
+        saved.append(tensor.data_ptr())
+        return tensor
+    with torch.autograd.graph.saved_tensors_hooks(remember, lambda tensor: tensor):
+        actual = _ChunkedCrossEntropy.apply(logits, targets)
+    assert saved == [logits.data_ptr(), targets.data_ptr()]
+    expected = F.cross_entropy(logits, targets, reduction='none')
+    torch.testing.assert_close(actual, expected)
+    reference = torch.autograd.grad(expected.sum(), logits)[0]
+    actual.sum().backward()
+    torch.testing.assert_close(logits.grad, reference)
+
+
 def test_short_negative_has_same_example_weight_as_long_transcript():
     logits = torch.zeros(11, 3, requires_grad=True)
     targets = torch.zeros(11, dtype=torch.long)

@@ -23,7 +23,8 @@ CONFIG_KEYS = (
     "freeze_vit", "freeze_aligner", "freeze_llm", "audio_encoder_batching",
     "save_only_model", "seed", "max_length", "model_type", "tuner_type",
 )
-SOURCE_KEYS = ("dataset_id", "version", "split", "weight", "require_clean_pass")
+SOURCE_KEYS = ("dataset_id", "version", "split", "weight", "require_clean_pass",
+               "sot_timestamps", "sot_alignment_sha256")
 
 
 def read_jsonl(path):
@@ -60,6 +61,29 @@ def aggregate_metrics(items):
             result["attribution_accuracy"] = 100 * correct / scored
         if units:
             result["attribution_coverage"] = 100 * scored / units
+    if all("timestamp_reference_coverage" in m for m in items):
+        available = sum(m["timestamp_reference_coverage"]["available_utterances"] for m in items)
+        total = sum(m["timestamp_reference_coverage"]["total_utterances"] for m in items)
+        result["timestamp_reference_records"] = available
+        result["timestamp_total_records"] = total
+        if total:
+            result["timestamp_reference_coverage"] = 100 * available / total
+    if all("timestamps" in m for m in items):
+        protocols = {(m["timestamps"]["method"], m["timestamps"]["collar_seconds"]) for m in items}
+        if len(protocols) != 1:
+            raise ValueError("Cannot aggregate different timestamp scoring protocols")
+        timing = {key: sum(m["timestamps"][key] for m in items) for key in (
+            "reference_segments", "predicted_segments", "matched_segments",
+            "within_collar_segments", "boundary_absolute_error_seconds")}
+        refs, hyps = timing["reference_segments"], timing["predicted_segments"]
+        matched, correct = timing["matched_segments"], timing["within_collar_segments"]
+        result["timestamp_precision"] = 100 * correct / hyps if hyps else 0.0
+        result["timestamp_recall"] = 100 * correct / refs if refs else 0.0
+        result["timestamp_f1"] = 200 * correct / (refs + hyps) if refs + hyps else 0.0
+        if refs:
+            result["timestamp_matched_reference_fraction"] = 100 * matched / refs
+        if matched:
+            result["timestamp_boundary_mae_seconds"] = timing["boundary_absolute_error_seconds"] / (2 * matched)
     return result
 
 
@@ -163,9 +187,24 @@ def run_config(root):
         origin = Path(phase["source_run"])
         config["parent_run"] = origin.name
         config["parent_checkpoint"] = Path(phase["source_checkpoint"]).name
-    provenance = origin / "source-provenance.json"
+    # A recovery can carry its own frozen snapshot (including run-specific
+    # fixes). Parent provenance is only a fallback when no local record exists.
+    provenance = root / "source-provenance.json"
+    if not provenance.exists():
+        provenance = origin / "source-provenance.json"
     if provenance.exists():
-        config["source_git_commit"] = json.loads(provenance.read_text())["git_commit"]
+        metadata = json.loads(provenance.read_text())
+        # A frozen file snapshot need not correspond to a Git commit. Never
+        # substitute the sync checkout's HEAD or a parent run's base revision.
+        config["source_git_commit"] = metadata.get("git_commit")
+        config["source_base_git_commit"] = metadata.get("base_git_commit")
+        config["source_origin"] = metadata.get("source_origin", str(provenance.parent / "source"))
+        config["source_run"] = metadata.get("source_run")
+        config["source_file_hashes"] = {
+            **metadata.get("files_sha256", {}),
+            **metadata.get("run_files_sha256", {}),
+            **metadata.get("files", {}),
+        }
         config["source_snapshot_sha256"] = hashlib.sha256(provenance.read_bytes()).hexdigest()
     return config
 
