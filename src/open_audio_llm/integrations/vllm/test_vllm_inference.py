@@ -652,15 +652,11 @@ def _build_messages_qwen3_asr(
 
     This preserves the message format expected by existing Qwen3-ASR checkpoints.
 
-    Wire format sent to ``/v1/chat/completions``::
-
-        messages = [
-            {"role": "system", "content": "Given the speaker's voice in the first audio.\\nHotwords: w1,w2"},
-            {"role": "user",   "content": [
-                {"type": "input_audio", "input_audio": {"data": "<enroll_b64>", "format": "wav"}},
-                {"type": "input_audio", "input_audio": {"data": "<mixed_b64>",  "format": "wav"}},
-            ]},
-        ]
+    TS-ASR matches AmphionASR v3: one waveform of a 3-second enrollment
+    followed immediately by the mixture (no inserted silence). The server
+    must be started with ``AMPHION_TSASR_INSERT_SEP=1`` so Mel and conv run
+    on each clip and a learned SEP is inserted. Hotwords, when present, are
+    appended to that system prompt.
 
     If neither enrollment nor hotwords are present, ``system`` is an empty
     string (the model was trained with empty system turns for plain ASR).
@@ -677,31 +673,30 @@ def _build_messages_qwen3_asr(
     has_enrollment = (not no_enrollment) and bool(item.get("enrollment_audio"))
 
     # ── system message ─────────────────────────────────────────────────
+    from open_audio_llm.tsasr.ts_prompt import TS_CONCAT_SYSTEM
+
     sys_lines: list[str] = []
     if has_enrollment:
-        sys_lines.append("Given the speaker's voice in the first audio.")
+        sys_lines.append(TS_CONCAT_SYSTEM)
     if not no_hotwords:
         hotwords_str = _format_hotwords(item.get("hotwords"))
         if hotwords_str:
             sys_lines.append(f"Hotwords: {hotwords_str}")
     system_content = "\n".join(sys_lines)
 
-    # ── user message (audio tokens only) ───────────────────────────────
-    user_content: list[dict] = []
+    # ── user message (one audio; TS is enroll prefix + mixture) ────────
+    user_audio = mixed_b64
     if has_enrollment:
         enroll_b64 = audios_b64.get("enrollment")
         if enroll_b64 is None:
             raise KeyError(
                 "enrollment audio expected but 'enrollment' slot is missing"
             )
-        user_content.append({
-            "type": "input_audio",
-            "input_audio": {"data": enroll_b64, "format": "wav"},
-        })
-    user_content.append({
+        user_audio = _concat_v3_ts_b64(enroll_b64, mixed_b64)
+    user_content: list[dict] = [{
         "type": "input_audio",
-        "input_audio": {"data": mixed_b64, "format": "wav"},
-    })
+        "input_audio": {"data": user_audio, "format": "wav"},
+    }]
 
     return [
         {"role": "system", "content": system_content},
@@ -888,6 +883,22 @@ def audio_to_wav_bytes(audio: np.ndarray, sr: int = 16000) -> bytes:
 def audio_to_base64_wav(audio: np.ndarray, sr: int = 16000) -> str:
     """Encode numpy audio array as base64 WAV string."""
     return base64.b64encode(audio_to_wav_bytes(audio, sr)).decode("utf-8")
+
+
+def _concat_v3_ts_b64(enroll_b64: str, mix_b64: str, enroll_seconds: int = 3) -> str:
+    """Pack v3 TS transport: 3s enrollment immediately followed by the mixture."""
+    enroll, enroll_sr = sf.read(io.BytesIO(base64.b64decode(enroll_b64)), dtype="float32")
+    mix, mix_sr = sf.read(io.BytesIO(base64.b64decode(mix_b64)), dtype="float32")
+    if int(enroll_sr) != 16000 or int(mix_sr) != 16000:
+        raise ValueError("v3 TS-ASR eval audio must already be 16 kHz")
+    enroll = np.asarray(enroll, dtype=np.float32).reshape(-1)
+    mix = np.asarray(mix, dtype=np.float32).reshape(-1)
+    count = enroll_seconds * 16000
+    if enroll.shape[0] >= count:
+        enroll = enroll[:count]
+    else:
+        enroll = np.pad(enroll, (0, count - enroll.shape[0]))
+    return audio_to_base64_wav(np.concatenate([enroll, mix]), 16000)
 
 
 def _get_triton_embed_client(url: str, model_name: str) -> TritonAudioEmbedClient:

@@ -127,13 +127,14 @@ def test_native_ts_reads_registered_audio_index_and_budgets_concat(catalog_confi
         assert dataset.records.sources[0].path != legacy.records.sources[0].path
     sampler = CatalogBatchSampler(dataset)
     assert list(sampler.slots) == [1, 1]
-    assert sampler.durations == pytest.approx([6.75, 6.75], abs=0.001)
+    assert sampler.durations == pytest.approx([3.75, 3.75], abs=0.001)
     sample = dataset[0]
     assert sample["audio_slot_count"] == 1 and len(sample["audios"]) == 1
-    assert sample["duration"] == 6.75
-    assert sample["_performance"]["audio_seconds"] == 6.75
-    audio, _ = sf.read(BytesIO(sample["audios"][0]))
-    assert np.count_nonzero(audio[3 * 16000:6 * 16000]) == 0
+    assert sample["duration"] == 3.75
+    assert sample["_performance"]["audio_seconds"] == 3.75
+    enroll, _ = sf.read(BytesIO(sample["audios"][0]))
+    mix, _ = sf.read(BytesIO(sample["mix_wav"]))
+    assert len(enroll) == 3 * 16000 and len(mix) == int(0.75 * 16000)
     assert dataset[1]["solution"] == "language None<asr_text>"
     assert len(dataset.resolver._audio_indexes) == 1
     # A source without an applicable clean version remains usable, including TS.

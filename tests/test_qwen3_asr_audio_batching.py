@@ -70,6 +70,67 @@ def test_batched_encoder_preserves_outputs_gradients_and_audio_isolation(checkpo
         torch.testing.assert_close(thinker.get_audio_features(features, mask), expected, rtol=0, atol=0)
 
 
+def test_batched_encoder_matches_serial_sep_and_keeps_sep_grad():
+    pytest.importorskip("qwen_asr")
+    from qwen_asr.core.transformers_backend.configuration_qwen3_asr import Qwen3ASRAudioEncoderConfig
+    from qwen_asr.core.transformers_backend.modeling_qwen3_asr import Qwen3ASRAudioEncoder
+    from open_audio_llm.integrations.ms_swift.audio_batching import enable_batched_audio
+    from open_audio_llm.tsasr.sep_token import AudioSepToken, _patch_hf_encoder_forward, conv_token_count
+
+    torch.manual_seed(5)
+    config = Qwen3ASRAudioEncoderConfig(
+        d_model=32, encoder_layers=2, encoder_attention_heads=4,
+        encoder_ffn_dim=64, output_dim=16, downsample_hidden_size=8, n_window=50,
+        conv_chunksize=3,
+    )
+    config._attn_implementation = "sdpa"
+    encoder = Qwen3ASRAudioEncoder(config).train()
+    encoder.add_module("sep_token", AudioSepToken(config.d_model))
+    _patch_hf_encoder_forward(encoder)
+    lengths = [80, 120, 250]
+    enrolls = [0, 50, 100]
+    features = torch.randn(len(lengths), 128, 260, requires_grad=True)
+    expected_rows = []
+    for feature, length, enroll in zip(features, lengths, enrolls):
+        expected_rows.append(encoder(
+            feature[:, :length],
+            feature_lens=torch.tensor([length]),
+            enroll_n_frames=enroll,
+        ).last_hidden_state)
+    expected = torch.cat(expected_rows)
+    expected_lens = []
+    for length, enroll in zip(lengths, enrolls):
+        if enroll > 0 and length > enroll:
+            expected_lens.append(conv_token_count(enroll) + 1 + conv_token_count(length - enroll))
+        elif enroll > 0:
+            expected_lens.append(conv_token_count(length) + 1)
+        else:
+            expected_lens.append(conv_token_count(length))
+    assert [row.shape[0] for row in expected_rows] == expected_lens
+    thinker = SimpleNamespace(audio_tower=encoder, get_audio_features=None)
+    restore = enable_batched_audio(SimpleNamespace(thinker=thinker))
+    try:
+        actual = thinker.get_audio_features(
+            features, audio_feature_lengths=torch.tensor(lengths), enroll_n_frames=torch.tensor(enrolls),
+        )
+        torch.testing.assert_close(actual, expected, atol=2e-5, rtol=2e-4)
+        weight = torch.randn_like(actual)
+        (actual * weight).sum().backward()
+        assert encoder.sep_token.weight.grad is not None
+        assert torch.isfinite(encoder.sep_token.weight.grad).all()
+        assert torch.count_nonzero(encoder.sep_token.weight.grad) > 0
+        with torch.no_grad():
+            altered = features.detach().clone()
+            altered[1:] *= 100
+            altered[0, :, lengths[0]:] = -1000
+            independent = thinker.get_audio_features(
+                altered, audio_feature_lengths=torch.tensor(lengths), enroll_n_frames=torch.tensor(enrolls),
+            )
+            torch.testing.assert_close(independent[:expected_lens[0]], actual[:expected_lens[0]], rtol=0, atol=0)
+    finally:
+        restore()
+
+
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA streams require a GPU")
 def test_batched_bf16_encoder_backward_has_no_cross_audio_or_padding_gradients():
     pytest.importorskip('qwen_asr')

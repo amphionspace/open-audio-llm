@@ -39,8 +39,7 @@ Training and vLLM-inference token sequences are therefore identical::
     {Hotwords: w1,w2  if applicable}
     <|im_end|>
     <|im_start|>user
-    <|audio_start|><|audio_pad|>...<|audio_pad|><|audio_end|>  ← enrollment (N₁ pad tokens)
-    <|audio_start|><|audio_pad|>...<|audio_pad|><|audio_end|>  ← target (N₂ pad tokens)
+    <|audio_start|><|audio_pad|>...<|audio_pad|><|audio_end|>  ← one clip, or enroll+SEP+mix
     <|im_end|>
     <|im_start|>assistant
     language English<asr_text>{transcription text}
@@ -50,11 +49,12 @@ Runtime sample format expected by this native-model template::
 
     {
       "messages": [
-        {"role": "system",    "content": "Given the speaker's voice in the first audio.\\nHotwords: xxx"},
-        {"role": "user",      "content": "<audio><audio>"},   ← ms-swift expands each <audio> → N pad tokens
+        {"role": "system",    "content": "<TS system or hotwords>"},
+        {"role": "user",      "content": "<audio>"},
         {"role": "assistant", "content": "language Chinese<asr_text>转写文本"}
       ],
-      "audios": ["enroll.wav", "target.wav"]
+      "audios": ["enroll.wav"],
+      "mix_wav": "mixture.wav"   ← TS only; omitted for plain ASR
     }
 
 For basic ASR (no enrollment, no hotwords, no language), system is empty
@@ -152,7 +152,11 @@ register_model_arch(
         'amphion_asr_1.7b',
         language_model=['thinker.model', 'thinker.lm_head'],
         vision_tower='thinker.audio_tower',
-        aligner=['thinker.audio_tower.proj1', 'thinker.audio_tower.proj2'],
+        aligner=[
+            'thinker.audio_tower.proj1',
+            'thinker.audio_tower.proj2',
+            'thinker.audio_tower.sep_token',
+        ],
     ))
 
 
@@ -281,7 +285,19 @@ class Qwen3ASRLoader(ModelLoader):
         # 3. Load via AutoModel (registered by qwen_asr at import time).
         # ------------------------------------------------------------------
         self.auto_model_cls = self.auto_model_cls or AutoModel
-        return super().get_model(model_dir, *args, **kwargs)
+        model = super().get_model(model_dir, *args, **kwargs)
+        from open_audio_llm.tsasr.sep_token import attach_sep_token
+
+        # Before any swift forward rebinding. Plain ASR leaves enroll_n_frames at 0.
+        model = attach_sep_token(model, model_dir)
+        # swift sft has no catalog flag. AUDIO_ENCODER_BATCHING=1 turns on the
+        # SEP-aware batched encoder for this v3 path.
+        if get_env_args('audio_encoder_batching', bool, False):
+            from open_audio_llm.integrations.ms_swift.audio_batching import enable_batched_audio
+
+            enable_batched_audio(model)
+            logger.info('Qwen3ASRLoader: audio encoder batching enabled')
+        return model
 
 
 # -----------------------------------------------------------------------
@@ -323,6 +339,78 @@ class Qwen3ASRTemplate(Template):
     def feature_extractor(self):
         return getattr(self, '_feature_extractor', None) or self.processor.feature_extractor
 
+    def _mix_source(self, inputs):
+        cached = getattr(inputs, '_ts_mix_wav', None)
+        if cached is not None:
+            return cached
+        extra = getattr(inputs, 'extra_kwargs', None) or {}
+        mix = extra.get('mix_wav')
+        if mix is None:
+            nested = extra.get('chat_template_kwargs') or {}
+            if isinstance(nested, dict):
+                mix = nested.get('mix_wav')
+        return mix
+
+    def _drop_mix_source(self, inputs) -> None:
+        extra = getattr(inputs, 'extra_kwargs', None) or {}
+        extra.pop('mix_wav', None)
+        nested = extra.get('chat_template_kwargs')
+        if isinstance(nested, dict):
+            nested.pop('mix_wav', None)
+
+    def _waveform(self, value, *, enroll: bool):
+        from io import BytesIO
+
+        import numpy as np
+        import soundfile as sf
+
+        from open_audio_llm.tsasr.concat_audio import (
+            configured_enroll_sec,
+            enroll_n_samples,
+            load_enroll_wav,
+            load_mix_wav,
+        )
+
+        if isinstance(value, (bytes, bytearray)):
+            wav, rate = sf.read(BytesIO(value), dtype='float32', always_2d=False)
+            wav = np.asarray(wav, dtype=np.float32)
+            if wav.ndim > 1:
+                wav = wav.mean(axis=-1)
+            wav = wav.reshape(-1)
+            if int(rate) != int(self.sampling_rate):
+                raise ValueError(
+                    f'TS-ASR audio rate {rate} != {self.sampling_rate}')
+            if enroll:
+                count = enroll_n_samples(configured_enroll_sec(), self.sampling_rate)
+                if wav.shape[0] >= count:
+                    wav = wav[:count]
+                else:
+                    wav = np.pad(wav, (0, count - wav.shape[0]))
+            return wav
+        if enroll:
+            return load_enroll_wav(str(value), sr=self.sampling_rate)
+        return load_mix_wav(str(value), sr=self.sampling_rate)
+
+    def _cache_ts_mel(self, inputs, enroll_wav) -> None:
+        if getattr(inputs, '_ts_sep_mel', None) is not None:
+            return
+        from open_audio_llm.tsasr.sep_token import extract_enroll_mix_mel
+
+        mix_wav = self._mix_source(inputs)
+        if not hasattr(mix_wav, 'shape'):
+            mix_wav = self._waveform(mix_wav, enroll=False)
+        feat, mask, enroll_n = extract_enroll_mix_mel(
+            self.feature_extractor, enroll_wav, mix_wav, self.sampling_rate)
+        policy = (getattr(inputs, 'extra_kwargs', None) or {}).get('audio_augmentation')
+        if policy:
+            mix_n = int(feat.shape[-1]) - int(enroll_n)
+            enroll_feat = augment_features(
+                feat[..., :enroll_n], torch.tensor([enroll_n]), policy)
+            mix_feat = augment_features(
+                feat[..., enroll_n:], torch.tensor([mix_n]), policy)
+            feat = torch.cat([enroll_feat, mix_feat], dim=-1)
+        inputs._ts_sep_mel = (feat, mask, int(enroll_n))
+
     def replace_tag(
         self,
         media_type: Literal['image', 'video', 'audio'],
@@ -337,15 +425,40 @@ class Qwen3ASRTemplate(Template):
         # will produce, so that masked_scatter in forward() can replace every
         # placeholder position with a real audio frame embedding.
         # (One placeholder → only 1 frame used → audio ignored → loss stuck at ~3.)
-        n_tokens = _get_n_audio_tokens(
-            wav,
-            hop_length=self._hop_length,
-        )
+        if self._mix_source(inputs) is not None and index == 0:
+            from open_audio_llm.tsasr.sep_token import audio_token_count
+
+            self._cache_ts_mel(inputs, wav)
+            feat, _mask, enroll_n = inputs._ts_sep_mel
+            n_tokens = audio_token_count(int(feat.shape[-1]), True, enroll_n)
+        else:
+            n_tokens = _get_n_audio_tokens(
+                wav,
+                hop_length=self._hop_length,
+            )
         return ['<|audio_start|>'] + ['<|audio_pad|>'] * n_tokens + ['<|audio_end|>']
 
     def _encode(self, inputs) -> Dict[str, Any]:
         if not inputs.audios:
             return super()._encode(inputs)
+        if self._mix_source(inputs) is not None:
+            # Do not set AMPHION_TSASR_INSERT_SEP during training. That env
+            # splits a single concat waveform; this path already has two clips.
+            enroll = self._waveform(inputs.audios[0], enroll=True)
+            inputs._ts_mix_wav = self._waveform(self._mix_source(inputs), enroll=False)
+            inputs._audio_llm_waveforms = [enroll]
+            self._drop_mix_source(inputs)
+            try:
+                encoded = super()._encode(inputs)
+            finally:
+                del inputs._audio_llm_waveforms
+                del inputs._ts_mix_wav
+            feat, mask, enroll_n = inputs._ts_sep_mel
+            del inputs._ts_sep_mel
+            encoded['input_features'] = feat.contiguous()
+            encoded['feature_attention_mask'] = mask.contiguous()
+            encoded['enroll_n_frames'] = int(enroll_n)
+            return encoded
         try:
             audios = load_batch(
                 inputs.audios,
@@ -425,6 +538,11 @@ class Qwen3ASRTemplate(Template):
             b['feature_attention_mask'] for b in batch
             if b.get('feature_attention_mask') is not None
         ]
+        if any('enroll_n_frames' in b for b in batch):
+            res['enroll_n_frames'] = torch.tensor(
+                [int(b.get('enroll_n_frames', 0) or 0) for b in batch],
+                dtype=torch.long,
+            )
         if input_features:
             max_frames = max(features.shape[-1] for features in input_features)
             input_features = [

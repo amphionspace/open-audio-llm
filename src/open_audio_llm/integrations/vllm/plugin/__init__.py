@@ -20,11 +20,15 @@ def register():
         os.environ.get("OPEN_AUDIO_LLM_ENABLE_LEGACY_AMPHION_ASR") == "1"
     )
     enable_funasr = os.environ.get("OPEN_AUDIO_LLM_ENABLE_FUNASR_VLLM") == "1"
+    enable_ts_sep = os.environ.get("AMPHION_TSASR_INSERT_SEP", "").strip().lower() in {
+        "1", "true", "yes", "on",
+    }
     if not (
         enable_audio_llm
         or enable_qwen3_asr_embeds
         or enable_legacy_amphion_asr
         or enable_funasr
+        or enable_ts_sep
     ):
         return
 
@@ -52,4 +56,10 @@ def register():
             "FunASRForConditionalGeneration",
             "open_audio_llm.integrations.vllm.plugin.funasr.funasr_model:"
             "FunASRForVLLM",
+        )
+    if enable_ts_sep:
+        # v3 TS-ASR: one concat waveform, independent Mel/conv, learned SEP.
+        ModelRegistry.register_model(
+            "Qwen3ASRForConditionalGeneration",
+            "open_audio_llm.tsasr.vllm_backend:Qwen3ASRForConditionalGeneration",
         )

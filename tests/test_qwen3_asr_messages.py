@@ -82,21 +82,25 @@ def test_ts_prompt_and_negative_keep_native_task_boundary():
 
 
 @pytest.mark.parametrize("enroll_seconds", [1, 4])
-def test_ts_concat_crops_or_pads_enrollment_without_truncating_mixture(enroll_seconds):
+def test_ts_clips_crop_enrollment_and_keep_mixture_separate(enroll_seconds):
     from io import BytesIO
 
     import numpy as np
     import soundfile as sf
 
-    from open_audio_llm.data.qwen3_asr import concat_ts_audio
+    from open_audio_llm.data.qwen3_asr import prepare_ts_clips
 
     audios = []
     for seconds, value in [(enroll_seconds, 0.25), (2, 0.5)]:
         buffer = BytesIO()
         sf.write(buffer, np.full(16000 * seconds, value), 16000, format="WAV", subtype="FLOAT")
         audios.append(buffer.getvalue())
-    audio, rate = sf.read(BytesIO(concat_ts_audio(audios, 16000)))
-    assert rate == 16000 and len(audio) == 8 * rate
-    assert np.all(audio[:min(enroll_seconds, 3) * rate] == 0.25)
-    assert np.all(audio[min(enroll_seconds, 3) * rate:6 * rate] == 0)
-    assert np.all(audio[6 * rate:] == 0.5)
+    enroll, mix = prepare_ts_clips(audios, 16000)
+    enroll_wav, enroll_rate = sf.read(BytesIO(enroll))
+    mix_wav, mix_rate = sf.read(BytesIO(mix))
+    assert enroll_rate == mix_rate == 16000
+    assert len(enroll_wav) == 3 * 16000 and len(mix_wav) == 2 * 16000
+    assert np.all(enroll_wav[:min(enroll_seconds, 3) * 16000] == 0.25)
+    if enroll_seconds < 3:
+        assert np.all(enroll_wav[enroll_seconds * 16000:] == 0)
+    assert np.all(mix_wav == 0.5)

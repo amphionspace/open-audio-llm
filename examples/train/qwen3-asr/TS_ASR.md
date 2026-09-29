@@ -50,14 +50,16 @@ token 数或梯度占比**，长 TS 仍可能贡献更多监督，当前 TS 目�
 
 ## 输入与训练参数
 
-普通 ASR 的 system 为空；TS system 明确指定目标说话人任务。训练和评估共用
-相同拼接：enrollment 前 3 秒，不足补零，随后是 3 秒静音和完整 mixture，最终
-只有一个 `<audio>`。中文答案为 `language Chinese<asr_text>文本`，英文使用
-`English`，目标说话人不存在时为 `language None<asr_text>`。
+普通 ASR 的 system 为空；TS system 与 AmphionASR v3 相同。注册音取前 3 秒，
+不足补零，混合音保持独立，中间不加静音。用户轮只有一个 `<audio>`，mixture
+走 `mix_wav`。编码器对两段分别提 Mel、分别卷积，在进 audio transformer 前插入
+可学习 SEP。中文答案为 `language Chinese<asr_text>文本`，英文使用 `English`，
+目标说话人不存在时为 `language None<asr_text>`。
 
-波形增强后再拼接，参考段与静音始终各占 3 秒。变速概率 25%，SpecAugment
+波形增强作用在各段上，参考段始终占 3 秒。变速概率 25%，SpecAugment
 概率 15%，不加噪或混响。主音频最多 20 秒、最慢速度 0.9，TS 最长
-`20 / 0.9 + 6 ≈ 28.23` 秒，为 30 秒特征窗口留出余量；组批也预算这 6 秒前缀。
+`20 / 0.9 + 3 ≈ 25.23` 秒；组批预算这 3 秒注册前缀。训练不要设置
+`AMPHION_TSASR_INSERT_SEP`。评测 concat 波形（注册 3 秒紧接混合音）时才设为 1。
 
 从原生预训练模型新建 LoRA，冻结音频编码器和连接层，只训练语言模型线性层的
 LoRA；rank=64、alpha=128、学习率 `2e-5`、cosine、5% warmup。
@@ -194,7 +196,7 @@ TS 开发样本按注册记录 `source_record_id` 中首条原始语音对应的
 正例空输出仍是漏识别，必须计入 CER/WER，并单独报告空输出率。中文逐域保持
 门槛继续独立执行，不能用更低 TS 错误率抵消通用中文退化。
 
-TS 输入继续保留 3 秒 enrollment、3 秒静音和混音，模型负责从混音中识别注册
+TS 输入是 3 秒 enrollment 和独立混音，中间用 SEP 分开，模型负责从混音中识别注册
 说话人的文字。SpeakerVAD 的端到端拒识效果由 Runtime 验收；本项目的重叠识别
 测试直接评估目标在场的混音，避免将前级误拒的难例从识别指标中排除。
 

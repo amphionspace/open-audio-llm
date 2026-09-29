@@ -163,6 +163,18 @@ unset \
   VLLM_ENABLE_MM_EMBEDS \
   VLLM_ENABLE_QWEN3_ASR_EMBEDS
 
-echo "[open-audio-llm serve] arch=${ARCH:-<unknown>} model=$MODEL port=$PORT gpus=${GPUS:-<unchanged>} served_name=${SERVED_NAME:-<default>} tp=$TP_SIZE dp=$DP_SIZE max_audio=$MAX_AUDIO util=${GPU_UTIL:-<vllm-default>} max_model_len=${MAX_MODEL_LEN:-<model-default>} enable_mm_embeds=$ENABLE_MM_EMBEDS enable_qwen3_asr_embeds=$ENABLE_QWEN3_ASR_EMBEDS"
+if [[ "${AMPHION_TSASR_INSERT_SEP:-0}" =~ ^(1|true|yes|on)$ ]]; then
+  HF_OVERRIDES="$(python - <<'PY'
+import json
+from open_audio_llm.tsasr.global_audio_attn import vllm_hf_overrides
+print(json.dumps(vllm_hf_overrides()))
+PY
+)"
+  if [[ -n "$HF_OVERRIDES" && "$HF_OVERRIDES" != "{}" ]]; then
+    EXTRA_ARGS_DEFAULT+=(--hf-overrides "$HF_OVERRIDES")
+  fi
+fi
+
+echo "[open-audio-llm serve] arch=${ARCH:-<unknown>} model=$MODEL port=$PORT gpus=${GPUS:-<unchanged>} served_name=${SERVED_NAME:-<default>} tp=$TP_SIZE dp=$DP_SIZE max_audio=$MAX_AUDIO util=${GPU_UTIL:-<vllm-default>} max_model_len=${MAX_MODEL_LEN:-<model-default>} enable_mm_embeds=$ENABLE_MM_EMBEDS enable_qwen3_asr_embeds=$ENABLE_QWEN3_ASR_EMBEDS ts_sep=${AMPHION_TSASR_INSERT_SEP:-0}"
 [[ ${#EXTRA_ARGS[@]} -gt 0 ]] && echo "[open-audio-llm serve] extra: ${EXTRA_ARGS[*]}"
 vllm serve "$MODEL" "${VLLM_ARGS[@]}" "${EXTRA_ARGS_DEFAULT[@]}" "${EXTRA_ARGS[@]}"

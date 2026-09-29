@@ -111,6 +111,15 @@ bash examples/serve/vllm/serve.sh \
 - `-e`：向 vLLM 传 `--enable-mm-embeds`，允许请求传预计算多模态 embedding。
 - `-q`：启用 Qwen3-ASR `audio_embeds` embedding bypass 注册。
 
+目标说话人 ASR 与普通 ASR 不要共用同一个服务。普通 ASR 保持
+`AMPHION_TSASR_INSERT_SEP` 关闭。TS-ASR 先设置 `AMPHION_TSASR_INSERT_SEP=1`
+再启动 `serve.sh`：服务会注册本仓库的 Qwen3-ASR 后端，在注册音频和混合音频之间
+插入可学习 `[SEP]`，并把音频注意力改为整段一个窗口
+（`n_window_infer=1000000000`）。要恢复配置里的 800 帧窗口，再设置
+`COT_AUDIO_CHUNKED_ATTN=1`。checkpoint-34479 的评测数字和三阶段训练配置见
+[评测结果](docs/ckpt34479-evaluation.md)与
+[三阶段 SFT](docs/qwen3-asr-three-stage-sft.md)。
+
 Triton/RAG-ASR embedding bypass 示例：
 
 ```bash
@@ -188,7 +197,7 @@ bash examples/model/convert_amphionasr_checkpoint.sh \
 
 ## 目录边界
 
-- `src/open_audio_llm/`：唯一 Python package。
+- `src/open_audio_llm/`：唯一 Python package。TS-ASR 的 `[SEP]`、全局音频注意力和 vLLM 后端在 `src/open_audio_llm/tsasr/`。
 - `src/open_audio_llm/integrations/`：唯一 integrations 实现位置。
 - `examples/configs/`：逐项注释的数据 YAML 与训练 env 示例。
 - `examples/train/`：统一 SFT / GRPO / rollout 启动入口。
@@ -203,6 +212,8 @@ bash examples/model/convert_amphionasr_checkpoint.sh \
 ## 文档
 
 - [近期实验记录（2026-09-22–29）](docs/experiments/2026-09-22-to-29.md)：会议 SOT 评测、数据质检、自动合成和 clean/events A/B 状态。
+- [checkpoint-34479 评测结果](docs/ckpt34479-evaluation.md)：三阶段 SFT 最终权重的 ASR、热词、TS-ASR 和警务指标。
+- [Qwen3-ASR-1.7B 三阶段 SFT](docs/qwen3-asr-three-stage-sft.md)：从底座到 checkpoint-34479 的数据、学习率和冻结配置。
 
 - [TS-ASR 回放与联合训练](examples/train/qwen3-asr/TS_ASR.md)：clean 优先数据、encoder 批处理和中文保持验收。
 - `docs/architecture.md`：组件契约和模型组合。
