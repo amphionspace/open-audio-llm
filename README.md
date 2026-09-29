@@ -211,19 +211,14 @@ bash examples/model/convert_amphionasr_checkpoint.sh \
 
 ## 文档
 
-- [近期实验记录（2026-09-22–29）](docs/experiments/2026-09-22-to-29.md)：会议 SOT 评测、数据质检、自动合成和 clean/events A/B 状态。
 - [checkpoint-34479 评测结果](docs/ckpt34479-evaluation.md)：三阶段 SFT 最终权重的 ASR、热词、TS-ASR 和警务指标。
 - [Qwen3-ASR-1.7B 三阶段 SFT](docs/qwen3-asr-three-stage-sft.md)：从底座到 checkpoint-34479 的数据、学习率和冻结配置。
-
 - [TS-ASR 回放与联合训练](examples/train/qwen3-asr/TS_ASR.md)：clean 优先数据、encoder 批处理和中文保持验收。
 - `docs/architecture.md`：组件契约和模型组合。
 - `docs/data_boundary.md`：离线样本事实与在线训练随机性的边界。
-- `docs/migration_from_amphionasr.md`：从 AmphionASR 迁移的边界和归属。
-- `docs/archive/project_context.md`：源项目和目标项目上下文。
 - `docs/remaining_work.md`：剩余工作和下一步。
 - `docs/train_reproduction.md`：当前训练入口与复现步骤。
+- `docs/online_training_data.md`：Catalog 在线取样、增强和断点恢复。
 - `docs/vllm_triton_bypass.md`：vLLM Qwen3-ASR Triton embedding bypass。
 - `docs/compatibility_matrix.md`：默认支持和可选路径。
-- `docs/legacy_deps.md`：k2 和 Zipformer legacy 依赖策略。
-- `docs/self-contained-asr-deployment.md`：本地 Qwen3-ASR 与 AmphionSPEC 模型、
-  plugin、镜像及 Kubernetes 部署方法。
+- `docs/self-contained-asr-deployment.md`：本地 Qwen3-ASR 与 AmphionSPEC 模型、plugin、镜像及 Kubernetes 部署方法。
