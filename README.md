@@ -202,6 +202,8 @@ bash examples/model/convert_amphionasr_checkpoint.sh \
 
 ## 文档
 
+- [近期实验记录（2026-09-22–29）](docs/experiments/2026-09-22-to-29.md)：会议 SOT 评测、数据质检、自动合成和 clean/events A/B 状态。
+
 - [TS-ASR 回放与联合训练](examples/train/qwen3-asr/TS_ASR.md)：clean 优先数据、encoder 批处理和中文保持验收。
 - `docs/architecture.md`：组件契约和模型组合。
 - `docs/data_boundary.md`：离线样本事实与在线训练随机性的边界。
