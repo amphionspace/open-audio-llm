@@ -3,6 +3,7 @@
 from audio_data_contract import AudioRecord
 
 from .sot import TIMESTAMP_FORMAT, TIMESTAMP_SYSTEM
+from .target_sot import TARGET_FORMAT, target_prompt
 
 # Matches the reference TS-ASR recipe; training and evaluation share these.
 ENROLL_SECONDS = 3
@@ -58,7 +59,10 @@ def native_messages(record: AudioRecord, hotwords: str) -> list[dict[str, str]]:
         if [s.name for s in record.audio_slots] != ["enrollment", "mixture"]:
             raise ValueError("Native TS-ASR requires enrollment then mixture slots")
     elif record.task == "speaker_attributed_asr":
-        if [slot.name for slot in record.audio_slots] != ["mixture"]:
+        count = len(record.audio_slots) - 1
+        expected = ([f"enrollment_{i + 1}" for i in range(count)] + ["mixture"]
+                    if record.metadata.get("sot_output_format") == TARGET_FORMAT else ["mixture"])
+        if [slot.name for slot in record.audio_slots] != expected:
             raise ValueError("Speaker-attributed ASR requires one mixture slot")
     elif record.task not in {"asr", "asr_hotwords"} or len(record.audio_slots) != 1:
         raise ValueError("Native Qwen3-ASR training supports single-audio ASR/hotword tasks")
@@ -82,7 +86,9 @@ def native_messages(record: AudioRecord, hotwords: str) -> list[dict[str, str]]:
     if record.task == "speaker_attributed_asr":
         context = (TIMESTAMP_SYSTEM if record.metadata.get("sot_output_format") == TIMESTAMP_FORMAT
                    else SOT_SYSTEM)
-        if mixed:
+        if record.metadata.get("sot_output_format") == TARGET_FORMAT:
+            context = target_prompt(len(record.audio_slots) - 1, record.metadata["enrollment_view"]["mode"])
+        elif mixed:
             context += ' Keep each speaker\'s original language, including Chinese and English. Do not translate.'
     if record.task == "asr_hotwords" and hotwords != "N/A":
         context = f"Hotwords: {hotwords}"

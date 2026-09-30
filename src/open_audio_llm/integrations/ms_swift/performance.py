@@ -33,6 +33,8 @@ class PerformanceCollator:
         totals = {k: sum(m.get(k, 0.0) for m in metadata) for k in
                   ("decode_s", "wave_augment_s", "audio_seconds", "encode_s", "prepare_s", "prepare_cpu_s")}
         totals["samples"] = len(rows)
+        for key in {k for m in metadata for k in m if k.startswith("enrollment_")}:
+            totals[key] = sum(m.get(key, 0) for m in metadata)
         totals["prepare_max_s"] = max(m["prepare_s"] for m in metadata)
         totals["sources"] = dict(Counter(m["dataset_id"] for m in metadata))
         for name, mask in (("tokens", batch.get("attention_mask")),

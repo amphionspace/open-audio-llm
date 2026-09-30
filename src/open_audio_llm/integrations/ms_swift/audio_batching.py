@@ -10,7 +10,7 @@ from torch.nn.utils.rnn import pad_sequence
 from transformers.modeling_outputs import BaseModelOutput
 
 
-def _encode_batch(encoder, features, lengths):
+def conv_segments(encoder, features, lengths):
     # Native short utterances use a narrower convolution tensor. Padding those
     # to 100 frames changes boundary activations after the strided convolutions.
     groups = {}
@@ -41,6 +41,11 @@ def _encode_batch(encoder, features, lengths):
         )[:, None]
         for index, hidden in zip(indexes, embedded[valid].split(output_lengths)):
             audio_hidden[index] = hidden
+    return audio_hidden
+
+
+def _encode_batch(encoder, features, lengths):
+    audio_hidden = conv_segments(encoder, features, lengths)
     hidden = pad_sequence(audio_hidden, batch_first=True)
     valid = torch.arange(hidden.shape[1], device=features.device)[None, :] < torch.tensor(
         [len(row) for row in audio_hidden], device=features.device,

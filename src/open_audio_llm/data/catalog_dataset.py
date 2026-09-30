@@ -26,6 +26,7 @@ from .online_dataset import TASK_TEMPLATES, OnlineAudioDataset
 from .records import ResolvedAudioRecord
 from .sot import TIMESTAMP_FORMAT, with_sot_timestamps
 from .sot_alignment import AlignmentIndex
+from .target_sot import EnrollmentConfig, TARGET_FORMAT, eligible_candidates
 
 
 def in_ts_partition(record, selection):
@@ -114,6 +115,10 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         if explicit and not all("weight" in s for s in sources):
             raise ValueError("Specify weight for every source")
         for source in sources:
+            if source.get("enrollment") is not None:
+                EnrollmentConfig(**source["enrollment"])
+                if message_format != "qwen3_asr" or grpo:
+                    raise ValueError("Conditional SOT requires Qwen3-ASR SFT")
             if type(source.get("sot_timestamps", False)) is not bool:
                 raise ValueError("sot_timestamps must be a boolean")
             if source.get("sot_timestamps"):
@@ -237,6 +242,11 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             if source.get("sot_timestamps"):
                 row = replace(row, record=with_sot_timestamps(
                     row.record, self._sot_alignments[source["sot_alignment_index"]]))
+            if source.get("enrollment") is not None:
+                eligible_candidates(row.record, EnrollmentConfig(**source["enrollment"]))
+                row = replace(row, record=replace(row.record, metadata={
+                    **row.record.metadata, "enrollment_config": source["enrollment"],
+                }))
             yield row
             count += 1
             limit = source.get("max_samples")
@@ -326,6 +336,8 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                 cut = self.resolver.get_cut(ref)
             elif ref.start is not None or ref.duration is not None:
                 cut = cut.truncate(offset=ref.start or 0.0, duration=ref.duration)
+            if slot.purpose == "enrollment" and ref.channel is not None:
+                cut = cut.with_channels(list(ref.channel) if isinstance(ref.channel, tuple) else ref.channel)
             started = time.perf_counter()
             audio = load_mono(cut, self.sampling_rate)
             if self.collect_metrics:
@@ -333,7 +345,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             started = time.perf_counter()
             if self.training:
                 augmentation = self.augmentation
-                if resolved.record.metadata.get("sot_output_format") == TIMESTAMP_FORMAT:
+                if resolved.record.metadata.get("sot_output_format") in {TIMESTAMP_FORMAT, TARGET_FORMAT}:
                     # Aligned times are fixed; time warping and delayed RIRs invalidate them.
                     augmentation = replace(augmentation, speed_prob=0.0, rir_prob=0.0)
                 audio = augment_waveform(
@@ -388,11 +400,22 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             else:
                 raise ValueError("Replay objective supports ordinary, target-speaker and speaker-attributed ASR")
         if self.collect_metrics:
+            enrollment = sample.get("enrollment_view", {}).get("enrollments", [])
             result["_performance"] = {
                 **self._sample_metrics,
                 "encode_s": time.perf_counter() - encode_started,
                 "prepare_s": time.perf_counter() - started,
                 "prepare_cpu_s": time.process_time() - cpu_started,
                 "dataset_id": sample["dataset_id"],
+                **({"enrollment_count": len(enrollment),
+                    "enrollment_examples": 1,
+                    f"enrollment_k{len(enrollment)}": 1,
+                    f"enrollment_mode_{sample['enrollment_view']['mode']}": 1,
+                    "enrollment_seconds": sum(e["ref"]["duration"] for e in enrollment),
+                    "enrollment_absent": sum(not e["present"] for e in enrollment),
+                    **{f"enrollment_{lo}_{lo + 1}s": sum(
+                        lo <= e["ref"]["duration"] < lo + 1 or
+                        (lo == 4 and e["ref"]["duration"] == 5) for e in enrollment)
+                       for lo in range(1, 5)}} if enrollment else {}),
             }
         return result

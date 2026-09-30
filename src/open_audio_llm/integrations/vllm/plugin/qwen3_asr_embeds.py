@@ -298,3 +298,18 @@ class Qwen3ASRForVLLMWithEmbeds(Qwen3ASRForConditionalGeneration):
 
         mrope_position_delta = (llm_positions.max() + 1 - seq_len).item()
         return llm_positions, mrope_position_delta
+
+
+@MULTIMODAL_REGISTRY.register_processor(
+    Qwen3ASREmbedMultiModalProcessor,
+    info=Qwen3ASREmbedProcessingInfo,
+    dummy_inputs=Qwen3ASREmbedDummyInputsBuilder,
+)
+class Qwen3ASRTargetSOTForVLLM(Qwen3ASRForVLLMWithEmbeds):
+    """Decode enrollment-conditioned embeddings from the checkpoint audio tower."""
+
+    def load_weights(self, weights):
+        # SEP is loaded and applied by the independent audio frontend. The vLLM
+        # native tower has no SEP and is not used for conditional request audio.
+        return super().load_weights((name, value) for name, value in weights
+                                    if name != "thinker.audio_tower.sep_token.weight")

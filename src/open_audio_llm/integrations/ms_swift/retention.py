@@ -1,4 +1,4 @@
-"""Full-LLM SFT with equal example weight and frozen-base ASR replay KL."""
+"""Full-LLM SFT with token-mean cross-entropy and frozen-base ASR replay KL."""
 
 from __future__ import annotations
 
@@ -70,6 +70,19 @@ def average_answer_parts(values, rows, counts, prefix=None):
     return header / prefix_counts.clamp_min(1) + body / (counts - prefix_counts).clamp_min(1)
 
 
+def token_mean_loss(example_losses, counts, num_items_in_batch=None, world_size=1):
+    """Recover the token sum from per-example means and divide by supervised tokens.
+
+    A length-10 transcript therefore contributes ten times the gradient of a
+    one-token transcript. ``num_items_in_batch`` is the global token count for
+    this optimizer step; multiplying by ``world_size`` cancels DDP's average.
+    """
+    weighted = example_losses * counts
+    if num_items_in_batch is None:
+        return weighted.sum() / counts.sum().clamp_min(1)
+    return weighted.sum() * world_size / num_items_in_batch
+
+
 def sample_losses(logits, targets, rows, counts, teacher_logits=None, ordinary=None, kl_weight=1.0, prefix=None):
     """Average tokens within examples, then combine CE and KL on ordinary ASR only."""
     token_ce = _ChunkedCrossEntropy.apply(logits, targets)
@@ -106,12 +119,12 @@ def install_retention_objective(trainer, args):
     from qwen_asr import Qwen3ASRModel
 
     if args.tuner_type != "full" or not args.retention_teacher:
-        raise ValueError("Sample-mean replay requires full LLM training and --retention_teacher")
+        raise ValueError("Token-mean replay requires full LLM training and --retention_teacher")
     if args.deepspeed or args.use_logits_to_keep or trainer.optimizer is not None:
         raise ValueError("Replay objective requires DDP, untrimmed labels and installation before optimizer creation")
     coefficient = float(args._catalog_config["objective"]["replay_kl_weight"])
-    separate_prefix = args._catalog_config["objective"].get("separate_prefix", False)
-    asr_text_id = trainer.template.tokenizer.convert_tokens_to_ids("<asr_text>")
+    if args._catalog_config["objective"].get("separate_prefix", False):
+        LOG.warning("separate_prefix is ignored; the objective averages supervised tokens")
     if not math.isfinite(coefficient) or coefficient <= 0:
         raise ValueError("replay_kl_weight must be finite and positive")
     student = trainer.model
@@ -138,8 +151,9 @@ def install_retention_objective(trainer, args):
     trainer.model_accepts_loss_kwargs = True
     trainer.args.average_tokens_across_devices = True
 
-    def count_examples(self, batches, device):
-        count = torch.tensor(sum(batch["labels"].shape[0] for batch in batches), device=device)
+    def count_supervised_tokens(self, batches, device):
+        count = torch.tensor(
+            sum(int((batch["labels"][:, 1:] != -100).sum()) for batch in batches), device=device)
         return self.accelerator.gather(count).sum()
 
     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
@@ -149,28 +163,25 @@ def install_retention_objective(trainer, args):
         inputs.pop("compute_loss_func", None)
         inputs.pop("text_position_ids", None)
         if inputs.pop("loss_scale", None) is not None:
-            raise ValueError("Token loss_scale cannot be combined with sample-mean replay")
+            raise ValueError("Token loss_scale cannot be combined with token-mean replay")
         outputs, targets, rows, counts = supervised_forward(model, thinker.lm_head, inputs, labels)
-        prefix = None
-        if separate_prefix:
-            shifted = labels[:, 1:]
-            boundary = shifted == asr_text_id
-            prefix = ((boundary.cumsum(-1) == 0) | boundary)[shifted != -100]
         indexes = (tasks == 0).nonzero().flatten()
         teacher_logits = None
         ordinary = tasks[rows] == 0
         if indexes.numel():
+            teacher_inputs = select_examples(inputs, indexes)
+            teacher_inputs.pop("enrollment_lengths", None)
             # Accelerate wraps only the student forward in autocast.
             with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16):
                 teacher_outputs, teacher_targets, _, _ = supervised_forward(
-                    teacher, teacher.thinker.lm_head, select_examples(inputs, indexes),
+                    teacher, teacher.thinker.lm_head, teacher_inputs,
                     labels.index_select(0, indexes),
                 )
             if not torch.equal(targets[ordinary], teacher_targets):
                 raise ValueError("Teacher and student labels differ")
             teacher_logits = teacher_outputs.logits
         losses, ce, kl = sample_losses(outputs.logits, targets, rows, counts,
-                                      teacher_logits, ordinary, coefficient, prefix)
+                                      teacher_logits, ordinary, coefficient)
         mode = "train" if model.training else "eval"
         metrics = self.custom_metrics[mode]
         # Create the same metrics on every rank even when a batch lacks a task.
@@ -182,21 +193,19 @@ def install_retention_objective(trainer, args):
         metric = metrics["replay_kl"]
         if indexes.numel():
             metric.update(kl.detach()[indexes])
-        if num_items_in_batch is None:
-            loss = losses.mean()
-        else:
-            # Global example count covers all microbatches in this optimizer step.
-            # DDP averages rank gradients, so compensate exactly once here.
-            loss = losses.sum() * self.accelerator.num_processes / num_items_in_batch
+        # counts restores the token sum; the denominator is every supervised token.
+        loss = token_mean_loss(
+            losses, counts, num_items_in_batch, self.accelerator.num_processes)
         outputs.loss = loss
         return (loss, outputs) if return_outputs else loss
 
-    trainer._get_num_items_in_batch = MethodType(count_examples, trainer)
+    trainer._get_num_items_in_batch = MethodType(count_supervised_tokens, trainer)
     trainer.compute_loss = MethodType(compute_loss, trainer)
     summary = {
         "teacher": args.retention_teacher,
-        "objective": "mean_examples(answer_reduction(CE) + ordinary_asr * replay_kl_weight * answer_reduction(KL(base || student)))",
-        "separate_prefix": separate_prefix,
+        "objective": "sum_tokens(CE + ordinary_asr * replay_kl_weight * KL(base || student)) / supervised_tokens",
+        "reduction": "token_mean",
+        "separate_prefix": False,
         "replay_kl_weight": coefficient,
         "trainable_parameters": sum(p.numel() for p in student.parameters() if p.requires_grad),
         "frozen_parameters": sum(p.numel() for p in student.parameters() if not p.requires_grad),

@@ -197,6 +197,27 @@ class OnlineAudioDataset(Dataset):
         if occurrence is not None:
             seed += f":{occurrence}"
         rng = random.Random(seed)
+        if record.metadata.get("enrollment_config") is not None:
+            from .target_sot import EnrollmentConfig, sample_enrollment
+
+            fixed = record.metadata.get("fixed_enrollment")
+            if not self.training and fixed is None:
+                raise ValueError("Conditional evaluation requires a frozen enrollment manifest")
+            record = sample_enrollment(record, EnrollmentConfig(**record.metadata["enrollment_config"]),
+                                       seed, fixed=fixed)
+            resolved = replace(resolved, record=record)
+        if record.metadata.get("enrollment_view"):
+            from .qwen3_asr import native_messages
+
+            audio = self._resolve_audio(resolved, rng)
+            names = [slot.name for slot in record.audio_slots]
+            messages = native_messages(record, "N/A")
+            return dict(messages=messages, audios=[audio["mixture"]],
+                        chat_template_kwargs={"enroll_wavs": [audio[n] for n in names[:-1]]},
+                        solution=messages[-1]["content"], task=record.task,
+                        candidate_hotwords="N/A", audio_slot_count=1,
+                        duration=resolved.duration, dataset_id=record.slot("mixture").ref.dataset_id,
+                        enrollment_view=record.metadata["enrollment_view"])
         hotwords = (
             sample_hotwords(
                 list(record.hotwords),

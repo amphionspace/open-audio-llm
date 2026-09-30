@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from audio_data_contract import AudioRecord, AudioRef, AudioSlot
 
 from open_audio_llm.data.catalog_dataset import in_ts_partition
-from open_audio_llm.integrations.ms_swift.retention import sample_losses, supervised_forward
+from open_audio_llm.integrations.ms_swift.retention import sample_losses, supervised_forward, token_mean_loss
 
 
 @pytest.mark.parametrize('dtype', [torch.float32, torch.bfloat16])
@@ -61,25 +61,25 @@ def test_chunked_ce_does_not_retain_full_softmax_and_ignores_masked_targets():
     torch.testing.assert_close(logits.grad, reference)
 
 
-def test_short_negative_has_same_example_weight_as_long_transcript():
+def test_long_transcript_contributes_in_proportion_to_its_tokens():
     logits = torch.zeros(11, 3, requires_grad=True)
     targets = torch.zeros(11, dtype=torch.long)
     rows = torch.tensor([0] * 10 + [1])
-    loss, _, _ = sample_losses(logits, targets, rows, torch.tensor([10, 1]))
-    loss.mean().backward()
-    assert logits.grad[:10].abs().sum() == pytest.approx(logits.grad[10:].abs().sum())
+    counts = torch.tensor([10, 1])
+    losses, _, _ = sample_losses(logits, targets, rows, counts)
+    token_mean_loss(losses, counts).backward()
+    assert logits.grad[:10].abs().sum() == pytest.approx(10 * logits.grad[10:].abs().sum())
 
 
-def test_presence_decision_is_not_overweighted_by_short_negative_body():
-    # Both answers have 3 header tokens, but positive and negative bodies have 20/1.
+def test_each_supervised_token_has_equal_loss_weight():
     logits = torch.zeros(27, 4, requires_grad=True)
     targets = torch.zeros(27, dtype=torch.long)
     rows = torch.tensor([0] * 23 + [1] * 4)
-    prefix = torch.tensor([True] * 3 + [False] * 20 + [True] * 3 + [False])
-    losses, _, _ = sample_losses(logits, targets, rows, torch.tensor([23, 4]), prefix=prefix)
-    losses.mean().backward()
-    torch.testing.assert_close(logits.grad[:3], logits.grad[23:26])
-    torch.testing.assert_close(logits.grad[3:23].sum(0), logits.grad[26])
+    counts = torch.tensor([23, 4])
+    losses, _, _ = sample_losses(logits, targets, rows, counts)
+    token_mean_loss(losses, counts).backward()
+    torch.testing.assert_close(logits.grad[0], logits.grad[26])
+    torch.testing.assert_close(logits.grad[:23].sum(0) / 23, logits.grad[23:].sum(0) / 4)
 
 
 def test_kl_anchors_only_plain_asr_and_does_not_train_teacher():
@@ -97,15 +97,16 @@ def test_kl_anchors_only_plain_asr_and_does_not_train_teacher():
     assert matching.abs().max().item() < 1e-6
 
 
-def test_global_example_normalization_matches_unequal_rank_microbatches():
+def test_global_token_normalization_matches_unequal_rank_microbatches():
     torch.manual_seed(42)
     weight = torch.randn(3, 4, requires_grad=True)
     inputs = torch.randn(7, 3)
     targets = torch.tensor([0, 1, 1, 3, 0, 2, 1])
-    # Three examples, lengths 2, 1, 4. Rank 0 has two microbatches; rank 1 has one.
+    # Three examples, lengths 2, 1, 4 (7 tokens). Rank 0 has two; rank 1 has one.
     rows = torch.tensor([0, 0, 1, 2, 2, 2, 2])
-    reference, _, _ = sample_losses(inputs @ weight, targets, rows, torch.tensor([2, 1, 4]))
-    expected = torch.autograd.grad(reference.mean(), weight)[0]
+    counts = torch.tensor([2, 1, 4])
+    reference, _, _ = sample_losses(inputs @ weight, targets, rows, counts)
+    expected = torch.autograd.grad(token_mean_loss(reference, counts), weight)[0]
     gradients = []
     for slices in ((slice(0, 2), slice(2, 3)), (slice(3, 7),)):
         total = 0
@@ -113,7 +114,7 @@ def test_global_example_normalization_matches_unequal_rank_microbatches():
             size = len(targets[section])
             loss, _, _ = sample_losses(inputs[section] @ weight, targets[section],
                                        torch.zeros(size, dtype=torch.long), torch.tensor([size]))
-            total = total + loss.sum() * 2 / 3
+            total = total + loss.sum() * size * 2 / 7
         gradients.append(torch.autograd.grad(total, weight)[0])
     torch.testing.assert_close(sum(gradients) / 2, expected)
 
@@ -139,8 +140,9 @@ def test_projecting_supervised_positions_preserves_loss_and_gradients():
     actual, _, _ = sample_losses(output.logits, targets, rows, counts)
     assert targets.tolist() == [3, 4, 4, 5]
     assert counts.tolist() == [2, 2]
-    torch.testing.assert_close(actual.mean(), expected)
-    for actual_grad, expected_grad in zip(torch.autograd.grad(actual.mean(), tuple(model.parameters())), expected_grads):
+    reduced = token_mean_loss(actual, counts)
+    torch.testing.assert_close(reduced, expected)
+    for actual_grad, expected_grad in zip(torch.autograd.grad(reduced, tuple(model.parameters())), expected_grads):
         torch.testing.assert_close(actual_grad, expected_grad)
     assert model(**inputs).logits.shape == (2, 4, 9)  # Hook cannot leak into generation.
 

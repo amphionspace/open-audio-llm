@@ -30,6 +30,11 @@ class CatalogArgumentsMixin:
                 "Use train/validation in --data_config instead of dataset/cache arguments"
             )
         self._catalog_config = read_data_config(self.data_config)
+        if any(source.get("enrollment") is not None for key in ("train", "validation")
+               for source in self._catalog_config.get(key, [])):
+            import os
+
+            os.environ["OPEN_AUDIO_LLM_TARGET_SOT"] = "1"
         # SftArguments requires dataset identities, but the pipeline below owns
         # loading; these config references never go through the HF JSON loader.
         self.dataset = [self.data_config]
@@ -109,6 +114,8 @@ class CatalogTrainingMixin:
         return train, validation
 
     def train(self, trainer):
+        if getattr(self.args, 'audio_encoder_parallel', False) and getattr(trainer.model.config, 'target_sot_audio', False):
+            raise ValueError('Conditional SOT requires audio_encoder_parallel=false')
         if getattr(self.args, 'audio_encoder_batching', False) and getattr(self.args, 'audio_encoder_parallel', False):
             raise ValueError('Choose either audio_encoder_batching or audio_encoder_parallel')
         original_create_optimizer = None
