@@ -243,9 +243,9 @@ def sampling_cost(row, dataset):
             duration = dataset.resolver.get_duration(slot.ref)
         total += duration / slowest + 1 / dataset.sampling_rate
     if native_ts:
-        from .qwen3_asr import ENROLL_SECONDS, SILENCE_SECONDS
+        from .qwen3_asr import ENROLL_SECONDS
 
-        total += ENROLL_SECONDS + SILENCE_SECONDS
+        total += ENROLL_SECONDS
     return total, 1 if native_ts else len(row.record.audio_slots)
 
 

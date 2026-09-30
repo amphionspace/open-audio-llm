@@ -223,11 +223,13 @@ class OnlineAudioDataset(Dataset):
         sample["duration"] = resolved.duration
         sample["dataset_id"] = resolved.dataset_id
         if self.message_format == "qwen3_asr":
-            from .qwen3_asr import concat_ts_audio, native_messages
+            from .qwen3_asr import native_messages, prepare_ts_clips
 
             sample["messages"] = native_messages(record, hotwords)
             sample["solution"] = sample["messages"][-1]["content"]
             if record.task == "ts_asr":
-                sample["audios"] = [concat_ts_audio(sample["audios"], self.sampling_rate)]
+                enroll, mix = prepare_ts_clips(sample["audios"], self.sampling_rate)
+                sample["audios"] = [enroll]
+                sample["mix_wav"] = mix
                 sample["audio_slot_count"] = 1
         return sample

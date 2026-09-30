@@ -362,7 +362,12 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         if self.collect_metrics:
             self._sample_metrics = dict(decode_s=0.0, wave_augment_s=0.0, audio_seconds=0.0)
         sample = super().__getitem__(idx)
-        sample["duration"] = sf.info(BytesIO(sample["audios"][-1])).duration
+        if sample.get("mix_wav") is not None:
+            from .qwen3_asr import ENROLL_SECONDS
+
+            sample["duration"] = ENROLL_SECONDS + sf.info(BytesIO(sample["mix_wav"])).duration
+        else:
+            sample["duration"] = sf.info(BytesIO(sample["audios"][-1])).duration
         if self.collect_metrics and self.message_format == "qwen3_asr" and sample["task"] == "ts_asr":
             self._sample_metrics["audio_seconds"] = sample["duration"]
         if self.grpo:

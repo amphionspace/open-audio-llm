@@ -89,6 +89,22 @@ TEST_SET_DEFS: Dict[str, Dict[str, Any]] = {
         "recordings":   "data_aishell3/data/manifests/aishell3_recordings_test.jsonl.gz",
         "supervisions": "data_aishell3/data/manifests/aishell3_supervisions_test.jsonl.gz",
     },
+    # Held-out police ASR. Paths are absolute; train/dev stay out of this table.
+    "police_v6_expanded": {
+        "kind": "single", "base": "manifest_dir", "use_punc": False,
+        "recordings":   "/222042021/mingdong/workspace/AmphionData/results/police-synthetic-v6-expanded-260915/manifests/police_synthetic_recordings_test.jsonl.gz",
+        "supervisions": "/222042021/mingdong/workspace/AmphionData/results/police-synthetic-v6-expanded-260915/manifests/police_synthetic_supervisions_test.jsonl.gz",
+    },
+    "police_incremental_20260916": {
+        "kind": "single", "base": "manifest_dir", "use_punc": False,
+        "recordings":   "/222042021/mingdong/workspace/AmphionData/results/police-legacy-rebalance-100k-260916/manifests/police_synthetic_recordings_test.jsonl.gz",
+        "supervisions": "/222042021/mingdong/workspace/AmphionData/results/police-legacy-rebalance-100k-260916/manifests/police_synthetic_supervisions_test.jsonl.gz",
+    },
+    "police_terms_v5": {
+        "kind": "single", "base": "manifest_dir", "use_punc": False,
+        "recordings":   "/ai_sds_wuzz/DATA_ASR/LHOTSE/synthetic/police_synthetic_zh_accent/v5-20260830-qwen75-cosy25-split80-10-10/manifests/police_terms_v5_recordings_test.jsonl.gz",
+        "supervisions": "/ai_sds_wuzz/DATA_ASR/LHOTSE/synthetic/police_synthetic_zh_accent/v5-20260830-qwen75-cosy25-split80-10-10/manifests/police_terms_v5_supervisions_test.jsonl.gz",
+    },
     "magicdata": {
         "kind": "single", "base": "manifest_dir", "use_punc": True,
         "recordings":   "MAGICDATA/data/manifests/magicdata_recordings_test.jsonl.gz",
@@ -461,6 +477,9 @@ DATASET_LANGUAGE: Dict[str, str] = {
     "aishell":        "zh",
     "aishell2":       "zh",
     "aishell3":       "zh",
+    "police_v6_expanded": "zh",
+    "police_incremental_20260916": "zh",
+    "police_terms_v5": "zh",
     "commonvoice_zh": "zh",
     "commonvoice_zh_hotwords": "zh",
     "aishell_hotwords":  "zh",
@@ -560,6 +579,9 @@ DATASET_TASK: Dict[str, str] = {
     "aishell":        "asr",
     "aishell2":       "asr",
     "aishell3":       "asr",
+    "police_v6_expanded": "asr",
+    "police_incremental_20260916": "asr",
+    "police_terms_v5": "asr",
     "kespeech":       "asr",
     "magicdata":      "asr",
     "talcs":          "asr",
