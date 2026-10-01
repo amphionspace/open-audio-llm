@@ -66,10 +66,7 @@ package pins，不写 extras；需要 HTTP client 时在 install 命令中请求
 如果要构建可复现镜像，可使用单服务 compose profile：
 
 ```bash
-export OPEN_AUDIO_LLM_MODEL=/path/to/qwen3-asr-or-compatible-model
-export VLLM_SERVED_MODEL_NAME=amphionasr-1.7b
-export VLLM_PORT=8009
-docker compose -f compose.vllm.yaml up --build
+open-audio-llm deploy --config examples/configs/deploy/vllm.yaml --dry-run
 ```
 
 对应 Dockerfile 会先用可续传下载预取大 wheel，再按
@@ -92,14 +89,7 @@ source /path/to/miniconda3/etc/profile.d/conda.sh
 conda activate vllm
 
 cd /path/to/open-audio-llm
-bash examples/serve/vllm/serve.sh \
-  -m /chenmingjie/lx/RAG-ASR/checkpoints/base/amphion_1.7b_merged \
-  -n amphionasr-1.7b \
-  -p 8009 \
-  -g 2 \
-  -t 1 \
-  -e \
-  -q
+open-audio-llm serve --config examples/configs/serve/vllm.yaml
 ```
 
 启动日志应出现类似信息：

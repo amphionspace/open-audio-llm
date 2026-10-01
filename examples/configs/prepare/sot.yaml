@@ -1,0 +1,16 @@
+version: 1
+runtime:
+  python: python
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../../../src}, {path: ../../../../audio-data-contract/src}]
+  gpus: []
+task:
+  kind: prepare
+  script: {path: ../../train/qwen3-asr/prepare_sot.py}
+  arguments:
+    --data-root: {path: ../../../runs/sot-synthesis}
+    --catalog: {path: ../../../../audio-data-contract/catalog}
+    --roots: {path: ../../../../audio-data-contract/roots.json}
+    --output: {path: '{attempt}/artifacts'}
+recording:
+  attempts_dir: {path: ../../../runs/sot-preparation/tasks/prepare/attempts}

@@ -1,0 +1,18 @@
+version: 1
+runtime:
+  python: python
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../../../src}]
+  gpus: []
+task:
+  kind: prepare
+  module: open_audio_llm.data.sot_alignment
+  arguments:
+    --output: {path: '{attempt}/artifacts/source-alignments.sqlite'}
+  repeated_arguments:
+    --input:
+      - {path: ../../../runs/source-alignment-train}
+      - {path: ../../../runs/source-alignment-dev}
+      - {path: ../../../runs/source-alignment-test}
+recording:
+  attempts_dir: {path: ../../../runs/sot-alignment-index/tasks/prepare/attempts}

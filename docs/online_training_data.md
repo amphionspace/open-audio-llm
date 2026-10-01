@@ -33,19 +33,12 @@ Catalog + roots → Lhotse cut / AudioRecord 元数据
 pip install -e /222042021/mingdong/workspace/audio-data-contract
 pip install -e '.[swift,data,hf]'
 
-CUDA_VISIBLE_DEVICES=2,3 NPROC_PER_NODE=2 \
-MODEL=/path/to/open-audio-llm-hf-checkpoint \
-DATA_CONFIG=examples/configs/data/catalog_mixed.yaml \
-MAX_STEPS=1000 SAVE_STEPS=200 EVAL_STEPS=200 \
-DATALOADER_NUM_WORKERS=2 \
-OUTPUT_DIR=runs/catalog-mixed \
-bash examples/train/sft/train.sh
+open-audio-llm train --config examples/configs/train/sft.yaml --dry-run
+open-audio-llm train --config examples/configs/train/sft.yaml
 ```
 
-脚本默认读取相邻的 `audio-data-contract/catalog` 和 `roots.json`。
-`AUDIO_DATA_CONTRACT_ROOT` 可覆盖仓库位置；`AUDIO_DATA_CATALOG` 和
-`AUDIO_DATA_ROOTS_FILE` 可分别覆盖这两个路径。也可在 YAML 写 `catalog` / `roots`，
-直接使用 Python 训练入口时，相对路径按 YAML 所在目录解析，环境变量优先。
+先在运行 YAML 填写模型、解释器和设备，在数据 YAML 填写 `catalog`、`roots` 和 `metadata_cache`。
+相对路径以所属 YAML 所在目录为基准，环境变量不覆盖配置。
 Catalog 和数据注册继续由契约仓库维护。
 
 `examples/configs/data/catalog_smoke.yaml` 是少量样本的快速验证配置；
@@ -164,12 +157,8 @@ batch 游标和配置签名。预取到但尚未训练的 batch 不计入游标�
 优化器、调度器及 RNG。不要仅用 global_step 推算数据位置。
 
 ```bash
-# 保持原来的 DATA_CONFIG、batch 参数和 GPU 数量。
-RESUME_FROM_CHECKPOINT=/path/to/checkpoint-200 \
-MODEL=/path/to/open-audio-llm-hf-checkpoint \
-DATA_CONFIG=examples/configs/data/catalog_mixed.yaml \
-CUDA_VISIBLE_DEVICES=2,3 NPROC_PER_NODE=2 MAX_STEPS=1000 \
-bash examples/train/sft/train.sh
+# 在 YAML 的 task.arguments 设置 --resume_from_checkpoint；保留数据、batch 和 GPU 配置。
+open-audio-llm train --config examples/configs/train/sft.yaml
 ```
 
 数据配方、记录顺序、batch 参数或 world size 改变会拒绝恢复。旧 checkpoint 没有

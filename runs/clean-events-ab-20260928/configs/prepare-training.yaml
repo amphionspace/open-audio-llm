@@ -1,0 +1,244 @@
+version: 1
+runtime:
+  python:
+    path: /ai_sds_wuzz/MODELS/miniconda3/envs/amphionft/bin/python
+  cwd:
+    path: ../../..
+  pythonpath:
+  - path: ../../../src
+  - path: ../scripts
+  - path: /222042021/mingdong/workspace/open-audio-llm/runs/qwen3-asr-sot-speaker-events-20260922/dependencies/audio-data-contract/src
+  gpus: []
+  threads:
+    omp: 4
+    openblas: 1
+  environment:
+    TOKENIZERS_PARALLELISM: false
+    HF_HUB_OFFLINE: '1'
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script:
+    path: ../scripts/prepare_training.py
+  accepts_config: true
+  arguments: {}
+experiment:
+  root:
+    path: ..
+  runs:
+    path: ../..
+  output:
+    path: '{attempt}/artifacts'
+  files:
+    README.md:
+      path: ../shared/history/README.md
+    __pycache__:
+      path: ../shared/history/__pycache__
+    audit-0:
+      path: ../tasks/03-synthesis/attempts/001/artifacts/audit-0
+    audit-1:
+      path: ../tasks/03-synthesis/attempts/001/artifacts/audit-1
+    audit-2:
+      path: ../tasks/03-synthesis/attempts/001/artifacts/audit-2
+    audit-3:
+      path: ../tasks/03-synthesis/attempts/002/artifacts/audit-3
+    centroid-speakers.json:
+      path: ../tasks/02-identity-screening/attempts/001/artifacts/centroid-speakers.json
+    centroids.npz:
+      path: ../tasks/02-identity-screening/attempts/001/artifacts/centroids.npz
+    clean-pool-summary.json:
+      path: ../tasks/02-identity-screening/attempts/001/artifacts/clean-pool-summary.json
+    control:
+      path: '{attempt}/artifacts/control'
+    controller.log:
+      path: ../tracking/logs/controller.log
+    embeddings-0.npz:
+      path: ../tasks/02-identity-screening/attempts/001/artifacts/embeddings-0.npz
+    embeddings-1.npz:
+      path: ../tasks/02-identity-screening/attempts/001/artifacts/embeddings-1.npz
+    evaluate.log:
+      path: ../tasks/07-evaluate/attempts/001/logs/evaluate.log
+    evaluate.py:
+      path: ../scripts/evaluate.py
+    evaluation:
+      path: ../tasks/07-evaluate/attempts/001/artifacts
+    expanded-clean-pool.jsonl.gz:
+      path: ../tasks/01-source-expansion/attempts/001/artifacts/expanded-clean-pool.jsonl.gz
+    extract.py:
+      path: ../scripts/extract.py
+    failed-control-attempt-20260929:
+      path: ../tasks/05-train-control/attempts/001/artifacts/legacy
+    failed-initial-synthesis.json:
+      path: ../tasks/03-synthesis/attempts/001/artifacts/failed-initial-synthesis.json
+    failed-resume.json:
+      path: ../tracking/history/failed-resume.json
+    failed-training-resume.json:
+      path: ../tracking/history/failed-training-resume.json
+    generate.log:
+      path: ../tasks/03-synthesis/attempts/001/logs/generate.log
+    generate.py:
+      path: ../scripts/generate.py
+    generated:
+      path: ../tasks/03-synthesis/attempts/002/artifacts/generated
+    generated-before-supplement:
+      path: ../tasks/03-synthesis/attempts/001/artifacts/generated
+    generation-failures.json:
+      path: ../tasks/03-synthesis/attempts/001/artifacts/generation-failures.json
+    generation-plan.json:
+      path: ../tasks/03-synthesis/attempts/001/artifacts/generation-plan.json
+    generation-progress.json:
+      path: ../tasks/03-synthesis/attempts/002/artifacts/generation-progress.json
+    generation-results.jsonl:
+      path: ../tasks/03-synthesis/attempts/001/artifacts/generation-results.jsonl
+    identity-0.log:
+      path: ../tasks/02-identity-screening/attempts/001/logs/identity-0.log
+    identity-1.log:
+      path: ../tasks/02-identity-screening/attempts/001/logs/identity-1.log
+    identity-audit.jsonl:
+      path: ../tasks/02-identity-screening/attempts/001/artifacts/identity-audit.jsonl
+    infer.py:
+      path: ../scripts/infer.py
+    inputs-0.json:
+      path: ../tasks/02-identity-screening/attempts/001/artifacts/inputs-0.json
+    inputs-1.json:
+      path: ../tasks/02-identity-screening/attempts/001/artifacts/inputs-1.json
+    inventory.json:
+      path: ../tasks/01-source-expansion/attempts/001/artifacts/inventory.json
+    matched-data.json:
+      path: '{attempt}/artifacts/matched-data.json'
+    metrics-history.jsonl:
+      path: ../tracking/history/metrics-history.jsonl
+    plan.json:
+      path: ../shared/plan.json
+    prepare-progress.json:
+      path: ../tasks/01-source-expansion/attempts/001/artifacts/prepare-progress.json
+    prepare.log:
+      path: ../tasks/01-source-expansion/attempts/001/logs/prepare.log
+    prepare.pid:
+      path: ../tasks/01-source-expansion/attempts/001/logs/prepare.pid
+    prepare.py:
+      path: ../scripts/prepare.py
+    prepare_training.log:
+      path: ../tasks/04-prepare-training/attempts/001/logs/prepare_training.log
+    prepare_training.py:
+      path: ../scripts/prepare_training.py
+    progress-0.json:
+      path: ../tasks/02-identity-screening/attempts/001/artifacts/progress-0.json
+    progress-1.json:
+      path: ../tasks/02-identity-screening/attempts/001/artifacts/progress-1.json
+    release-gate-before-supplement.json:
+      path: ../tasks/03-synthesis/attempts/001/artifacts/release-gate-before-supplement.json
+    release-gate.json:
+      path: ../tasks/03-synthesis/attempts/002/artifacts/release-gate.json
+    resume-training.log:
+      path: ../tracking/logs/resume-training.log
+    resume.log:
+      path: ../tracking/logs/resume.log
+    resume.py:
+      path: ../scripts/resume.py
+    resume_training.py:
+      path: ../scripts/resume_training.py
+    roots.json:
+      path: ../shared/roots.json
+    run.py:
+      path: ../scripts/run.py
+    score.py:
+      path: ../scripts/score.py
+    screen.log:
+      path: ../tasks/02-identity-screening/attempts/001/logs/screen.log
+    screen.py:
+      path: ../scripts/screen.py
+    shared-registration-verification.json:
+      path: ../shared/shared-registration-verification.json
+    source-selection.json:
+      path: ../tasks/01-source-expansion/attempts/001/artifacts/source-selection.json
+    source-turn-policy.json:
+      path: ../tasks/01-source-expansion/attempts/001/artifacts/source-turn-policy.json
+    status.json:
+      path: ../tracking/history/status.json
+    supplement-plan.json:
+      path: ../tasks/03-synthesis/attempts/002/artifacts/supplement-plan.json
+    supplement-results.jsonl:
+      path: ../tasks/03-synthesis/attempts/002/artifacts/supplement-results.jsonl
+    supplement-summary.json:
+      path: ../tasks/03-synthesis/attempts/002/artifacts/supplement-summary.json
+    supplement.log:
+      path: ../tasks/03-synthesis/attempts/002/logs/supplement.log
+    supplement.py:
+      path: ../scripts/supplement.py
+    synthesis-source:
+      path: ../shared/synthesis-source
+    synthesis-source-supplement:
+      path: ../shared/synthesis-source-supplement
+    synthesis-summary-before-supplement.json:
+      path: ../tasks/03-synthesis/attempts/001/artifacts/synthesis-summary-before-supplement.json
+    synthesis-summary.json:
+      path: ../tasks/03-synthesis/attempts/002/artifacts/synthesis-summary.json
+    test_supplement_scheduler.py:
+      path: ../scripts/test_supplement_scheduler.py
+    track.log:
+      path: ../tracking/logs/track.log
+    track.pid:
+      path: ../tracking/logs/track.pid
+    track.py:
+      path: ../scripts/track.py
+    train.py:
+      path: ../scripts/train.py
+    train_control.log:
+      path: ../tasks/05-train-control/attempts/002/logs/train_control.log
+    train_treatment.log:
+      path: ../tasks/06-train-treatment/attempts/001/logs/train_treatment.log
+    training-ready.json:
+      path: '{attempt}/artifacts/training-ready.json'
+    treatment:
+      path: '{attempt}/artifacts/treatment'
+    verify_data.py:
+      path: ../scripts/verify_data.py
+    wandb-verification.json:
+      path: ../tracking/history/wandb-verification.json
+    word-pool.jsonl.gz:
+      path: ../tasks/02-identity-screening/attempts/001/artifacts/word-pool.jsonl.gz
+  producers:
+    expanded-clean-pool.jsonl.gz: 01-source-expansion
+    source-turn-policy.json: 01-source-expansion
+    inventory.json: 01-source-expansion
+    roots.json: 02-identity-screening
+    word-pool.jsonl.gz: 02-identity-screening
+    centroids.npz: 02-identity-screening
+    centroid-speakers.json: 02-identity-screening
+    clean-pool-summary.json: 02-identity-screening
+    generated: 03-synthesis
+    release-gate.json: 03-synthesis
+    synthesis-summary.json: 03-synthesis
+parameters:
+  source_data:
+    path: /222042021/mingdong/data/sot-multispeaker/events-v1c-20260921
+  reference_experiment:
+    path: /222042021/mingdong/workspace/open-audio-llm/runs/qwen3-asr-sot-speaker-events-20260922
+  training_configs:
+    control:
+      path: control-train.yaml
+    treatment:
+      path: treatment-train.yaml
+  verification_pythonpath: /222042021/mingdong/workspace/open-audio-llm/src:/222042021/mingdong/workspace/open-audio-llm/runs/qwen3-asr-sot-speaker-events-20260922/dependencies/audio-data-contract/src
+recording:
+  attempts_dir:
+    path: ../tasks/04-prepare-training/attempts
+  result:
+    path: '{attempt}/artifacts/training-ready.json'
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python:
+    path: ../../wandb-sync-env/bin/python
+  credentials_file:
+    path: ~/.bashrc
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: clean-events-ab-20260928-prepare-training
+  interval: 5
+  metrics:
+  - file:
+      path: '{attempt}/artifacts/training-ready.json'
+    prefix: prepare-training

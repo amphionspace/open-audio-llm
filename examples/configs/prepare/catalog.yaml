@@ -1,0 +1,20 @@
+version: 1
+runtime:
+  python: python
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../../../src}, {path: ../../../../audio-data-contract/src}]
+  gpus: []
+  threads: {omp: 4, openblas: 1}
+data:
+  config: {path: ../data/qwen3_asr_ts_replay.yaml}
+task:
+  kind: prepare
+  module: open_audio_llm.data.catalog_cache
+  arguments:
+    --workers: 4
+    --world-size: 2
+    --batch-size: 8
+    --preflight-report: {path: '{attempt}/artifacts/data-preflight.json'}
+recording:
+  attempts_dir: {path: ../../../runs/catalog-preflight/tasks/prepare/attempts}
+  result: {path: '{attempt}/artifacts/data-preflight.json'}

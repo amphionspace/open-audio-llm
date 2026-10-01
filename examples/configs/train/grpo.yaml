@@ -1,0 +1,66 @@
+version: 1
+runtime:
+  python: python
+  cwd: {path: ../../..}
+  pythonpath:
+    - {path: ../../../src}
+    - {path: ../../../../audio-data-contract/src}
+  gpus: [2, 3]
+  distributed: {processes: 2, port: 29502}
+  threads: {omp: 2, openblas: 1}
+  environment:
+    TOKENIZERS_PARALLELISM: false
+data:
+  config: {path: ../data/catalog_smoke.yaml}
+task:
+  backend: vllm
+  kind: train
+  module: open_audio_llm.integrations.ms_swift.train
+  positional: [grpo]
+  arguments:
+    --rlhf_type: "grpo"
+    --model: {path: "../../../models/open-audio-llm"}
+    --external_plugins: [{path: "../../../src/open_audio_llm/integrations/ms_swift/register_audio_llm.py"}, {path: "../../../src/open_audio_llm/integrations/ms_swift/rewards/plugin.py"}]
+    --reward_funcs: ["asr_format_reward", "asr_accuracy_reward", "hotword_reward"]
+    --dataloader_num_workers: 2
+    --freeze_vit: true
+    --lora_rank: 64
+    --lora_alpha: 128
+    --target_modules: "all-linear"
+    --torch_dtype: "bfloat16"
+    --num_generations: 2
+    --generation_batch_size: 4
+    --temperature: 0.6
+    --top_k: 50
+    --max_completion_length: 256
+    --deepspeed: "zero2"
+    --per_device_train_batch_size: 1
+    --per_device_eval_batch_size: 2
+    --gradient_accumulation_steps: 1
+    --learning_rate: 0.000001
+    --max_steps: 1
+    --warmup_ratio: 0.05
+    --save_steps: 1
+    --save_total_limit: 2
+    --eval_steps: 1
+    --logging_steps: 1
+    --log_completions: true
+    --report_to: "none"
+    --ddp_timeout: 180000000
+    --use_vllm: true
+    --vllm_mode: "server"
+    --vllm_server_host: "127.0.0.1"
+    --vllm_server_port: 8006
+    --vllm_server_timeout: 600
+    --output_dir: {path: "{attempt}/artifacts/training"}
+recording:
+  attempts_dir: {path: ../../../runs/grpo-smoke/tasks/run/attempts}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: python
+  credentials_file: {path: ~/.bashrc}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: grpo-smoke
+  interval: 5

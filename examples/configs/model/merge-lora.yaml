@@ -1,0 +1,16 @@
+version: 1
+runtime:
+  python: python
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../../../src}]
+  gpus: [0]
+task:
+  kind: model
+  module: swift.cli.export
+  arguments:
+    --model: {path: ../../../models/base-model}
+    --adapters: {path: ../../../models/adapter}
+    --merge_lora: true
+    --output_dir: {path: '{attempt}/artifacts/model'}
+recording:
+  attempts_dir: {path: ../../../runs/merge-lora/tasks/merge/attempts}

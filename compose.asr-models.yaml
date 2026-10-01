@@ -2,7 +2,7 @@ name: open-audio-llm-asr-models
 
 services:
   qwen3-asr:
-    image: open-audio-llm/qwen3-asr-1.7b:${MODEL_IMAGE_TAG:-local}
+    image: open-audio-llm/qwen3-asr-1.7b:local
     build:
       context: .
       dockerfile: docker/Dockerfile.qwen3-asr-bundle
@@ -10,12 +10,12 @@ services:
     ipc: host
     shm_size: 4g
     environment:
-      CUDA_VISIBLE_DEVICES: "${QWEN_GPU:-0}"
+      CUDA_VISIBLE_DEVICES: '0'
     ports:
-      - "127.0.0.1:${QWEN3_ASR_PORT:-8011}:8000"
+      - '127.0.0.1:8011:8000'
 
   amphion-spec:
-    image: open-audio-llm/amphion-spec:${MODEL_IMAGE_TAG:-local}
+    image: open-audio-llm/amphion-spec:local
     build:
       context: .
       dockerfile: docker/Dockerfile.amphion-spec-bundle
@@ -23,6 +23,12 @@ services:
     ipc: host
     shm_size: 4g
     environment:
-      CUDA_VISIBLE_DEVICES: "${AMPHION_SPEC_GPU:-1}"
+      CUDA_VISIBLE_DEVICES: '1'
     ports:
-      - "127.0.0.1:${AMPHION_SPEC_PORT:-9001}:8000"
+      - '127.0.0.1:9001:8000'
+    volumes:
+      - type: bind
+        source: ./examples/configs/serve/amphion-spec-compose.yaml
+        target: /configs/serve.yaml
+        read_only: true
+    command: [--config, /configs/serve.yaml]

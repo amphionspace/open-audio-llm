@@ -1,0 +1,17 @@
+version: 1
+runtime:
+  python: python
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../../../src}]
+  credentials_file: {path: ~/.bashrc}
+  gpus: []
+task:
+  kind: prepare
+  module: open_audio_llm.scripts.sync_wandb
+  arguments:
+    --run-dir: {path: ../../../runs/qwen3-asr-sot-v2-2gpu-20260916}
+    --entity: 1016097967-amphion
+    --project: open-audio-llm
+  flags: [--follow]
+recording:
+  attempts_dir: {path: ../../../runs/wandb-backfill/tasks/sync/attempts}

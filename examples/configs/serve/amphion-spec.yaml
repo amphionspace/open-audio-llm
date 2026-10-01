@@ -1,0 +1,26 @@
+version: 1
+runtime:
+  python: python
+  cwd: {path: /opt/open-audio-llm}
+  gpus: [0]
+  threads: {omp: 4, openblas: 1}
+  environment:
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    OPEN_AUDIO_LLM_ENABLE_QWEN3_ASR_EMBEDS: '0'
+    OPEN_AUDIO_LLM_ENABLE_LEGACY_AMPHION_ASR: '1'
+task:
+  kind: serve
+  backend: vllm
+  model: {path: /models/amphion-spec}
+  arguments:
+    --host: 0.0.0.0
+    --port: 8000
+    --served-model-name: AmphionSPEC
+    --tensor-parallel-size: 1
+    --data-parallel-size: 1
+    --limit-mm-per-prompt: {audio: 2}
+    --gpu-memory-utilization: 0.7
+    --max-model-len: 16384
+  flags: [--trust-remote-code]
+recording:
+  attempts_dir: {path: /tmp/serving/amphion-spec/attempts}

@@ -1,0 +1,15 @@
+version: 1
+runtime:
+  python: python
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../../../src}]
+  gpus: []
+task:
+  kind: model
+  module: open_audio_llm.integrations.hf.convert_amphion_to_hf
+  arguments:
+    --amphion-ckpt: {path: ../../../models/legacy.pt}
+    --llm-path: {path: ../../../models/base-llm}
+    --output-dir: {path: '{attempt}/artifacts/model'}
+recording:
+  attempts_dir: {path: ../../../runs/convert-amphion/tasks/convert/attempts}
