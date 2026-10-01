@@ -193,6 +193,8 @@ def child_environment(config):
         if k not in BUSINESS_ENV
         and (not k.startswith("VLLM_") or k == "VLLM_API_KEY")
         and not k.startswith("OPEN_AUDIO_LLM_ENABLE_")
+        and not k.startswith("AMPHION_TSASR_")
+        and k not in {"COT_AUDIO_CHUNKED_ATTN", "COT_TSASR_ENROLL_RANDOM"}
     }
     env.update(runtime_environment(config))
     return env

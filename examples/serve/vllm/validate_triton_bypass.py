@@ -13,12 +13,14 @@ from pathlib import Path
 
 import soundfile as sf
 
+from open_audio_llm.integrations.vllm.test_vllm_inference import _concat_v3_ts_b64
 from open_audio_llm.integrations.vllm.triton_audio_embed import (
     DEFAULT_TRITON_MODEL,
     TritonAudioEmbedClient,
     stable_audio_embed_uuid,
     tensor_to_vllm_audio_embeds_block,
 )
+from open_audio_llm.tsasr.ts_prompt import TS_CONCAT_SYSTEM
 
 
 def _wav_base64(path: str) -> str:
@@ -37,23 +39,18 @@ def _build_qwen3_asr_messages(
     hotwords: list[str],
 ) -> list[dict]:
     sys_lines: list[str] = []
-    user_content: list[dict] = []
+    user_audio = audio_b64
     if enrollment_b64:
-        sys_lines.append("Given the speaker's voice in the first audio.")
-        user_content.append(
-            {
-                "type": "input_audio",
-                "input_audio": {"data": enrollment_b64, "format": "wav"},
-            }
-        )
+        sys_lines.append(TS_CONCAT_SYSTEM)
+        user_audio = _concat_v3_ts_b64(enrollment_b64, audio_b64)
     if hotwords:
         sys_lines.append(f"Hotwords: {','.join(hotwords)}")
-    user_content.append(
+    user_content = [
         {
             "type": "input_audio",
-            "input_audio": {"data": audio_b64, "format": "wav"},
+            "input_audio": {"data": user_audio, "format": "wav"},
         }
-    )
+    ]
     return [
         {"role": "system", "content": "\n".join(sys_lines)},
         {"role": "user", "content": user_content},

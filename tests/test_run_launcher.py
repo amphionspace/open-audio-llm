@@ -127,6 +127,30 @@ def test_inference_does_not_fall_back_to_transformers(tmp_path, kind):
     assert main([kind, "--config", str(path), "--dry-run"]) == 2
 
 
+def test_tsasr_configuration_preserves_sep_and_global_attention_without_ambient_overrides(
+    monkeypatch,
+):
+    from open_audio_llm.tsasr.global_audio_attn import GLOBAL_N_WINDOW_INFER
+
+    root = Path(__file__).resolve().parents[1]
+    monkeypatch.setenv("AMPHION_TSASR_INSERT_SEP", "1")
+    monkeypatch.setenv("COT_AUDIO_CHUNKED_ATTN", "1")
+    plain = load_config(
+        root / "examples/configs/serve/vllm.yaml", root / "runs/preview"
+    )
+    assert "AMPHION_TSASR_INSERT_SEP" not in child_environment(plain)
+    ts = load_config(root / "examples/configs/serve/tsasr.yaml", root / "runs/preview")
+    env = child_environment(ts)
+    assert env["AMPHION_TSASR_INSERT_SEP"] == "1"
+    assert env["COT_AUDIO_CHUNKED_ATTN"] == "0"
+    args = command(ts)
+    overrides = json.loads(args[args.index("--hf-overrides") + 1])
+    assert (
+        overrides["thinker_config"]["audio_config"]["n_window_infer"]
+        == GLOBAL_N_WINDOW_INFER
+    )
+
+
 def test_train_requires_tracking_and_generates_distributed_command(tmp_path):
     path, config = recipe(tmp_path)
     config["task"] = {

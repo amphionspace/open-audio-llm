@@ -2,16 +2,12 @@
 
 from audio_data_contract import AudioRecord
 
+from open_audio_llm.tsasr.ts_prompt import TS_CONCAT_SYSTEM
+
 from .sot import TIMESTAMP_FORMAT, TIMESTAMP_SYSTEM
 
-# Matches the reference TS-ASR recipe; training and evaluation share these.
+# v3: enroll is 3s; mixture stays a separate clip. No waveform silence.
 ENROLL_SECONDS = 3
-SILENCE_SECONDS = 3
-TS_CONCAT_SYSTEM = (
-    "The clip contains a 3-second enrollment, 3 seconds of silence, "
-    "and then a mixture. Transcribe only the enrolled speaker from the mixture. "
-    "If the enrolled speaker is not present, output nothing."
-)
 SOT_SYSTEM = (
     "Transcribe every speaker in the mixture. Output one line per speaker as "
     "[S1] text, [S2] text, and so on, ordered by when each speaker first speaks. "
@@ -32,8 +28,21 @@ def native_language(language: str) -> str:
     }.get(language.lower(), language)
 
 
-def concat_ts_audio(audios, sampling_rate):
-    """Convert enrollment/mixture WAV bytes to one native encoder input."""
+def _wav_bytes(waveform, sampling_rate):
+    from io import BytesIO
+
+    import soundfile as sf
+
+    buffer = BytesIO()
+    sf.write(buffer, waveform, sampling_rate, format="WAV", subtype="FLOAT")
+    return buffer.getvalue()
+
+
+def prepare_ts_clips(audios, sampling_rate):
+    """Crop enrollment to 3s and keep mixture as its own clip.
+
+    The template extracts Mel and runs conv on each clip, then inserts SEP.
+    """
     from io import BytesIO
 
     import numpy as np
@@ -42,15 +51,12 @@ def concat_ts_audio(audios, sampling_rate):
     enrollment, rate = sf.read(BytesIO(audios[0]), dtype="float32")
     mixture, mix_rate = sf.read(BytesIO(audios[1]), dtype="float32")
     if rate != sampling_rate or mix_rate != sampling_rate:
-        raise ValueError("TS-ASR audio must be resampled before concatenation")
+        raise ValueError("TS-ASR audio must be resampled before the encoder")
     count = ENROLL_SECONDS * sampling_rate
+    enrollment = np.asarray(enrollment, dtype=np.float32).reshape(-1)
+    mixture = np.asarray(mixture, dtype=np.float32).reshape(-1)
     enrollment = np.pad(enrollment[:count], (0, max(0, count - len(enrollment))))
-    waveform = np.concatenate(
-        [enrollment, np.zeros(SILENCE_SECONDS * sampling_rate, dtype=np.float32), mixture]
-    )
-    buffer = BytesIO()
-    sf.write(buffer, waveform, sampling_rate, format="WAV", subtype="FLOAT")
-    return buffer.getvalue()
+    return _wav_bytes(enrollment, sampling_rate), _wav_bytes(mixture, sampling_rate)
 
 
 def native_messages(record: AudioRecord, hotwords: str) -> list[dict[str, str]]:

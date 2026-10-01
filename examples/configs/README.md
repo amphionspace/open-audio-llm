@@ -11,6 +11,7 @@
 | [train/sot.yaml](train/sot.yaml) | 全说话人转写 |
 | [prepare/sot.yaml](prepare/sot.yaml)、[synthesize/sot.yaml](synthesize/sot.yaml) | 训练视图准备与合成 |
 | [serve/vllm.yaml](serve/vllm.yaml)、[eval/comparison.yaml](eval/comparison.yaml) | vLLM 服务与评测 |
+| [serve/tsasr.yaml](serve/tsasr.yaml) | 使用 SEP 和全局音频注意力的独立 TS-ASR 服务 |
 | [rollout/vllm.yaml](rollout/vllm.yaml)、[model/](model/) | rollout 与模型处理 |
 | [deploy/](deploy/) | 生成具体 Compose 部署文件 |
 

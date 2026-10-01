@@ -125,6 +125,54 @@ def test_encode_preserves_extractor_values_and_decodes_once(
     assert not hasattr(inputs, "_audio_llm_waveforms")
 
 
+def test_ts_encode_uses_independent_mel_and_sep_pad_count(monkeypatch):
+    from io import BytesIO
+
+    import soundfile as sf
+    from transformers import WhisperFeatureExtractor
+
+    from open_audio_llm.integrations.ms_swift import register_qwen3_asr as module
+    from open_audio_llm.tsasr.sep_token import audio_token_count, extract_wav_mel
+
+    if module.Template is object:
+        pytest.skip("ms-swift is unavailable")
+    template = object.__new__(module.Qwen3ASRTemplate)
+    template.sampling_rate = 16000
+    template._hop_length = 160
+    template._feature_extractor = WhisperFeatureExtractor(
+        feature_size=128, sampling_rate=16000)
+    captured = {}
+
+    def encode(self, inputs):
+        captured["tags"] = self.replace_tag("audio", 0, inputs)
+        return {}
+
+    monkeypatch.setattr(module.Template, "_encode", encode)
+
+    def wav_bytes(seconds, value):
+        buffer = BytesIO()
+        sf.write(
+            buffer, np.full(16000 * seconds, value, dtype=np.float32),
+            16000, format="WAV", subtype="FLOAT")
+        return buffer.getvalue()
+
+    enroll = np.full(16000 * 3, 0.1, dtype=np.float32)
+    mix = np.full(16000 * 2, 0.2, dtype=np.float32)
+    inputs = SimpleNamespace(
+        audios=[wav_bytes(3, 0.1)],
+        extra_kwargs={"mix_wav": wav_bytes(2, 0.2)},
+    )
+    result = template._encode(inputs)
+    _, _, enroll_n = extract_wav_mel(template.feature_extractor, enroll, 16000)
+    _, _, mix_n = extract_wav_mel(template.feature_extractor, mix, 16000)
+    assert result["enroll_n_frames"] == enroll_n
+    assert result["input_features"].shape[-1] == enroll_n + mix_n
+    assert captured["tags"].count("<|audio_pad|>") == audio_token_count(
+        enroll_n + mix_n, True, enroll_n)
+    assert "mix_wav" not in inputs.extra_kwargs
+    assert not hasattr(inputs, "_ts_mix_wav")
+
+
 def test_encode_releases_waveform_on_failure(audio_template, monkeypatch):
     module, template = audio_template
     if module is generic:

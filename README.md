@@ -81,6 +81,10 @@ open-audio-llm model --config examples/configs/model/convert-legacy.yaml
 
 训练和评测必须同步 W&B，并核验远端 run URL 和实际指标；记录保存在每次执行目录。凭据留在环境中。推理与模型对比使用 vLLM，AntSpeaker 声纹核验使用已授权的官方 PyTorch；不会自动回退后端。
 
+目标说话人 ASR 使用独立服务配置 [serve/tsasr.yaml](examples/configs/serve/tsasr.yaml)：在注册音和混合音之间插入可学习 `[SEP]`，音频注意力使用全局窗口 `n_window_infer=1000000000`。普通 ASR 配置保持 SEP 关闭。需要分块注意力时，在 TS-ASR YAML 中设置 `COT_AUDIO_CHUNKED_ATTN: '1'` 并移除 `--hf-overrides`。
+
+checkpoint-34479 的结果和训练设置见 [评测结果](docs/ckpt34479-evaluation.md)与 [三阶段 SFT](docs/qwen3-asr-three-stage-sft.md)。启动方式仍为 `open-audio-llm serve --config examples/configs/serve/tsasr.yaml`，无需手工 export。
+
 Compose 由配置生成有效文件，默认只检查配置：
 
 ```bash
@@ -105,7 +109,7 @@ open-audio-llm experiment run --config runs/clean-events-ab-20260928/experiment.
 
 ## 目录边界
 
-- `src/open_audio_llm/`：唯一 Python package。
+- `src/open_audio_llm/`：唯一 Python package。TS-ASR 的 `[SEP]`、全局音频注意力和 vLLM 后端在 `src/open_audio_llm/tsasr/`。
 - `src/open_audio_llm/integrations/`：唯一 integrations 实现位置。
 - `examples/configs/`：显式的数据与运行 YAML。
 - `examples/train/`：统一 SFT / GRPO / rollout 启动入口。
@@ -119,15 +123,14 @@ open-audio-llm experiment run --config runs/clean-events-ab-20260928/experiment.
 
 ## 文档
 
+- [checkpoint-34479 评测结果](docs/ckpt34479-evaluation.md)：三阶段 SFT 最终权重的 ASR、热词、TS-ASR 和警务指标。
+- [Qwen3-ASR-1.7B 三阶段 SFT](docs/qwen3-asr-three-stage-sft.md)：从底座到 checkpoint-34479 的数据、学习率和冻结配置。
 - [TS-ASR 回放与联合训练](examples/train/qwen3-asr/TS_ASR.md)：clean 优先数据、encoder 批处理和中文保持验收。
 - `docs/architecture.md`：组件契约和模型组合。
 - `docs/data_boundary.md`：离线样本事实与在线训练随机性的边界。
-- `docs/migration_from_amphionasr.md`：从 AmphionASR 迁移的边界和归属。
-- `docs/archive/project_context.md`：源项目和目标项目上下文。
 - `docs/remaining_work.md`：剩余工作和下一步。
 - `docs/train_reproduction.md`：当前训练入口与复现步骤。
+- `docs/online_training_data.md`：Catalog 在线取样、增强和断点恢复。
 - `docs/vllm_triton_bypass.md`：vLLM Qwen3-ASR Triton embedding bypass。
 - `docs/compatibility_matrix.md`：默认支持和可选路径。
-- `docs/legacy_deps.md`：k2 和 Zipformer legacy 依赖策略。
-- `docs/self-contained-asr-deployment.md`：本地 Qwen3-ASR 与 AmphionSPEC 模型、
-  plugin、镜像及 Kubernetes 部署方法。
+- `docs/self-contained-asr-deployment.md`：本地 Qwen3-ASR 与 AmphionSPEC 模型、plugin、镜像及 Kubernetes 部署方法。

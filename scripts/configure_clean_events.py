@@ -482,7 +482,7 @@ def generate(root):
                         f"# {title}：执行 {number:03d}\n\n"
                         f"执行状态：{status['execution']}；质量状态：{status['quality']}。\n\n"
                         "这是迁入的历史执行，原始配置、日志和来源证明保持原文。\n\n"
-                        "[产物](artifacts/)；[日志](logs/)；[状态](status.json)。\n\n"
+                        f"[产物](artifacts/)；[日志]({'artifacts/legacy/train.log' if index == 4 and number == 1 else 'logs/'})；[状态](status.json)。\n\n"
                         "[重建配置](effective.yaml) 按原始参数和迁移映射生成，不视为当时保存的原始 YAML。\n"
                     ),
                 )

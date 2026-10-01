@@ -1,0 +1,35 @@
+version: 1
+runtime:
+  python: python
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../../../src}]
+  gpus: [0]
+  threads: {omp: 4, openblas: 1}
+  environment:
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    AMPHION_TSASR_INSERT_SEP: '1'
+    AMPHION_TSASR_ENROLL_SEC: '3'
+    AMPHION_TSASR_ENROLL_NOPAD: '0'
+    COT_TSASR_ENROLL_RANDOM: '0'
+    COT_AUDIO_CHUNKED_ATTN: '0'
+task:
+  kind: serve
+  backend: vllm
+  model: {path: ../../../models/qwen3-asr-tsasr}
+  arguments:
+    --host: 0.0.0.0
+    --port: 8010
+    --served-model-name: tsasr
+    --tensor-parallel-size: 1
+    --data-parallel-size: 1
+    --limit-mm-per-prompt: {audio: 1}
+    --gpu-memory-utilization: 0.9
+    --max-model-len: 8192
+    # Matches GLOBAL_N_WINDOW_INFER in tsasr/global_audio_attn.py.
+    --hf-overrides:
+      thinker_config:
+        audio_config:
+          n_window_infer: 1000000000
+  flags: [--trust-remote-code]
+recording:
+  attempts_dir: {path: ../../../runs/tsasr-service/tasks/serve/attempts}
