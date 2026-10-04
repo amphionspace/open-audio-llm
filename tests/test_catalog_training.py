@@ -354,6 +354,20 @@ def test_preflight_uses_real_quotas_before_decoding(catalog_config, monkeypatch)
     assert {s['selection'] for s in report['decoded_examples']} == {'train', 'validation'}
 
 
+def test_preflight_reports_resolved_full_coverage_budget(catalog_config):
+    from open_audio_llm.data.catalog_preflight import check_data
+
+    catalog_config['augmentation'] = {}
+    for source in catalog_config['train']:
+        source['weight'] = 1
+    catalog_config['replay'] = {'epoch_samples': 'full_coverage', 'window_samples': 10}
+    report = check_data(catalog_config)
+    assert report['full_coverage'] is True
+    assert report['replay']['epoch_samples'] >= sum(s['records'] for s in report['sources'])
+    assert all(s['samples_per_epoch'] >= s['records'] for s in report['sources'])
+    assert catalog_config['replay']['epoch_samples'] == 'full_coverage'
+
+
 def test_previous_recipe_paths_are_not_overridden_by_current_run(catalog_config, tmp_path, monkeypatch):
     path = tmp_path / 'recipe.json'
     path.write_text(json.dumps(catalog_config))
@@ -400,6 +414,56 @@ def test_nonclean_training_is_allowed_without_clean_requirement(catalog_config, 
         catalog_config["metadata_cache"] = str(tmp_path / "raw-cache")
     dataset = CatalogSwiftDataset(catalog_config)
     assert len(dataset) == 2 and "hello" in dataset[0]["solution"]
+
+
+def test_single_speaker_format_rejects_portable_records(catalog_config, tmp_path):
+    record = AudioRecord(
+        "portable",
+        "asr",
+        (AudioSlot("primary", AudioRef("speech", "1", "train", "s0", duration=0.25)),),
+        "hello",
+        language="en",
+    )
+    write_records([record], tmp_path / "portable.jsonl.gz")
+    spec = DatasetSpec(
+        dataset_id="portable",
+        version="1",
+        languages=("en",),
+        tasks=("asr",),
+        artifacts=(ArtifactRef("records", "audio-records", "data", "portable.jsonl.gz"),),
+        splits={"train": {"records_artifact": "records"}},
+    )
+    with Path(catalog_config["catalog"]).open("a") as stream:
+        stream.write("\n" + json.dumps(spec.to_dict()))
+    catalog_config["train"] = [{
+        "dataset_id": "portable", "version": "1", "split": "train",
+        "task": "asr", "single_speaker_format": True,
+    }]
+    with pytest.raises(ValueError, match="requires Lhotse supervision"):
+        CatalogSwiftDataset(catalog_config, message_format="qwen3_asr")
+
+
+@pytest.mark.parametrize("cached", [False, True])
+def test_single_speaker_asr_uses_unified_diarization_target(catalog_config, tmp_path, cached):
+    for index in range(2):
+        path = tmp_path / f"cuts{index}.jsonl.gz"
+        cut = next(iter(CutSet.from_file(path)))
+        cut.supervisions[0].speaker = "speaker0"
+        CutSet.from_cuts([cut]).to_file(path)
+    source = catalog_config["train"][0]
+    source.update(task="asr", single_speaker_format=True)
+    if cached:
+        catalog_config["metadata_cache"] = str(tmp_path / "cache")
+    dataset = CatalogSwiftDataset(catalog_config, message_format="qwen3_asr")
+    record = dataset.records[0].record
+    assert record.task == "speaker_attributed_asr"
+    assert record.target == "[S1] hello"
+    assert record.metadata == {
+        "source_task": "asr",
+        "single_speaker_verified": True,
+        "source_speaker": "speaker0",
+    }
+    assert dataset[0]["solution"] == "language English<asr_text>[S1] hello"
 
 
 @pytest.mark.parametrize("flag", ["true", 1])

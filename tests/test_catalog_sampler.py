@@ -169,6 +169,68 @@ def test_replay_ddp_reconstructs_global_plan():
     assert [batch for pair in zip(*ranks) for batch in pair] == list(CatalogBatchSampler(ds))
 
 
+def test_full_coverage_keeps_mix_and_covers_every_record_in_every_epoch():
+    ds = dataset([{"weight": 2}, {"weight": 4}, {"weight": 4}], [3, 18, 51],
+                 batching={"max_samples": 2, "num_buckets": 3},
+                 durations=[1.0] * 3 + [5.0] * 18 + [10.0] * 51)
+    ds.config["replay"] = {"epoch_samples": "full_coverage", "window_samples": 10}
+    sampler = CatalogBatchSampler(ds)
+    assert ds.config["replay"]["epoch_samples"] == "full_coverage"
+    assert sampler.replay["epoch_samples"] == 130
+    previous = None
+    for epoch in range(3):
+        sampler.set_epoch(epoch)
+        ids = indexes(sampler)
+        assert set(ids) == set(range(72))
+        for start in range(0, len(ids), 10):
+            counts = Counter(0 if i < 3 else 1 if i < 21 else 2 for i in ids[start:start + 10])
+            assert counts == {0: 2, 1: 4, 2: 4}
+        assert ids != previous
+        previous = ids
+    plan = list(sampler)
+    sampler.mark_consumed()
+    resumed = CatalogBatchSampler(ds)
+    resumed.load_state_dict(sampler.state_dict())
+    resumed.set_epoch(0)
+    assert resumed.epoch == 2
+    assert list(resumed) == plan[1:]
+
+
+def test_full_coverage_ddp_preserves_all_records_and_only_pads_last_batch():
+    ds = dataset([{"weight": 1}, {"weight": 1}], [2, 19],
+                 batching={"max_samples": 3, "num_buckets": 1})
+    ds.config["replay"] = {"epoch_samples": "full_coverage", "window_samples": 4}
+    single = list(CatalogBatchSampler(ds))
+    ranks = [list(CatalogBatchSampler(ds, rank=r, world_size=3)) for r in range(3)]
+    combined = [batch for triplet in zip(*ranks) for batch in triplet]
+    assert combined[:len(single)] == single
+    assert len(combined) - len(single) < 3
+    assert set(key[1] for batch in combined for key in batch) == set(range(21))
+
+
+@pytest.mark.parametrize("source,batching,match", [
+    ({"weight": 1, "max_samples": 1}, {}, "max_samples"),
+    ({"weight": 1}, {"drop_last": True}, "drop_last"),
+])
+def test_full_coverage_rejects_record_dropping(source, batching, match):
+    ds = dataset([source], [3], batching=batching)
+    ds.config["replay"] = {"epoch_samples": "full_coverage", "window_samples": 2}
+    with pytest.raises(ValueError, match=match):
+        CatalogBatchSampler(ds)
+
+
+def test_full_coverage_shuffles_duration_batches_without_losing_records():
+    ds = dataset([{"weight": 1}], [80], durations=[1.0] * 40 + [10.0] * 40,
+                 batching={"max_samples": 2, "num_buckets": 2})
+    ds.config["replay"] = {"epoch_samples": "full_coverage", "window_samples": 80}
+    sampler = CatalogBatchSampler(ds)
+    batches = list(sampler)
+    assert sorted(key[1] for batch in batches for key in batch) == list(range(80))
+    kinds = [sampler.durations[batch[0][1]] for batch in batches]
+    assert sum(a != b for a, b in zip(kinds, kinds[1:])) > 1
+    assert batches == list(CatalogBatchSampler(ds))
+
+
 @pytest.mark.parametrize("replay,weights,match", [
     ({"epoch_samples": 5, "window_samples": 2}, [1, 1], "divisible"),
     ({"epoch_samples": 10, "window_samples": 2}, [1000, 1], "every source"),

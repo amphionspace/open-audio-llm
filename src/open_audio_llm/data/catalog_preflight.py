@@ -22,7 +22,10 @@ def check_data(config, *, message_format="qwen3_asr", batch_size=8, world_size=2
             quotas[source["dataset_id"]] += quota
         sources.append({"dataset_id": source["dataset_id"], "version": source["version"],
                         "split": source["split"], "records": len(indices),
-                        "weight": source.get("weight"), "quota": quota})
+                        "weight": source.get("weight"), "quota": quota,
+                        "samples_per_epoch": (quota * sampler.replay["epoch_samples"]
+                                              // sampler.replay["window_samples"]
+                                              if quota is not None else None)})
     # Construct the sampler before decoding: a zero quota must fail preflight.
     datasets = [("train", dataset)]
     if config.get("validation"):
@@ -53,6 +56,7 @@ def check_data(config, *, message_format="qwen3_asr", batch_size=8, world_size=2
             "effective_config_sha256": hashlib.sha256(
                 json.dumps(config, sort_keys=True).encode()).hexdigest(),
             "world_size": world_size, "batch_size": batch_size,
-            "replay": sampler.replay, "sources": sources,
+            "replay": sampler.replay, "full_coverage": sampler.full_coverage,
+            "sources": sources,
             "quotas_by_dataset": dict(quotas), "decoded_examples": examples,
             "sampler_state": sampler.state_dict()}
