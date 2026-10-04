@@ -1,4 +1,4 @@
-"""Full-LLM SFT with equal example weight and frozen-base ASR replay KL."""
+"""Equal-example SFT with an explicitly optional frozen-base ASR replay KL."""
 
 from __future__ import annotations
 
@@ -105,15 +105,23 @@ def select_examples(inputs, indexes):
 def install_retention_objective(trainer, args):
     from qwen_asr import Qwen3ASRModel
 
-    if args.tuner_type != "full" or not args.retention_teacher:
-        raise ValueError("Sample-mean replay requires full LLM training and --retention_teacher")
+    if args.tuner_type not in {"full", "lora"}:
+        raise ValueError("Sample-mean SFT supports full or lora training")
     if args.deepspeed or args.use_logits_to_keep or trainer.optimizer is not None:
         raise ValueError("Replay objective requires DDP, untrimmed labels and installation before optimizer creation")
     coefficient = float(args._catalog_config["objective"]["replay_kl_weight"])
     separate_prefix = args._catalog_config["objective"].get("separate_prefix", False)
     asr_text_id = trainer.template.tokenizer.convert_tokens_to_ids("<asr_text>")
-    if not math.isfinite(coefficient) or coefficient <= 0:
-        raise ValueError("replay_kl_weight must be finite and positive")
+    if not math.isfinite(coefficient) or coefficient < 0:
+        raise ValueError("replay_kl_weight must be finite and nonnegative")
+    if coefficient and not args.retention_teacher:
+        raise ValueError("Positive replay_kl_weight requires retention_teacher")
+    if coefficient and all(source.get('single_speaker_format') or source.get('sot_timestamps')
+                           or trainer.train_dataset.records[indices.start].record.task == 'speaker_attributed_asr'
+                           for source, indices in zip(trainer.train_dataset.sources,
+                                                      trainer.train_dataset.source_ranges)):
+        raise ValueError("ASR replay KL has no plain-ASR examples after task conversion; "
+                         "set replay_kl_weight=0 for supervised diarization replay")
     student = trainer.model
     thinker = student.thinker
     # Training forwards explicitly disable caching; exported configs should retain
@@ -122,18 +130,22 @@ def install_retention_objective(trainer, args):
     thinker.generation_config.use_cache = True
     if any(p.requires_grad for p in thinker.audio_tower.parameters()) and args.audio_encoder_parallel:
         raise ValueError("Trainable audio encoder requires audio_encoder_parallel=false")
-    if not all(p.requires_grad for p in thinker.model.parameters()) or not thinker.lm_head.weight.requires_grad:
+    if args.tuner_type == 'full' and (
+        not all(p.requires_grad for p in thinker.model.parameters()) or not thinker.lm_head.weight.requires_grad
+    ):
         raise ValueError("All LLM parameters, including embeddings and output head, must be trainable")
     # AdamW needs FP32 master weights/moments for small full-model updates.
     # Trainer's BF16 autocast still performs the expensive matrix multiplies in BF16.
     for parameter in student.parameters():
         if parameter.requires_grad:
             parameter.data = parameter.data.float()
-    teacher = Qwen3ASRModel.from_pretrained(
-        args.retention_teacher, dtype=torch.bfloat16,
-        device_map=str(trainer.accelerator.device), attn_implementation="sdpa",
-    ).model.eval().requires_grad_(False)
-    teacher.thinker.config.use_cache = False
+    teacher = None
+    if coefficient:
+        teacher = Qwen3ASRModel.from_pretrained(
+            args.retention_teacher, dtype=torch.bfloat16,
+            device_map=str(trainer.accelerator.device), attn_implementation="sdpa",
+        ).model.eval().requires_grad_(False)
+        teacher.thinker.config.use_cache = False
     trainer.retention_teacher = teacher
     trainer.model_accepts_loss_kwargs = True
     trainer.args.average_tokens_across_devices = True
@@ -159,7 +171,7 @@ def install_retention_objective(trainer, args):
         indexes = (tasks == 0).nonzero().flatten()
         teacher_logits = None
         ordinary = tasks[rows] == 0
-        if indexes.numel():
+        if coefficient and indexes.numel():
             # Accelerate wraps only the student forward in autocast.
             with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16):
                 teacher_outputs, teacher_targets, _, _ = supervised_forward(
@@ -180,7 +192,7 @@ def install_retention_objective(trainer, args):
             if selected.numel():
                 metric.update(selected)
         metric = metrics["replay_kl"]
-        if indexes.numel():
+        if coefficient and indexes.numel():
             metric.update(kl.detach()[indexes])
         if num_items_in_batch is None:
             loss = losses.mean()
@@ -194,7 +206,9 @@ def install_retention_objective(trainer, args):
     trainer._get_num_items_in_batch = MethodType(count_examples, trainer)
     trainer.compute_loss = MethodType(compute_loss, trainer)
     summary = {
-        "teacher": args.retention_teacher,
+        "teacher": args.retention_teacher if teacher is not None else None,
+        "teacher_enabled": teacher is not None,
+        "tuner_type": args.tuner_type,
         "objective": "mean_examples(answer_reduction(CE) + ordinary_asr * replay_kl_weight * answer_reduction(KL(base || student)))",
         "separate_prefix": separate_prefix,
         "replay_kl_weight": coefficient,
@@ -205,9 +219,9 @@ def install_retention_objective(trainer, args):
                                         if p.requires_grad and name.startswith(("model.", "lm_head."))),
         "learning_rates": {"llm": args.learning_rate, "encoder": args.vit_lr, "aligner": args.aligner_lr},
         "master_dtype": "float32", "compute_dtype": "bfloat16",
-        "teacher_trainable_parameters": sum(p.numel() for p in teacher.parameters() if p.requires_grad),
+        "teacher_trainable_parameters": sum(p.numel() for p in teacher.parameters() if p.requires_grad) if teacher is not None else 0,
     }
-    LOG.warning("Full LLM replay: %s", json.dumps(summary))
+    LOG.warning("Sample-mean objective: %s", json.dumps(summary))
     if trainer.is_world_process_zero():
         path = Path(trainer.args.output_dir)
         path.mkdir(parents=True, exist_ok=True)

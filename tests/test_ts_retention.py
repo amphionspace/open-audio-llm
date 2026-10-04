@@ -1,3 +1,4 @@
+import json
 from dataclasses import replace
 from types import SimpleNamespace
 
@@ -95,6 +96,38 @@ def test_kl_anchors_only_plain_asr_and_does_not_train_teacher():
     _, _, matching = sample_losses(student, labels, rows, counts, student[:1].detach(),
                                    torch.tensor([True, False]))
     assert matching.abs().max().item() < 1e-6
+
+
+def test_lora_supervised_replay_does_not_load_unused_teacher(tmp_path, monkeypatch):
+    from qwen_asr import Qwen3ASRModel
+    from open_audio_llm.integrations.ms_swift.retention import install_retention_objective
+
+    monkeypatch.setattr(Qwen3ASRModel, 'from_pretrained',
+                        lambda *a, **k: pytest.fail('zero KL must not load a teacher'))
+    thinker = torch.nn.Module()
+    thinker.model = torch.nn.Linear(3, 3).requires_grad_(False)
+    thinker.model.config = SimpleNamespace(use_cache=False)
+    thinker.audio_tower = torch.nn.Linear(3, 3).requires_grad_(False)
+    thinker.lm_head = torch.nn.Linear(3, 3).requires_grad_(False)
+    thinker.lora_adapter = torch.nn.Linear(3, 3)
+    thinker.generation_config = SimpleNamespace(use_cache=False)
+    student = torch.nn.Module()
+    student.thinker = thinker
+    trainer = SimpleNamespace(
+        model=student, optimizer=None,
+        template=SimpleNamespace(tokenizer=SimpleNamespace(convert_tokens_to_ids=lambda x: 1)),
+        args=SimpleNamespace(output_dir=str(tmp_path)),
+        is_world_process_zero=lambda: True,
+    )
+    args = SimpleNamespace(tuner_type='lora', retention_teacher=None, deepspeed=None,
+                           use_logits_to_keep=False, audio_encoder_parallel=False,
+                           learning_rate=2e-5, vit_lr=0, aligner_lr=0,
+                           _catalog_config={'objective': {'replay_kl_weight': 0}})
+    install_retention_objective(trainer, args)
+    assert trainer.retention_teacher is None
+    assert not any(p.requires_grad for p in thinker.audio_tower.parameters())
+    assert all(p.requires_grad for p in thinker.lora_adapter.parameters())
+    assert not json.loads((tmp_path / 'retention-objective.json').read_text())['teacher_enabled']
 
 
 def test_global_example_normalization_matches_unequal_rank_microbatches():

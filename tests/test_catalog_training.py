@@ -781,6 +781,153 @@ def test_catalog_loader_does_not_advance_model_rng(catalog_config):
     assert torch.equal(state, torch.get_rng_state())
 
 
+def test_sft_pipeline_passes_continuous_options_to_catalog_loader(monkeypatch):
+    from open_audio_llm.integrations.ms_swift import catalog_loader
+    from open_audio_llm.integrations.ms_swift.train import CatalogTrainingMixin
+
+    installed = []
+    monkeypatch.setattr(catalog_loader, 'install_catalog_loader',
+                        lambda trainer, checkpoint: installed.append(
+                            (trainer.args.continuous_training,
+                             trainer.args.reset_catalog_sampler, checkpoint)))
+
+    class ParentPipeline:
+        def train(self, trainer):
+            return 'training'
+
+    class Pipeline(CatalogTrainingMixin, ParentPipeline):
+        pass
+
+    pipeline = Pipeline()
+    pipeline.args = SimpleNamespace(_catalog_config={}, continuous_training=True,
+                                    reset_catalog_sampler=True)
+    pipeline._get_resume_checkpoint = lambda trainer: 'checkpoint-1000'
+    trainer = SimpleNamespace(args=SimpleNamespace())
+    assert pipeline.train(trainer) == 'training'
+    assert installed == [(True, True, 'checkpoint-1000')]
+
+
+def test_continuous_catalog_resume_keeps_optimizer_and_restarts_constant_lr(catalog_config):
+    import sys
+    from open_audio_llm.integrations.ms_swift.catalog_loader import install_catalog_loader
+
+    parameter = torch.nn.Parameter(torch.ones(1))
+    optimizer = torch.optim.AdamW([parameter], lr=1e-5)
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda step: max(0, 1 - step / 2))
+    for _ in range(2):
+        parameter.sum().backward()
+        optimizer.step()
+        optimizer.zero_grad()
+        scheduler.step()
+    assert optimizer.param_groups[0]['lr'] == 0
+    moments = optimizer.state[parameter]['exp_avg'].clone()
+    trainer = SimpleNamespace(
+        args=SimpleNamespace(
+            continuous_training=True, reset_catalog_sampler=True, max_steps=-1,
+            lr_scheduler_type='constant', warmup_steps=0, warmup_ratio=0,
+            deepspeed=None, process_index=0, world_size=1,
+            train_dataloader_shuffle=True, gradient_accumulation_steps=1,
+            dataloader_num_workers=0, dataloader_pin_memory=False,
+            lr_scheduler_kwargs={'timescale': 10000},
+        ),
+        template=SimpleNamespace(sequence_parallel_size=1),
+        train_dataset=CatalogSwiftDataset(catalog_config), _train_batch_size=1,
+        data_collator=list, accelerator=SimpleNamespace(device=torch.device('cpu')),
+        add_callback=lambda callback: None, set_initial_training_values=lambda *args: (1,),
+        optimizer=optimizer, lr_scheduler=scheduler,
+        _load_optimizer_and_scheduler=lambda checkpoint: None,
+    )
+    install_catalog_loader(trainer, 'old-quota-checkpoint')
+    trainer._load_optimizer_and_scheduler('old-quota-checkpoint')
+    assert trainer.args.max_steps == sys.maxsize
+    assert trainer.set_initial_training_values()[0] == sys.maxsize
+    assert trainer.catalog_sampler.epoch == trainer.catalog_sampler.consumed == 0
+    assert trainer.lr_scheduler.last_epoch == 2
+    assert optimizer.param_groups[0]['lr'] == 1e-5
+    assert optimizer.state[parameter]['step'] == 2
+    assert torch.equal(optimizer.state[parameter]['exp_avg'], moments)
+    parameter.sum().backward()
+    optimizer.step()
+    trainer.lr_scheduler.step()
+    assert optimizer.state[parameter]['step'] == trainer.lr_scheduler.last_epoch == 3
+    assert optimizer.param_groups[0]['lr'] == 1e-5
+
+
+def test_continuous_inverse_sqrt_keeps_schedule_on_resume(catalog_config):
+    from transformers import get_inverse_sqrt_schedule
+    from open_audio_llm.integrations.ms_swift.catalog_loader import install_catalog_loader
+
+    parameter = torch.nn.Parameter(torch.ones(1))
+    optimizer = torch.optim.AdamW([parameter], lr=2e-5)
+    scheduler = get_inverse_sqrt_schedule(optimizer, num_warmup_steps=2)
+    rates = []
+    for _ in range(8):
+        optimizer.step()
+        scheduler.step()
+        rates.append(optimizer.param_groups[0]['lr'])
+    assert rates[0] < rates[1] and rates[-1] < rates[1]
+    trainer = SimpleNamespace(
+        args=SimpleNamespace(
+            continuous_training=True, reset_catalog_sampler=True, max_steps=-1,
+            lr_scheduler_type='inverse_sqrt', warmup_steps=2, warmup_ratio=0,
+            lr_scheduler_kwargs={'timescale': 10000},
+            get_warmup_steps=lambda steps: 2,
+            deepspeed=None, process_index=0, world_size=1,
+            train_dataloader_shuffle=True, gradient_accumulation_steps=1,
+            dataloader_num_workers=0, dataloader_pin_memory=False,
+        ),
+        template=SimpleNamespace(sequence_parallel_size=1),
+        train_dataset=CatalogSwiftDataset(catalog_config), _train_batch_size=1,
+        data_collator=list, accelerator=SimpleNamespace(device=torch.device('cpu')),
+        add_callback=lambda callback: None, set_initial_training_values=lambda *args: (1,),
+        optimizer=optimizer, lr_scheduler=scheduler,
+        create_scheduler=lambda *args: None,
+        _load_optimizer_and_scheduler=lambda checkpoint: None,
+    )
+    install_catalog_loader(trainer)
+    trainer.lr_scheduler = None
+    trainer.create_scheduler(9223372036854775807, optimizer)
+    trainer.lr_scheduler.step(2002)
+    assert trainer.lr_scheduler.last_epoch == 2002
+    assert optimizer.param_groups[0]['lr'] > 1.8e-5
+
+
+def test_continuous_inverse_sqrt_rebuilds_scheduler_after_checkpoint(catalog_config):
+    from open_audio_llm.integrations.ms_swift.catalog_loader import install_catalog_loader
+
+    parameter = torch.nn.Parameter(torch.ones(1))
+    optimizer = torch.optim.AdamW([parameter], lr=2e-5)
+    old_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda step: 0.0)
+    old_scheduler.step(1000)
+    trainer = SimpleNamespace(
+        args=SimpleNamespace(
+            continuous_training=True, reset_catalog_sampler=True, max_steps=-1,
+            lr_scheduler_type='inverse_sqrt', warmup_steps=500, warmup_ratio=0,
+            lr_scheduler_kwargs={'timescale': 10000},
+            get_warmup_steps=lambda steps: 500,
+            deepspeed=None, process_index=0, world_size=1,
+            train_dataloader_shuffle=True, gradient_accumulation_steps=1,
+            dataloader_num_workers=0, dataloader_pin_memory=False,
+        ),
+        template=SimpleNamespace(sequence_parallel_size=1),
+        train_dataset=CatalogSwiftDataset(catalog_config), _train_batch_size=1,
+        data_collator=list, accelerator=SimpleNamespace(device=torch.device('cpu')),
+        add_callback=lambda callback: None, set_initial_training_values=lambda *args: (1,),
+        optimizer=optimizer, lr_scheduler=None,
+        create_scheduler=lambda *args: None,
+        _load_optimizer_and_scheduler=lambda checkpoint: setattr(
+            trainer, 'lr_scheduler', old_scheduler
+        ),
+    )
+    install_catalog_loader(trainer, 'old-checkpoint')
+    trainer.create_scheduler(9223372036854775807, optimizer)
+    trainer._load_optimizer_and_scheduler('old-checkpoint')
+    assert trainer.lr_scheduler.last_epoch == 0
+    assert optimizer.param_groups[0]['lr'] == 0
+    trainer.lr_scheduler.step()
+    assert optimizer.param_groups[0]['lr'] == 4e-8
+
+
 def test_portable_records_artifact_preserves_segment_refs(catalog_config, tmp_path):
     record = AudioRecord(
         "segment",
