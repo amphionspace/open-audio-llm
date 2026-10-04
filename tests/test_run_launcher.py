@@ -339,6 +339,27 @@ def test_wandb_verification_checks_real_remote_values():
         verify(wandb, run, {"uploaded": 4}, 0, terminal="finished")
 
 
+@pytest.mark.parametrize('actual,expected,passes', [
+    (0.18294914013904137, 0.18294914013904134, True),
+    (0.18295014013904134, 0.18294914013904134, False),
+    (None, 0.18294914013904134, False),
+    (3.0000000000000004, 3, False),
+])
+def test_wandb_verification_allows_only_float_round_trip_error(actual, expected, passes):
+    from types import SimpleNamespace
+    from open_audio_llm.run_tracking import verify
+
+    remote = SimpleNamespace(summary={'metric': actual}, state='finished',
+                             url='https://example.test/run')
+    wandb = SimpleNamespace(Api=lambda: SimpleNamespace(run=lambda _: remote))
+    run = SimpleNamespace(entity='entity', project='project', id='run')
+    if passes:
+        assert verify(wandb, run, {'metric': expected}, 0, terminal='finished')['url'] == remote.url
+    else:
+        with pytest.raises(RuntimeError, match='did not match'):
+            verify(wandb, run, {'metric': expected}, 0, terminal='finished')
+
+
 def test_quality_is_separate_from_successful_execution(tmp_path):
     path, config = recipe(tmp_path)
     worker = tmp_path / "worker.py"

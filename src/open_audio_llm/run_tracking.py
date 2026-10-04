@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import time
 from pathlib import Path
 
@@ -63,7 +64,17 @@ def verify(wandb, run, expected, timeout, terminal=None):
     while True:
         remote = wandb.Api().run(f"{run.entity}/{run.project}/{run.id}")
         actual = dict(remote.summary)
-        if all(actual.get(k) == v for k, v in expected.items()) and (
+        # W&B's JSON round trip can change the final bits of a float.
+        matched = all(
+            actual.get(k) == v
+            or (
+                isinstance(v, float)
+                and isinstance(actual.get(k), (int, float))
+                and math.isclose(actual[k], v, rel_tol=1e-14, abs_tol=0)
+            )
+            for k, v in expected.items()
+        )
+        if matched and (
             terminal is None or remote.state == terminal
         ):
             return {

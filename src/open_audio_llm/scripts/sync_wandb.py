@@ -150,6 +150,10 @@ def collect_events(root):
             continue
         step = int(folder.name.removeprefix("checkpoint-"))
         values = {"global_step": step}
+        if (folder / "metrics.json").is_file():
+            values.update(numeric(json.loads((folder / "metrics.json").read_text())))
+            events[f"evaluation:{step}"] = values
+            continue
         for task in ("asr", "sot"):
             summary = json.loads((folder / task / "summary.json").read_text())
             values.update(evaluation_metrics(summary, task))
