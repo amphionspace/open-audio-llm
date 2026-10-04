@@ -53,6 +53,8 @@ class CatalogArgumentsMixin:
 @dataclass
 class CatalogSftArguments(CatalogArgumentsMixin, SftArguments):
     data_config: str | None = None
+    continuous_training: bool = False
+    reset_catalog_sampler: bool = False
     performance_logging: bool = True
     audio_encoder_parallel: bool = False
     audio_encoder_batching: bool = False
@@ -141,6 +143,9 @@ class CatalogTrainingMixin:
         else:
             from .catalog_loader import install_catalog_loader
 
+            # TrainerFactory drops fields outside its TrainingArguments schema.
+            trainer.args.continuous_training = self.args.continuous_training
+            trainer.args.reset_catalog_sampler = self.args.reset_catalog_sampler
             if self.args._catalog_config.get("objective", {}).get("sample_mean"):
                 from .retention import install_retention_objective
 
