@@ -96,6 +96,16 @@ def test_incomplete_or_failed_evaluations_are_not_uploaded(tmp_path):
     assert "evaluation:100" in collect_events(tmp_path)
 
 
+def test_fixed_meeting_evaluation_uploads_only_after_completion(tmp_path):
+    folder = tmp_path / 'training/retention-evaluations/checkpoint-500'
+    folder.mkdir(parents=True)
+    metrics = {'eval/aishell4/cpCER': 0.2, 'eval/asr/aishell/error_rate': 0.01}
+    (folder / 'metrics.json').write_text(json.dumps(metrics))
+    assert collect_events(tmp_path) == {}
+    (folder / 'runner-exit.json').write_text('{"returncode":0}')
+    assert collect_events(tmp_path)['evaluation:500'] == {'global_step': 500, **metrics}
+
+
 def write_config(tmp_path):
     (tmp_path / "training").mkdir()
     (tmp_path / "training/args.json").write_text(json.dumps({
