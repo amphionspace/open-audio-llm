@@ -54,19 +54,29 @@ class CatalogBatchSampler(Sampler):
             raise ValueError("batching.max_duration must be positive and finite")
         self.drop_last = self.options.get("drop_last", False)
         self.replay = dataset.config.get("replay")
+        self.full_coverage = False
         if self.replay is not None:
+            self.replay = dict(self.replay)
             if set(self.replay) != {"epoch_samples", "window_samples"}:
                 raise ValueError("replay requires epoch_samples and window_samples")
+            self.full_coverage = self.replay["epoch_samples"] == "full_coverage"
+            if self.full_coverage and self.drop_last:
+                raise ValueError("full_coverage requires batching.drop_last=false")
             for name, value in self.replay.items():
+                if name == "epoch_samples" and self.full_coverage:
+                    continue
                 if type(value) is not int or value <= 0:
-                    raise ValueError(f"replay.{name} must be a positive integer")
+                    raise ValueError(f"replay.{name} must be a positive integer"
+                                     " (epoch_samples also accepts full_coverage)")
             window = self.replay["window_samples"]
-            if self.replay["epoch_samples"] % window:
+            if not self.full_coverage and self.replay["epoch_samples"] % window:
                 raise ValueError("replay.epoch_samples must be divisible by window_samples")
             weights = []
             for source in dataset.sources:
                 if any(k in source for k in ("samples", "reps", "shard_rotation")):
                     raise ValueError("replay uses weight, not samples/reps/shard_rotation")
+                if self.full_coverage and "max_samples" in source:
+                    raise ValueError("full_coverage cannot use source max_samples")
                 weight = source.get("weight", 0)
                 if not math.isfinite(weight) or weight <= 0:
                     raise ValueError("replay requires positive weight for every source")
@@ -78,6 +88,11 @@ class CatalogBatchSampler(Sampler):
                 self.quotas[i] += 1
             if min(self.quotas) == 0:
                 raise ValueError("Increase replay.window_samples to include every source")
+            if self.full_coverage:
+                # Cover the slowest source; smaller sources cycle without replacement.
+                windows = max((len(indices) + quota - 1) // quota
+                              for indices, quota in zip(dataset.source_ranges, self.quotas))
+                self.replay["epoch_samples"] = windows * window
             # Each bucketing window must retain the configured source quotas.
             self.buffer_size = window
         indexed = hasattr(dataset.records, "signature")
@@ -170,6 +185,12 @@ class CatalogBatchSampler(Sampler):
     def _replay_mux(self, rng):
         windows = self.replay["epoch_samples"] // self.replay["window_samples"]
         positions = [self.epoch * windows * quota for quota in self.quotas]
+        if self.full_coverage:
+            # Start each data epoch at a fresh permutation. A tail of one shuffle
+            # plus a prefix of another need not cover all records, even at N draws.
+            positions = [self.epoch * ((windows * quota + len(indices) - 1) // len(indices))
+                         * len(indices)
+                         for indices, quota in zip(self.dataset.source_ranges, self.quotas)]
         occurrence = 0
         for _ in range(windows):
             window = []

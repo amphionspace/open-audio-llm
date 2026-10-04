@@ -198,7 +198,15 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         spec = self.resolver.catalog.get(source["dataset_id"], source["version"])
         split_name = source["split"]
         split = spec.splits[split_name]
+        single_speaker = source.get("single_speaker_format", False)
+        if type(single_speaker) is not bool:
+            raise ValueError("single_speaker_format must be a boolean")
         if "records_artifact" in split or "records_artifacts" in split:
+            if single_speaker:
+                raise ValueError(
+                    "single_speaker_format requires Lhotse supervision speaker IDs "
+                    "or preconverted speaker-attributed records"
+                )
             if source.get("exclude_speakers"):
                 raise ValueError("exclude_speakers requires Lhotse supervision speaker IDs")
             names = split.get("records_artifacts") or [split["records_artifact"]]
@@ -251,6 +259,14 @@ class CatalogSwiftDataset(OnlineAudioDataset):
 
     def _cut_records(self, cuts, source, spec):
         excluded = set(source.get("exclude_speakers", []))
+        single_speaker = source.get("single_speaker_format", False)
+        if type(single_speaker) is not bool:
+            raise ValueError("single_speaker_format must be a boolean")
+        source_task = source.get("task", "asr")
+        if single_speaker and source_task not in {"asr", "asr_hotwords"}:
+            raise ValueError(
+                "single_speaker_format is only valid for ordinary ASR sources"
+            )
         if excluded:
             def exclude_heldout(cut):
                 return cut.filter_supervisions(lambda supervision: supervision.speaker not in excluded)
@@ -270,8 +286,24 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         for cut in cuts.trim_to_supervisions(keep_overlapping=False):
             supervision = cut.supervisions[0]
             custom = {**(cut.custom or {}), **(supervision.custom or {})}
-            task = source.get("task", custom.get("task", "asr"))
-            name = "mixture" if task == "ts_asr" else "primary"
+            task = source_task if "task" in source else custom.get("task", "asr")
+            target = supervision.text or ""
+            metadata = {}
+            if single_speaker:
+                # Only sources with explicit speaker supervision may be promoted
+                # to the unified diarization target format.
+                if not supervision.speaker:
+                    raise ValueError(
+                        f"single_speaker_format requires speaker supervision: {supervision.id}"
+                    )
+                task = "speaker_attributed_asr"
+                target = f"[S1] {target}" if target.strip() else ""
+                metadata = {
+                    "source_task": source_task,
+                    "single_speaker_verified": True,
+                    "source_speaker": str(supervision.speaker),
+                }
+            name = "mixture" if task in {"ts_asr", "speaker_attributed_asr"} else "primary"
             ref = AudioRef(
                 spec.dataset_id,
                 spec.version,
@@ -304,7 +336,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                     id=f"{spec.key}:{source['split']}:{supervision.id}",
                     task=task,
                     audio_slots=tuple(slots),
-                    target=supervision.text or "",
+                    target=target,
                     language=supervision.language
                     or custom.get("language")
                     or spec.languages[0],
@@ -313,6 +345,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                         "labels",
                         {k: v for k, v in custom.items() if k.endswith("_label")},
                     ),
+                    metadata=metadata,
                 ),
                 cuts={name: cut} if self.metadata_cache else None,
             )
