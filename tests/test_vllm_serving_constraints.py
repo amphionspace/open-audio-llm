@@ -51,8 +51,11 @@ def test_vllm_serving_dockerfile_documents_runtime_compiler_boundary():
 
 
 def test_vllm_compose_profile_enables_embedding_bypass():
-    compose = (ROOT / "compose.vllm.yaml").read_text(encoding="utf-8")
+    import yaml
+    from open_audio_llm.run_config import load_config
 
-    assert "OPEN_AUDIO_LLM_MODEL" in compose
-    assert "- -e" in compose
-    assert "- -q" in compose
+    compose = yaml.safe_load((ROOT / 'compose.vllm.yaml').read_text())
+    assert compose['services']['vllm-serving']['command'] == ['--config', '/configs/serve.yaml']
+    recipe = load_config(ROOT / 'examples/configs/serve/container.yaml', ROOT / 'runs/unused')
+    assert '--enable-mm-embeds' in recipe['task']['flags']
+    assert recipe['runtime']['environment']['OPEN_AUDIO_LLM_ENABLE_QWEN3_ASR_EMBEDS'] == '1'

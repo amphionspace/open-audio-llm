@@ -4,4 +4,4 @@ FROM ${SERVING_IMAGE}
 
 COPY models/qwen3-asr-1.7b /models/qwen3-asr-1.7b
 
-CMD ["-m", "/models/qwen3-asr-1.7b", "-p", "8000", "-n", "Qwen/Qwen3-ASR-1.7B", "-a", "1", "-u", "0.70", "-l", "32768"]
+CMD ["--config", "examples/configs/serve/qwen3-asr.yaml"]

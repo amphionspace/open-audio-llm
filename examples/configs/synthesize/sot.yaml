@@ -1,0 +1,30 @@
+version: 1
+runtime:
+  python: {path: ../../../../AmphionData/.venv/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../../../../AmphionData/src}, {path: ../../../../audio-data-contract/src}]
+  gpus: []
+  threads: {omp: 4, openblas: 1}
+task:
+  kind: synthesize
+  module: amphiondata
+  positional: [multispeaker, generate]
+  arguments:
+    --output: {path: '{attempt}/artifacts'}
+    --workers: 16
+    --train: 1200000
+    --dev: 6000
+    --test: 6000
+    --shard-size: 500
+preflight:
+  - kind: synthesize
+    module: amphiondata
+    positional: [multispeaker, prepare]
+    arguments:
+      --recipe: {path: ../../../runs/sot-synthesis/recipe.json}
+      --catalog: {path: ../../../../audio-data-contract/catalog}
+      --roots: {path: ../../../../audio-data-contract/roots.json}
+      --workers: 4
+      --output: {path: '{attempt}/artifacts'}
+recording:
+  attempts_dir: {path: ../../../runs/sot-synthesis/tasks/synthesis/attempts}

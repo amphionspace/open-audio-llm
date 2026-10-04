@@ -1,0 +1,57 @@
+version: 1
+runtime:
+  python: python
+  cwd: {path: ../../..}
+  pythonpath:
+    - {path: ../../../src}
+    - {path: ../../../../audio-data-contract/src}
+  gpus: [2, 3]
+  distributed: {processes: 2, port: 29501}
+  threads: {omp: 2, openblas: 1}
+  environment:
+    TOKENIZERS_PARALLELISM: false
+data:
+  config: {path: ../data/catalog_mixed.yaml}
+task:
+  kind: train
+  module: open_audio_llm.integrations.ms_swift.train
+  positional: [sft]
+  arguments:
+    --model: {path: "../../../models/open-audio-llm"}
+    --external_plugins: [{path: "../../../src/open_audio_llm/integrations/ms_swift/register_audio_llm.py"}]
+    --dataloader_num_workers: 2
+    --freeze_vit: true
+    --freeze_aligner: false
+    --freeze_llm: false
+    --tuner_type: "lora"
+    --deepspeed: "zero2"
+    --torch_dtype: "bfloat16"
+    --lora_rank: 64
+    --lora_alpha: 128
+    --target_modules: "all-linear"
+    --max_length: 2048
+    --per_device_train_batch_size: 1
+    --gradient_accumulation_steps: 4
+    --learning_rate: 0.00001
+    --max_steps: 1000
+    --lr_scheduler_type: "cosine"
+    --warmup_ratio: 0.05
+    --gradient_checkpointing: true
+    --save_steps: 200
+    --save_total_limit: 2
+    --eval_steps: 200
+    --logging_steps: 10
+    --report_to: "none"
+    --output_dir: {path: "{attempt}/artifacts/training"}
+    --ddp_timeout: 180000000
+recording:
+  attempts_dir: {path: ../../../runs/catalog-sft/tasks/run/attempts}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: python
+  credentials_file: {path: ~/.bashrc}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: catalog-sft
+  interval: 5

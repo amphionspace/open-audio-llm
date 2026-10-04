@@ -37,8 +37,8 @@ AISHELLMix / LibriMix 当前版本保留原标注、未重新审核，仍可用�
 DDP 尾部补批会略微改变整轮计数。比例按样本数计算，**不等于音频秒数、目标
 token 数或梯度占比**，长 TS 仍可能贡献更多监督，当前 TS 目标配额为 40%。
 
-启动脚本先用 `METADATA_WORKERS=4` 个 CPU 进程建立可复用的磁盘索引，默认放在
-`runs/catalog-metadata-cache`，可用 `AUDIO_DATA_METADATA_CACHE` 指定位置。
+运行 YAML 的 `preflight` 先用 4 个 CPU 进程建立可复用索引，位置由数据 YAML 的
+`metadata_cache` 指定，示例为 `runs/catalog-metadata-cache`。
 首次需要扫描原始 manifests；后续各 rank 和 DataLoader worker 按需读取记录，
 时长和槽位使用紧凑数组，不再常驻数千万个 Python 记录对象。索引按来源定义、
 文件路径/大小/修改时间、采样率和变速设置区分；共享目录使用文件锁，完成后才
@@ -59,7 +59,8 @@ token 数或梯度占比**，长 TS 仍可能贡献更多监督，当前 TS 目�
 波形增强作用在各段上，参考段始终占 3 秒。变速概率 25%，SpecAugment
 概率 15%，不加噪或混响。主音频最多 20 秒、最慢速度 0.9，TS 最长
 `20 / 0.9 + 3 ≈ 25.23` 秒；组批预算这 3 秒注册前缀。训练不要设置
-`AMPHION_TSASR_INSERT_SEP`。评测 concat 波形（注册 3 秒紧接混合音）时才设为 1。
+`AMPHION_TSASR_INSERT_SEP`。评测 concat 波形（注册 3 秒紧接混合音）使用
+[独立服务配置](../../configs/serve/tsasr.yaml)，由启动器按 YAML 生成 SEP 与注意力设置。
 
 从原生预训练模型新建 LoRA，冻结音频编码器和连接层，只训练语言模型线性层的
 LoRA；rank=64、alpha=128、学习率 `2e-5`、cosine、5% warmup。
@@ -93,32 +94,14 @@ checkpoint 中仍保存合并前的 batch 游标，支持旧版 `catalog_sampler
 ## 启动与验收
 
 沿用 [原生 Qwen3-ASR 环境与参数](README.md)，不新增依赖。
+以下命令只读配置文件；模型、GPU、batch、学习率和恢复 checkpoint 均写 YAML。
+所有新 checkpoint 对比使用 vLLM；本页原有原生生成参数及结果描述作为历史协议保留，不再作为公开推理入口。
 此入口使用已有 ms-swift 4.x 接入；具体版本与运行限制见该文档。
 
 ```bash
-export MODEL=/path/to/pretrained/Qwen3-ASR-1.7B
-export PYTHON=/path/to/environment/bin/python
-export AUDIO_DATA_CONTRACT_ROOT=/path/to/audio-data-contract
-export AUDIO_DATA_CATALOG=$AUDIO_DATA_CONTRACT_ROOT/catalog
-export AUDIO_DATA_ROOTS_FILE=$AUDIO_DATA_CONTRACT_ROOT/roots.json
-export PYTHONPATH=$PWD/src:$AUDIO_DATA_CONTRACT_ROOT/src
-export CUDA_VISIBLE_DEVICES=2,3
-export OUTPUT_DIR=$PWD/runs/qwen3-asr-ts-replay
-export DATA_CONFIG=$PWD/examples/configs/data/qwen3_asr_ts_replay.yaml
-
-# 固定开发集基线。
-CUDA_VISIBLE_DEVICES=2 "$PYTHON" -m open_audio_llm.eval.ts_asr \
-  --model "$MODEL" --data_config "$DATA_CONFIG" \
-  --output_dir "$OUTPUT_DIR/base-dev"
-
-bash examples/train/qwen3-asr/train_tsasr.sh
-
-# 填写实际 checkpoint 路径，对候选分别验收。
-CHECKPOINT=/path/to/checkpoint-250
-CUDA_VISIBLE_DEVICES=2 "$PYTHON" -m open_audio_llm.eval.ts_asr \
-  --model "$MODEL" --adapter "$CHECKPOINT" --data_config "$DATA_CONFIG" \
-  --baseline "$OUTPUT_DIR/base-dev/summary.json" \
-  --output_dir "$OUTPUT_DIR/candidate-dev"
+open-audio-llm serve --config examples/configs/serve/vllm.yaml
+open-audio-llm eval --config examples/configs/eval/comparison.yaml
+open-audio-llm train --config examples/configs/train/ts-replay.yaml
 ```
 
 评估加 `--audio_encoder_parallel` 可验证并行编码路径；基线和候选仍使用相同的
@@ -181,7 +164,7 @@ WenetSpeech clean v3 使用其
 普通 ASR 回放增加 `KL(base || student)`，系数为 10，同样分别平均前缀和正文，
 只作用于有监督的答案位置。第一轮系数 1 的试跑仍未通过逐域中文 CER 门槛，
 因此提高约束强度；该数值仍需开发集验证，不能视为零退化保证。
-教师是 `RETENTION_TEACHER` 指定的冻结原生基座，默认等于 `MODEL`；不在 TS
+教师是 `--retention_teacher` 指定的冻结原生基座，默认等于 `--model`；不在 TS
 样本上模仿基座。训练使用 FP32 主权重和 AdamW 状态、BF16 autocast 运算，
 避免小学习率更新直接被 BF16 权重舍入。只投影有监督位置以控制词表 logits 显存。
 这些措施降低退化风险，不能替代逐域 CER 验收。
@@ -202,13 +185,11 @@ TS 输入是 3 秒 enrollment 和独立混音，中间用 SEP 分开，模型负
 
 切换到此配方时，以旧 checkpoint 的模型权重初始化新运行，并重新建立采样计划。
 数据来源和权重已改变，旧 `catalog_sampler.json` 的签名不兼容，不能沿用旧采样
-游标直接 `resume_from_checkpoint`。`MODEL` 指向旧 checkpoint 时，需显式将
-`RETENTION_TEACHER` 指向原生预训练模型，继续约束相对原基座的中文退化。
+游标直接 `resume_from_checkpoint`。`--model` 指向旧 checkpoint 时，需显式将
+`--retention_teacher` 指向原生预训练模型，继续约束相对原基座的中文退化。
 
 ```bash
-CUDA_VISIBLE_DEVICES=0,1,2 NPROC_PER_NODE=3 \
-  OUTPUT_DIR=$PWD/runs/qwen3-asr-ts-full \
-  bash examples/train/qwen3-asr/train_tsasr_full.sh
+open-audio-llm train --config examples/configs/train/ts-full.yaml
 ```
 
 普通 ASR 验收仍使用相同基座、相同开发样本、每个中文域零 CER 增幅；不得用更低
@@ -225,17 +206,12 @@ LoRA 的 optimizer/sampler 状态直接续训。
 
 `train_tsasr_joint.sh` 沿用全参回放目标，同时解冻 audio encoder、proj1/proj2 和
 全部 LLM 参数。三个优化器参数组互不重复，包含 lm_head；学习率分别由
-`ENCODER_LR`（默认 `1e-6`）、`ALIGNER_LR`（默认 `5e-6`）和 `LLM_LR`
+`--vit_lr`（默认 `1e-6`）、`--aligner_lr`（默认 `5e-6`）和 `--learning_rate`
 （默认 `5e-6`）控制。默认 80,000 步，每 1,000 步保存模型并计算 dev loss，
 保留最近 4 个 checkpoint；这些默认值仍需通过生成式评测验证。
 
 ```bash
-MODEL=/path/to/pretrained/Qwen3-ASR-1.7B \
-  RETENTION_TEACHER=/path/to/pretrained/Qwen3-ASR-1.7B \
-  CUDA_VISIBLE_DEVICES=0,1,2,3 NPROC_PER_NODE=4 \
-  OUTPUT_DIR=$PWD/runs/qwen3-asr-ts-joint \
-  bash examples/train/qwen3-asr/train_tsasr_joint.sh \
-  --audio_encoder_batching true
+open-audio-llm train --config examples/configs/train/ts-joint.yaml
 ```
 
 联合入口关闭仅适用于冻结 encoder 的双 stream 路径，启用 encoder gradient
@@ -247,9 +223,9 @@ padding，支持 encoder 反向传播。它限定 `qwen-asr==0.0.6`、SDPA、100
 添加 `--audio_encoder_batching` 对照识别效果，默认评估仍使用原生路径。
 
 联合入口默认 `--save_only_model true`，不保存优化器状态。
-已有 checkpoint 可通过 `MODEL` 初始化新运行，但这会重新建立优化器，不能声称
+已有 checkpoint 可通过 `--model` 初始化新运行，但这会重新建立优化器，不能声称
 精确恢复完整训练状态。加载本项目 FP32 checkpoint 时添加 `--torch_dtype float32`，
-避免加载阶段先舍入到 BF16；`RETENTION_TEACHER` 仍指向原生基座。
+避免加载阶段先舍入到 BF16；`--retention_teacher` 仍指向原生基座。
 如果需要完整状态续训，应在产生 checkpoint 前显式设置 `--save_only_model false`，
 并保持数据配方和采样器签名兼容。
 

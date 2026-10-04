@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import time
 import hashlib
 from dataclasses import asdict, replace
@@ -50,22 +49,27 @@ def in_ts_partition(record, selection):
     return held_out if part == "dev" else not held_out
 
 
-def read_data_config(path, *, use_env=True):
+def read_data_config(path):
     path = Path(path).expanduser().resolve()
     config = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(config, dict):
         raise TypeError("data config must be a YAML mapping")
-    for field, env in (
-        ("catalog", "AUDIO_DATA_CATALOG"),
-        ("roots", "AUDIO_DATA_ROOTS_FILE"),
-    ):
-        value = (os.environ.get(env) if use_env else None) or config.get(field)
+    for field in ("catalog", "roots", "metadata_cache"):
+        value = config.get(field)
         if not value:
-            raise ValueError(f"Set {env} or {field!r} in {path}")
+            if field == "metadata_cache":
+                continue
+            raise ValueError(f"Set {field!r} in {path}")
         selected = Path(value).expanduser()
         config[field] = str(
             selected if selected.is_absolute() else path.parent / selected
         )
+    for source in config.get("train", []) + config.get("validation", []) + config.get('evaluation', []):
+        if source.get("sot_alignment_index"):
+            selected = Path(source["sot_alignment_index"]).expanduser()
+            source["sot_alignment_index"] = str(
+                selected if selected.is_absolute() else path.parent / selected
+            )
     if not config.get("train"):
         raise ValueError("data config requires at least one train source")
     return config
@@ -89,7 +93,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
 
     def __init__(self, config, *, training=True, encode=None, grpo=False, message_format="generic", collect_metrics=False):
         self.collect_metrics = collect_metrics
-        self.metadata_cache = os.environ.get("AUDIO_DATA_METADATA_CACHE") or config.get("metadata_cache")
+        self.metadata_cache = config.get("metadata_cache")
         self.resolver = LhotseCatalogAudioResolver(
             config["catalog"],
             config["roots"],

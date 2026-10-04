@@ -1,0 +1,32 @@
+version: 1
+runtime:
+  python: python
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../../../src}]
+  gpus: [0]
+  threads: {omp: 4, openblas: 1}
+task:
+  kind: rollout
+  backend: vllm
+  module: swift.cli.rollout
+  arguments:
+    --model: {path: '{attempt}/artifacts/model'}
+    --external_plugins:
+      - {path: ../../../src/open_audio_llm/integrations/ms_swift/register_audio_llm.py}
+      - {path: ../../../src/open_audio_llm/integrations/vllm/patch_registry_subprocess.py}
+    --vllm_tensor_parallel_size: 1
+    --vllm_data_parallel_size: 1
+    --vllm_gpu_memory_utilization: 0.9
+    --vllm_max_model_len: 1024
+    --vllm_enforce_eager: true
+    --port: 8006
+recording:
+  attempts_dir: {path: ../../../runs/vllm-rollout/tasks/serve/attempts}
+preflight:
+  - kind: model
+    module: open_audio_llm.scripts.prepare_rollout
+    arguments:
+      --source: {path: ../../../models/open-audio-llm}
+      --output: {path: '{attempt}/artifacts/model'}
+      --code: {path: ../../../src/open_audio_llm}
+      --architecture: TransformersForCausalLM

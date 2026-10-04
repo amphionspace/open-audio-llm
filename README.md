@@ -64,142 +64,54 @@ vLLM 0.18 已验证线。该路径还需要系统 C 编译器（例如 Debian/Ub
 pip install -e ".[hf,swift,data,dev]"
 ```
 
-## vLLM 部署
+## 配置与运行
 
-推荐使用仓库提供的单服务部署 profile 构建 vLLM serving 镜像：
-
-```bash
-export OPEN_AUDIO_LLM_MODEL=/path/to/qwen3-asr-or-compatible-model
-export VLLM_SERVED_MODEL_NAME=amphionasr-1.7b
-export VLLM_PORT=8009
-# Shared GPU hosts may need a lower value, for example 0.2.
-export VLLM_GPU_MEMORY_UTILIZATION=0.9
-docker compose -f compose.vllm.yaml up --build
-```
-
-该 compose 文件只覆盖本仓库的 vLLM serving 单元；RAG-ASR Triton、
-audiollm-server 等多服务编排应继续放在部署仓库里。
-
-启动 OpenAI-compatible vLLM 服务：
+正式入口只接受配置路径、任务选择、恢复和预览。先填写 YAML 中的模型、解释器、GPU、端口与数据路径；相对路径以所属配置文件为基准。
 
 ```bash
-source /path/to/miniconda3/etc/profile.d/conda.sh
-conda activate vllm
-
-cd /path/to/open-audio-llm
-bash examples/serve/vllm/serve.sh \
-  -m /path/to/model \
-  -p 8000 \
-  -g 0 \
-  -n open-audio-llm \
-  -t 1 \
-  -d 1 \
-  -a 4
+open-audio-llm train --config examples/configs/train/sft.yaml --dry-run
+open-audio-llm train --config examples/configs/train/sft.yaml
+open-audio-llm train --config examples/configs/train/grpo.yaml
+open-audio-llm serve --config examples/configs/serve/vllm.yaml
+open-audio-llm eval --config examples/configs/eval/comparison.yaml
+open-audio-llm model --config examples/configs/model/convert-legacy.yaml
 ```
 
-常用参数：
+训练、数据准备、合成、评测、服务、rollout 和模型处理配置见 [examples/configs](examples/configs/README.md)。shell 文件是薄入口，不再接受 `MODEL`、`MAX_STEPS`、`OUTPUT_DIR` 等业务环境变量。数据加载器只从 YAML 读取 Catalog、roots 和缓存路径。
 
-- `-m`：模型目录，必填；脚本会自动解析 ModelScope 嵌套 `config.json`。
-- `-p`：服务端口，默认 `8000`。
-- `-g`：`CUDA_VISIBLE_DEVICES`。
-- `-n`：`served-model-name`。
-- `-t`：tensor parallel size。
-- `-d`：data parallel size。
-- `-a`：每条 prompt 允许的最大音频数。
-- `-u`：`gpu-memory-utilization`；共享 GPU 上需要低于 vLLM 默认值。
-- `-l`：`max-model-len`。
-- `-e`：向 vLLM 传 `--enable-mm-embeds`，允许请求传预计算多模态 embedding。
-- `-q`：启用 Qwen3-ASR `audio_embeds` embedding bypass 注册。
+训练和评测必须同步 W&B，并核验远端 run URL 和实际指标；记录保存在每次执行目录。凭据留在环境中。推理与模型对比使用 vLLM，AntSpeaker 声纹核验使用已授权的官方 PyTorch；不会自动回退后端。
 
-目标说话人 ASR 与普通 ASR 不要共用同一个服务。普通 ASR 保持
-`AMPHION_TSASR_INSERT_SEP` 关闭。TS-ASR 先设置 `AMPHION_TSASR_INSERT_SEP=1`
-再启动 `serve.sh`：服务会注册本仓库的 Qwen3-ASR 后端，在注册音频和混合音频之间
-插入可学习 `[SEP]`，并把音频注意力改为整段一个窗口
-（`n_window_infer=1000000000`）。要恢复配置里的 800 帧窗口，再设置
-`COT_AUDIO_CHUNKED_ATTN=1`。checkpoint-34479 的评测数字和三阶段训练配置见
-[评测结果](docs/ckpt34479-evaluation.md)与
-[三阶段 SFT](docs/qwen3-asr-three-stage-sft.md)。
+目标说话人 ASR 使用独立服务配置 [serve/tsasr.yaml](examples/configs/serve/tsasr.yaml)：在注册音和混合音之间插入可学习 `[SEP]`，音频注意力使用全局窗口 `n_window_infer=1000000000`。普通 ASR 配置保持 SEP 关闭。需要分块注意力时，在 TS-ASR YAML 中设置 `COT_AUDIO_CHUNKED_ATTN: '1'` 并移除 `--hf-overrides`。
 
-Triton/RAG-ASR embedding bypass 示例：
+checkpoint-34479 的结果和训练设置见 [评测结果](docs/ckpt34479-evaluation.md)与 [三阶段 SFT](docs/qwen3-asr-three-stage-sft.md)。启动方式仍为 `open-audio-llm serve --config examples/configs/serve/tsasr.yaml`，无需手工 export。
+
+Compose 由配置生成有效文件，默认只检查配置：
 
 ```bash
-bash examples/serve/vllm/serve.sh \
-  -m /path/to/qwen3-asr-or-compatible-model \
-  -p 8009 \
-  -g 0 \
-  -n amphionasr-1.7b \
-  -e \
-  -q
+open-audio-llm deploy --config examples/configs/deploy/vllm.yaml --dry-run
+open-audio-llm deploy --config examples/configs/deploy/vllm.yaml
 ```
 
-`-q` 会在脚本内部设置 `OPEN_AUDIO_LLM_ENABLE_QWEN3_ASR_EMBEDS=1`，并通过根项目
-的 `vllm.general_plugins` entry point 注册：
+需要启动时，在部署 YAML 中显式设置 `operation: [up, --build]`。镜像版本、GPU 和模型只读挂载约束沿用原 profile。Qwen3-ASR embedding bypass 在 `serve/vllm.yaml` 中通过 `--enable-mm-embeds` 和对应插件运行时设置开启，仍使用根项目的 `vllm.general_plugins`，无需单独安装插件子目录。
 
-`open_audio_llm.integrations.vllm.plugin:register`
+## 实验目录
 
-因此不需要、也不应该安装 `src/open_audio_llm/integrations/vllm/plugin/` 子目录。
-
-## 训练与转换
-
-本项目用于 Audio-LLM 后训练，有适用的 clean 训练版本时优先使用，并设置
-`require_clean_pass: true` 过滤未通过条目；没有 clean 版本时允许使用原训练集，
-不因此阻断 TS、普通 ASR 或热词训练。配方固定版本引用，保留清洗来源的可追溯性。
-
-训练直接读取 `audio-data-contract` Catalog 中的音频清单，取样时构造输入并执行
-on-the-fly 增强，不需要离线生成 ShareGPT JSONL 或增强后的 WAV。
-先安装本地契约包：`pip install -e /222042021/mingdong/workspace/audio-data-contract`，
-再安装训练依赖：`pip install -e ".[swift,data,hf]"`。
-
-通过 `DATA_CONFIG` 选择 YAML 数据配方；SFT 支持来源权重、samples/reps、epoch
-分片轮换、按时长与槽位动态组 batch，以及采样位置断点恢复。混合示例见
-[catalog_mixed.yaml](examples/configs/data/catalog_mixed.yaml)。启动脚本默认读取相邻 `audio-data-contract`
-仓库的 `catalog/` 和本机 `roots.json`，也可用 `AUDIO_DATA_CATALOG`、
-`AUDIO_DATA_ROOTS_FILE` 覆盖。配置与增强说明见 [在线训练数据](docs/online_training_data.md)。
-
-smoke SFT：
+每个实验根目录只放概览、方案和目录；每项任务提供中文输入、完成条件、进展和证据，失败与补充执行归入原任务的 `attempts`，完成状态与质量结论分开记录。
 
 ```bash
-set -a
-source examples/configs/train/sft.env
-set +a
-export DATA_CONFIG=examples/configs/data/catalog_smoke.yaml
-export MAX_STEPS=2 SAVE_STEPS=2 EVAL_STEPS=2 LOGGING_STEPS=1
-bash examples/train/sft/train.sh
+open-audio-llm experiment run --config runs/clean-events-ab-20260928/experiment.yaml --dry-run
+open-audio-llm experiment run --config runs/clean-events-ab-20260928/experiment.yaml --task evaluate
 ```
 
-smoke GRPO：
+示例实验两组已完成 1000 步，固定评测失败，尚无最终对比结论；迁移保留原始数据、日志、失败版本与反馈。其他历史实验只补导航，产物保留原位。规范见 [实验目录与配置](docs/experiments.md)。
 
-```bash
-set -a
-source examples/configs/train/grpo.env
-set +a
-bash examples/train/grpo/train.sh
-```
-
-legacy checkpoint 转 Open Audio-LLM HF 格式：
-
-```bash
-export AMPHION_CKPT=/path/to/legacy.pt
-export ENCODER_WEIGHTS=/path/to/encoder.pth
-export ENCODER_CONFIG=/path/to/encoder_config.json
-export LLM_PATH=/path/to/base_llm
-export OUTPUT_DIR=runs/converted_open_audio_llm
-bash examples/model/convert_legacy_checkpoint.sh
-```
-
-旧 AmphionASR HF 兼容转换入口：
-
-```bash
-bash examples/model/convert_amphionasr_checkpoint.sh \
-  -c /path/to/amphion_checkpoint.pt \
-  -o /path/to/output_hf_dir
-```
+训练直接读取 `audio-data-contract` Catalog，在取样时在线增强，不生成离线 ShareGPT。适用 clean 训练版本优先使用并设置 `require_clean_pass: true`；没有 clean 版本时允许原训练集。固定数据版本与真实开发/测试标签，禁止为通过门槛删难例。
 
 ## 目录边界
 
 - `src/open_audio_llm/`：唯一 Python package。TS-ASR 的 `[SEP]`、全局音频注意力和 vLLM 后端在 `src/open_audio_llm/tsasr/`。
 - `src/open_audio_llm/integrations/`：唯一 integrations 实现位置。
-- `examples/configs/`：逐项注释的数据 YAML 与训练 env 示例。
+- `examples/configs/`：显式的数据与运行 YAML。
 - `examples/train/`：统一 SFT / GRPO / rollout 启动入口。
 - `examples/model/`、`examples/serve/`、`examples/eval/`：模型转换、推理和评测脚本。
 - `docs/`：当前架构与使用说明；`docs/archive/` 保存历史记录。

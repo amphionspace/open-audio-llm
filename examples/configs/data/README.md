@@ -12,11 +12,12 @@ YAML 保留配方意图和关键约束，具体参数在这里查询；重复来
 |---|---|
 | `seed` | 采样和增强的随机种子，结合 epoch 与重复位置保证可复现。 |
 | `sampling_rate` | 统一音频采样率，单位 Hz，须匹配模型。 |
-| `catalog`（可选） | Catalog 注册目录；相对路径从 YAML 所在目录解析。 |
-| `roots`（可选） | 本机音频和清单的根目录映射文件。 |
+| `catalog`（必填） | Catalog 注册目录；相对路径从 YAML 所在目录解析。 |
+| `roots`（必填） | 本机音频和清单的根目录映射文件。 |
+| `metadata_cache`（可选） | 索引缓存位置；CPU 预检查需要设置。 |
 
-启动脚本默认读取相邻 `audio-data-contract` 的 catalog 和 roots.json。
-`AUDIO_DATA_CATALOG`、`AUDIO_DATA_ROOTS_FILE` 环境变量优先于 YAML。
+示例 YAML 显式引用相邻 `audio-data-contract` 的 Catalog 和 roots.json。
+数据加载器只读取配置，不再接受环境变量覆盖；对齐索引和缓存路径也以 YAML 所在目录为基准。
 
 ## 数据来源
 

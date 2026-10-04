@@ -434,20 +434,16 @@ def main():
     parser.add_argument("--world-size", type=int, default=2)
     args = parser.parse_args()
     config = read_data_config(args.data_config)
-    if not (
-        os.environ.get("AUDIO_DATA_METADATA_CACHE") or config.get("metadata_cache")
-    ):
-        parser.error("Set AUDIO_DATA_METADATA_CACHE or metadata_cache")
+    if not config.get("metadata_cache"):
+        parser.error("Set metadata_cache in data config")
     if args.workers <= 0:
         parser.error("workers must be positive")
     if args.batch_size <= 0 or args.world_size <= 0:
         parser.error("batch-size and world-size must be positive")
     reused = []
     if args.reuse_config:
-        # The current run's exported roots must not override the previous recipe.
-        previous = read_data_config(args.reuse_config, use_env=False)
-        reused = reuse_indexes(config, previous,
-                               os.environ.get("AUDIO_DATA_METADATA_CACHE") or config["metadata_cache"],
+        previous = read_data_config(args.reuse_config)
+        reused = reuse_indexes(config, previous, config["metadata_cache"],
                                args.message_format)
         print("Verified reusable Catalog indexes:", len(reused), flush=True)
     sources = [(source, True) for source in config["train"]]

@@ -1,0 +1,74 @@
+version: 1
+runtime:
+  python: python
+  cwd: {path: ../../..}
+  pythonpath:
+    - {path: ../../../src}
+    - {path: ../../../../audio-data-contract/src}
+  gpus: [2, 3]
+  distributed: {processes: 2, port: 29501}
+  threads: {omp: 2, openblas: 1}
+  environment:
+    TOKENIZERS_PARALLELISM: false
+data:
+  config: {path: ../data/qwen3_asr_ts_replay.yaml}
+task:
+  kind: train
+  module: open_audio_llm.integrations.ms_swift.train
+  positional: [sft]
+  arguments:
+    --model: {path: "../../../models/qwen3-asr-1.7b"}
+    --model_type: "amphion_asr_1.7b"
+    --external_plugins: [{path: "../../../src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py"}]
+    --tuner_type: "lora"
+    --lora_rank: 64
+    --lora_alpha: 128
+    --target_modules: "all-linear"
+    --freeze_vit: true
+    --freeze_aligner: true
+    --freeze_llm: false
+    --torch_dtype: "bfloat16"
+    --attn_impl: "sdpa"
+    --max_length: 2048
+    --per_device_train_batch_size: 8
+    --per_device_eval_batch_size: 4
+    --gradient_accumulation_steps: 2
+    --learning_rate: 0.00002
+    --max_steps: 2000
+    --lr_scheduler_type: "cosine"
+    --warmup_ratio: 0.05
+    --gradient_checkpointing: false
+    --vit_gradient_checkpointing: false
+    --ddp_find_unused_parameters: false
+    --dataloader_num_workers: 4
+    --performance_logging: true
+    --save_steps: 250
+    --save_total_limit: 8
+    --eval_steps: 250
+    --logging_steps: 10
+    --report_to: "none"
+    --seed: 42
+    --output_dir: {path: "{attempt}/artifacts/training"}
+    --audio_encoder_parallel: true
+    --dataloader_persistent_workers: true
+    --eval_strategy: "steps"
+preflight:
+  - kind: prepare
+    module: open_audio_llm.data.catalog_cache
+    arguments:
+      --data_config: {path: ../data/qwen3_asr_ts_replay.yaml}
+      --workers: 4
+      --batch-size: 8
+      --world-size: 2
+      --preflight-report: {path: "{attempt}/artifacts/data-preflight.json"}
+recording:
+  attempts_dir: {path: ../../../runs/qwen3-asr-ts-replay/tasks/run/attempts}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: python
+  credentials_file: {path: ~/.bashrc}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: qwen3-asr-ts-replay
+  interval: 5

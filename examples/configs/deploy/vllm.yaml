@@ -1,0 +1,27 @@
+version: 1
+output: {path: ../../../runs/deploy/compose.vllm.yaml}
+operation: [config]
+compose:
+  name: open-audio-llm-serving
+  services:
+    vllm-serving:
+      image: open-audio-llm/vllm-serving:local
+      build:
+        context: {path: ../../..}
+        dockerfile: docker/Dockerfile.vllm-serving
+      gpus: all
+      ipc: host
+      shm_size: 16g
+      environment:
+        NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      ports: ['8009:8009']
+      volumes:
+        - type: bind
+          source: {path: ../../../models/qwen3-asr-1.7b}
+          target: /models/main
+          read_only: true
+        - type: bind
+          source: {path: ../serve/container.yaml}
+          target: /configs/serve.yaml
+          read_only: true
+      command: [--config, /configs/serve.yaml]

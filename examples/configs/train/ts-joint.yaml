@@ -1,0 +1,85 @@
+version: 1
+runtime:
+  python: python
+  cwd: {path: ../../..}
+  pythonpath:
+    - {path: ../../../src}
+    - {path: ../../../../audio-data-contract/src}
+  gpus: [0, 1]
+  distributed: {processes: 2, port: 29501}
+  threads: {omp: 2, openblas: 1}
+  environment:
+    TOKENIZERS_PARALLELISM: false
+data:
+  config: {path: ../data/qwen3_asr_ts_full.yaml}
+task:
+  kind: train
+  module: open_audio_llm.integrations.ms_swift.train
+  positional: [sft]
+  arguments:
+    --model: {path: "../../../models/qwen3-asr-1.7b"}
+    --model_type: "amphion_asr_1.7b"
+    --external_plugins: [{path: "../../../src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py"}]
+    --tuner_type: "full"
+    --lora_rank: 64
+    --lora_alpha: 128
+    --target_modules: "all-linear"
+    --freeze_vit: false
+    --freeze_aligner: false
+    --freeze_llm: false
+    --torch_dtype: "bfloat16"
+    --attn_impl: "sdpa"
+    --max_length: 2048
+    --per_device_train_batch_size: 8
+    --per_device_eval_batch_size: 4
+    --gradient_accumulation_steps: 4
+    --learning_rate: 0.000005
+    --max_steps: 80000
+    --lr_scheduler_type: "cosine"
+    --warmup_ratio: 0
+    --gradient_checkpointing: true
+    --vit_gradient_checkpointing: true
+    --ddp_find_unused_parameters: false
+    --dataloader_num_workers: 4
+    --performance_logging: true
+    --save_steps: 1000
+    --save_total_limit: 4
+    --eval_steps: 1000
+    --logging_steps: 10
+    --report_to: "none"
+    --seed: 42
+    --output_dir: {path: "{attempt}/artifacts/training"}
+    --audio_encoder_parallel: false
+    --dataloader_persistent_workers: true
+    --eval_strategy: "steps"
+    --retention_teacher: {path: "../../../models/qwen3-asr-1.7b"}
+    --warmup_steps: 300
+    --optim: "adamw_torch_fused"
+    --weight_decay: 0.01
+    --max_grad_norm: 1
+    --use_logits_to_keep: false
+    --prediction_loss_only: true
+    --vit_lr: 0.000001
+    --aligner_lr: 0.000005
+    --ddp_timeout: 7200
+    --save_only_model: true
+preflight:
+  - kind: prepare
+    module: open_audio_llm.data.catalog_cache
+    arguments:
+      --data_config: {path: ../data/qwen3_asr_ts_full.yaml}
+      --workers: 4
+      --batch-size: 8
+      --world-size: 2
+      --preflight-report: {path: "{attempt}/artifacts/data-preflight.json"}
+recording:
+  attempts_dir: {path: ../../../runs/qwen3-asr-ts-joint/tasks/run/attempts}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: python
+  credentials_file: {path: ~/.bashrc}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: qwen3-asr-ts-joint
+  interval: 5

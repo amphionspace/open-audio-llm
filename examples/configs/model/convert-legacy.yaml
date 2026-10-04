@@ -1,0 +1,19 @@
+version: 1
+runtime:
+  python: python
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../../../src}]
+  gpus: []
+task:
+  kind: model
+  module: open_audio_llm.scripts.convert_to_hf
+  arguments:
+    --amphion-ckpt: {path: ../../../models/legacy.pt}
+    --llm-path: {path: ../../../models/base-llm}
+    --encoder-type: qwen3asr
+    --encoder-weights: {path: ../../../models/encoder.pth}
+    --encoder-config: {path: ../../../models/encoder-config.json}
+    --ds-rate: 1
+    --output-dir: {path: '{attempt}/artifacts/model'}
+recording:
+  attempts_dir: {path: ../../../runs/convert-legacy/tasks/convert/attempts}

@@ -358,46 +358,25 @@ def test_previous_recipe_paths_are_not_overridden_by_current_run(catalog_config,
     path = tmp_path / 'recipe.json'
     path.write_text(json.dumps(catalog_config))
     monkeypatch.setenv('AUDIO_DATA_ROOTS_FILE', '/new/run/roots.json')
-    assert read_data_config(path, use_env=False)['roots'] == catalog_config['roots']
-    assert read_data_config(path)['roots'] == '/new/run/roots.json'
+    monkeypatch.setenv('AUDIO_DATA_CATALOG', '/new/run/catalog')
+    monkeypatch.setenv('AUDIO_DATA_METADATA_CACHE', '/new/run/cache')
+    assert read_data_config(path)['roots'] == catalog_config['roots']
+    assert read_data_config(path)['catalog'] == catalog_config['catalog']
+    assert CatalogSwiftDataset(read_data_config(path)).metadata_cache is None
 
 
-@pytest.mark.parametrize('preflight_exit', [0, 37])
-@pytest.mark.parametrize('config_style', ['separate', 'equals'])
-def test_launch_checks_data_before_ddp(tmp_path, preflight_exit, config_style):
-    import os
-    import subprocess
+@pytest.mark.parametrize('config_name', ['ts-replay', 'ts-full', 'ts-joint', 'sot'])
+def test_config_preflight_matches_training_data_and_batch(config_name, tmp_path):
+    from open_audio_llm.run_config import command, load_config
 
-    calls = tmp_path / 'calls.jsonl'
-    python = tmp_path / 'python'
-    python.write_text('''#!/usr/bin/env python3
-import json, os, sys
-with open(os.environ['PREFLIGHT_TEST_CALLS'], 'a') as stream:
-    stream.write(json.dumps(sys.argv[1:]) + '\\n')
-if 'open_audio_llm.data.catalog_cache' in sys.argv:
-    raise SystemExit(int(os.environ['PREFLIGHT_TEST_EXIT']))
-''')
-    python.chmod(0o755)
-    env = {**os.environ, 'PYTHON': str(python), 'DATA_CONFIG': str(tmp_path / 'data.yaml'),
-           'MODEL': 'unused-model', 'OUTPUT_DIR': str(tmp_path / 'training'),
-           'NPROC_PER_NODE': '2', 'PREFLIGHT_TEST_CALLS': str(calls),
-           'PREFLIGHT_TEST_EXIT': str(preflight_exit)}
-    script = Path(__file__).resolve().parents[1] / 'examples/train/qwen3-asr/train_tsasr.sh'
-    recipe = str(tmp_path / 'selected-data.yaml')
-    override = ['--data_config', recipe] if config_style == 'separate' else ['--data_config=' + recipe]
-    result = subprocess.run(['bash', str(script), '--per_device_train_batch_size', '4',
-                             '--per_device_train_batch_size=2', *override], env=env, capture_output=True)
-    recorded = [json.loads(line) for line in calls.read_text().splitlines()]
-    assert result.returncode == preflight_exit, result.stderr.decode()
-    assert 'open_audio_llm.data.catalog_cache' in recorded[0]
-    assert recorded[0][recorded[0].index('--batch-size') + 1] == '2'
-    assert '--preflight-report' in recorded[0]
-    assert recorded[0][recorded[0].index('--data_config') + 1] == recipe
-    if preflight_exit:
-        assert len(recorded) == 1
-    else:
-        assert len(recorded) == 2 and 'torch.distributed.run' in recorded[1]
-        assert recorded[1][-len(override):] == override
+    root = Path(__file__).resolve().parents[1]
+    config = load_config(root / f'examples/configs/train/{config_name}.yaml', tmp_path)
+    training = command(config)
+    preflight = command({**config, 'task': config['preflight'][0]})
+    assert preflight[preflight.index('--data_config') + 1] == training[training.index('--data_config') + 1]
+    assert preflight[preflight.index('--batch-size') + 1] == training[training.index('--per_device_train_batch_size') + 1]
+    assert preflight[preflight.index('--world-size') + 1] == str(config['runtime']['distributed']['processes'])
+    assert '--preflight-report' in preflight
 
 
 @pytest.mark.parametrize("flag", [None, False])
@@ -640,14 +619,15 @@ def test_pipeline_encodes_only_at_access(catalog_config):
     assert validation is not None
 
 
-def test_config_uses_environment_catalog_and_roots(
+def test_config_requires_explicit_catalog_and_roots(
     catalog_config, tmp_path, monkeypatch
 ):
     monkeypatch.setenv("AUDIO_DATA_CATALOG", catalog_config["catalog"])
     monkeypatch.setenv("AUDIO_DATA_ROOTS_FILE", catalog_config["roots"])
     path = tmp_path / "training.json"
     path.write_text(json.dumps({"train": catalog_config["train"]}))
-    assert read_data_config(path)["catalog"] == catalog_config["catalog"]
+    with pytest.raises(ValueError, match="catalog"):
+        read_data_config(path)
 
 
 def test_yaml_config_relative_paths_and_samples(catalog_config, tmp_path, monkeypatch):

@@ -1,0 +1,202 @@
+version: 1
+runtime:
+  python: /ai_sds_wuzz/MODELS/miniconda3/envs/amphionft/bin/python
+  cwd: /222042021/mingdong/workspace/open-audio-llm
+  pythonpath:
+  - /222042021/mingdong/workspace/open-audio-llm/runs/qwen3-asr-sot-speaker-events-20260922/source/src
+  - /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/scripts
+  - /222042021/mingdong/workspace/open-audio-llm/runs/qwen3-asr-sot-speaker-events-20260922/dependencies/audio-data-contract/src
+  gpus:
+  - 0
+  - 1
+  threads:
+    omp: 2
+    openblas: 1
+  environment:
+    TOKENIZERS_PARALLELISM: false
+    HF_HUB_OFFLINE: '1'
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    PYTHONUNBUFFERED: '1'
+    PYTORCH_ALLOC_CONF: expandable_segments:True
+  distributed:
+    processes: 2
+    port: 29782
+task:
+  kind: train
+  module: open_audio_llm.integrations.ms_swift.train
+  positional:
+  - sft
+  arguments:
+    --model_type: amphion_asr_1.7b
+    --tuner_type: full
+    --lora_rank: 64
+    --lora_alpha: 128
+    --target_modules:
+    - all-linear
+    --freeze_vit: false
+    --freeze_aligner: false
+    --freeze_llm: false
+    --torch_dtype: float32
+    --attn_impl: sdpa
+    --max_length: 16384
+    --per_device_train_batch_size: 8
+    --per_device_eval_batch_size: 1
+    --gradient_accumulation_steps: 4
+    --learning_rate: 1.0e-05
+    --vit_lr: 1.0e-05
+    --aligner_lr: 2.0e-05
+    --max_steps: 1000
+    --lr_scheduler_type: cosine
+    --warmup_ratio: 0.0
+    --warmup_steps: 500
+    --gradient_checkpointing: true
+    --vit_gradient_checkpointing: true
+    --ddp_find_unused_parameters: false
+    --dataloader_num_workers: 4
+    --dataloader_persistent_workers: true
+    --performance_logging: true
+    --save_steps: 500.0
+    --save_total_limit: 3
+    --logging_steps: 5
+    --report_to: none
+    --seed: 42
+    --audio_encoder_parallel: false
+    --audio_encoder_batching: true
+    --use_logits_to_keep: false
+    --prediction_loss_only: true
+    --optim: adamw_torch_fused
+    --weight_decay: 0.01
+    --max_grad_norm: 1.0
+    --bf16: true
+    --fp16: false
+    --save_only_model: false
+    --ddp_timeout: 300
+    --eval_strategy: 'no'
+    --load_args: false
+    --add_version: false
+    --retention_teacher: /ai_sds_wuzz/MODELS/Qwen3-ASR-1.7B/Qwen/Qwen3-ASR-1___7B
+    --callbacks:
+    - sot_training_audit
+    --model: /222042021/mingdong/workspace/open-audio-llm/runs/qwen3-asr-sot-speaker-events-20260922/initial-checkpoint
+    --external_plugins:
+    - /222042021/mingdong/workspace/open-audio-llm/runs/qwen3-asr-sot-speaker-events-20260922/source/src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py
+    - /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/scripts/training_audit.py
+    --output_dir: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/06-train-treatment/attempts/001/artifacts/training
+experiment:
+  root: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928
+  runs: /222042021/mingdong/workspace/open-audio-llm/runs
+  output: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/06-train-treatment/attempts/001/artifacts
+  files:
+    README.md: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/shared/history/README.md
+    __pycache__: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/shared/history/__pycache__
+    audit-0: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/03-synthesis/attempts/001/artifacts/audit-0
+    audit-1: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/03-synthesis/attempts/001/artifacts/audit-1
+    audit-2: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/03-synthesis/attempts/001/artifacts/audit-2
+    audit-3: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/03-synthesis/attempts/002/artifacts/audit-3
+    centroid-speakers.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/02-identity-screening/attempts/001/artifacts/centroid-speakers.json
+    centroids.npz: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/02-identity-screening/attempts/001/artifacts/centroids.npz
+    clean-pool-summary.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/02-identity-screening/attempts/001/artifacts/clean-pool-summary.json
+    control: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/05-train-control/attempts/002/artifacts
+    controller.log: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tracking/logs/controller.log
+    embeddings-0.npz: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/02-identity-screening/attempts/001/artifacts/embeddings-0.npz
+    embeddings-1.npz: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/02-identity-screening/attempts/001/artifacts/embeddings-1.npz
+    evaluate.log: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/07-evaluate/attempts/001/logs/evaluate.log
+    evaluate.py: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/scripts/evaluate.py
+    evaluation: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/07-evaluate/attempts/001/artifacts
+    expanded-clean-pool.jsonl.gz: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/01-source-expansion/attempts/001/artifacts/expanded-clean-pool.jsonl.gz
+    extract.py: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/scripts/extract.py
+    failed-control-attempt-20260929: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/05-train-control/attempts/001/artifacts/legacy
+    failed-initial-synthesis.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/03-synthesis/attempts/001/artifacts/failed-initial-synthesis.json
+    failed-resume.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tracking/history/failed-resume.json
+    failed-training-resume.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tracking/history/failed-training-resume.json
+    generate.log: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/03-synthesis/attempts/001/logs/generate.log
+    generate.py: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/scripts/generate.py
+    generated: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/03-synthesis/attempts/002/artifacts/generated
+    generated-before-supplement: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/03-synthesis/attempts/001/artifacts/generated
+    generation-failures.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/03-synthesis/attempts/001/artifacts/generation-failures.json
+    generation-plan.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/03-synthesis/attempts/001/artifacts/generation-plan.json
+    generation-progress.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/03-synthesis/attempts/002/artifacts/generation-progress.json
+    generation-results.jsonl: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/03-synthesis/attempts/001/artifacts/generation-results.jsonl
+    identity-0.log: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/02-identity-screening/attempts/001/logs/identity-0.log
+    identity-1.log: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/02-identity-screening/attempts/001/logs/identity-1.log
+    identity-audit.jsonl: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/02-identity-screening/attempts/001/artifacts/identity-audit.jsonl
+    infer.py: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/scripts/infer.py
+    inputs-0.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/02-identity-screening/attempts/001/artifacts/inputs-0.json
+    inputs-1.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/02-identity-screening/attempts/001/artifacts/inputs-1.json
+    inventory.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/01-source-expansion/attempts/001/artifacts/inventory.json
+    matched-data.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/04-prepare-training/attempts/001/artifacts/matched-data.json
+    metrics-history.jsonl: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tracking/history/metrics-history.jsonl
+    plan.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/shared/plan.json
+    prepare-progress.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/01-source-expansion/attempts/001/artifacts/prepare-progress.json
+    prepare.log: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/01-source-expansion/attempts/001/logs/prepare.log
+    prepare.pid: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/01-source-expansion/attempts/001/logs/prepare.pid
+    prepare.py: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/scripts/prepare.py
+    prepare_training.log: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/04-prepare-training/attempts/001/logs/prepare_training.log
+    prepare_training.py: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/scripts/prepare_training.py
+    progress-0.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/02-identity-screening/attempts/001/artifacts/progress-0.json
+    progress-1.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/02-identity-screening/attempts/001/artifacts/progress-1.json
+    release-gate-before-supplement.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/03-synthesis/attempts/001/artifacts/release-gate-before-supplement.json
+    release-gate.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/03-synthesis/attempts/002/artifacts/release-gate.json
+    resume-training.log: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tracking/logs/resume-training.log
+    resume.log: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tracking/logs/resume.log
+    resume.py: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/scripts/resume.py
+    resume_training.py: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/scripts/resume_training.py
+    roots.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/shared/roots.json
+    run.py: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/scripts/run.py
+    score.py: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/scripts/score.py
+    screen.log: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/02-identity-screening/attempts/001/logs/screen.log
+    screen.py: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/scripts/screen.py
+    shared-registration-verification.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/shared/shared-registration-verification.json
+    source-selection.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/01-source-expansion/attempts/001/artifacts/source-selection.json
+    source-turn-policy.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/01-source-expansion/attempts/001/artifacts/source-turn-policy.json
+    status.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tracking/history/status.json
+    supplement-plan.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/03-synthesis/attempts/002/artifacts/supplement-plan.json
+    supplement-results.jsonl: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/03-synthesis/attempts/002/artifacts/supplement-results.jsonl
+    supplement-summary.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/03-synthesis/attempts/002/artifacts/supplement-summary.json
+    supplement.log: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/03-synthesis/attempts/002/logs/supplement.log
+    supplement.py: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/scripts/supplement.py
+    synthesis-source: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/shared/synthesis-source
+    synthesis-source-supplement: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/shared/synthesis-source-supplement
+    synthesis-summary-before-supplement.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/03-synthesis/attempts/001/artifacts/synthesis-summary-before-supplement.json
+    synthesis-summary.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/03-synthesis/attempts/002/artifacts/synthesis-summary.json
+    test_supplement_scheduler.py: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/scripts/test_supplement_scheduler.py
+    track.log: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tracking/logs/track.log
+    track.pid: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tracking/logs/track.pid
+    track.py: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/scripts/track.py
+    train.py: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/scripts/train.py
+    train_control.log: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/05-train-control/attempts/002/logs/train_control.log
+    train_treatment.log: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/06-train-treatment/attempts/001/logs/train_treatment.log
+    training-ready.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/04-prepare-training/attempts/001/artifacts/training-ready.json
+    treatment: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/06-train-treatment/attempts/001/artifacts
+    verify_data.py: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/scripts/verify_data.py
+    wandb-verification.json: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tracking/history/wandb-verification.json
+    word-pool.jsonl.gz: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/02-identity-screening/attempts/001/artifacts/word-pool.jsonl.gz
+  producers: {}
+  training_arm: treatment
+  copy_inputs: []
+parameters:
+  source_data: /222042021/mingdong/data/sot-multispeaker/events-v1c-20260921
+  reference_experiment: /222042021/mingdong/workspace/open-audio-llm/runs/qwen3-asr-sot-speaker-events-20260922
+recording:
+  attempts_dir: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/06-train-treatment/attempts
+  reconstructed:
+    reason: 历史启动没有统一 YAML；按迁移映射和原始参数重建，不能视为原始运行快照
+    evidence: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/06-train-treatment/attempts/001/artifacts
+tracking:
+  enabled: true
+  python: /222042021/mingdong/workspace/open-audio-llm/runs/wandb-sync-env/bin/python
+  pythonpath:
+  - /222042021/mingdong/workspace/open-audio-llm/src
+  credentials_file: /root/.bashrc
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: clean-events-ab-20260928-train-treatment
+  interval: 5
+  metrics: []
+data:
+  config: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/configs/treatment-data.yaml
+preflight:
+- kind: prepare
+  script: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/scripts/gpu_preflight.py
+  accepts_config: true
+config_file: /222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/configs/treatment-train.yaml

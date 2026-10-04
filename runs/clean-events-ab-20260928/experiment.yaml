@@ -1,0 +1,45 @@
+version: 1
+name: clean-events-ab-20260928
+purpose: 固定起点、相同训练配方，对比旧合成数据与自动清洗合成流程
+policy:
+  evaluation_backend: vllm
+  identity_backend: official_antspeaker_pytorch
+  human_review_required: false
+  steps_per_arm: 1000
+  fixed_evaluation_samples: 338
+tasks:
+- id: source-expansion
+  name: 扩充清洗来源
+  config: configs/source-expansion.yaml
+  depends_on: []
+- id: identity-screening
+  name: 声纹筛查
+  config: configs/identity-screening.yaml
+  depends_on:
+  - source-expansion
+- id: synthesis
+  name: 合成与补充
+  config: configs/synthesis.yaml
+  depends_on:
+  - identity-screening
+- id: prepare-training
+  name: 准备对照训练数据
+  config: configs/prepare-training.yaml
+  depends_on:
+  - synthesis
+- id: train-control
+  name: 训练旧数据对照组
+  config: configs/control-train.yaml
+  depends_on:
+  - prepare-training
+- id: train-treatment
+  name: 训练新数据实验组
+  config: configs/treatment-train.yaml
+  depends_on:
+  - train-control
+- id: evaluate
+  name: 固定集评测
+  config: configs/evaluate.yaml
+  depends_on:
+  - train-control
+  - train-treatment

@@ -1,0 +1,47 @@
+version: 1
+runtime:
+  python: python
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../../../src}, {path: ../../../../audio-data-contract/src}]
+  gpus: []
+  threads: {omp: 4, openblas: 1}
+task:
+  kind: eval
+  backend: vllm
+  server_url: http://127.0.0.1:8009
+  module: open_audio_llm.integrations.vllm.test_vllm_inference
+  arguments:
+    --port: 8009
+    --model: amphionasr-1.7b
+    --test-plan-file: {path: ../eval/plans/ts-hotwords.yaml}
+    --output-dir: {path: '{attempt}/artifacts'}
+    --manifest-dir: {path: /ai_sds_wuzz/DATA_ASR/LHOTSE}
+    --ser-manifest-dir: {path: /ai_sds_wuzz/DATA_SER/LHOTSE}
+    --tsasr-test-manifest-dir: {path: /chenmingjie/mingdong/data/lhotse/ts_hw_test}
+    -j: 64
+    --default-lang: zh-cn
+    --hotwords-pad-to: 10
+    --hotword-mode: none
+    --retrieve-top-k: 10
+    --retrieve-workers: 8
+    --prompt-style: qwen3_asr
+    --backend: auto
+    --encoder-source: vllm
+    --triton-url: localhost:8000
+    --triton-model: rag_asr_retrieve
+    --triton-top-k: 0
+    --run-name: comparison
+recording:
+  attempts_dir: {path: ../../../runs/vllm-comparison/tasks/evaluate/attempts}
+  result: {path: '{attempt}/artifacts/comparison/summary.json'}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: python
+  credentials_file: {path: ~/.bashrc}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: vllm-comparison
+  metrics:
+    - file: {path: '{attempt}/artifacts/comparison/summary.json'}
+      prefix: evaluation

@@ -1,0 +1,26 @@
+version: 1
+runtime:
+  python: python
+  cwd: {path: /opt/open-audio-llm}
+  gpus: [0]
+  threads: {omp: 4, openblas: 1}
+  environment:
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    OPEN_AUDIO_LLM_ENABLE_QWEN3_ASR_EMBEDS: '1'
+    OPEN_AUDIO_LLM_ENABLE_LEGACY_AMPHION_ASR: '0'
+task:
+  kind: serve
+  backend: vllm
+  model: {path: /models/main}
+  arguments:
+    --host: 0.0.0.0
+    --port: 8009
+    --served-model-name: open-audio-llm
+    --tensor-parallel-size: 1
+    --data-parallel-size: 1
+    --limit-mm-per-prompt: {audio: 4}
+    --gpu-memory-utilization: 0.9
+    --max-model-len: 32768
+  flags: [--trust-remote-code, --enable-mm-embeds]
+recording:
+  attempts_dir: {path: /tmp/serving/container/attempts}

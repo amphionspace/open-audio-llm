@@ -23,21 +23,7 @@ v2 配方覆盖 1～5 人、中文/英文/中英同场，以及 0、0～20%、20
 安装 AmphionData。已有完整产物时可直接跳到下方训练视图准备。
 
 ```bash
-export AMPHION_DATA_ROOT=/path/to/AmphionData
-export AUDIO_DATA_CONTRACT_ROOT=/path/to/audio-data-contract
-export SOT_DATA_ROOT=/path/to/sot-multispeaker/synthetic-v2-20260915
-
-# 在 AmphionData 的独立环境安装 CPU 合成依赖。
-(cd "$AMPHION_DATA_ROOT" && uv sync --extra multispeaker)
-export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
-bash examples/train/qwen3-asr/synthesize_sot.sh prepare \
-  --recipe "$AMPHION_DATA_ROOT/src/amphiondata/multispeaker/recipe-v2.json" \
-  --catalog "$AUDIO_DATA_CONTRACT_ROOT/catalog" \
-  --roots "$AUDIO_DATA_CONTRACT_ROOT/roots.json" \
-  --output "$SOT_DATA_ROOT" --workers 4
-bash examples/train/qwen3-asr/synthesize_sot.sh generate \
-  --output "$SOT_DATA_ROOT" --workers 32 \
-  --train 2000000 --dev 10000 --test 10000 --shard-size 500
+open-audio-llm synthesize --config examples/configs/synthesize/sot.yaml
 ```
 
 合成命令保留 v1 默认参数；上面的 v2 配方和样本数需显式指定。迁移不改变 v1/v2
@@ -45,13 +31,7 @@ bash examples/train/qwen3-asr/synthesize_sot.sh generate \
 是本地可消费声明，注册到 `audio-data-contract/catalog/` 仍走独立发布流程。
 
 ```bash
-export AUDIO_DATA_CONTRACT_ROOT=/path/to/audio-data-contract
-export PYTHONPATH="$PWD/src:$AUDIO_DATA_CONTRACT_ROOT/src"
-python examples/train/qwen3-asr/prepare_sot.py \
-  --data-root /path/to/sot-multispeaker/synthetic-v2-20260915 \
-  --catalog "$AUDIO_DATA_CONTRACT_ROOT/catalog" \
-  --roots "$AUDIO_DATA_CONTRACT_ROOT/roots.json" \
-  --output /path/to/sot-v2-training-view
+open-audio-llm prepare --config examples/configs/prepare/sot.yaml
 ```
 
 只接受已经生成完成的数据。准备脚本从实际成品发现条件，兼容 v1 的 12 类与 v2 的
@@ -70,21 +50,17 @@ dev/test 说话人，v2 复用 v1 的源池划分，避免旧训练污染新开�
 `CatalogBatchSampler` 检查配额，再读取每个训练/验证来源的最短和最长样本。
 
 ```bash
-CUDA_VISIBLE_DEVICES='' python -m open_audio_llm.data.catalog_cache \
-  --data_config /path/to/new-run/train-data.yaml \
-  --reuse-config /path/to/old-run/train-data.yaml \
-  --workers 4 --world-size 2 --batch-size 8 \
-  --preflight-report /path/to/new-run/data-preflight.json
+open-audio-llm prepare --config examples/configs/prepare/catalog.yaml
 ```
 
-`AUDIO_DATA_METADATA_CACHE` 指向已有缓存目录；`--batch-size` 与正式启动参数一致。
+数据 YAML 的 `metadata_cache` 指向已有缓存目录；配置中的 `--batch-size` 与正式训练参数一致。
 旧配方使用其文件中固定的 Catalog/roots，不受新任务导出的同名环境变量覆盖。
 只有索引输入、版本、过滤和处理参数一致的已完成缓存才会复用，不清空旧目录。
 新增无关路径别名或调整字典键顺序不再重建旧语料；有序 shard 列表的顺序仍属于输入。
 
 必须等命令成功，检查报告中的每桶 `quota`、`quotas_by_dataset` 和读取结果，再等旧任务
 保存完整 checkpoint、停止旧任务、以其权重启动新配方。数据检查失败时旧训练继续运行。
-正式启动入口也会在 DDP 前执行同一检查；可设置 `PREVIOUS_DATA_CONFIG` 指向旧配方。
+正式启动入口也会在 DDP 前执行同一检查；旧配方路径写入预检查配置的 `--reuse-config`。
 配比按样本条数计算。窗口太小时检查会失败，不会静默删除小分桶或修改权重。
 本次事件配方使用 10,000 条窗口：新事件 3,500、旧合成 500、真实会议 4,000、普通 ASR 2,000。
 
@@ -129,24 +105,22 @@ cpWER，中英混合按 cpMER 评分：中文字与英文词各计一个单位�
 正常评测自动包含此统计；旧预测可以在 CPU 上回算，无需加载模型，输出独立报告：
 
 ```bash
-python -m open_audio_llm.eval.sot \
-  --predictions /path/to/eval/sot/predictions.jsonl \
-  --output /path/to/eval/sot/speaker-attribution.json
+open-audio-llm prepare --config examples/configs/prepare/score-sot.yaml
 ```
 
 新增开发集有 62 类，建议训练中固定抽每类 8 条（496 条），另保留固定的普通 ASR
 基线；正式报告再用完整测试集。更换数据或代码快照时先重新生成相同协议的基线。
 
 训练入口为 `train_sot.sh`，四卡全参数，encoder/aligner/LLM 学习率分别为
-`2e-5/2e-5/1e-5`，仅保存模型。设置 `MODEL`、`DATA_CONFIG`、`OUTPUT_DIR` 后启动，
+`2e-5/2e-5/1e-5`，仅保存模型。将模型、数据、输出和训练参数写入 YAML 后启动，
 首次训练应带 `--warmup_steps 300`。已有运行使用其冻结的代码与配置；准备新数据不会
 使正在运行的训练自动切换，切换需要在保存点启动新的运行并明确记录模型来源。
 
 ## W&B 实验记录
 
 每次启动实验都必须同时拉起 W&B 持续同步。默认使用 entity
-`1016097967-amphion`、project `open-audio-llm`。训练生成 `args.json` 和启动检查记录后，
-立即执行下列同步命令；核验 `wandb-sync/run.json` 的链接及远端实际指标后再报告接入成功。
+`1016097967-amphion`、project `open-audio-llm`。新入口自动启动并核验 CPU 记录器；
+下列独立同步配置只用于补录已有实验，不重启训练。
 已有实验漏启同步时，补传历史并继续跟随，不重启训练。
 
 `open_audio_llm.scripts.sync_wandb` 可独立读取运行目录中的训练、性能日志和已完成的
@@ -154,9 +128,7 @@ python -m open_audio_llm.eval.sot \
 `wandb==0.30.0` 与 `PyYAML>=6`。先通过 `wandb login` 配置凭据，不把 key 放入脚本。
 
 ```bash
-PYTHONPATH=src python -m open_audio_llm.scripts.sync_wandb \
-  --run-dir runs/qwen3-asr-sot-v2-2gpu-20260916 \
-  --entity 1016097967-amphion --project open-audio-llm --follow
+open-audio-llm prepare --config examples/configs/prepare/sync-wandb.yaml
 ```
 
 不加 `--follow` 时只补录历史。run ID 默认取运行目录名；重启同步时从远端历史识别
@@ -189,17 +161,8 @@ PYTHONPATH=src python -m open_audio_llm.scripts.sync_wandb \
 dev、test 的来源结果；不同目录不能包含重复的来源版本和样本 ID。
 
 ```bash
-python -m open_audio_llm.data.sot_alignment \
-  --input /path/to/source-alignment-train \
-  --input /path/to/source-alignment-dev \
-  --input /path/to/source-alignment-test \
-  --output /path/to/timed-sot/source-alignments.sqlite
-python examples/train/qwen3-asr/prepare_sot.py \
-  --data-root "$SOT_DATA_ROOT" \
-  --catalog "$AUDIO_DATA_CONTRACT_ROOT/catalog" \
-  --roots "$AUDIO_DATA_CONTRACT_ROOT/roots.json" \
-  --alignment-index /path/to/timed-sot/source-alignments.sqlite \
-  --output /path/to/timed-sot
+open-audio-llm prepare --config examples/configs/prepare/alignment-index.yaml
+open-audio-llm prepare --config examples/configs/prepare/sot.yaml
 ```
 
 索引旁的 JSON 保存来源计划、模型配置、分片校验和与状态计数；训练配置固定索引
@@ -213,12 +176,7 @@ SHA-256，数据缓存也包含索引身份。索引允许收录待复核状态�
 不变。两卡试训可以沿用现有入口；从上一轮最终模型初始化新优化器和学习率计划：
 
 ```bash
-export MODEL=/path/to/previous-run/training/checkpoint-60000
-export DATA_CONFIG=/path/to/timed-sot/train-data.yaml
-export OUTPUT_DIR=/path/to/timed-sot/training
-export CUDA_VISIBLE_DEVICES=0,1 NPROC_PER_NODE=2 MAX_STEPS=2000
-bash examples/train/qwen3-asr/train_sot.sh \
-  --gradient_accumulation_steps 4 --warmup_steps 100
+open-audio-llm train --config examples/configs/train/sot.yaml
 ```
 
 此例是 2,000 步试训；encoder/aligner/LLM 保持原学习率 `2e-5/2e-5/1e-5`，
