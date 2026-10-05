@@ -31,6 +31,14 @@ def write_json(path, value):
     temporary.replace(path)
 
 
+def handoff_line(status):
+    handoff = status.get("checkpoint_handoff")
+    if not handoff:
+        return ""
+    location = handoff["checkpoint_remote"] or f"{handoff['checkpoint']}（未上传，仅本地）"
+    return f"交付 checkpoint（{handoff['selection']}，step {handoff['global_step']}）：`{location}`。\n\n"
+
+
 def storage_line(status):
     storage = status.get("storage")
     if not storage:
@@ -55,7 +63,7 @@ def update_readme(path, status):
     block = (
         f"{start}\n\n执行状态：{status['execution']}；质量状态：{status.get('quality', '未核实')}。\n\n"
         f"开始：{status.get('started', '未知')}；结束：{status.get('ended', '未结束')}；"
-        f"退出码：{status.get('exit_code', '未知')}。\n\n{storage_line(status)}{end}"
+        f"退出码：{status.get('exit_code', '未知')}。\n\n{handoff_line(status)}{storage_line(status)}{end}"
     )
     if start in content and end in content:
         left, rest = content.split(start, 1)
@@ -366,6 +374,13 @@ def execute(config, attempt):
             quality_field = config["recording"].get("quality_field", "passed")
             if quality_field in result:
                 status["quality"] = "通过" if result[quality_field] else "未达标"
+        handoff = config["task"].get("arguments", {}).get("--checkpoint_handoff")
+        if handoff and Path(handoff).is_file():
+            delivered = json.loads(Path(handoff).read_text())
+            status["checkpoint_handoff"] = {
+                key: delivered.get(key)
+                for key in ("checkpoint", "checkpoint_remote", "selection", "global_step")
+            }
         status["execution"] = "completed" if code == 0 else "failed"
     except (
         OSError,

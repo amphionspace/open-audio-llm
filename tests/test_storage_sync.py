@@ -240,3 +240,22 @@ def test_training_command_receives_storage_from_yaml(tmp_path):
     path.write_text(yaml.safe_dump(config))
     cmd = command(load_config(path))
     assert json.loads(cmd[cmd.index("--storage_sync") + 1]) == storage
+
+
+def test_readme_shows_the_delivered_checkpoint_location(tmp_path):
+    storage, _ = fake_storage(tmp_path)
+    handoff = tmp_path / "handoff.json"
+    handoff.write_text(json.dumps({
+        "checkpoint": "/local/checkpoint-30", "selection": "final", "global_step": 30,
+        "checkpoint_remote": "whai:open-audio-llm/runs/train/checkpoint-30",
+    }))
+    path = recipe(tmp_path, storage)
+    config = yaml.safe_load(path.read_text())
+    config["task"]["arguments"] = {"--checkpoint_handoff": {"path": str(handoff)}}
+    path.write_text(yaml.safe_dump(config))
+    (tmp_path / "runs/train/checkpoint-5").mkdir(parents=True)
+    assert main(["prepare", "--config", str(path)]) == 0
+    attempt = tmp_path / "runs/prepare/attempts/001"
+    status = json.loads((attempt / "status.json").read_text())
+    assert status["checkpoint_handoff"]["checkpoint_remote"] == "whai:open-audio-llm/runs/train/checkpoint-30"
+    assert "交付 checkpoint（final，step 30）：`whai:open-audio-llm/runs/train/checkpoint-30`" in (attempt / "README.md").read_text()
