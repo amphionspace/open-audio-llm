@@ -41,7 +41,7 @@ YAML 只使用 PyYAML，无多层继承。`runtime` 指定解释器、工作目�
 
 训练与评测必须启用 W&B；CPU 记录器加载配置指定的凭据文件，核验远端 run URL 和实际上传的启动指标后才允许任务启动，结束后核验实际指标与远端状态。凭据不写 YAML、Git 或预览输出。默认 entity/project 为 `1016097967-amphion/open-audio-llm`。启动与结束核验分别保存为 `wandb-start-verification.json`、`wandb-verification.json`。记录进程故障会停止实验，防止实验脱离记录继续运行。
 
-推理、评测和模型比较必须使用 vLLM，启动前检查配置后端与目标解释器中的 vLLM；HTTP 评测检查服务 `/version`，客户端无需安装模型运行时。示例实验核验实际引擎 `backend` 和类来源并保存 runtime 证据。AntSpeaker 使用已授权的官方 PyTorch 后端；存疑项隔离，不恢复人工听审。
+本项目要部署的 checkpoint 用 vLLM 推理、评测和比较，启动前检查配置后端与目标解释器中的 vLLM；HTTP 评测检查服务 `/version`，客户端无需安装模型运行时。示例实验核验实际引擎 `backend` 和类来源并保存 runtime 证据。第三方基线（含 AntSpeaker）使用官方推荐推理方式并固定版本，在独立进程中运行，后端记入快照；存疑项隔离，不恢复人工听审。
 
 Compose 使用 `open-audio-llm deploy --config examples/configs/deploy/vllm.yaml --dry-run` 预览，去掉 `--dry-run` 后生成有效文件并执行 YAML 中的 `operation`，示例默认只做 `config` 检查。需要部署时在配置写明 `operation: [up, --build]`。模型只读挂载、GPU 约束、绑定地址和镜像版本沿用原 profile；容器读取独立服务 YAML。vLLM serving 仍为 constraints 固定的 0.18.0，常规 vLLM 依赖仍为 0.17.0；没有构建或启动镜像验证，需在对应 CUDA/驱动环境部署验证。
 
