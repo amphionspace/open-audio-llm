@@ -19,7 +19,7 @@ vLLM 上游 (`vllm/model_executor/models/funasr.py`) 已经为同名
 - 之前尝试把它翻成 False + 在 multimodal processor 里改写 chat-prompt 不
   靠谱 — chat completions 走的多模态数据流跟 transcription 不同, 我们曾经
   得到一连串 500/dtype/shape 错. transcription 路径是 vLLM 团队真正测过的.
-- 客户端 (`test_vllm_inference.py:call_vllm_api`) 这边 cost 极低: 同样的
+- 客户端 (`amphion_eval.legacy.vllm.driver.call_vllm_api`) 这边 cost 极低: 同样的
   base64 WAV 解出 bytes 走 multipart `file`, content 文本拼好填进 `prompt`
   字段, response 拿 `text` 就完事.
 

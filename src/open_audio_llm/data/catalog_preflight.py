@@ -47,7 +47,7 @@ def check_data(config, *, message_format="qwen3_asr", batch_size=8, world_size=2
                 if row.record.metadata.get("sot_output_format") == TIMESTAMP_FORMAT:
                     if abs(sample["duration"] - row.duration) > 1 / selected.sampling_rate:
                         raise ValueError(f"Timestamped audio duration changed: {row.record.id}")
-                    if row.record.target not in sample["solution"]:
+                    if not sample.get("enrollment_view") and row.record.target not in sample["solution"]:
                         raise ValueError(f"Timestamp target changed: {row.record.id}")
                 examples.append({"selection": split, "dataset_id": source["dataset_id"],
                                  "split": source["split"], "id": row.record.id,

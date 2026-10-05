@@ -1,4 +1,4 @@
-"""Pure reward helpers shared by GRPO and evaluation code."""
+"""Pure reward helpers for GRPO training."""
 
 from __future__ import annotations
 
