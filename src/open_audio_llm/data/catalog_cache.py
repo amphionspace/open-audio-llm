@@ -246,6 +246,13 @@ def sampling_cost(row, dataset):
         from .qwen3_asr import ENROLL_SECONDS
 
         total += ENROLL_SECONDS
+    if row.record.metadata.get("enrollment_config") is not None:
+        from .target_sot import EnrollmentConfig
+
+        config = EnrollmentConfig(**row.record.metadata["enrollment_config"])
+        # Add SEP and independent segment rounding slack to the upper bound.
+        total += config.max_targets * (config.max_seconds + .16)
+        return total, 1
     return total, 1 if native_ts else len(row.record.audio_slots)
 
 

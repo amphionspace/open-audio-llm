@@ -23,16 +23,24 @@ def register():
     enable_ts_sep = os.environ.get("AMPHION_TSASR_INSERT_SEP", "").strip().lower() in {
         "1", "true", "yes", "on",
     }
+    enable_target_sot = os.environ.get("OPEN_AUDIO_LLM_TARGET_SOT_VLLM") == "1"
     if not (
         enable_audio_llm
         or enable_qwen3_asr_embeds
         or enable_legacy_amphion_asr
         or enable_funasr
         or enable_ts_sep
+        or enable_target_sot
     ):
         return
 
     from vllm import ModelRegistry
+
+    if enable_target_sot:
+        ModelRegistry.register_model(
+            "Qwen3ASRTargetSOTForVLLM",
+            "open_audio_llm.integrations.vllm.plugin.qwen3_asr_embeds:Qwen3ASRTargetSOTForVLLM",
+        )
 
     if enable_audio_llm:
         ModelRegistry.register_model(

@@ -70,6 +70,19 @@ def average_answer_parts(values, rows, counts, prefix=None):
     return header / prefix_counts.clamp_min(1) + body / (counts - prefix_counts).clamp_min(1)
 
 
+def token_mean_loss(example_losses, counts, num_items_in_batch=None, world_size=1):
+    """Recover the token sum from per-example means and divide by supervised tokens.
+
+    A length-10 transcript therefore contributes ten times the gradient of a
+    one-token transcript. ``num_items_in_batch`` is the global token count for
+    this optimizer step; multiplying by ``world_size`` cancels DDP's average.
+    """
+    weighted = example_losses * counts
+    if num_items_in_batch is None:
+        return weighted.sum() / counts.sum().clamp_min(1)
+    return weighted.sum() * world_size / num_items_in_batch
+
+
 def sample_losses(logits, targets, rows, counts, teacher_logits=None, ordinary=None, kl_weight=1.0, prefix=None):
     """Average tokens within examples, then combine CE and KL on ordinary ASR only."""
     token_ce = _ChunkedCrossEntropy.apply(logits, targets)
@@ -111,6 +124,12 @@ def install_retention_objective(trainer, args):
         raise ValueError("Replay objective requires DDP, untrimmed labels and installation before optimizer creation")
     coefficient = float(args._catalog_config["objective"]["replay_kl_weight"])
     separate_prefix = args._catalog_config["objective"].get("separate_prefix", False)
+    reduction = args._catalog_config["objective"].get("reduction", "example_mean")
+    if reduction not in {"example_mean", "token_mean"}:
+        raise ValueError("objective.reduction must be example_mean or token_mean")
+    if reduction == "token_mean" and separate_prefix:
+        # Prefix/body averages cannot be recovered as a token sum.
+        raise ValueError("separate_prefix requires reduction=example_mean")
     asr_text_id = trainer.template.tokenizer.convert_tokens_to_ids("<asr_text>")
     if not math.isfinite(coefficient) or coefficient < 0:
         raise ValueError("replay_kl_weight must be finite and nonnegative")
@@ -154,6 +173,11 @@ def install_retention_objective(trainer, args):
         count = torch.tensor(sum(batch["labels"].shape[0] for batch in batches), device=device)
         return self.accelerator.gather(count).sum()
 
+    def count_supervised_tokens(self, batches, device):
+        count = torch.tensor(
+            sum(int((batch["labels"][:, 1:] != -100).sum()) for batch in batches), device=device)
+        return self.accelerator.gather(count).sum()
+
     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
         inputs = dict(inputs)
         tasks = inputs.pop("catalog_task")
@@ -161,7 +185,7 @@ def install_retention_objective(trainer, args):
         inputs.pop("compute_loss_func", None)
         inputs.pop("text_position_ids", None)
         if inputs.pop("loss_scale", None) is not None:
-            raise ValueError("Token loss_scale cannot be combined with sample-mean replay")
+            raise ValueError("Token loss_scale cannot be combined with the retention objective")
         outputs, targets, rows, counts = supervised_forward(model, thinker.lm_head, inputs, labels)
         prefix = None
         if separate_prefix:
@@ -174,8 +198,11 @@ def install_retention_objective(trainer, args):
         if coefficient and indexes.numel():
             # Accelerate wraps only the student forward in autocast.
             with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16):
+                teacher_inputs = select_examples(inputs, indexes)
+                # Replay rows are plain ASR; the base teacher has no enrollment input.
+                teacher_inputs.pop("enrollment_lengths", None)
                 teacher_outputs, teacher_targets, _, _ = supervised_forward(
-                    teacher, teacher.thinker.lm_head, select_examples(inputs, indexes),
+                    teacher, teacher.thinker.lm_head, teacher_inputs,
                     labels.index_select(0, indexes),
                 )
             if not torch.equal(targets[ordinary], teacher_targets):
@@ -194,7 +221,9 @@ def install_retention_objective(trainer, args):
         metric = metrics["replay_kl"]
         if coefficient and indexes.numel():
             metric.update(kl.detach()[indexes])
-        if num_items_in_batch is None:
+        if reduction == "token_mean":
+            loss = token_mean_loss(losses, counts, num_items_in_batch, self.accelerator.num_processes)
+        elif num_items_in_batch is None:
             loss = losses.mean()
         else:
             # Global example count covers all microbatches in this optimizer step.
@@ -203,13 +232,19 @@ def install_retention_objective(trainer, args):
         outputs.loss = loss
         return (loss, outputs) if return_outputs else loss
 
-    trainer._get_num_items_in_batch = MethodType(count_examples, trainer)
+    trainer._get_num_items_in_batch = MethodType(
+        count_supervised_tokens if reduction == "token_mean" else count_examples, trainer)
     trainer.compute_loss = MethodType(compute_loss, trainer)
     summary = {
         "teacher": args.retention_teacher if teacher is not None else None,
         "teacher_enabled": teacher is not None,
         "tuner_type": args.tuner_type,
-        "objective": "mean_examples(answer_reduction(CE) + ordinary_asr * replay_kl_weight * answer_reduction(KL(base || student)))",
+        "objective": (
+            "sum_tokens(CE + ordinary_asr * replay_kl_weight * KL(base || student)) / supervised_tokens"
+            if reduction == "token_mean" else
+            "mean_examples(answer_reduction(CE) + ordinary_asr * replay_kl_weight * answer_reduction(KL(base || student)))"
+        ),
+        "reduction": reduction,
         "separate_prefix": separate_prefix,
         "replay_kl_weight": coefficient,
         "trainable_parameters": sum(p.numel() for p in student.parameters() if p.requires_grad),

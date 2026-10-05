@@ -1,4 +1,4 @@
-"""Triton audio-embedding client for vLLM evaluation.
+"""Triton audio-embedding client for vLLM inference.
 
 The RAG-ASR Triton model exposes two independent surfaces on the same model:
 
@@ -6,7 +6,7 @@ The RAG-ASR Triton model exposes two independent surfaces on the same model:
 * ``ACTION=list/add/delete/reload`` manages the online hotword pool.
 
 This module intentionally uses only the infer surface.  It keeps the vLLM
-evaluation code free from Triton tensor boilerplate and makes the bypass path
+inference clients free from Triton tensor boilerplate and makes the bypass path
 easy to disable by leaving the default encoder source as ``vllm``.
 """
 

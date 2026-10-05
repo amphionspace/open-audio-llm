@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from audio_data_contract import AudioRecord, AudioRef, AudioSlot
 
 from open_audio_llm.data.catalog_dataset import in_ts_partition
-from open_audio_llm.integrations.ms_swift.retention import sample_losses, supervised_forward
+from open_audio_llm.integrations.ms_swift.retention import sample_losses, supervised_forward, token_mean_loss
 
 
 @pytest.mark.parametrize('dtype', [torch.float32, torch.bfloat16])
@@ -191,3 +191,61 @@ def test_ts_derivatives_and_all_targets_share_one_partition(dataset, ids):
         records = [replace(record, metadata={"source_record_id":value}) for value in ids]
         assert len({in_ts_partition(r, train) for r in records}) == 1
         assert all(in_ts_partition(r, train) != in_ts_partition(r, dev) for r in records)
+
+
+def test_token_mean_long_transcript_contributes_in_proportion_to_its_tokens():
+    logits = torch.zeros(11, 3, requires_grad=True)
+    targets = torch.zeros(11, dtype=torch.long)
+    rows = torch.tensor([0] * 10 + [1])
+    counts = torch.tensor([10, 1])
+    losses, _, _ = sample_losses(logits, targets, rows, counts)
+    token_mean_loss(losses, counts).backward()
+    assert logits.grad[:10].abs().sum() == pytest.approx(10 * logits.grad[10:].abs().sum())
+
+
+def test_token_mean_gives_each_supervised_token_equal_weight():
+    logits = torch.zeros(27, 4, requires_grad=True)
+    targets = torch.zeros(27, dtype=torch.long)
+    rows = torch.tensor([0] * 23 + [1] * 4)
+    counts = torch.tensor([23, 4])
+    losses, _, _ = sample_losses(logits, targets, rows, counts)
+    token_mean_loss(losses, counts).backward()
+    torch.testing.assert_close(logits.grad[0], logits.grad[26])
+    torch.testing.assert_close(logits.grad[:23].sum(0) / 23, logits.grad[23:].sum(0) / 4)
+
+
+def test_global_token_normalization_matches_unequal_rank_microbatches():
+    torch.manual_seed(42)
+    weight = torch.randn(3, 4, requires_grad=True)
+    inputs = torch.randn(7, 3)
+    targets = torch.tensor([0, 1, 1, 3, 0, 2, 1])
+    # Three examples, lengths 2, 1, 4 (7 tokens). Rank 0 has two; rank 1 has one.
+    rows = torch.tensor([0, 0, 1, 2, 2, 2, 2])
+    counts = torch.tensor([2, 1, 4])
+    reference, _, _ = sample_losses(inputs @ weight, targets, rows, counts)
+    expected = torch.autograd.grad(token_mean_loss(reference, counts), weight)[0]
+    gradients = []
+    for slices in ((slice(0, 2), slice(2, 3)), (slice(3, 7),)):
+        total = 0
+        for section in slices:
+            size = len(targets[section])
+            loss, _, _ = sample_losses(inputs[section] @ weight, targets[section],
+                                       torch.zeros(size, dtype=torch.long), torch.tensor([size]))
+            total = total + token_mean_loss(loss, torch.tensor([size]), 7, world_size=2)
+        gradients.append(torch.autograd.grad(total, weight)[0])
+    torch.testing.assert_close(sum(gradients) / 2, expected)
+
+
+@pytest.mark.parametrize('objective', [
+    {'replay_kl_weight': 0, 'reduction': 'sum'},
+    {'replay_kl_weight': 0, 'reduction': 'token_mean', 'separate_prefix': True},
+])
+def test_invalid_reduction_settings_are_rejected(objective):
+    from open_audio_llm.integrations.ms_swift.retention import install_retention_objective
+
+    trainer = SimpleNamespace(optimizer=None, template=SimpleNamespace(
+        tokenizer=SimpleNamespace(convert_tokens_to_ids=lambda x: 1)))
+    args = SimpleNamespace(tuner_type='lora', retention_teacher=None, deepspeed=None,
+                           use_logits_to_keep=False, _catalog_config={'objective': objective})
+    with pytest.raises(ValueError, match='reduction'):
+        install_retention_objective(trainer, args)

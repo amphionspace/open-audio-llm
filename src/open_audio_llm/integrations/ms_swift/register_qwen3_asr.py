@@ -96,6 +96,7 @@ from __future__ import annotations
 from functools import partial
 from typing import Any, Dict, List, Literal, Optional
 
+import os
 import torch
 import torch.nn.functional as F
 from transformers import PreTrainedModel
@@ -297,6 +298,11 @@ class Qwen3ASRLoader(ModelLoader):
 
             enable_batched_audio(model)
             logger.info('Qwen3ASRLoader: audio encoder batching enabled')
+        if os.environ.get('OPEN_AUDIO_LLM_TARGET_SOT') == '1' or getattr(model.config, 'target_sot_audio', False):
+            from open_audio_llm.audio.target_sot import enable_target_audio
+
+            # Reuses the SEP parameter attached above for multi-enrollment SOT.
+            enable_target_audio(model)
         return model
 
 
@@ -418,6 +424,11 @@ class Qwen3ASRTemplate(Template):
         inputs,
     ) -> list:
         assert media_type == 'audio'
+        target_tokens = getattr(inputs, '_target_audio_tokens', None)
+        if target_tokens is not None:
+            if index != 0:
+                raise ValueError('Conditional SOT uses one packed audio placeholder')
+            return ['<|audio_start|>'] + ['<|audio_pad|>'] * target_tokens + ['<|audio_end|>']
         wavs = getattr(inputs, '_audio_llm_waveforms', None)
         wav = (wavs[index] if wavs is not None else
                load_audio(inputs.audios[index], sampling_rate=self.sampling_rate))
@@ -458,6 +469,28 @@ class Qwen3ASRTemplate(Template):
             encoded['input_features'] = feat.contiguous()
             encoded['feature_attention_mask'] = mask.contiguous()
             encoded['enroll_n_frames'] = int(enroll_n)
+            return encoded
+        extra = getattr(inputs, 'extra_kwargs', None) or {}
+        # ms-swift 4.5 keeps chat_template_kwargs as an input attribute.
+        template_kwargs = getattr(inputs, 'chat_template_kwargs', None) or extra.get('chat_template_kwargs') or {}
+        enrollments = template_kwargs.get('enroll_wavs')
+        if enrollments:
+            from open_audio_llm.audio.target_sot import extract_segments, segment_tokens
+
+            if len(inputs.audios) != 1 or not 1 <= len(enrollments) <= 3:
+                raise ValueError('Conditional SOT needs 1--3 enrollments and one mixture')
+            wavs = [load_audio(p, sampling_rate=self.sampling_rate)
+                    for p in [*enrollments, inputs.audios[0]]]
+            features, lengths = extract_segments(self.feature_extractor, wavs)
+            inputs._target_audio_tokens = segment_tokens(lengths)
+            try:
+                encoded = super()._encode(inputs)
+            finally:
+                del inputs._target_audio_tokens
+            encoded['input_features'] = augment_features(
+                features, torch.tensor([sum(lengths)]), extra.get('audio_augmentation'))
+            encoded['feature_attention_mask'] = torch.ones((1, sum(lengths)), dtype=torch.long)
+            encoded['enrollment_lengths'] = torch.tensor([lengths[:-1] + [0] * (4 - len(lengths))])
             return encoded
         try:
             audios = load_batch(
@@ -555,6 +588,11 @@ class Qwen3ASRTemplate(Template):
             ]
             res['input_features'] = torch.concat(input_features)
             res['feature_attention_mask'] = torch.concat(feature_attention_mask)
+        if any('enrollment_lengths' in b for b in batch):
+            res['enrollment_lengths'] = torch.cat([
+                b.get('enrollment_lengths', torch.zeros((b['input_features'].shape[0], 3), dtype=torch.long))
+                for b in batch
+            ])
         return res
 
 
