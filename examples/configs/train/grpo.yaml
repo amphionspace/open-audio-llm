@@ -51,6 +51,8 @@ task:
     --vllm_server_host: "127.0.0.1"
     --vllm_server_port: 8006
     --vllm_server_timeout: 600
+    # Skip ms-swift's ModelScope latest-version lookup for local checkpoints.
+    --check_model: false
     --output_dir: {path: "{attempt}/artifacts/training"}
 storage:
   # Uploads through AmphionBucket; the remote layout mirrors paths under local_root.
