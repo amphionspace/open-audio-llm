@@ -18,6 +18,7 @@ from pathlib import Path
 import yaml
 
 from .run_config import absolute, child_environment, command, load_config, preview
+from .storage import StorageError, pull, push, remote_path
 
 
 def now():
@@ -28,6 +29,18 @@ def write_json(path, value):
     temporary = path.with_suffix(".tmp")
     temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n")
     temporary.replace(path)
+
+
+def storage_line(status):
+    storage = status.get("storage")
+    if not storage:
+        return ""
+    problems = [storage["problem"]] if "problem" in storage else []
+    problems += [p["problem"] for p in storage.get("checkpoint_problems", [])]
+    if not problems:
+        return f"对象存储：已同步到 `{storage['remote']}`。\n\n"
+    causes = "；".join(f"{p['cause']}（{p['detail']}）" for p in problems)
+    return f"对象存储：同步有问题：{causes}。\n\n"
 
 
 def update_readme(path, status):
@@ -42,7 +55,7 @@ def update_readme(path, status):
     block = (
         f"{start}\n\n执行状态：{status['execution']}；质量状态：{status.get('quality', '未核实')}。\n\n"
         f"开始：{status.get('started', '未知')}；结束：{status.get('ended', '未结束')}；"
-        f"退出码：{status.get('exit_code', '未知')}。\n\n{end}"
+        f"退出码：{status.get('exit_code', '未知')}。\n\n{storage_line(status)}{end}"
     )
     if start in content and end in content:
         left, rest = content.split(start, 1)
@@ -88,6 +101,39 @@ def allocate(config_path, resume=None, dry_run=False):
         (attempt / "logs").mkdir(exist_ok=True)
         (attempt / "artifacts").mkdir(exist_ok=True)
     return config, attempt
+
+
+def sync_attempt(attempt, storage, status):
+    """Mirror the whole execution record; a storage failure never changes the exit code."""
+    remote = remote_path(attempt, storage)
+    status["storage"] = {"remote": remote}
+    # Training uploads checkpoints itself; surface what it could not upload.
+    failed = [
+        {"checkpoint": record["checkpoint"], "problem": record["problem"]}
+        for log in sorted(attempt.glob("artifacts/**/storage-uploads.json"))
+        for record in json.loads(log.read_text())
+        if "problem" in record
+    ]
+    if failed:
+        status["storage"]["checkpoint_problems"] = failed
+    try:
+        # Records (status, logs, README) legitimately change, so the remote mirrors local.
+        transfer = push(attempt, remote, storage, overwrite=True)
+        status["storage"].update(synced=now(), uploaded=transfer["uploaded"], unchanged=transfer["unchanged"])
+    except StorageError as exc:
+        status["storage"]["problem"] = exc.problem
+    line = storage_line(status).strip()
+    if "problem" in status["storage"] or failed:
+        print(line, file=sys.stderr)
+    write_json(attempt / "status.json", status)
+    update_readme(attempt / "README.md", status)
+    if "problem" not in status["storage"]:
+        for name in ("status.json", "README.md"):
+            try:
+                push(attempt / name, remote + "/", storage, overwrite=True)
+            except StorageError as exc:
+                print(f"对象存储：{name} 同步失败：{exc}", file=sys.stderr)
+    return "problem" not in status["storage"]
 
 
 def backend_preflight(config, env):
@@ -184,7 +230,16 @@ def execute(config, attempt):
     original = {s: signal.signal(s, forward) for s in (signal.SIGINT, signal.SIGTERM)}
     code = 1
     tracker = None
+    storage = config.get("storage")
+    restored = []
     try:
+        for target in (storage or {}).get("restore", []):
+            if not Path(target).exists():
+                # Restored inputs are a task-scoped copy; object storage stays authoritative.
+                restored.append(target)
+                pull(remote_path(target, storage), target, storage)
+        if restored:
+            status["storage_restored"] = restored
         if not config["recording"].get("resuming"):
             for source, destination in (
                 config.get("experiment", {}).get("copies", {}).items()
@@ -359,14 +414,19 @@ def execute(config, attempt):
                     child.wait()
         for sig, handler in original.items():
             signal.signal(sig, handler)
+        for target in restored:
+            shutil.rmtree(target, ignore_errors=True)
         write_json(attempt / "status.json", status)
         update_readme(attempt / "README.md", status)
+        if storage:
+            sync_attempt(attempt, storage, status)
         print(
             json.dumps(
                 {
                     "attempt": str(attempt),
                     "execution": status["execution"],
                     "exit_code": code,
+                    **({"storage": status["storage"]} if "storage" in status else {}),
                 },
                 ensure_ascii=False,
             )
@@ -462,6 +522,29 @@ def experiment(options):
     return 0
 
 
+def storage_sync(config_path, attempt):
+    """Upload an existing attempt, then drop local checkpoints the upload confirmed."""
+    config_path, attempt = config_path.absolute(), attempt.absolute()
+    raw = yaml.safe_load(config_path.read_text())
+    directory = Path(absolute(raw["recording"]["attempts_dir"]["path"], config_path.parent))
+    if attempt.parent != directory or not (attempt / "status.json").is_file():
+        raise ValueError("--attempt must select an existing attempt of this task")
+    storage = load_config(config_path, attempt).get("storage")
+    if not storage:
+        raise ValueError("The config has no storage section")
+    with (directory / ".execution.lock").open("w") as lock:
+        # run_recipe holds this lock for the whole execution.
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        status = read_status(attempt)
+        if not sync_attempt(attempt, storage, status):
+            return 1
+        for checkpoint in sorted(attempt.glob("artifacts/**/checkpoint-[0-9]*")):
+            if checkpoint.is_dir() and not checkpoint.is_symlink():
+                shutil.rmtree(checkpoint)
+    print(json.dumps({"attempt": str(attempt), "storage": status["storage"]}, ensure_ascii=False))
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="action", required=True)
@@ -487,8 +570,15 @@ def main(argv=None):
     run_parser.add_argument("--task")
     run_parser.add_argument("--resume", type=Path)
     run_parser.add_argument("--dry-run", action="store_true")
+    sync_parser = sub.add_parser("storage").add_subparsers(
+        dest="operation", required=True
+    ).add_parser("sync")
+    sync_parser.add_argument("--config", type=Path, required=True)
+    sync_parser.add_argument("--attempt", type=Path, required=True)
     options = parser.parse_args(argv)
     try:
+        if options.action == "storage":
+            return storage_sync(options.config, options.attempt)
         if options.action == "experiment":
             return experiment(options)
         if options.action == "deploy":

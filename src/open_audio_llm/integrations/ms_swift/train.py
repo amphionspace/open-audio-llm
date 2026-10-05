@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 import time
 import logging
@@ -63,11 +64,13 @@ class CatalogSftArguments(CatalogArgumentsMixin, SftArguments):
     retention_eval_interval: int = 2000
     checkpoint_handoff: str | None = None
     checkpoint_selection: str = "final"
+    storage_sync: str | None = None
 
 
 @dataclass
 class CatalogRLHFArguments(CatalogArgumentsMixin, RLHFArguments):
     data_config: str | None = None
+    storage_sync: str | None = None
 
 
 class DatasetEpochCallback(TrainerCallback):
@@ -113,13 +116,6 @@ class CatalogTrainingMixin:
         return train, validation
 
     def train(self, trainer):
-        if handoff := getattr(self.args, 'checkpoint_handoff', None):
-            from .checkpoint_handoff import CheckpointHandoffCallback
-
-            trainer.add_callback(CheckpointHandoffCallback(
-                handoff, selection=self.args.checkpoint_selection,
-                base_model=self.args.model, tuner_type=self.args.tuner_type,
-            ))
         if getattr(self.args, 'audio_encoder_batching', False) and getattr(self.args, 'audio_encoder_parallel', False):
             raise ValueError('Choose either audio_encoder_batching or audio_encoder_parallel')
         original_create_optimizer = None
@@ -166,6 +162,24 @@ class CatalogTrainingMixin:
                 trainer.add_callback(RetentionEvaluationCallback(
                     self.args.retention_eval_script, self.args.retention_eval_interval,
                 ))
+        uploads = None
+        if storage := getattr(self.args, 'storage_sync', None):
+            if trainer.args.save_total_limit:
+                raise ValueError('storage_sync removes uploaded checkpoints itself; unset save_total_limit')
+            from .checkpoint_upload import CheckpointUploadCallback
+
+            # Registered after callbacks that write into the checkpoint during on_save.
+            uploads = CheckpointUploadCallback(json.loads(storage))
+            trainer.add_callback(uploads)
+        if handoff := getattr(self.args, 'checkpoint_handoff', None):
+            from .checkpoint_handoff import CheckpointHandoffCallback
+
+            # After the uploader so train-end handoff sees the confirmed remote copy.
+            trainer.add_callback(CheckpointHandoffCallback(
+                handoff, selection=self.args.checkpoint_selection,
+                base_model=self.args.model, tuner_type=self.args.tuner_type,
+                uploads=uploads,
+            ))
         restore_audio = None
         if getattr(self.args, "audio_encoder_batching", False):
             from .audio_batching import enable_batched_audio

@@ -33,6 +33,11 @@ task:
     --triton-model: rag_asr_retrieve
     --triton-top-k: 0
     --run-name: comparison
+storage:
+  # Uploads through AmphionBucket; the remote layout mirrors paths under local_root.
+  executable: {path: ~/.local/bin/ab}
+  remote: whai:open-audio-llm
+  local_root: {path: ../../..}
 recording:
   attempts_dir: {path: ../../../runs/vllm-comparison/tasks/evaluate/attempts}
   result: {path: '{attempt}/artifacts/comparison/summary.json'}

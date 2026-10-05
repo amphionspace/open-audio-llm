@@ -25,7 +25,7 @@ def test_final_checkpoint_is_explicit_and_includes_lora_base(tmp_path):
     assert saved["tuner_type"] == "lora"
     assert saved["selection"] == "final"
     assert saved["framework"] == "open-audio-llm"
-    assert saved["schema_version"] == 1
+    assert saved["schema_version"] == 2
 
 
 def test_no_directory_scan_when_final_step_was_not_saved(tmp_path):

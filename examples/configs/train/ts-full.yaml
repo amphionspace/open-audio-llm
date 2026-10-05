@@ -43,7 +43,6 @@ task:
     --dataloader_num_workers: 4
     --performance_logging: true
     --save_steps: 500
-    --save_total_limit: 4
     --eval_steps: 500
     --logging_steps: 10
     --report_to: "none"
@@ -68,6 +67,11 @@ preflight:
       --batch-size: 8
       --world-size: 2
       --preflight-report: {path: "{attempt}/artifacts/data-preflight.json"}
+storage:
+  # Uploads through AmphionBucket; the remote layout mirrors paths under local_root.
+  executable: {path: ~/.local/bin/ab}
+  remote: whai:open-audio-llm
+  local_root: {path: ../../..}
 recording:
   attempts_dir: {path: ../../../runs/qwen3-asr-ts-full/tasks/run/attempts}
 tracking:

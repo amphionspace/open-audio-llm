@@ -41,6 +41,15 @@ YAML 只使用 PyYAML，无多层继承。`runtime` 指定解释器、工作目�
 
 训练与评测必须启用 W&B；CPU 记录器加载配置指定的凭据文件，核验远端 run URL 和实际上传的启动指标后才允许任务启动，结束后核验实际指标与远端状态。凭据不写 YAML、Git 或预览输出。默认 entity/project 为 `1016097967-amphion/open-audio-llm`。启动与结束核验分别保存为 `wandb-start-verification.json`、`wandb-verification.json`。记录进程故障会停止实验，防止实验脱离记录继续运行。
 
+训练 checkpoint 和执行记录同步到对象存储 `whai:open-audio-llm`（SenseCore AOSS，内网），远端路径与 `storage.local_root` 下的本地路径一致，例如 `whai:open-audio-llm/runs/<实验>/tasks/<任务>/attempts/<编号>/`。在任务 YAML 写 `storage`（`executable` 指向 AmphionBucket 的 `ab`、`remote`、`local_root`）即启用，示例训练、合并和评测配置默认开启：
+
+- 训练：每次保存后由 rank 0 在后台上传权重，中间 checkpoint 不传优化器、调度器、RNG 和 DeepSpeed `global_step*` 状态；训练结束时最后一个 checkpoint 连同这些状态完整上传。`ab` 核验全部文件后才删除本地副本；训练中保留最新和最佳 checkpoint 供中断续训和 `load_best_model_at_end`。本地清理由上传器负责，启用时不能设置 `save_total_limit`。上传记录写在训练输出目录的 `storage-uploads.json`，失败的 checkpoint 保留在本地。
+- 执行结束：整个执行记录（配置、状态、日志、评测结果等）以覆盖方式镜像到远端，结果写入 `status.json` 的 `storage`。同步失败不改变执行退出码。
+- 输入：`storage.restore` 列出的路径若本地不存在，执行前从远端拉回，结束后删除。实验评测按 producer 选中的训练 checkpoint 自动加入该列表。
+- 失败定位：不限制 `ab` 版本。任何上传或拉取失败都会自动按顺序检查：本地路径、`ab` 是否可执行、`ab remotes` 是否有该桶、远端冲突或未确认文件、桶能否访问、远端数据是否存在，得出 `cause`、说明和 `ab` 原始输出。原因写入 `storage-uploads.json`、`status.json` 的 `storage`、执行 README 和结束输出，并打印到 stderr。
+- `ab` 把传输状态固定保存在 `$HOME/.cache/amphion-bucket`，路径含符号链接时拒绝传输（诊断为 `transfer-failed`，原因“不跟随符号链接”）。这类机器让 `storage.executable` 指向一个以无符号链接的真实目录作为 `HOME` 运行 `ab` 的包装脚本。
+- 补传：`open-audio-llm storage sync --config <任务 YAML> --attempt <执行目录>` 重新上传指定执行，并在核验后删除其中的本地 checkpoint；执行仍持有锁时拒绝。
+
 本项目要部署的 checkpoint 用 vLLM 推理、评测和比较，启动前检查配置后端与目标解释器中的 vLLM；HTTP 评测检查服务 `/version`，客户端无需安装模型运行时。示例实验核验实际引擎 `backend` 和类来源并保存 runtime 证据。第三方基线（含 AntSpeaker）使用官方推荐推理方式并固定版本，在独立进程中运行，后端记入快照；存疑项隔离，不恢复人工听审。
 
 Compose 使用 `open-audio-llm deploy --config examples/configs/deploy/vllm.yaml --dry-run` 预览，去掉 `--dry-run` 后生成有效文件并执行 YAML 中的 `operation`，示例默认只做 `config` 检查。需要部署时在配置写明 `operation: [up, --build]`。模型只读挂载、GPU 约束、绑定地址和镜像版本沿用原 profile；容器读取独立服务 YAML。vLLM serving 仍为 constraints 固定的 0.18.0，常规 vLLM 依赖仍为 0.17.0；没有构建或启动镜像验证，需在对应 CUDA/驱动环境部署验证。

@@ -17,8 +17,9 @@
 | 字段 | 含义 |
 | --- | --- |
 | `framework` | 固定为 `open-audio-llm` |
-| `schema_version` | 当前为 `1`；字段含义变化或删除时递增，消费方遇到未知版本应拒绝 |
-| `checkpoint` | 交付的 checkpoint 绝对路径 |
+| `schema_version` | 当前为 `2`；字段含义变化或删除时递增，消费方遇到未知版本应拒绝 |
+| `checkpoint` | 交付的 checkpoint 训练时的绝对路径；启用对象存储后本地副本可能已删除 |
+| `checkpoint_remote` | 已核验上传的对象存储路径（`bucket:前缀`）；未启用或上传失败时为 `null`，此时 `checkpoint` 仍在本地 |
 | `selection` | `final`（要求末步已保存）或 `best`（Trainer 记录的最佳 checkpoint） |
 | `global_step` | 训练结束时的步数 |
 | `base_model` | 基础模型；`tuner_type` 为 `lora` 时评测前需要先合并 |
@@ -26,7 +27,7 @@
 | `training_run` | 训练输出目录 |
 | `wandb_run_id` | 训练 W&B run ID，用于把评测 run 关联到训练；没有时为 `null` |
 
-不会按目录名猜测"最新" checkpoint。实现见 `src/open_audio_llm/integrations/ms_swift/checkpoint_handoff.py`。
+v2 相对 v1 的变化：`checkpoint` 不再保证存在于本地，新增 `checkpoint_remote`。不会按目录名猜测"最新" checkpoint。实现见 `src/open_audio_llm/integrations/ms_swift/checkpoint_handoff.py`。
 
 ### 2. 推理服务
 
@@ -99,7 +100,7 @@ open-audio-llm prepare --config examples/configs/prepare/score-sot.yaml
 ### 4. 训练后评测
 
 1. 训练 YAML 加 `--checkpoint_handoff`。
-2. 读取 handoff：`tuner_type: lora` 时用 `base_model` 和 `checkpoint` 合并，`full` 时直接使用 `checkpoint`。
+2. 读取 handoff：`tuner_type: lora` 时用 `base_model` 和 `checkpoint` 合并，`full` 时直接使用 `checkpoint`。本地没有 `checkpoint` 时，在合并 YAML 的 `storage.restore` 写入该路径，执行时会从 `checkpoint_remote` 拉回，结束后删除。
 3. 按第 2、3 步启动服务并评测，W&B 评测 run 用 handoff 的 `wandb_run_id` 关联训练。
 
 训练中的周期评测使用 `--retention_eval_script`：训练在保存点暂停，以子进程运行该脚本，参数为 checkpoint 路径和输出目录。训练进程不 import 任何评测代码，脚本内部可以调用 `ae`。
