@@ -12,57 +12,77 @@ from open_audio_llm.integrations.ms_swift.checkpoint_upload import CheckpointUpl
 from open_audio_llm.run_config import command, load_config
 from open_audio_llm.storage import StorageError, push
 
-# Minimal stand-in for `ab` on a local directory acting as the bucket;
-# FAKE_AB_FAIL=unreachable simulates a network/credential failure.
+# Minimal stand-in for `ab --json` (AmphionBucket 0.5) on a local directory acting
+# as the bucket; FAKE_AB_FAIL selects a failure mode.
 FAKE_AB = r'''
-import filecmp, os, shutil, sys
+import filecmp, json, os, shutil, sys
 from pathlib import Path
 bucket = Path(__file__).parent / "bucket"
+mode = os.environ.get("FAKE_AB_FAIL")
 args = sys.argv[1:]
+if mode == "no-json" and "--json" in args:
+    print("ab: error: unrecognized arguments: --json")
+    raise SystemExit(2)
+args = [arg for arg in args if arg != "--json"]
 def target(spec):
     return bucket / spec.split(":", 1)[1]
+def result(status, source, destination, error=None):
+    row = {"op": args[0], "status": status, "source": str(source), "target": destination, "bytes": 1}
+    if error:
+        row["error"] = error
+    print(json.dumps(row, ensure_ascii=False))
+def summary(error=None, **counts):
+    row = {"summary": {key: counts.get(key, 0) for key in ("done", "skipped", "preview", "conflict", "failed")}}
+    if error:
+        row["error"] = error
+    print(json.dumps(row, ensure_ascii=False))
+    raise SystemExit(1 if error or counts.get("conflict") or counts.get("failed") else 0)
 if args[0] == "remotes":
-    print("BUCKET\tPROVIDER\nwhai\tsensecore")
+    print(json.dumps({"bucket": "whai", "provider": "sensecore"}))
+    raise SystemExit(0)
+if args[0] == "credentials":
+    source = "missing" if mode == "no-credentials" else "file"
+    print(json.dumps({"bucket": "whai", "profile": "sensecore", "source": source}))
     raise SystemExit(0)
 if any(":" in arg and not arg.startswith("whai:") for arg in args):
-    print("错误: 远端路径应为真实桶名:path；使用 remotes 查看存储桶")
-    raise SystemExit(1)
-if os.environ.get("FAKE_AB_FAIL") == "symlinked-state" and args[0] == "push":
-    print(f"失败: {args[1]} <-> {args[2]}x: 不跟随符号链接: /home/u/.cache")
-    print("结果: 完成 0，跳过 0，预览 0，冲突 0，失败 1")
-    raise SystemExit(1)
-if os.environ.get("FAKE_AB_FAIL") == "unreachable":
-    print("错误: Could not connect to the endpoint URL")
-    raise SystemExit(1)
+    summary("远端路径应为真实桶名:path；使用 remotes 查看存储桶")
+if mode == "symlinked-state" and args[0] == "push":
+    print("进度 not json")
+    result("failed", args[1], args[2], "不跟随符号链接: /home/u/.cache")
+    summary(failed=1)
+if mode in {"unreachable", "no-credentials"}:
+    summary("Could not connect to the endpoint URL")
 if args[0] == "ls":
     path = target(args[1])
     print("\n".join(p.name for p in path.iterdir()) if path.is_dir() else "", end="")
     raise SystemExit(0)
 if args[0] == "pull":
     if not target(args[1]).is_dir():
-        print("错误: 远端文件或目录不存在（或该前缀下没有对象）")
-        raise SystemExit(1)
+        summary("远端文件或目录不存在（或该前缀下没有对象）")
     shutil.copytree(target(args[1]), args[2])
-    raise SystemExit(0)
+    summary()
 source, destination, overwrite = Path(args[1]), args[2], "--overwrite" in args
 if source.is_dir():
-    pairs = [(p, target(destination) / p.relative_to(source)) for p in source.rglob("*") if p.is_file()]
+    pairs = [(p, target(destination) / p.relative_to(source)) for p in source.rglob("*")
+             if p.is_file() and not p.is_symlink()]
 else:
     pairs = [(source, target(destination) / source.name if destination.endswith("/") else target(destination))]
-done = skipped = conflicts = 0
+counts = {"done": 0, "skipped": 0, "conflict": 0}
 for local, remote in pairs:
+    spec = "whai:" + str(remote.relative_to(bucket))
+    print(f"进度 {spec}")
     if remote.exists() and filecmp.cmp(local, remote, shallow=False):
-        skipped += 1
+        counts["skipped"] += 1
+        result("skipped", local, spec)
     elif remote.exists() and not overwrite:
-        conflicts += 1
+        counts["conflict"] += 1
+        result("conflict", local, spec, "目标已存在，内容不同或无法确认一致；覆盖需 --overwrite")
     else:
         remote.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(local, remote)
-        done += 1
-    if conflicts and remote.exists() and not overwrite and not filecmp.cmp(local, remote, shallow=False):
-        print(f"冲突: {local} <-> {remote}")
-print(f"结果: 完成 {done}，跳过 {skipped}，预览 0，冲突 {conflicts}，失败 0")
-raise SystemExit(1 if conflicts else 0)
+        counts["done"] += 1
+        result("done", local, spec)
+summary(**counts)
 '''
 
 
@@ -143,6 +163,8 @@ def test_failed_upload_keeps_local_checkpoint(tmp_path, monkeypatch):
     ("conflict", "remote-conflict"),
     ("unreachable", "bucket-unreachable"),
     ("symlinked-state", "transfer-failed"),
+    ("no-credentials", "credentials-missing"),
+    ("no-json", "ab-no-json"),
 ])
 def test_push_failures_report_their_cause(tmp_path, monkeypatch, case, cause):
     storage, bucket = fake_storage(tmp_path)
@@ -163,6 +185,8 @@ def test_push_failures_report_their_cause(tmp_path, monkeypatch, case, cause):
     assert error.value.problem["cause"] == cause
     if case == "symlinked-state":
         assert error.value.problem["detail"].endswith("不跟随符号链接: /home/u/.cache")
+    if case == "conflict":
+        assert "whai:open-audio-llm/runs/result.json" in error.value.problem["evidence"]
 
 
 def test_restore_reports_missing_remote_and_failed_sync_is_recorded(tmp_path, monkeypatch, capsys):

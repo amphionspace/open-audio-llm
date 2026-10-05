@@ -47,8 +47,8 @@ YAML 只使用 PyYAML，无多层继承。`runtime` 指定解释器、工作目�
 - 交付位置：配置了 `--checkpoint_handoff` 的训练结束后，交付 checkpoint 的 `checkpoint_remote`（未上传时为本地路径）写入 `status.json` 的 `checkpoint_handoff`，并显示在执行 README 的状态块中。
 - 执行结束：整个执行记录（配置、状态、日志、评测结果等）以覆盖方式镜像到远端，结果写入 `status.json` 的 `storage`。同步失败不改变执行退出码。
 - 输入：`storage.restore` 列出的路径若本地不存在，执行前从远端拉回，结束后删除。实验评测按 producer 选中的训练 checkpoint 自动加入该列表。
-- 失败定位：不限制 `ab` 版本。任何上传或拉取失败都会自动按顺序检查：本地路径、`ab` 是否可执行、`ab remotes` 是否有该桶、远端冲突或未确认文件、桶能否访问、远端数据是否存在，得出 `cause`、说明和 `ab` 原始输出。原因写入 `storage-uploads.json`、`status.json` 的 `storage`、执行 README 和结束输出，并打印到 stderr。
-- `ab` 把传输状态固定保存在 `$HOME/.cache/amphion-bucket`，路径含符号链接时拒绝传输（诊断为 `transfer-failed`，原因“不跟随符号链接”）。这类机器让 `storage.executable` 指向一个以无符号链接的真实目录作为 `HOME` 运行 `ab` 的包装脚本。
+- `ab` 需支持 `--json` 结果输出（AmphionBucket 0.5.0 起）；凭证在运行时读取，配置在 `~/.config/amphion-bucket/credentials.ini` 或 `AMPHION_BUCKET_<PROFILE>_ACCESS_KEY/SECRET_KEY`，不写进 YAML。
+- 失败定位：任何上传或拉取失败都会自动按顺序检查：本地路径、`ab` 是否可执行且支持 `--json`、是否配置该桶、该桶是否有凭证、远端冲突或未确认文件、桶能否访问、远端数据是否存在，得出 `cause`、说明和 `ab` 原始输出。原因写入 `storage-uploads.json`、`status.json` 的 `storage`、执行 README 和结束输出，并打印到 stderr。
 - 补传：`open-audio-llm storage sync --config <任务 YAML> --attempt <执行目录>` 重新上传指定执行，并在核验后删除其中的本地 checkpoint；执行仍持有锁时拒绝。
 
 本项目要部署的 checkpoint 用 vLLM 推理、评测和比较，启动前检查配置后端与目标解释器中的 vLLM；HTTP 评测检查服务 `/version`，客户端无需安装模型运行时。示例实验核验实际引擎 `backend` 和类来源并保存 runtime 证据。第三方基线（含 AntSpeaker）使用官方推荐推理方式并固定版本，在独立进程中运行，后端记入快照；存疑项隔离，不恢复人工听审。
