@@ -1,9 +1,10 @@
 version: 1
 runtime:
-  # Interpreter of the AmphionEval environment: pip install -e '../amphion-eval[legacy-http,tracking]'.
+  # AmphionEval environment: pip install 'amphion-eval[legacy-http,tracking]' from the GitLab package registry.
   python: python
   cwd: {path: ../../..}
-  pythonpath: [{path: ../../../src}, {path: ../../../../audio-data-contract/src}]
+  # Empty on purpose: the evaluator must not import open-audio-llm.
+  pythonpath: []
   gpus: []
   threads: {omp: 4, openblas: 1}
 task:

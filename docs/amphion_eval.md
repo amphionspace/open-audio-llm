@@ -60,9 +60,13 @@ v2 相对 v1 的变化：`checkpoint` 不再保证存在于本地，新增 `chec
 source /path/to/miniconda3/etc/profile.d/conda.sh
 conda create -n amphion-eval -c conda-forge --override-channels python=3.12 -y
 conda activate amphion-eval
-python -m pip install -e '/path/to/amphion-eval[legacy-http,tracking]'
+# token 为有读取权限的 GitLab 个人访问令牌（read_api）
+python -m pip install "amphion-eval[open-audio-llm,legacy-http,tracking]==0.2.0" \
+  --extra-index-url "https://__token__:${GITLAB_TOKEN}@git.amphiondev.com/api/v4/projects/42/packages/pypi/simple"
 python -m amphion_eval.cli open-audio-llm --help
 ```
+
+`open-audio-llm` extra 用于训练后评测，依赖不在包仓库里的 `audio-data-contract`，需先从其仓库安装；只做 `comparison.yaml` 和重新打分时装 `legacy-http,tracking` 即可。评测配置的 `runtime.pythonpath` 为空：评测进程不 import 本项目。
 
 如果 conda 报证书错误，先 `export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt`。
 
@@ -101,15 +105,11 @@ open-audio-llm prepare --config examples/configs/prepare/score-sot.yaml
 
 1. 训练 YAML 加 `--checkpoint_handoff`。
 2. 读取 handoff：`tuner_type: lora` 时用 `base_model` 和 `checkpoint` 合并，`full` 时直接使用 `checkpoint`。本地没有 `checkpoint` 时，在合并 YAML 的 `storage.restore` 写入该路径，执行时会从 `checkpoint_remote` 拉回，结束后删除。
-3. 按第 2、3 步启动服务并评测，W&B 评测 run 用 handoff 的 `wandb_run_id` 关联训练。
+3. 同一份权重起两个服务：`serve/vllm.yaml`（ASR、热词、SOT）和 `serve/tsasr.yaml`（TS-ASR，SEP 是服务级开关）。
+4. 按 AmphionEval 的 [after-training 配置示例](https://git.amphiondev.com/amphion/amphioneval/-/blob/main/examples/open-audio-llm/after-training.yaml) 写评测 YAML，填 `server_url`/`served_model` 和 `tsasr_server_url`/`tsasr_served_model`，然后运行 `ae open-audio-llm after-training --handoff <handoff.json> --config <评测 YAML>`。缺少所需服务时在推理前失败。
+
+handoff v2（本地 checkpoint 已上传删除）需要包含 amphioneval!8 的 AmphionEval；0.2.0 仍要求本地 checkpoint 目录存在。
+
+多目标注册 SOT 的已有预测用 `ae open-audio-llm rescore-target-sot` 打分，见 [多目标 SOT](multi-target-sot.md)。
 
 训练中的周期评测使用 `--retention_eval_script`：训练在保存点暂停，以子进程运行该脚本，参数为 checkpoint 路径和输出目录。训练进程不 import 任何评测代码，脚本内部可以调用 `ae`。
-
-## 当前未满足的边界（AmphionEval 侧待办）
-
-| 问题 | 影响 |
-| --- | --- |
-| `amphion_eval.legacy.vllm` 仍 import `open_audio_llm.integrations.vllm.triton_audio_embed`、`retrieve_hotwords` 和 `hf.modeling_amphion_asr` | 评测进程的 `PYTHONPATH` 还需要包含本项目 `src`（`comparison.yaml` 已配置） |
-| legacy vLLM 客户端的 TS-ASR 请求仍是两段 `input_audio`，没有按第 3 节拼接，也缺 `police_*` 测试集 | 在同步之前，TS-ASR 评测结果不可信 |
-| `ae open-audio-llm after-training` 调用本项目已不再提供的原生 worker `open_audio_llm.inference.qwen3_asr` | 训练后自动评测需改为按第 4 节合并、起服务，再走 HTTP |
-| 还没有 OpenAI 兼容的通用 HTTP adapter 和 diarization 协议 | 第三方 diarization 基线暂时不能评测 |
