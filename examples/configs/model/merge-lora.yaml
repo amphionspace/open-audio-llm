@@ -9,8 +9,15 @@ task:
   module: swift.cli.export
   arguments:
     --model: {path: ../../../models/base-model}
-    --adapters: {path: ../../../models/adapter}
+    # Point at a training checkpoint under runs/; it is pulled back if only the uploaded copy exists.
+    --adapters: &adapters {path: ../../../models/adapter}
     --merge_lora: true
     --output_dir: {path: '{attempt}/artifacts/model'}
+storage:
+  # Uploads through AmphionBucket; the remote layout mirrors paths under local_root.
+  executable: {path: ~/.local/bin/ab}
+  remote: whai:open-audio-llm
+  local_root: {path: ../../..}
+  restore: [*adapters]
 recording:
   attempts_dir: {path: ../../../runs/merge-lora/tasks/merge/attempts}

@@ -38,12 +38,16 @@ task:
     --warmup_ratio: 0.05
     --gradient_checkpointing: true
     --save_steps: 200
-    --save_total_limit: 2
     --eval_steps: 200
     --logging_steps: 10
     --report_to: "none"
     --output_dir: {path: "{attempt}/artifacts/training"}
     --ddp_timeout: 180000000
+storage:
+  # Uploads through AmphionBucket; the remote layout mirrors paths under local_root.
+  executable: {path: ~/.local/bin/ab}
+  remote: whai:open-audio-llm
+  local_root: {path: ../../..}
 recording:
   attempts_dir: {path: ../../../runs/catalog-sft/tasks/run/attempts}
 tracking:

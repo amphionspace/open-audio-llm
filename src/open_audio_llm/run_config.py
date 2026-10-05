@@ -114,6 +114,11 @@ def load_config(path, attempt=None):
                     config["parameters"]["models"][name] = str(
                         Path(experiment["files"][name]) / "training/checkpoint-1000"
                     )
+                    if "storage" in config:
+                        # Uploaded training checkpoints no longer exist locally.
+                        config["storage"].setdefault("restore", []).append(
+                            config["parameters"]["models"][name]
+                        )
         copies = {}
         for name in experiment.get("copy_inputs", []):
             destination = str(attempt / "artifacts" / name)
@@ -132,6 +137,10 @@ def load_config(path, attempt=None):
         "enabled"
     ):
         raise ValueError("Training and evaluation require W&B tracking")
+    if "storage" in config:
+        from .storage import check
+
+        check(config["storage"])
     config["config_file"] = str(path)
     return config
 
@@ -232,6 +241,11 @@ def command(config, effective_file=None):
     data = config.get("data", {})
     if data.get("config"):
         options["--data_config"] = data["config"]
+    storage = config.get("storage")
+    if storage and task["kind"] == "train":
+        options["--storage_sync"] = {
+            k: storage[k] for k in ("executable", "remote", "local_root")
+        }
     if task.get("accepts_config"):
         options["--config"] = str(effective_file or "<effective.yaml>")
     cmd += arguments(options) + task.get("flags", [])
