@@ -61,6 +61,8 @@ class CatalogSftArguments(CatalogArgumentsMixin, SftArguments):
     retention_teacher: str | None = None
     retention_eval_script: str | None = None
     retention_eval_interval: int = 2000
+    checkpoint_handoff: str | None = None
+    checkpoint_selection: str = "final"
 
 
 @dataclass
@@ -111,6 +113,13 @@ class CatalogTrainingMixin:
         return train, validation
 
     def train(self, trainer):
+        if handoff := getattr(self.args, 'checkpoint_handoff', None):
+            from .checkpoint_handoff import CheckpointHandoffCallback
+
+            trainer.add_callback(CheckpointHandoffCallback(
+                handoff, selection=self.args.checkpoint_selection,
+                base_model=self.args.model, tuner_type=self.args.tuner_type,
+            ))
         if getattr(self.args, 'audio_encoder_batching', False) and getattr(self.args, 'audio_encoder_parallel', False):
             raise ValueError('Choose either audio_encoder_batching or audio_encoder_parallel')
         original_create_optimizer = None

@@ -17,4 +17,6 @@ LoRA rank/alpha 为 32/64，冻结音频编码器和连接层；每卡最多 8 �
 
 checkpoint 和模型对比使用 vLLM。LoRA 先按 [merge-lora.yaml](../../configs/model/merge-lora.yaml) 合并，基础模型和候选分别按固定 [评测配置](../../configs/eval/comparison.yaml) 运行；保持样本、候选词、原始标签和解码条件一致。不得使用历史原生 PyTorch 评测入口作为自动回退。
 
+需要把训练结果交给外部评测时，在训练 YAML 的 `task.arguments` 写 `--checkpoint_handoff: {path: "{attempt}/artifacts/checkpoint-handoff.json"}`。训练结束后由 rank 0 写入交付的 checkpoint、选择方式、全局步数、基础模型和 `tuner_type`。默认 `--checkpoint_selection: final`，要求末步已保存，不按目录名猜测最新 checkpoint；选 `best` 时使用 Trainer 记录的最佳 checkpoint。
+
 训练与评测均由统一入口同步 W&B 并核验远端指标。性能字段见 [训练性能日志](../../../docs/training_performance.md)，记录规范见 [实验规范](../../../docs/experiments.md)。
