@@ -79,7 +79,7 @@ open-audio-llm model --config examples/configs/model/convert-legacy.yaml
 
 训练、数据准备、合成、评测、服务、rollout 和模型处理配置见 [examples/configs](examples/configs/README.md)。shell 文件是薄入口，不再接受 `MODEL`、`MAX_STEPS`、`OUTPUT_DIR` 等业务环境变量。数据加载器只从 YAML 读取 Catalog、roots 和缓存路径。
 
-训练和评测必须同步 W&B，并核验远端 run URL 和实际指标；记录保存在每次执行目录。凭据留在环境中。推理与模型对比使用 vLLM，AntSpeaker 声纹核验使用已授权的官方 PyTorch；不会自动回退后端。
+训练和评测必须同步 W&B，并核验远端 run URL 和实际指标；记录保存在每次执行目录。凭据留在环境中。要部署的 checkpoint 用 vLLM 推理和对比，第三方基线用官方推理方式；不会自动回退后端。评测实现由独立的 AmphionEval 提供，本项目通过 CLI 调用，协议和用法见 [使用 AmphionEval 评测](docs/amphion_eval.md)。
 
 目标说话人 ASR 使用独立服务配置 [serve/tsasr.yaml](examples/configs/serve/tsasr.yaml)：在注册音和混合音之间插入可学习 `[SEP]`，音频注意力使用全局窗口 `n_window_infer=1000000000`。普通 ASR 配置保持 SEP 关闭。需要分块注意力时，在 TS-ASR YAML 中设置 `COT_AUDIO_CHUNKED_ATTN: '1'` 并移除 `--hf-overrides`。
 
@@ -113,7 +113,7 @@ open-audio-llm experiment run --config runs/clean-events-ab-20260928/experiment.
 - `src/open_audio_llm/integrations/`：唯一 integrations 实现位置。
 - `examples/configs/`：显式的数据与运行 YAML。
 - `examples/train/`：统一 SFT / GRPO / rollout 启动入口。
-- `examples/model/`、`examples/serve/`、`examples/eval/`：模型转换、推理和评测脚本。
+- `examples/model/`、`examples/serve/`、`examples/eval/`：模型转换、推理脚本和评测薄入口；评测数据、请求、打分在 AmphionEval。
 - `docs/`：当前架构与使用说明；`docs/archive/` 保存历史记录。
 
 仓库中不再保留顶层 `src/integrations/`。旧 AmphionASR 的 integrations 能力已经合并到
@@ -126,6 +126,7 @@ open-audio-llm experiment run --config runs/clean-events-ab-20260928/experiment.
 - [checkpoint-34479 评测结果](docs/ckpt34479-evaluation.md)：三阶段 SFT 最终权重的 ASR、热词、TS-ASR 和警务指标。
 - [Qwen3-ASR-1.7B 三阶段 SFT](docs/qwen3-asr-three-stage-sft.md)：从底座到 checkpoint-34479 的数据、学习率和冻结配置。
 - [TS-ASR 回放与联合训练](examples/train/qwen3-asr/TS_ASR.md)：clean 优先数据、encoder 批处理和中文保持验收。
+- [使用 AmphionEval 评测](docs/amphion_eval.md)：训练与评测的边界协议、环境和评测步骤。
 - `docs/architecture.md`：组件契约和模型组合。
 - `docs/data_boundary.md`：离线样本事实与在线训练随机性的边界。
 - `docs/remaining_work.md`：剩余工作和下一步。

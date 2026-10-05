@@ -6,6 +6,8 @@ only when packing tokens into the audio transformer.
 """
 from __future__ import annotations
 
+import base64
+import io
 import os
 import warnings
 from typing import Optional
@@ -185,3 +187,22 @@ def concat_enroll_mix(
 
 def random_enroll_enabled() -> bool:
     return os.environ.get("COT_TSASR_ENROLL_RANDOM", "0").strip() not in ("", "0", "false", "False")
+
+
+def pack_ts_transport_b64(enroll_b64: str, mix_b64: str) -> str:
+    """Pack the served TS-ASR request audio: 3s enrollment immediately followed by the mixture.
+
+    The TS-ASR vLLM service accepts one audio per request, so callers send this
+    waveform together with ``ts_prompt.TS_CONCAT_SYSTEM``.
+    """
+    enroll, enroll_sr = sf.read(io.BytesIO(base64.b64decode(enroll_b64)), dtype="float32")
+    mix, mix_sr = sf.read(io.BytesIO(base64.b64decode(mix_b64)), dtype="float32")
+    if int(enroll_sr) != SAMPLE_RATE or int(mix_sr) != SAMPLE_RATE:
+        raise ValueError("TS-ASR request audio must already be 16 kHz")
+    enroll = np.asarray(enroll, dtype=np.float32).reshape(-1)
+    mix = np.asarray(mix, dtype=np.float32).reshape(-1)
+    count = int(ENROLL_SEC * SAMPLE_RATE)
+    enroll = enroll[:count] if enroll.shape[0] >= count else np.pad(enroll, (0, count - enroll.shape[0]))
+    buf = io.BytesIO()
+    sf.write(buf, np.concatenate([enroll, mix]), SAMPLE_RATE, format="WAV", subtype="PCM_16")
+    return base64.b64encode(buf.getvalue()).decode("utf-8")

@@ -7,6 +7,9 @@ from pathlib import Path
 
 from transformers import TrainerCallback
 
+# Bump when a field changes meaning or is removed; consumers reject unknown versions.
+HANDOFF_SCHEMA_VERSION = 1
+
 
 class CheckpointHandoffCallback(TrainerCallback):
     def __init__(self, path, *, base_model, tuner_type, selection="final"):
@@ -34,6 +37,7 @@ class CheckpointHandoffCallback(TrainerCallback):
         if checkpoint is None or not checkpoint.is_dir():
             raise RuntimeError("No saved checkpoint for the requested selection; save the final step or explicitly select best")
         payload = {
+            "framework": "open-audio-llm", "schema_version": HANDOFF_SCHEMA_VERSION,
             "checkpoint": str(checkpoint), "selection": self.selection,
             "training_run": str(Path(args.output_dir).resolve()),
             "global_step": state.global_step, "base_model": self.base_model,

@@ -1,12 +1,14 @@
 version: 1
 runtime:
+  # Interpreter of the AmphionEval environment: pip install -e '../amphion-eval[legacy-http,tracking]'.
   python: python
   cwd: {path: ../../..}
   pythonpath: [{path: ../../../src}]
   gpus: []
 task:
   kind: prepare
-  module: open_audio_llm.eval.sot
+  module: amphion_eval.cli
+  positional: [open-audio-llm, rescore-sot]
   arguments:
     --predictions: {path: ../../../runs/sot-evaluation/predictions.jsonl}
     --output: {path: '{attempt}/artifacts/speaker-attribution.json'}

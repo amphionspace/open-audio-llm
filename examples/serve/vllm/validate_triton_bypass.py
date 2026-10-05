@@ -13,13 +13,13 @@ from pathlib import Path
 
 import soundfile as sf
 
-from open_audio_llm.integrations.vllm.test_vllm_inference import _concat_v3_ts_b64
 from open_audio_llm.integrations.vllm.triton_audio_embed import (
     DEFAULT_TRITON_MODEL,
     TritonAudioEmbedClient,
     stable_audio_embed_uuid,
     tensor_to_vllm_audio_embeds_block,
 )
+from open_audio_llm.tsasr.concat_audio import pack_ts_transport_b64
 from open_audio_llm.tsasr.ts_prompt import TS_CONCAT_SYSTEM
 
 
@@ -42,7 +42,7 @@ def _build_qwen3_asr_messages(
     user_audio = audio_b64
     if enrollment_b64:
         sys_lines.append(TS_CONCAT_SYSTEM)
-        user_audio = _concat_v3_ts_b64(enrollment_b64, audio_b64)
+        user_audio = pack_ts_transport_b64(enrollment_b64, audio_b64)
     if hotwords:
         sys_lines.append(f"Hotwords: {','.join(hotwords)}")
     user_content = [

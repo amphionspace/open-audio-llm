@@ -10,10 +10,8 @@ from audio_data_contract import ArtifactRef, AudioRecord, AudioRef, AudioSlot, D
 
 from open_audio_llm.data.catalog_dataset import CatalogSwiftDataset
 from open_audio_llm.data.qwen3_asr import native_messages
-from open_audio_llm.data.sot import TIMESTAMP_FORMAT, TIMESTAMP_SYSTEM, with_sot_timestamps
+from open_audio_llm.data.sot import TIMESTAMP_SYSTEM, with_sot_timestamps
 from open_audio_llm.data.sot_alignment import AlignmentIndex, build_alignment_index, fingerprint
-from open_audio_llm.eval.sot_timestamps import summarize_timed_sot
-from open_audio_llm.eval.ts_asr import summarize
 
 
 def source_rows():
@@ -150,46 +148,6 @@ def test_index_rejects_incomplete_or_changed_alignment_outputs(tmp_path, issue):
     with pytest.raises(ValueError):
         build_alignment_index([root], tmp_path / 'changed.sqlite')
     assert not (tmp_path / 'changed.sqlite').exists()
-
-
-def evaluation_row(reference, prediction):
-    return dict(source='sot', language='en', task='speaker_attributed_asr', duration=4.,
-                sot_output_format=TIMESTAMP_FORMAT, reference=reference, prediction=prediction)
-
-
-def test_timestamp_scoring_keeps_transcription_and_timing_separate(tmp_path):
-    index, _ = make_index(tmp_path)
-    reference = with_sot_timestamps(record(), index).target
-    perfect = summarize([evaluation_row(reference, reference)])['sot']
-    assert perfect['error_rate'] == 0
-    assert perfect['speaker_attribution']['accuracy'] == 1
-    assert perfect['timestamps']['boundary_mae_seconds'] == 0
-    assert perfect['timestamps']['f1'] == 1 and perfect['format_valid_rate'] == 1
-    shifted = reference.replace('0.28-0.84', '0.88-1.44')
-    result = summarize([evaluation_row(reference, shifted)])['sot']
-    assert result['error_rate'] == 0
-    assert result['timestamps']['f1'] == pytest.approx(2 / 3)
-    assert result['timestamps']['boundary_mae_seconds'] == pytest.approx(.2)
-    assert result['format_valid_rate'] == 0  # Lines are no longer chronological.
-    lexical_error = reference.replace('good day', 'bad day')
-    result = summarize_timed_sot([evaluation_row(reference, lexical_error)], False)
-    assert result['error_rate'] == .2
-    assert result['timestamps']['boundary_mae_seconds'] == 0
-
-
-def test_missing_extra_malformed_and_permuted_timed_predictions():
-    reference = '[S1][0.00-1.00] hello\n[S2][0.20-1.20] world'
-    swapped = '[S2][0.00-1.00] hello\n[S1][0.20-1.20] world'
-    result = summarize_timed_sot([evaluation_row(reference, swapped)], False)
-    assert result['error_rate'] == 0 and result['timestamps']['f1'] == 1
-    for prediction, precision, recall in [('', 0, 0), ('[S1][0.00-1.00] hello', 1, .5),
-            (reference + '\n[S1][2.00-3.00] again', 2 / 3, 1),
-            ('[S1][bad] hello\n[S2][0.20-1.20] world', .5, .5)]:
-        result = summarize_timed_sot([evaluation_row(reference, prediction)], False)
-        assert result['timestamps']['precision'] == pytest.approx(precision)
-        assert result['timestamps']['recall'] == recall
-    malformed = summarize_timed_sot([evaluation_row(reference, reference.replace('0.00-1.00', 'bad'))], False)
-    assert malformed['error_rate'] == 0 and malformed['format_valid_rate'] == 0
 
 
 @pytest.mark.parametrize('cached', [False, True])

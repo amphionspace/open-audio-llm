@@ -1071,62 +1071,6 @@ def test_native_qwen_pipeline_renders_before_encoding(catalog_config):
         assert row["solution"] == row["messages"][-1]["content"]
 
 
-@pytest.mark.parametrize("cached,incomplete", [(False, False), (True, False), (True, True)])
-def test_hotword_eval_uses_dataset_audio_and_checks_prediction_count(
-    catalog_config, tmp_path, monkeypatch, cached, incomplete
-):
-    qwen_asr = pytest.importorskip("qwen_asr")
-    from open_audio_llm.eval.qwen3_asr import main
-
-    config = dict(catalog_config, evaluation=catalog_config["train"])
-    if cached:
-        config["metadata_cache"] = str(tmp_path / "cache")
-    path = tmp_path / "eval.json"
-    path.write_text(json.dumps(config))
-    output = tmp_path / "evaluation"
-    model = torch.nn.Module()
-    model.generation_config = SimpleNamespace(use_cache=False, do_sample=True)
-    model.thinker = torch.nn.Module()
-    model.thinker.generation_config = SimpleNamespace(use_cache=False, do_sample=True)
-    model.thinker.model = SimpleNamespace(config=SimpleNamespace(use_cache=False))
-    original, rate = sf.read(tmp_path / "speech.wav", dtype="float32")
-    expected = [original[:4000], original[4800:8800]]
-    calls = []
-
-    def transcribe(audio, context):
-        assert len(audio) == len(context) == 2
-        for waveform, sampling_rate in audio:
-            assert sampling_rate == rate
-            assert waveform.dtype == np.float32
-            assert any(np.allclose(waveform, segment) for segment in expected)
-        assert not model.training and not model.thinker.training
-        assert model.thinker.model.config.use_cache
-        for module in (model, model.thinker):
-            assert module.generation_config.use_cache
-            assert not module.generation_config.do_sample
-        calls.append(context)
-        return [SimpleNamespace(text="hello", language="English")] * (1 if incomplete else 2)
-
-    monkeypatch.setattr(qwen_asr.Qwen3ASRModel, "from_pretrained", lambda *a, **kw: SimpleNamespace(
-        model=model, transcribe=transcribe,
-    ))
-    monkeypatch.setattr("sys.argv", [
-        "qwen3_asr", "--model", "unused", "--data_config", str(path),
-        "--output_dir", str(output), "--samples_per_source", "2", "--batch_size", "2",
-    ])
-    if incomplete:
-        with pytest.raises(RuntimeError, match="incomplete batch"):
-            main()
-        assert not (output / "summary.json").exists()
-    else:
-        main()
-        summary = json.loads((output / "summary.json").read_text())
-        assert len(calls) == 2
-        for condition in ("no_hotwords", "hotwords"):
-            assert summary[f"speech/{condition}"]["utterances"] == 2
-            assert summary[f"speech/{condition}"]["error_rate"] == 0
-
-
 def test_performance_logging_preserves_online_sample(catalog_config):
     plain = CatalogSwiftDataset(catalog_config)
     measured = CatalogSwiftDataset(catalog_config, collect_metrics=True)
