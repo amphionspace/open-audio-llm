@@ -224,11 +224,12 @@ def main():
         )
     mode = sys.argv[1]
     cls = CatalogSft if mode == "sft" else CatalogGRPO
-    try:
-        cls(sys.argv[2:]).main()
-    finally:
-        if torch.distributed.is_initialized():
-            torch.distributed.destroy_process_group()
+    cls(sys.argv[2:]).main()
+    # Only a successful rank tears down collectives. After a failure, peers may be
+    # blocked in a collective and destroy_process_group would wait for them, so
+    # exit with the error and let torchrun stop the remaining ranks.
+    if torch.distributed.is_initialized():
+        torch.distributed.destroy_process_group()
 
 
 if __name__ == "__main__":

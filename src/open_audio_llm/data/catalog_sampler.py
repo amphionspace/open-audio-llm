@@ -218,17 +218,18 @@ class CatalogBatchSampler(Sampler):
         root = getattr(self.dataset.records, "root", None)
         if root is None:
             return build()
-        import fcntl
         import os
 
         import numpy as np
+
+        from .catalog_cache import lock_exclusive
 
         key = hashlib.sha256(json.dumps([
             self.dataset.seed, source, cycle, self.shuffle, indexes.start, indexes.stop,
         ]).encode()).hexdigest()
         path = root / f"permutation-{key}.npy"
         with path.with_suffix(".lock").open("a") as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX)
+            lock_exclusive(lock)
             if not path.exists():
                 with path.with_suffix(".tmp").open("wb") as stream:
                     np.save(stream, np.asarray(build(), dtype=np.int64))

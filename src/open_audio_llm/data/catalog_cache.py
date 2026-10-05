@@ -10,6 +10,7 @@ import logging
 import os
 import struct
 import sqlite3
+import time
 from bisect import bisect_right
 from pathlib import Path
 
@@ -24,6 +25,24 @@ from .sot import TIMESTAMP_FORMAT
 _META = np.dtype([("offset", "<u8"), ("duration", "<f8"), ("slots", "<u2")])
 _PACK = struct.Struct("<QdH")
 
+# Polling interval while another rank builds a shared cache entry.
+LOCK_RETRY_SECONDS = 0.5
+
+
+def lock_exclusive(lock):
+    """Wait for an exclusive flock.
+
+    quarkfs (FUSE) answers a contended blocking flock with EAGAIN instead of
+    waiting, so poll a non-blocking lock. The kernel releases it if the holder dies.
+    """
+    while True:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return
+        except BlockingIOError:
+            time.sleep(LOCK_RETRY_SECONDS)
+
+
 
 class AudioIndex:
     """Keep large shared audio indexes outside Python's cyclic object graph."""
@@ -37,7 +56,7 @@ class AudioIndex:
         self.path = Path(root).expanduser().resolve() / f"audio-{key}.sqlite"
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.path.with_suffix(".lock").open("a") as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX)
+            lock_exclusive(lock)
             if not self.path.exists():
                 temporary = self.path.with_suffix(".tmp")
                 temporary.unlink(missing_ok=True)
@@ -266,7 +285,7 @@ class SourceRecordIndex:
         self.path.mkdir(parents=True, exist_ok=True)
         # The completion marker is written last. A failed build is never opened.
         with (self.path / "build.lock").open("a") as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX)
+            lock_exclusive(lock)
             if not (self.path / "complete.json").exists():
                 self._build(dataset, source)
         info = json.loads((self.path / "complete.json").read_text())
@@ -384,7 +403,7 @@ class CatalogRecordIndex:
         ).hexdigest()
         path = self.root / f"signature-{key}.txt"
         with path.with_suffix(".lock").open("a") as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX)
+            lock_exclusive(lock)
             if path.exists():
                 return path.read_text().strip()
             digest = hashlib.sha256()
