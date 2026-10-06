@@ -279,3 +279,57 @@ def test_duration_pairing_preserves_update_samples_and_checkpoint_cursor():
         sampler.state_dict()
     sampler.mark_consumed()
     assert sampler.state_dict()['consumed'] == 4
+
+
+def test_migration_continues_global_plan_on_new_world_size_and_paths():
+    def make(root, **kwargs):
+        ds = dataset([{"weight": 1, "index": f"{root}/a.sqlite"}, {"weight": 3}], [6, 30])
+        ds.config.update(catalog=f"{root}/catalog.jsonl",
+                         replay={"epoch_samples": "full_coverage", "window_samples": 8})
+        return ds
+
+    old = [CatalogBatchSampler(make("/old"), rank=r, world_size=2) for r in range(2)]
+    for sampler in old:
+        list(sampler)
+        for _ in range(6):
+            sampler.mark_consumed()
+    state = old[0].state_dict()
+    global_plan = list(CatalogBatchSampler(make("/old")))
+    new = [CatalogBatchSampler(make("/new"), rank=r, world_size=4) for r in range(4)]
+    with pytest.raises(ValueError, match="world size changed"):
+        new[0].load_state_dict(state)
+    for sampler in new:
+        sampler.load_state_dict(sampler.migrate_state_dict(
+            state, world_size=2, previous_paths={"/new": "/old"}))
+        assert sampler.consumed == 3
+    resumed = [batch for group in zip(*map(list, new)) for batch in group]
+    assert resumed == global_plan[12:12 + len(resumed)]
+
+
+@pytest.mark.parametrize("previous_paths,world_size,match", [
+    ({}, 2, "beyond the mapped paths"),
+    ({"/new": "/old"}, 3, "beyond the mapped paths"),
+])
+def test_migration_rejects_unproven_identity(previous_paths, world_size, match):
+    def make(root, weight=1):
+        ds = dataset([{"weight": weight}, {"weight": 3}], [6, 30])
+        ds.config["catalog"] = f"{root}/catalog.jsonl"
+        return ds
+
+    old = CatalogBatchSampler(make("/old"), world_size=2)
+    old.mark_consumed()
+    with pytest.raises(ValueError, match=match):
+        CatalogBatchSampler(make("/new"), world_size=4).migrate_state_dict(
+            old.state_dict(), world_size=world_size, previous_paths=previous_paths)
+    with pytest.raises(ValueError, match="beyond the mapped paths"):
+        CatalogBatchSampler(make("/new", weight=2), world_size=4).migrate_state_dict(
+            old.state_dict(), world_size=2, previous_paths={"/new": "/old"})
+
+
+def test_migration_rejects_cursor_that_does_not_split():
+    ds = dataset([{}], [12])
+    old = CatalogBatchSampler(ds, world_size=2)
+    old.mark_consumed()
+    with pytest.raises(ValueError, match="does not split"):
+        CatalogBatchSampler(ds, world_size=4).migrate_state_dict(
+            old.state_dict(), world_size=2, previous_paths={})

@@ -1,0 +1,134 @@
+# LoRA 002 在本机 8×A800 上续训：从 checkpoint-8000 恢复 adapter、AdamW、调度器和数据游标。
+# 训练契约与 train-local.yaml 相同，仅卡数和路径不同：8 卡 × 每卡 1 条 × 累积 4 = 每次更新 32 条。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath:
+  - {path: ../../../src}
+  - {path: /workspace/data/audio-data-contract/src}
+  gpus: [0, 1, 2, 3, 4, 5, 6, 7]
+  threads: {omp: 2, openblas: 1}
+  environment:
+    TOKENIZERS_PARALLELISM: false
+    HF_HUB_OFFLINE: '1'
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    PYTHONUNBUFFERED: '1'
+    PYTORCH_ALLOC_CONF: expandable_segments:True
+  distributed:
+    processes: 8
+    port: 29785
+data:
+  config: {path: ../tasks/localize-data/attempts/004/artifacts/local-balanced-train.yaml}
+task:
+  kind: train
+  module: open_audio_llm.integrations.ms_swift.train
+  positional:
+  - sft
+  arguments:
+    --model_type: amphion_asr_1.7b
+    --tuner_type: lora
+    --lora_rank: 32
+    --lora_alpha: 64
+    --target_modules:
+    - all-linear
+    --freeze_vit: true
+    --freeze_aligner: true
+    --freeze_llm: false
+    --torch_dtype: bfloat16
+    --attn_impl: sdpa
+    --max_length: 16384
+    --per_device_train_batch_size: 1
+    --per_device_eval_batch_size: 1
+    --gradient_accumulation_steps: 4
+    --learning_rate: 2.0e-05
+    --max_steps: -1
+    --lr_scheduler_type: inverse_sqrt
+    --warmup_ratio: 0.0
+    --warmup_steps: 500
+    --gradient_checkpointing: true
+    --vit_gradient_checkpointing: true
+    --ddp_find_unused_parameters: true
+    --dataloader_num_workers: 4
+    --dataloader_persistent_workers: true
+    --performance_logging: true
+    --save_steps: 500
+    --save_total_limit: 3
+    --logging_steps: 5
+    --report_to: none
+    --seed: 42
+    --audio_encoder_parallel: false
+    --audio_encoder_batching: true
+    --use_logits_to_keep: false
+    --prediction_loss_only: true
+    --optim: adamw_torch_fused
+    --weight_decay: 0.01
+    --max_grad_norm: 1.0
+    --save_only_model: false
+    --bf16: true
+    --fp16: false
+    --ddp_timeout: 7200
+    --eval_strategy: 'no'
+    --load_args: false
+    # 跳过 ms-swift 对本地 checkpoint 的 ModelScope 版本查询（本机 CA 链不可用，仅拖慢启动）。
+    --check_model: false
+    --add_version: false
+    --callbacks:
+    - resume_training_audit
+    # 2026-10-06 从对象存储下载，SHA256 与 docs/experiments/2026-10-06/weights.json 一致。
+    --model: {path: /workspace/model/unified-diarization-20261001/unified-base-checkpoint-1000}
+    --resume_from_checkpoint: {path: /workspace/model/unified-diarization-20261001/lora-002-checkpoint-8000}
+    --external_plugins:
+    - {path: ../../../src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py}
+    - {path: ../scripts/resume_training_audit.py}
+    --output_dir: {path: '{attempt}/artifacts/training'}
+    --continuous_training: true
+    # 保留 checkpoint 中的调度器与数据游标；重置会把学习率退回 warmup 起点。
+    --reset_catalog_sampler: false
+    # 2 卡游标 128000/卡 = 全局 256000 条，换算为 8 卡各 32000 条。
+    # 新路径映射回原机路径后重算的签名必须等于 checkpoint 签名，证明记录与配方未变。
+    --catalog_sampler_migration:
+      world_size: 2
+      previous_paths:
+        "/workspace/workspace/mingdong/repo/open-audio-llm/runs/clean-events-ab-20260928/tasks/06-train-treatment/attempts/001/artifacts/catalog.jsonl": "/222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/06-train-treatment/attempts/001/artifacts/catalog.jsonl"
+        "/workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/localize-data/attempts/004/artifacts/roots.json": "/222042021/mingdong/workspace/open-audio-llm/runs/unified-diarization-asr-20261001/shared/data/roots.json"
+        "/workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/rebalance-data/attempts/001/artifacts/verification.json": "/222042021/mingdong/workspace/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/rebalance-data/attempts/001/artifacts/verification.json"
+        "/workspace/data/migration/unified-diarization-20261001-transfer/source-alignments.sqlite": "/222042021/mingdong/workspace/open-audio-llm/runs/sot-timestamps-recovery-20260920/recovered/source-alignments.sqlite"
+    --lr_scheduler_kwargs:
+      timescale: 10000
+    --gradient_checkpointing_kwargs:
+      use_reentrant: false
+    --retention_eval_script: {path: ../scripts/local_checkpoint_eval.py}
+    --retention_eval_interval: 2000
+preflight:
+- kind: prepare
+  module: open_audio_llm.data.catalog_cache
+  arguments:
+    --data_config: {path: ../tasks/localize-data/attempts/004/artifacts/local-balanced-train.yaml}
+    --workers: 4
+    --batch-size: 1
+    --world-size: 8
+    --preflight-report: {path: '{attempt}/artifacts/data-preflight.json'}
+recording:
+  attempts_dir: {path: ../tasks/local-training/attempts}
+tracking:
+  pythonpath:
+  - {path: ../../../src}
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: ~/.config/open-audio-llm/wandb-env.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: unified-diarization-local-lora
+  interval: 5
+  startup_timeout: 180
+  finish_timeout: 300
+parameters:
+  checkpoint_evaluation:
+    template: {path: evaluate-a800.yaml}
+    # A800 80GB 上与 8 个训练进程共存；基线与各 checkpoint 使用同一设置。
+    gpu_memory_utilization: 0.4
+    run_name: unified-diarization-local-lora-a800-eval
+    # 同机基座：A800 上重新生成的 checkpoint-1000 输出，不混用 RTX 5090 结果。
+    baseline_predictions: {path: ../tasks/evaluate-a800/attempts/001/artifacts/evaluation/unified/predictions.jsonl}
+    baseline_asr_predictions: {path: ../tasks/evaluate-a800/attempts/001/artifacts/evaluation/unified/asr-predictions.jsonl}

@@ -61,6 +61,9 @@ class CatalogSftArguments(CatalogArgumentsMixin, SftArguments):
     data_config: str | None = None
     continuous_training: bool = False
     reset_catalog_sampler: bool = False
+    # JSON {"world_size": W, "previous_paths": {current: previous}} for resuming
+    # a checkpoint saved at another world size or data location.
+    catalog_sampler_migration: str | None = None
     performance_logging: bool = True
     audio_encoder_parallel: bool = False
     audio_encoder_batching: bool = False
@@ -159,6 +162,7 @@ class CatalogTrainingMixin:
             # TrainerFactory drops fields outside its TrainingArguments schema.
             trainer.args.continuous_training = self.args.continuous_training
             trainer.args.reset_catalog_sampler = self.args.reset_catalog_sampler
+            trainer.args.catalog_sampler_migration = self.args.catalog_sampler_migration
             if self.args._catalog_config.get("objective", {}).get("sample_mean"):
                 from .retention import install_retention_objective
 
