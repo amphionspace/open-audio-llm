@@ -26,6 +26,7 @@
 | `tuner_type` | `lora` 或 `full` |
 | `training_run` | 训练输出目录 |
 | `wandb_run_id` | 训练 W&B run ID，用于把评测 run 关联到训练；没有时为 `null` |
+| `amphion_eval_version` | 训练前 `ae open-audio-llm check` 通过的 AmphionEval 版本；未配置 `evaluation` 时为 `null` |
 
 v2 相对 v1 的变化：`checkpoint` 不再保证存在于本地，新增 `checkpoint_remote`。不会按目录名猜测"最新" checkpoint。实现见 `src/open_audio_llm/integrations/ms_swift/checkpoint_handoff.py`。
 
@@ -60,13 +61,13 @@ v2 相对 v1 的变化：`checkpoint` 不再保证存在于本地，新增 `chec
 source /path/to/miniconda3/etc/profile.d/conda.sh
 conda create -n amphion-eval -c conda-forge --override-channels python=3.12 -y
 conda activate amphion-eval
-# token 为有读取权限的 GitLab 个人访问令牌（read_api）
-python -m pip install "amphion-eval[open-audio-llm,legacy-http,tracking]==0.2.0" \
+python -m pip install /path/to/audio-data-contract
+python -m pip install -r requirements-eval.txt \
   --extra-index-url "https://__token__:${GITLAB_TOKEN}@git.amphiondev.com/api/v4/projects/42/packages/pypi/simple"
-python -m amphion_eval.cli open-audio-llm --help
+ae --version   # amphion-eval 0.3.0 (… open-audio-llm handoff schema 2)
 ```
 
-`open-audio-llm` extra 用于训练后评测，依赖不在包仓库里的 `audio-data-contract`，需先从其仓库安装；只做 `comparison.yaml` 和重新打分时装 `legacy-http,tracking` 即可。评测配置的 `runtime.pythonpath` 为空：评测进程不 import 本项目。
+[requirements-eval.txt](../requirements-eval.txt) 固定 `amphion-eval[open-audio-llm,legacy-http,tracking]==0.3.0`（GitLab 包仓库项目 42，`GITLAB_TOKEN` 需 read_api，不写进仓库）。`audio-data-contract` 不在包仓库中，需先从其仓库安装。评测配置的 `runtime.pythonpath` 为空：评测进程不 import 本项目。升级 AmphionEval 时同时修改该文件。
 
 如果 conda 报证书错误，先 `export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt`。
 
@@ -108,7 +109,15 @@ open-audio-llm prepare --config examples/configs/prepare/score-sot.yaml
 3. 同一份权重起两个服务：`serve/vllm.yaml`（ASR、热词、SOT）和 `serve/tsasr.yaml`（TS-ASR，SEP 是服务级开关）。
 4. 按 AmphionEval 的 [after-training 配置示例](https://git.amphiondev.com/amphion/amphioneval/-/blob/main/examples/open-audio-llm/after-training.yaml) 写评测 YAML，填 `server_url`/`served_model` 和 `tsasr_server_url`/`tsasr_served_model`，然后运行 `ae open-audio-llm after-training --handoff <handoff.json> --config <评测 YAML>`。缺少所需服务时在推理前失败。
 
-handoff v2（本地 checkpoint 已上传删除）需要包含 amphioneval!8 的 AmphionEval；0.2.0 仍要求本地 checkpoint 目录存在。
+训练前检查：训练 YAML 加
+
+```yaml
+evaluation:
+  python: {path: /path/to/amphion-eval/bin/python}
+  config: {path: after-training.yaml}
+```
+
+启动器在训练开始前运行 `ae open-audio-llm check --config ...`（清空 `PYTHONPATH`，用 `tracking.credentials_file` 加载 W&B 凭据）：评测器、服务名与参数、W&B 凭据、发布桶和评测数据的问题一次列出并拒绝训练；AmphionEval 读取的 handoff 版本与训练写出的（2）不一致，或 AmphionEval 低于 0.3.0 时同样拒绝。报告保存为执行目录的 `amphion-eval-check.json`，handoff 记录 `amphion_eval_version`。服务在训练后才启动，评测开始时再探测。
 
 多目标注册 SOT 的已有预测用 `ae open-audio-llm rescore-target-sot` 打分，见 [多目标 SOT](multi-target-sot.md)。
 

@@ -52,3 +52,17 @@ def test_best_requires_explicit_selection_and_only_rank_zero_writes(tmp_path):
     state.is_world_process_zero = True
     callback.on_train_end(args, state, None)
     assert json.loads(output.read_text())["checkpoint"] == str(checkpoint)
+
+
+def test_handoff_records_the_checked_amphion_eval_version(tmp_path):
+    (tmp_path / "checkpoint-10").mkdir()
+    check = tmp_path / "amphion-eval-check.json"
+    check.write_text(json.dumps({"ok": True, "amphion_eval_version": "0.3.0", "handoff_schema": 2}))
+    output = tmp_path / "handoff.json"
+    callback = CheckpointHandoffCallback(output, base_model="base", tuner_type="full",
+                                         amphion_eval_check=check)
+    args = SimpleNamespace(output_dir=str(tmp_path))
+    state = SimpleNamespace(global_step=10, is_world_process_zero=True)
+    callback.on_save(args, state, None)
+    callback.on_train_end(args, state, None)
+    assert json.loads(output.read_text())["amphion_eval_version"] == "0.3.0"

@@ -17,6 +17,7 @@ from pathlib import Path
 
 import yaml
 
+from .handoff import HANDOFF_SCHEMA_VERSION
 from .run_config import absolute, child_environment, command, load_config, preview
 from .storage import StorageError, pull, push, remote_path
 
@@ -174,6 +175,37 @@ def backend_preflight(config, env):
     return {"backend": task.get("backend", "not-applicable")}
 
 
+def amphion_eval_check(config, attempt):
+    """Refuse to train when AmphionEval would reject the evaluation or the handoff."""
+    evaluation = config["evaluation"]
+    cmd = [evaluation["python"], "-m", "amphion_eval.cli", "open-audio-llm", "check",
+           "--config", evaluation["config"]]
+    credentials = config.get("tracking", {}).get("credentials_file")
+    if credentials:
+        # The evaluation logs to W&B with the same credentials as training.
+        cmd = ["bash", "-c", 'source "$1" >/dev/null 2>&1; shift; exec "$@"',
+               "credentials", credentials, *cmd]
+    env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+    process = subprocess.run(cmd, capture_output=True, text=True, env=env,
+                             cwd=config["runtime"]["cwd"], timeout=600)
+    try:
+        report = json.loads(process.stdout.strip().splitlines()[-1])
+    except (IndexError, ValueError):
+        raise RuntimeError(
+            "AmphionEval check did not run (needs amphion-eval >= 0.3.0, see requirements-eval.txt): "
+            + (process.stdout + process.stderr).strip()[-1000:]
+        ) from None
+    write_json(attempt / "amphion-eval-check.json", report)
+    if not report.get("ok"):
+        raise ValueError("AmphionEval config check failed: " + "; ".join(report.get("problems", [])))
+    if report.get("handoff_schema") != HANDOFF_SCHEMA_VERSION:
+        raise ValueError(
+            f"AmphionEval {report.get('amphion_eval_version')} reads handoff schema "
+            f"{report.get('handoff_schema')}, training writes {HANDOFF_SCHEMA_VERSION}; "
+            "install the amphion-eval pinned in requirements-eval.txt"
+        )
+
+
 def tracked_command(config, attempt):
     tracking = config["tracking"]
     python = tracking["python"]
@@ -286,6 +318,8 @@ def execute(config, attempt):
             )
             status["command"] = command(config, effective)
         write_json(attempt / "backend.json", backend_preflight(config, env))
+        if config.get("evaluation"):
+            amphion_eval_check(config, attempt)
         if config.get("tracking", {}).get("enabled"):
             tracking_env = dict(env)
             tracking_env.pop("WANDB_DISABLED", None)
