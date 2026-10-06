@@ -5,8 +5,8 @@ must instead prove that the checkpoint state is what training continues from.
 """
 import json
 import math
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import torch
 from safetensors.torch import load_file
