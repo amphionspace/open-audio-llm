@@ -74,7 +74,15 @@ def install_catalog_loader(trainer, resume_checkpoint=None):
             raise ValueError(
                 f"Sampler state missing: {path}; use the old model as initialization for a new run"
             )
-        sampler.load_state_dict(json.loads(path.read_text()))
+        state = json.loads(path.read_text())
+        if migration := getattr(args, "catalog_sampler_migration", None):
+            migration = json.loads(migration) if isinstance(migration, str) else migration
+            state = sampler.migrate_state_dict(
+                state,
+                world_size=migration["world_size"],
+                previous_paths=migration.get("previous_paths", {}),
+            )
+        sampler.load_state_dict(state)
     if continuous and args.lr_scheduler_type == "constant" and getattr(args, "reset_catalog_sampler", False):
         original_load = trainer._load_optimizer_and_scheduler
 
@@ -109,24 +117,33 @@ def install_catalog_loader(trainer, resume_checkpoint=None):
                 self._created_lr_scheduler = True
             return self.lr_scheduler
         trainer.create_scheduler = MethodType(create_scheduler, trainer)
-        if getattr(args, "reset_catalog_sampler", False):
-            original_load = trainer._load_optimizer_and_scheduler
+        original_load = trainer._load_optimizer_and_scheduler
+        reset = getattr(args, "reset_catalog_sampler", False)
 
-            def load_optimizer_and_scheduler(self, checkpoint):
-                original_load(checkpoint)
-                if checkpoint:
-                    from transformers import get_inverse_sqrt_schedule
+        def load_optimizer_and_scheduler(self, checkpoint):
+            from transformers import get_inverse_sqrt_schedule
 
-                    kwargs = dict(getattr(self.args, "lr_scheduler_kwargs", None) or {})
-                    self.lr_scheduler = get_inverse_sqrt_schedule(
-                        self.optimizer,
-                        num_warmup_steps=self.args.get_warmup_steps(sys.maxsize),
-                        **kwargs,
-                    )
+            kwargs = dict(getattr(self.args, "lr_scheduler_kwargs", None) or {})
 
-            trainer._load_optimizer_and_scheduler = MethodType(
-                load_optimizer_and_scheduler, trainer
-            )
+            def configured():
+                return get_inverse_sqrt_schedule(
+                    self.optimizer,
+                    num_warmup_steps=self.args.get_warmup_steps(sys.maxsize),
+                    **kwargs,
+                )
+
+            # ms-swift>=4.5 builds the scheduler via the unbound HF
+            # Trainer.create_scheduler, bypassing the patch above. HF calls this
+            # loader on fresh and resumed runs, so install the configured schedule
+            # here; the checkpoint then restores its step and the optimizer's LR.
+            self.lr_scheduler = configured()
+            original_load(checkpoint)
+            if checkpoint and reset:
+                self.lr_scheduler = configured()
+
+        trainer._load_optimizer_and_scheduler = MethodType(
+            load_optimizer_and_scheduler, trainer
+        )
     # The saved consumed cursor replaces HF's global_step-based batch skipping.
     args.ignore_data_skip = True
     trainer.catalog_sampler = sampler

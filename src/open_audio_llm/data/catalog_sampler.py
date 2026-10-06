@@ -113,28 +113,55 @@ class CatalogBatchSampler(Sampler):
             self._max_duration = max(self.durations)
         if self.max_duration and self._max_duration > self.max_duration:
             raise ValueError("augmented duration exceeds batching.max_duration")
-        config = {k: v for k, v in dataset.config.items() if k != "metadata_cache"}
-        if "batching" in config:
-            config["batching"] = {k: v for k, v in config["batching"].items() if k not in {"batch_merge", "merge_window"}}
-        identity = {
-            "config": config,
-            "batch_size": batch_size,
-            "shuffle": shuffle,
-            "world_size": world_size,
-        }
-        if indexed:
-            self.signature = dataset.records.signature(identity)
-        else:
-            identity["records"] = [
-                (r.record.id, d, s)
-                for r, d, s in zip(dataset.records, self.durations, self.slots)
-            ]
-            self.signature = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+        self._batch_size = batch_size
+        self.signature = self._signature(dataset.config, world_size)
         self.epoch, self.consumed = 0, 0
         self._start = 0
         self._plan = None
         self._resume_epoch = None
         self._epoch_offset = 0
+
+    def _signature(self, data_config, world_size):
+        config = {k: v for k, v in data_config.items() if k != "metadata_cache"}
+        if "batching" in config:
+            config["batching"] = {k: v for k, v in config["batching"].items() if k not in {"batch_merge", "merge_window"}}
+        identity = {
+            "config": config,
+            "batch_size": self._batch_size,
+            "shuffle": self.shuffle,
+            "world_size": world_size,
+        }
+        if hasattr(self.dataset.records, "signature"):
+            return self.dataset.records.signature(identity)
+        identity["records"] = [
+            (r.record.id, d, s)
+            for r, d, s in zip(self.dataset.records, self.durations, self.slots)
+        ]
+        return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+
+    def migrate_state_dict(self, state, *, world_size, previous_paths):
+        """Carry a cursor across a world-size or data-path change of the same recipe.
+
+        The global batch plan does not depend on world size, so a cursor of c
+        batches on each of W ranks covers the first c * W planned batches. The
+        saved signature must match the current records and recipe once current
+        paths are mapped back to the paths recorded with the checkpoint.
+        """
+        previous = _replace_paths(self.dataset.config, previous_paths)
+        if self._signature(previous, world_size) != state["signature"]:
+            raise ValueError(
+                "Cannot migrate Catalog sampler: records or recipe differ beyond the mapped paths and world size"
+            )
+        planned = state["consumed"] * world_size
+        if planned % self.world_size:
+            raise ValueError(
+                f"Cursor of {planned} global batches does not split over world size {self.world_size}"
+            )
+        return {
+            "signature": self.signature,
+            "epoch": state["epoch"],
+            "consumed": planned // self.world_size,
+        }
 
     def set_epoch(self, epoch):
         # HF infers loop epochs from the initial loader length. Restore the
@@ -340,3 +367,15 @@ class CatalogBatchSampler(Sampler):
         self._resume_epoch = self.epoch
         self._start = self.consumed
         self.dataset.set_epoch(self.epoch)
+
+
+def _replace_paths(value, paths):
+    if isinstance(value, dict):
+        return {k: _replace_paths(v, paths) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_replace_paths(v, paths) for v in value]
+    if isinstance(value, str):
+        for current, previous in paths.items():
+            if value == current or value.startswith(current.rstrip("/") + "/"):
+                return previous.rstrip("/") + value[len(current.rstrip("/")):]
+    return value

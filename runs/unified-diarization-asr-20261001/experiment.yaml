@@ -1,0 +1,51 @@
+version: 1
+name: unified-diarization-asr-20261001
+purpose: 统一 Diarization 目标格式，加入有说话人标注的单说话人 ASR 回放
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training_steps: null
+  training_epochs: null
+  training_coverage: all_eligible_records
+tasks:
+- id: train
+  name: 已完成的 1000 步先导训练
+  config: configs/train-unified.yaml
+  depends_on: []
+- id: evaluate-1000
+  name: 第 1000 步固定集 vLLM 对照评测
+  config: configs/evaluate-1000.yaml
+  depends_on: []
+- id: rebalance-data
+  name: 修复全量数据配比并核验实际覆盖
+  config: configs/rebalance-data.yaml
+  depends_on: []
+- id: full-training
+  name: 全量数据持续续训
+  config: configs/train-full-continuous.yaml
+  depends_on:
+  - evaluate-1000
+  - rebalance-data
+- id: evaluate-71000
+  name: 训练停止后第 71,000 步固定集 vLLM 测评
+  config: configs/evaluate-71000.yaml
+  depends_on: []
+- id: local-training
+  # 执行 001、002 为原机双卡（configs/train-local.yaml）；003 起从 002/checkpoint-8000 在 8×A800 续训。
+  name: LoRA 持续训练
+  config: configs/train-local-8gpu.yaml
+  depends_on:
+  - rebalance-data
+  - evaluate-71000
+- id: localize-data
+  name: 将 LoRA 002 数据配方映射到本机 8×A800 并核验文件
+  config: configs/localize-data.yaml
+  depends_on: []
+- id: merge-8000
+  name: 合并 LoRA 002 checkpoint-8000 供固定集评测
+  config: configs/merge-8000.yaml
+  depends_on: []
+- id: evaluate-a800
+  name: 本机 A800 同机基线与 4000/8000 步固定集 vLLM 评测
+  config: configs/evaluate-a800.yaml
+  depends_on: [localize-data, merge-8000]

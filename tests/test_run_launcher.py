@@ -339,6 +339,33 @@ def test_wandb_verification_checks_real_remote_values():
         verify(wandb, run, {"uploaded": 4}, 0, terminal="finished")
 
 
+def test_wandb_verification_retries_busy_service_until_deadline():
+    from types import SimpleNamespace
+
+    from open_audio_llm.run_tracking import verify
+
+    class CommError(Exception):
+        pass
+
+    remote = SimpleNamespace(summary={"uploaded": 3}, state="running", url="https://example.test/run")
+    calls = []
+
+    def lookup(_):
+        calls.append(1)
+        if len(calls) == 1:
+            raise CommError("the service process is busy and did not respond in time")
+        return remote
+
+    wandb = SimpleNamespace(Api=lambda: SimpleNamespace(run=lookup),
+                            errors=SimpleNamespace(CommError=CommError))
+    run = SimpleNamespace(entity="entity", project="project", id="run")
+    assert verify(wandb, run, {"uploaded": 3}, 5)["url"] == remote.url
+    assert len(calls) == 2
+    calls.clear()
+    with pytest.raises(CommError):
+        verify(wandb, run, {"uploaded": 3}, 0)
+
+
 @pytest.mark.parametrize('actual,expected,passes', [
     (0.18294914013904137, 0.18294914013904134, True),
     (0.18295014013904134, 0.18294914013904134, False),

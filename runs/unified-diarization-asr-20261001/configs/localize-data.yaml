@@ -1,0 +1,49 @@
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath:
+  - {path: ../../../src}
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/localize_data.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  # 2 卡 LoRA 002 实际生效的数据配方；本任务只改路径，不改配比、过滤或版本。
+  source_data: {path: ../tasks/local-training/attempts/002/data-effective.yaml}
+  catalog: {path: ../../clean-events-ab-20260928/tasks/06-train-treatment/attempts/001/artifacts/catalog.jsonl}
+  previous_roots: {path: ../shared/data/roots.json}
+  experiment_plan: {path: ../tasks/rebalance-data/attempts/001/artifacts/verification.json}
+  metadata_cache: {path: ../../catalog-metadata-cache}
+  sot_alignment_index: {path: /workspace/data/migration/unified-diarization-20261001-transfer/source-alignments.sqlite}
+  # 原机目录在 AIDC 迁移时被拆分，这些别名用逐文件硬链接镜像重建原相对路径（同一 inode，不复制数据）。
+  mirrored_aliases: [legacy_asr, multispeaker_synthetic]
+  path_map: {path: /workspace/data/migration/aidc-20260923/path-map.jsonl}
+  relocated_manifests: {path: /workspace/data/migration/aidc-20260923/relocated-manifests.json}
+  aidc_root: /workspace/data
+  # 迁移记录未覆盖的整目录：会议原始音频（迁移目录表与本机数据集源）和 2026-10-06 原机补传的会议切分。
+  prefix_map:
+    /ai_sds_wuzz/DATA_ASR/LHOTSE/data_aishell4: /workspace/data/datasets/aishell4/source/data_aishell4-f68f1bf5
+    /ai_sds_wuzz/DATA_ASR/AliMeeting/Eval_Ali: /workspace/data/datasets/alimeeting/source/openslr-119-local-20260826/Eval_Ali
+    /ai_sds_wuzz/DATA_ASR/AliMeeting/Train_Ali_far: /workspace/data/datasets/alimeeting/source/openslr-119-local-20260826/Train_Ali_far
+    /ai_sds_wuzz/DATA_ASR/Derived/meeting-sot/meeting-long-v1-20260920: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920
+  alias_roots:
+    aidc_data: /workspace/data
+    timed_sot_trial: /workspace/data/migration/unified-diarization-20261001-transfer/timed_sot_trial
+    events_treatment_ab_manifest: /workspace/data/migration/unified-diarization-20261001-transfer/events_treatment_ab_manifest
+    events_treatment_ab_audio: /workspace/data/migration/unified-diarization-20261001-transfer/events_treatment_ab_audio
+  full_audio_check_aliases: [events_treatment_ab_audio]
+  # 200 万条合成混音按固定种子抽检音频头；全部记录身份由训练采样器签名核对。
+  audio_sample_per_index: 5000
+  seed: 42
+recording:
+  attempts_dir: {path: ../tasks/localize-data/attempts}
+  result: {path: '{attempt}/artifacts/verification.json'}
+tracking:
+  enabled: false

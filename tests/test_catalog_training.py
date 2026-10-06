@@ -789,7 +789,8 @@ def test_sft_pipeline_passes_continuous_options_to_catalog_loader(monkeypatch):
     monkeypatch.setattr(catalog_loader, 'install_catalog_loader',
                         lambda trainer, checkpoint: installed.append(
                             (trainer.args.continuous_training,
-                             trainer.args.reset_catalog_sampler, checkpoint)))
+                             trainer.args.reset_catalog_sampler,
+                             trainer.args.catalog_sampler_migration, checkpoint)))
 
     class ParentPipeline:
         def train(self, trainer):
@@ -800,11 +801,12 @@ def test_sft_pipeline_passes_continuous_options_to_catalog_loader(monkeypatch):
 
     pipeline = Pipeline()
     pipeline.args = SimpleNamespace(_catalog_config={}, continuous_training=True,
-                                    reset_catalog_sampler=True)
+                                    reset_catalog_sampler=True,
+                                    catalog_sampler_migration='{"world_size": 2}')
     pipeline._get_resume_checkpoint = lambda trainer: 'checkpoint-1000'
     trainer = SimpleNamespace(args=SimpleNamespace())
     assert pipeline.train(trainer) == 'training'
-    assert installed == [(True, True, 'checkpoint-1000')]
+    assert installed == [(True, True, '{"world_size": 2}', 'checkpoint-1000')]
 
 
 def test_continuous_catalog_resume_keeps_optimizer_and_restarts_constant_lr(catalog_config):
@@ -926,6 +928,50 @@ def test_continuous_inverse_sqrt_rebuilds_scheduler_after_checkpoint(catalog_con
     assert optimizer.param_groups[0]['lr'] == 0
     trainer.lr_scheduler.step()
     assert optimizer.param_groups[0]['lr'] == 4e-8
+
+
+def test_continuous_inverse_sqrt_resume_ignores_scheduler_built_without_timescale(catalog_config):
+    import math
+    from transformers import get_inverse_sqrt_schedule
+    from open_audio_llm.integrations.ms_swift.catalog_loader import install_catalog_loader
+
+    parameter = torch.nn.Parameter(torch.ones(1))
+    saved_optimizer = torch.optim.AdamW([parameter], lr=2e-5)
+    saved = get_inverse_sqrt_schedule(saved_optimizer, num_warmup_steps=500, timescale=10000)
+    saved.step(8000)
+    optimizer_state, scheduler_state = saved_optimizer.state_dict(), saved.state_dict()
+    optimizer = torch.optim.AdamW([parameter], lr=2e-5)
+    trainer = SimpleNamespace(
+        args=SimpleNamespace(
+            continuous_training=True, reset_catalog_sampler=False, max_steps=-1,
+            lr_scheduler_type='inverse_sqrt', warmup_steps=500, warmup_ratio=0,
+            lr_scheduler_kwargs={'timescale': 10000},
+            get_warmup_steps=lambda steps: 500,
+            deepspeed=None, process_index=0, world_size=1,
+            train_dataloader_shuffle=True, gradient_accumulation_steps=1,
+            dataloader_num_workers=0, dataloader_pin_memory=False,
+        ),
+        template=SimpleNamespace(sequence_parallel_size=1),
+        train_dataset=CatalogSwiftDataset(catalog_config), _train_batch_size=1,
+        data_collator=list, accelerator=SimpleNamespace(device=torch.device('cpu')),
+        add_callback=lambda callback: None, set_initial_training_values=lambda *args: (1,),
+        optimizer=optimizer,
+        # ms-swift 4.5 creates this through the unbound HF create_scheduler.
+        lr_scheduler=get_inverse_sqrt_schedule(optimizer, num_warmup_steps=500),
+        create_scheduler=lambda *args: None,
+        _load_optimizer_and_scheduler=lambda checkpoint: (
+            optimizer.load_state_dict(optimizer_state),
+            trainer.lr_scheduler.load_state_dict(scheduler_state),
+        ),
+    )
+    trainer.args.catalog_sampler_migration = None
+    install_catalog_loader(trainer)
+    trainer._load_optimizer_and_scheduler('checkpoint-8000')
+    assert trainer.lr_scheduler.last_epoch == 8000
+    assert math.isclose(optimizer.param_groups[0]['lr'], 2e-5 / math.sqrt(1.75))
+    optimizer.step()
+    trainer.lr_scheduler.step()
+    assert math.isclose(optimizer.param_groups[0]['lr'], 2e-5 / math.sqrt(1.7501))
 
 
 def test_portable_records_artifact_preserves_segment_refs(catalog_config, tmp_path):

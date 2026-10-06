@@ -62,7 +62,14 @@ def collect_metrics(config):
 def verify(wandb, run, expected, timeout, terminal=None):
     deadline = time.monotonic() + timeout
     while True:
-        remote = wandb.Api().run(f"{run.entity}/{run.project}/{run.id}")
+        try:
+            remote = wandb.Api().run(f"{run.entity}/{run.project}/{run.id}")
+        except wandb.errors.CommError:
+            # A busy W&B service is transient; keep polling until the deadline.
+            if time.monotonic() >= deadline:
+                raise
+            time.sleep(1)
+            continue
         actual = dict(remote.summary)
         # W&B's JSON round trip can change the final bits of a float.
         matched = all(
