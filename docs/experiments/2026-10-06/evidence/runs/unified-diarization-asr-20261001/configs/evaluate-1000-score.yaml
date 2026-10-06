@@ -1,0 +1,76 @@
+version: 1
+runtime:
+  python:
+    path: /ai_sds_wuzz/MODELS/miniconda3/envs/amphionft/bin/python
+  cwd:
+    path: ../../..
+  pythonpath:
+  - path: ../../../src
+  - path: ../../qwen3-asr-sot-speaker-events-20260922/dependencies/audio-data-contract/src
+  gpus:
+  - 0
+  - 1
+  threads:
+    omp: 4
+    openblas: 1
+  environment:
+    TOKENIZERS_PARALLELISM: false
+    HF_HUB_OFFLINE: '1'
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: eval
+  backend: vllm
+  script:
+    path: ../scripts/evaluate.py
+  accepts_config: true
+  arguments: {}
+parameters:
+  output:
+    path: '{attempt}/artifacts/evaluation'
+  reference_plan:
+    path: ../../qwen3-asr-sot-speaker-events-20260922/vllm-full-audio-checkpoint-21000-20260927/plan.json
+  reference_clips:
+    path: ../../qwen3-asr-sot-speaker-events-20260922/vllm-full-audio-checkpoint-21000-20260927/clips.jsonl
+  scoring_helpers:
+    path: ../../qwen3-asr-sot-speaker-events-20260922/statistical-moss-comparison-500-20260922/score.py
+  scoring_python:
+    path: /ai_sds_wuzz/MODELS/miniconda3/envs/sats-asr/bin/python
+  data_config:
+    path: ../shared/data/unified-train.yaml
+  gpu_memory_utilization: 0.8
+  single_speaker_prompt: Transcribe the single speaker. Output [S1] followed by the
+    transcription.
+  models:
+    unified:
+      path: ../tasks/train/attempts/003/artifacts/training/checkpoint-1000
+    initial:
+      path: ../../qwen3-asr-sot-speaker-events-20260922/initial-checkpoint
+  cached_predictions:
+    mixed:
+      path: ../../clean-events-ab-20260928/tasks/07-evaluate/attempts/001/artifacts/treatment/predictions.jsonl
+  completed_inference:
+    path: /222042021/mingdong/workspace/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/evaluate-1000/attempts/001/artifacts/evaluation
+recording:
+  attempts_dir:
+    path: ../tasks/evaluate-1000/attempts
+  result:
+    path: '{attempt}/artifacts/evaluation/summary.json'
+tracking:
+  pythonpath:
+  - path: ../../../src
+  enabled: true
+  python:
+    path: ../../wandb-sync-env/bin/python
+  credentials_file:
+    path: ~/.bashrc
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: unified-diarization-asr-1000-eval
+  interval: 5
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file:
+      path: '{attempt}/artifacts/evaluation/summary.json'
+    prefix: evaluate

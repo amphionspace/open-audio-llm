@@ -1,0 +1,610 @@
+{
+  "execution": "completed",
+  "quality": "未核实",
+  "started": "2026-10-04T16:30:01.701649+00:00",
+  "config_file": "/222042021/mingdong/workspace/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/local-training/attempts/002/artifacts/training/retention-evaluations/checkpoint-500/evaluation.yaml",
+  "attempt": "/222042021/mingdong/workspace/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/local-training/attempts/002/artifacts/training/retention-evaluations/checkpoint-500/attempts/001",
+  "command": [
+    "/ai_sds_wuzz/MODELS/miniconda3/envs/amphionft/bin/python",
+    "/222042021/mingdong/workspace/open-audio-llm/runs/unified-diarization-asr-20261001/scripts/evaluate.py",
+    "--config",
+    "/222042021/mingdong/workspace/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/local-training/attempts/002/artifacts/training/retention-evaluations/checkpoint-500/attempts/001/effective.yaml"
+  ],
+  "history": [],
+  "pid": 55404,
+  "process_exit_code": 0,
+  "result": {
+    "backend": "vllm",
+    "training_step": 500,
+    "primary_candidate": "latest",
+    "samples": 338,
+    "diarization": {
+      "by_candidate": {
+        "latest": {
+          "aishell4": {
+            "samples": 200,
+            "meetings": 20,
+            "reference_characters": 19131,
+            "cp_errors": 3608,
+            "cpCER": 0.1885944278919032,
+            "timed_scored_pairs": 200,
+            "timed_reference_characters": 19131,
+            "timed_coverage": 1.0,
+            "own_timed_parse_failures": 0,
+            "format_valid_rate": 0.88,
+            "speaker_count_accuracy": 0.785,
+            "hit_token_limit_count": 0,
+            "tcp_errors_5s": 3664,
+            "tcpCER_5s": 0.19152161413412785,
+            "tcp_errors_1s": 5255,
+            "tcpCER_1s": 0.2746850661230464
+          },
+          "alimeeting": {
+            "samples": 138,
+            "meetings": 8,
+            "reference_characters": 81086,
+            "cp_errors": 18351,
+            "cpCER": 0.22631527020694078,
+            "timed_scored_pairs": 138,
+            "timed_reference_characters": 81086,
+            "timed_coverage": 1.0,
+            "own_timed_parse_failures": 0,
+            "format_valid_rate": 0.7101449275362319,
+            "speaker_count_accuracy": 0.8985507246376812,
+            "hit_token_limit_count": 0,
+            "tcp_errors_5s": 18680,
+            "tcpCER_5s": 0.23037269072342945,
+            "tcp_errors_1s": 33883,
+            "tcpCER_1s": 0.4178649828577066
+          }
+        },
+        "unified": {
+          "aishell4": {
+            "samples": 200,
+            "meetings": 20,
+            "reference_characters": 19131,
+            "cp_errors": 3583,
+            "cpCER": 0.18728764831948147,
+            "timed_scored_pairs": 200,
+            "timed_reference_characters": 19131,
+            "timed_coverage": 1.0,
+            "own_timed_parse_failures": 0,
+            "format_valid_rate": 0.85,
+            "speaker_count_accuracy": 0.775,
+            "hit_token_limit_count": 0,
+            "tcp_errors_5s": 3641,
+            "tcpCER_5s": 0.19031937692749987,
+            "tcp_errors_1s": 5500,
+            "tcpCER_1s": 0.2874915059327793
+          },
+          "alimeeting": {
+            "samples": 138,
+            "meetings": 8,
+            "reference_characters": 81086,
+            "cp_errors": 19571,
+            "cpCER": 0.24136102409787139,
+            "timed_scored_pairs": 137,
+            "timed_reference_characters": 80198,
+            "timed_coverage": 0.9927536231884058,
+            "own_timed_parse_failures": 1,
+            "format_valid_rate": 0.6884057971014492,
+            "speaker_count_accuracy": 0.8840579710144928,
+            "hit_token_limit_count": 2,
+            "tcp_errors_5s": 19338,
+            "tcpCER_5s": 0.2411282076859772,
+            "tcp_errors_1s": 34047,
+            "tcpCER_1s": 0.42453677149056085
+          }
+        }
+      },
+      "comparisons": {
+        "latest_vs_unified": {
+          "cpCER": {
+            "paired_samples": 338,
+            "full_set": true,
+            "statistics": {
+              "aishell4": {
+                "qwen": 0.1885944278919032,
+                "moss": 0.18728764831948147,
+                "qwen_ci95": [
+                  0.15277371377246746,
+                  0.22256896789029576
+                ],
+                "moss_ci95": [
+                  0.15148831358104586,
+                  0.22191045870351
+                ],
+                "difference_qwen_minus_moss": 0.001306779572421729,
+                "difference_ci95": [
+                  -0.003418369837773768,
+                  0.006898709278420361
+                ],
+                "paired_meeting_permutation_p_two_sided": 0.6649433505664943,
+                "ci_excludes_zero": false,
+                "significant_at_005": false
+              },
+              "alimeeting": {
+                "qwen": 0.22631527020694078,
+                "moss": 0.24136102409787139,
+                "qwen_ci95": [
+                  0.15097643789627607,
+                  0.29253067293177615
+                ],
+                "moss_ci95": [
+                  0.15055448410278735,
+                  0.3231685148960807
+                ],
+                "difference_qwen_minus_moss": -0.015045753890930602,
+                "difference_ci95": [
+                  -0.03351470417722052,
+                  0.006692065122783003
+                ],
+                "paired_meeting_permutation_p_two_sided": 0.24143758562414375,
+                "ci_excludes_zero": false,
+                "significant_at_005": false
+              },
+              "equal_weight_corpus_macro": {
+                "qwen": 0.207454849049422,
+                "moss": 0.2143243362086764,
+                "qwen_ci95": [
+                  0.16553895364424093,
+                  0.24511651352126257
+                ],
+                "moss_ci95": [
+                  0.16557143819328146,
+                  0.2590849275885056
+                ],
+                "difference_qwen_minus_moss": -0.006869487159254423,
+                "difference_ci95": [
+                  -0.016484595262883834,
+                  0.00432137645403143
+                ],
+                "paired_meeting_permutation_p_two_sided": 0.3020069799302007,
+                "ci_excludes_zero": false,
+                "significant_at_005": false
+              }
+            }
+          },
+          "tcpCER_5s": {
+            "paired_samples": 337,
+            "full_set": false,
+            "statistics": {
+              "aishell4": {
+                "qwen": 0.19152161413412785,
+                "moss": 0.19031937692749987,
+                "qwen_ci95": [
+                  0.15467520910670823,
+                  0.22731088219621892
+                ],
+                "moss_ci95": [
+                  0.15328712152795504,
+                  0.22665870056440648
+                ],
+                "difference_qwen_minus_moss": 0.0012022372066279874,
+                "difference_ci95": [
+                  -0.003622030215097697,
+                  0.006919783206749599
+                ],
+                "paired_meeting_permutation_p_two_sided": 0.7003029969700303,
+                "ci_excludes_zero": false,
+                "significant_at_005": false
+              },
+              "alimeeting": {
+                "qwen": 0.22938227885982193,
+                "moss": 0.2411282076859772,
+                "qwen_ci95": [
+                  0.15361098566178333,
+                  0.2971226259048499
+                ],
+                "moss_ci95": [
+                  0.15356938073394497,
+                  0.32183488951014866
+                ],
+                "difference_qwen_minus_moss": -0.011745928826155272,
+                "difference_ci95": [
+                  -0.03030097153339223,
+                  0.007156468031301499
+                ],
+                "paired_meeting_permutation_p_two_sided": 0.33577664223357767,
+                "ci_excludes_zero": false,
+                "significant_at_005": false
+              },
+              "equal_weight_corpus_macro": {
+                "qwen": 0.2104519464969749,
+                "moss": 0.21572379230673855,
+                "qwen_ci95": [
+                  0.16801461390210032,
+                  0.24909093316069272
+                ],
+                "moss_ci95": [
+                  0.16769184594186962,
+                  0.2606101119446451
+                ],
+                "difference_qwen_minus_moss": -0.005271845809763642,
+                "difference_ci95": [
+                  -0.014952706689022838,
+                  0.0045992960148824235
+                ],
+                "paired_meeting_permutation_p_two_sided": 0.37921620783792165,
+                "ci_excludes_zero": false,
+                "significant_at_005": false
+              }
+            }
+          },
+          "tcpCER_1s": {
+            "paired_samples": 337,
+            "full_set": false,
+            "statistics": {
+              "aishell4": {
+                "qwen": 0.2746850661230464,
+                "moss": 0.2874915059327793,
+                "qwen_ci95": [
+                  0.23759384663186414,
+                  0.31049098372074635
+                ],
+                "moss_ci95": [
+                  0.2523898179462535,
+                  0.32174718694146887
+                ],
+                "difference_qwen_minus_moss": -0.012806439809732895,
+                "difference_ci95": [
+                  -0.03224670355541629,
+                  0.0034423083868984163
+                ],
+                "paired_meeting_permutation_p_two_sided": 0.18716812831871682,
+                "ci_excludes_zero": false,
+                "significant_at_005": false
+              },
+              "alimeeting": {
+                "qwen": 0.4134267687473503,
+                "moss": 0.42453677149056085,
+                "qwen_ci95": [
+                  0.25007482001088804,
+                  0.5430234733517482
+                ],
+                "moss_ci95": [
+                  0.24611242742115572,
+                  0.5717895483761863
+                ],
+                "difference_qwen_minus_moss": -0.011110002743210556,
+                "difference_ci95": [
+                  -0.07405673078048725,
+                  0.03730784802051257
+                ],
+                "paired_meeting_permutation_p_two_sided": 0.8370416295837042,
+                "ci_excludes_zero": false,
+                "significant_at_005": false
+              },
+              "equal_weight_corpus_macro": {
+                "qwen": 0.34405591743519837,
+                "moss": 0.3560141387116701,
+                "qwen_ci95": [
+                  0.2607903434396819,
+                  0.4113353709692182
+                ],
+                "moss_ci95": [
+                  0.2645421370527184,
+                  0.4322147242189153
+                ],
+                "difference_qwen_minus_moss": -0.011958221276471726,
+                "difference_ci95": [
+                  -0.04483986638723763,
+                  0.01423194310796134
+                ],
+                "paired_meeting_permutation_p_two_sided": 0.5479145208547914,
+                "ci_excludes_zero": false,
+                "significant_at_005": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "asr_regression": {
+      "latest": {
+        "aishell/plain": {
+          "samples": 16,
+          "metric": "CER",
+          "errors": 1,
+          "reference_units": 256,
+          "error_rate": 0.00390625,
+          "token_limit_hits": 0
+        },
+        "aishell/diarization": {
+          "samples": 16,
+          "metric": "CER",
+          "errors": 1,
+          "reference_units": 256,
+          "error_rate": 0.00390625,
+          "token_limit_hits": 0
+        },
+        "kespeech/plain": {
+          "samples": 16,
+          "metric": "CER",
+          "errors": 26,
+          "reference_units": 244,
+          "error_rate": 0.10655737704918032,
+          "token_limit_hits": 0
+        },
+        "kespeech/diarization": {
+          "samples": 16,
+          "metric": "CER",
+          "errors": 26,
+          "reference_units": 244,
+          "error_rate": 0.10655737704918032,
+          "token_limit_hits": 0
+        },
+        "librispeech/plain": {
+          "samples": 16,
+          "metric": "WER",
+          "errors": 10,
+          "reference_units": 355,
+          "error_rate": 0.028169014084507043,
+          "token_limit_hits": 0
+        },
+        "librispeech/diarization": {
+          "samples": 16,
+          "metric": "WER",
+          "errors": 9,
+          "reference_units": 355,
+          "error_rate": 0.02535211267605634,
+          "token_limit_hits": 0
+        }
+      },
+      "unified": {
+        "aishell/plain": {
+          "samples": 16,
+          "metric": "CER",
+          "errors": 1,
+          "reference_units": 256,
+          "error_rate": 0.00390625,
+          "token_limit_hits": 0
+        },
+        "aishell/diarization": {
+          "samples": 16,
+          "metric": "CER",
+          "errors": 1,
+          "reference_units": 256,
+          "error_rate": 0.00390625,
+          "token_limit_hits": 0
+        },
+        "kespeech/plain": {
+          "samples": 16,
+          "metric": "CER",
+          "errors": 26,
+          "reference_units": 244,
+          "error_rate": 0.10655737704918032,
+          "token_limit_hits": 0
+        },
+        "kespeech/diarization": {
+          "samples": 16,
+          "metric": "CER",
+          "errors": 26,
+          "reference_units": 244,
+          "error_rate": 0.10655737704918032,
+          "token_limit_hits": 0
+        },
+        "librispeech/plain": {
+          "samples": 16,
+          "metric": "WER",
+          "errors": 10,
+          "reference_units": 355,
+          "error_rate": 0.028169014084507043,
+          "token_limit_hits": 0
+        },
+        "librispeech/diarization": {
+          "samples": 16,
+          "metric": "WER",
+          "errors": 10,
+          "reference_units": 355,
+          "error_rate": 0.028169014084507043,
+          "token_limit_hits": 0
+        }
+      }
+    },
+    "limitations": [
+      "Fixed development set; per-comparison statistics do not adjust for repeated checkpoint looks.",
+      "ASR regression has 16 fixed examples per source; it is a small regression check.",
+      "ASR error rates remove speaker/timestamp markup; raw model outputs are retained."
+    ]
+  },
+  "ended": "2026-10-04T16:41:11.342018+00:00",
+  "exit_code": 0,
+  "tracking": {
+    "url": "https://wandb.ai/1016097967-amphion/open-audio-llm/runs/unified-diarization-local-lora-eval-step-500-001",
+    "state": "finished",
+    "verified_metrics": {
+      "launcher/started": 1,
+      "launcher/attempt": "/222042021/mingdong/workspace/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/local-training/attempts/002/artifacts/training/retention-evaluations/checkpoint-500/attempts/001",
+      "evaluation/training_step": 500,
+      "evaluation/samples": 338,
+      "evaluation/diarization/by_candidate/latest/aishell4/samples": 200,
+      "evaluation/diarization/by_candidate/latest/aishell4/meetings": 20,
+      "evaluation/diarization/by_candidate/latest/aishell4/reference_characters": 19131,
+      "evaluation/diarization/by_candidate/latest/aishell4/cp_errors": 3608,
+      "evaluation/diarization/by_candidate/latest/aishell4/cpCER": 0.1885944278919032,
+      "evaluation/diarization/by_candidate/latest/aishell4/timed_scored_pairs": 200,
+      "evaluation/diarization/by_candidate/latest/aishell4/timed_reference_characters": 19131,
+      "evaluation/diarization/by_candidate/latest/aishell4/timed_coverage": 1.0,
+      "evaluation/diarization/by_candidate/latest/aishell4/own_timed_parse_failures": 0,
+      "evaluation/diarization/by_candidate/latest/aishell4/format_valid_rate": 0.88,
+      "evaluation/diarization/by_candidate/latest/aishell4/speaker_count_accuracy": 0.785,
+      "evaluation/diarization/by_candidate/latest/aishell4/hit_token_limit_count": 0,
+      "evaluation/diarization/by_candidate/latest/aishell4/tcp_errors_5s": 3664,
+      "evaluation/diarization/by_candidate/latest/aishell4/tcpCER_5s": 0.19152161413412785,
+      "evaluation/diarization/by_candidate/latest/aishell4/tcp_errors_1s": 5255,
+      "evaluation/diarization/by_candidate/latest/aishell4/tcpCER_1s": 0.2746850661230464,
+      "evaluation/diarization/by_candidate/latest/alimeeting/samples": 138,
+      "evaluation/diarization/by_candidate/latest/alimeeting/meetings": 8,
+      "evaluation/diarization/by_candidate/latest/alimeeting/reference_characters": 81086,
+      "evaluation/diarization/by_candidate/latest/alimeeting/cp_errors": 18351,
+      "evaluation/diarization/by_candidate/latest/alimeeting/cpCER": 0.22631527020694078,
+      "evaluation/diarization/by_candidate/latest/alimeeting/timed_scored_pairs": 138,
+      "evaluation/diarization/by_candidate/latest/alimeeting/timed_reference_characters": 81086,
+      "evaluation/diarization/by_candidate/latest/alimeeting/timed_coverage": 1.0,
+      "evaluation/diarization/by_candidate/latest/alimeeting/own_timed_parse_failures": 0,
+      "evaluation/diarization/by_candidate/latest/alimeeting/format_valid_rate": 0.7101449275362319,
+      "evaluation/diarization/by_candidate/latest/alimeeting/speaker_count_accuracy": 0.8985507246376812,
+      "evaluation/diarization/by_candidate/latest/alimeeting/hit_token_limit_count": 0,
+      "evaluation/diarization/by_candidate/latest/alimeeting/tcp_errors_5s": 18680,
+      "evaluation/diarization/by_candidate/latest/alimeeting/tcpCER_5s": 0.23037269072342945,
+      "evaluation/diarization/by_candidate/latest/alimeeting/tcp_errors_1s": 33883,
+      "evaluation/diarization/by_candidate/latest/alimeeting/tcpCER_1s": 0.4178649828577066,
+      "evaluation/diarization/by_candidate/unified/aishell4/samples": 200,
+      "evaluation/diarization/by_candidate/unified/aishell4/meetings": 20,
+      "evaluation/diarization/by_candidate/unified/aishell4/reference_characters": 19131,
+      "evaluation/diarization/by_candidate/unified/aishell4/cp_errors": 3583,
+      "evaluation/diarization/by_candidate/unified/aishell4/cpCER": 0.18728764831948147,
+      "evaluation/diarization/by_candidate/unified/aishell4/timed_scored_pairs": 200,
+      "evaluation/diarization/by_candidate/unified/aishell4/timed_reference_characters": 19131,
+      "evaluation/diarization/by_candidate/unified/aishell4/timed_coverage": 1.0,
+      "evaluation/diarization/by_candidate/unified/aishell4/own_timed_parse_failures": 0,
+      "evaluation/diarization/by_candidate/unified/aishell4/format_valid_rate": 0.85,
+      "evaluation/diarization/by_candidate/unified/aishell4/speaker_count_accuracy": 0.775,
+      "evaluation/diarization/by_candidate/unified/aishell4/hit_token_limit_count": 0,
+      "evaluation/diarization/by_candidate/unified/aishell4/tcp_errors_5s": 3641,
+      "evaluation/diarization/by_candidate/unified/aishell4/tcpCER_5s": 0.19031937692749987,
+      "evaluation/diarization/by_candidate/unified/aishell4/tcp_errors_1s": 5500,
+      "evaluation/diarization/by_candidate/unified/aishell4/tcpCER_1s": 0.2874915059327793,
+      "evaluation/diarization/by_candidate/unified/alimeeting/samples": 138,
+      "evaluation/diarization/by_candidate/unified/alimeeting/meetings": 8,
+      "evaluation/diarization/by_candidate/unified/alimeeting/reference_characters": 81086,
+      "evaluation/diarization/by_candidate/unified/alimeeting/cp_errors": 19571,
+      "evaluation/diarization/by_candidate/unified/alimeeting/cpCER": 0.24136102409787139,
+      "evaluation/diarization/by_candidate/unified/alimeeting/timed_scored_pairs": 137,
+      "evaluation/diarization/by_candidate/unified/alimeeting/timed_reference_characters": 80198,
+      "evaluation/diarization/by_candidate/unified/alimeeting/timed_coverage": 0.9927536231884058,
+      "evaluation/diarization/by_candidate/unified/alimeeting/own_timed_parse_failures": 1,
+      "evaluation/diarization/by_candidate/unified/alimeeting/format_valid_rate": 0.6884057971014492,
+      "evaluation/diarization/by_candidate/unified/alimeeting/speaker_count_accuracy": 0.8840579710144928,
+      "evaluation/diarization/by_candidate/unified/alimeeting/hit_token_limit_count": 2,
+      "evaluation/diarization/by_candidate/unified/alimeeting/tcp_errors_5s": 19338,
+      "evaluation/diarization/by_candidate/unified/alimeeting/tcpCER_5s": 0.2411282076859772,
+      "evaluation/diarization/by_candidate/unified/alimeeting/tcp_errors_1s": 34047,
+      "evaluation/diarization/by_candidate/unified/alimeeting/tcpCER_1s": 0.42453677149056085,
+      "evaluation/diarization/comparisons/latest_vs_unified/cpCER/paired_samples": 338,
+      "evaluation/diarization/comparisons/latest_vs_unified/cpCER/full_set": true,
+      "evaluation/diarization/comparisons/latest_vs_unified/cpCER/statistics/aishell4/qwen": 0.1885944278919032,
+      "evaluation/diarization/comparisons/latest_vs_unified/cpCER/statistics/aishell4/moss": 0.18728764831948147,
+      "evaluation/diarization/comparisons/latest_vs_unified/cpCER/statistics/aishell4/difference_qwen_minus_moss": 0.001306779572421729,
+      "evaluation/diarization/comparisons/latest_vs_unified/cpCER/statistics/aishell4/paired_meeting_permutation_p_two_sided": 0.6649433505664943,
+      "evaluation/diarization/comparisons/latest_vs_unified/cpCER/statistics/aishell4/ci_excludes_zero": false,
+      "evaluation/diarization/comparisons/latest_vs_unified/cpCER/statistics/aishell4/significant_at_005": false,
+      "evaluation/diarization/comparisons/latest_vs_unified/cpCER/statistics/alimeeting/qwen": 0.22631527020694078,
+      "evaluation/diarization/comparisons/latest_vs_unified/cpCER/statistics/alimeeting/moss": 0.24136102409787139,
+      "evaluation/diarization/comparisons/latest_vs_unified/cpCER/statistics/alimeeting/difference_qwen_minus_moss": -0.015045753890930602,
+      "evaluation/diarization/comparisons/latest_vs_unified/cpCER/statistics/alimeeting/paired_meeting_permutation_p_two_sided": 0.24143758562414375,
+      "evaluation/diarization/comparisons/latest_vs_unified/cpCER/statistics/alimeeting/ci_excludes_zero": false,
+      "evaluation/diarization/comparisons/latest_vs_unified/cpCER/statistics/alimeeting/significant_at_005": false,
+      "evaluation/diarization/comparisons/latest_vs_unified/cpCER/statistics/equal_weight_corpus_macro/qwen": 0.207454849049422,
+      "evaluation/diarization/comparisons/latest_vs_unified/cpCER/statistics/equal_weight_corpus_macro/moss": 0.2143243362086764,
+      "evaluation/diarization/comparisons/latest_vs_unified/cpCER/statistics/equal_weight_corpus_macro/difference_qwen_minus_moss": -0.006869487159254423,
+      "evaluation/diarization/comparisons/latest_vs_unified/cpCER/statistics/equal_weight_corpus_macro/paired_meeting_permutation_p_two_sided": 0.3020069799302007,
+      "evaluation/diarization/comparisons/latest_vs_unified/cpCER/statistics/equal_weight_corpus_macro/ci_excludes_zero": false,
+      "evaluation/diarization/comparisons/latest_vs_unified/cpCER/statistics/equal_weight_corpus_macro/significant_at_005": false,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_5s/paired_samples": 337,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_5s/full_set": false,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_5s/statistics/aishell4/qwen": 0.19152161413412785,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_5s/statistics/aishell4/moss": 0.19031937692749987,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_5s/statistics/aishell4/difference_qwen_minus_moss": 0.0012022372066279874,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_5s/statistics/aishell4/paired_meeting_permutation_p_two_sided": 0.7003029969700303,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_5s/statistics/aishell4/ci_excludes_zero": false,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_5s/statistics/aishell4/significant_at_005": false,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_5s/statistics/alimeeting/qwen": 0.22938227885982193,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_5s/statistics/alimeeting/moss": 0.2411282076859772,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_5s/statistics/alimeeting/difference_qwen_minus_moss": -0.011745928826155272,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_5s/statistics/alimeeting/paired_meeting_permutation_p_two_sided": 0.33577664223357767,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_5s/statistics/alimeeting/ci_excludes_zero": false,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_5s/statistics/alimeeting/significant_at_005": false,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_5s/statistics/equal_weight_corpus_macro/qwen": 0.2104519464969749,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_5s/statistics/equal_weight_corpus_macro/moss": 0.21572379230673855,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_5s/statistics/equal_weight_corpus_macro/difference_qwen_minus_moss": -0.005271845809763642,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_5s/statistics/equal_weight_corpus_macro/paired_meeting_permutation_p_two_sided": 0.37921620783792165,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_5s/statistics/equal_weight_corpus_macro/ci_excludes_zero": false,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_5s/statistics/equal_weight_corpus_macro/significant_at_005": false,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_1s/paired_samples": 337,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_1s/full_set": false,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_1s/statistics/aishell4/qwen": 0.2746850661230464,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_1s/statistics/aishell4/moss": 0.2874915059327793,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_1s/statistics/aishell4/difference_qwen_minus_moss": -0.012806439809732895,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_1s/statistics/aishell4/paired_meeting_permutation_p_two_sided": 0.18716812831871682,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_1s/statistics/aishell4/ci_excludes_zero": false,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_1s/statistics/aishell4/significant_at_005": false,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_1s/statistics/alimeeting/qwen": 0.4134267687473503,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_1s/statistics/alimeeting/moss": 0.42453677149056085,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_1s/statistics/alimeeting/difference_qwen_minus_moss": -0.011110002743210556,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_1s/statistics/alimeeting/paired_meeting_permutation_p_two_sided": 0.8370416295837042,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_1s/statistics/alimeeting/ci_excludes_zero": false,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_1s/statistics/alimeeting/significant_at_005": false,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_1s/statistics/equal_weight_corpus_macro/qwen": 0.34405591743519837,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_1s/statistics/equal_weight_corpus_macro/moss": 0.3560141387116701,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_1s/statistics/equal_weight_corpus_macro/difference_qwen_minus_moss": -0.011958221276471726,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_1s/statistics/equal_weight_corpus_macro/paired_meeting_permutation_p_two_sided": 0.5479145208547914,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_1s/statistics/equal_weight_corpus_macro/ci_excludes_zero": false,
+      "evaluation/diarization/comparisons/latest_vs_unified/tcpCER_1s/statistics/equal_weight_corpus_macro/significant_at_005": false,
+      "evaluation/asr_regression/latest/aishell/plain/samples": 16,
+      "evaluation/asr_regression/latest/aishell/plain/errors": 1,
+      "evaluation/asr_regression/latest/aishell/plain/reference_units": 256,
+      "evaluation/asr_regression/latest/aishell/plain/error_rate": 0.00390625,
+      "evaluation/asr_regression/latest/aishell/plain/token_limit_hits": 0,
+      "evaluation/asr_regression/latest/aishell/diarization/samples": 16,
+      "evaluation/asr_regression/latest/aishell/diarization/errors": 1,
+      "evaluation/asr_regression/latest/aishell/diarization/reference_units": 256,
+      "evaluation/asr_regression/latest/aishell/diarization/error_rate": 0.00390625,
+      "evaluation/asr_regression/latest/aishell/diarization/token_limit_hits": 0,
+      "evaluation/asr_regression/latest/kespeech/plain/samples": 16,
+      "evaluation/asr_regression/latest/kespeech/plain/errors": 26,
+      "evaluation/asr_regression/latest/kespeech/plain/reference_units": 244,
+      "evaluation/asr_regression/latest/kespeech/plain/error_rate": 0.10655737704918032,
+      "evaluation/asr_regression/latest/kespeech/plain/token_limit_hits": 0,
+      "evaluation/asr_regression/latest/kespeech/diarization/samples": 16,
+      "evaluation/asr_regression/latest/kespeech/diarization/errors": 26,
+      "evaluation/asr_regression/latest/kespeech/diarization/reference_units": 244,
+      "evaluation/asr_regression/latest/kespeech/diarization/error_rate": 0.10655737704918032,
+      "evaluation/asr_regression/latest/kespeech/diarization/token_limit_hits": 0,
+      "evaluation/asr_regression/latest/librispeech/plain/samples": 16,
+      "evaluation/asr_regression/latest/librispeech/plain/errors": 10,
+      "evaluation/asr_regression/latest/librispeech/plain/reference_units": 355,
+      "evaluation/asr_regression/latest/librispeech/plain/error_rate": 0.028169014084507043,
+      "evaluation/asr_regression/latest/librispeech/plain/token_limit_hits": 0,
+      "evaluation/asr_regression/latest/librispeech/diarization/samples": 16,
+      "evaluation/asr_regression/latest/librispeech/diarization/errors": 9,
+      "evaluation/asr_regression/latest/librispeech/diarization/reference_units": 355,
+      "evaluation/asr_regression/latest/librispeech/diarization/error_rate": 0.02535211267605634,
+      "evaluation/asr_regression/latest/librispeech/diarization/token_limit_hits": 0,
+      "evaluation/asr_regression/unified/aishell/plain/samples": 16,
+      "evaluation/asr_regression/unified/aishell/plain/errors": 1,
+      "evaluation/asr_regression/unified/aishell/plain/reference_units": 256,
+      "evaluation/asr_regression/unified/aishell/plain/error_rate": 0.00390625,
+      "evaluation/asr_regression/unified/aishell/plain/token_limit_hits": 0,
+      "evaluation/asr_regression/unified/aishell/diarization/samples": 16,
+      "evaluation/asr_regression/unified/aishell/diarization/errors": 1,
+      "evaluation/asr_regression/unified/aishell/diarization/reference_units": 256,
+      "evaluation/asr_regression/unified/aishell/diarization/error_rate": 0.00390625,
+      "evaluation/asr_regression/unified/aishell/diarization/token_limit_hits": 0,
+      "evaluation/asr_regression/unified/kespeech/plain/samples": 16,
+      "evaluation/asr_regression/unified/kespeech/plain/errors": 26,
+      "evaluation/asr_regression/unified/kespeech/plain/reference_units": 244,
+      "evaluation/asr_regression/unified/kespeech/plain/error_rate": 0.10655737704918032,
+      "evaluation/asr_regression/unified/kespeech/plain/token_limit_hits": 0,
+      "evaluation/asr_regression/unified/kespeech/diarization/samples": 16,
+      "evaluation/asr_regression/unified/kespeech/diarization/errors": 26,
+      "evaluation/asr_regression/unified/kespeech/diarization/reference_units": 244,
+      "evaluation/asr_regression/unified/kespeech/diarization/error_rate": 0.10655737704918032,
+      "evaluation/asr_regression/unified/kespeech/diarization/token_limit_hits": 0,
+      "evaluation/asr_regression/unified/librispeech/plain/samples": 16,
+      "evaluation/asr_regression/unified/librispeech/plain/errors": 10,
+      "evaluation/asr_regression/unified/librispeech/plain/reference_units": 355,
+      "evaluation/asr_regression/unified/librispeech/plain/error_rate": 0.028169014084507043,
+      "evaluation/asr_regression/unified/librispeech/plain/token_limit_hits": 0,
+      "evaluation/asr_regression/unified/librispeech/diarization/samples": 16,
+      "evaluation/asr_regression/unified/librispeech/diarization/errors": 10,
+      "evaluation/asr_regression/unified/librispeech/diarization/reference_units": 355,
+      "evaluation/asr_regression/unified/librispeech/diarization/error_rate": 0.028169014084507043,
+      "evaluation/asr_regression/unified/librispeech/diarization/token_limit_hits": 0,
+      "launcher/exit_code": 0,
+      "launcher/metric_events": 2
+    },
+    "verified_unix": 1791132086.4936528
+  }
+}

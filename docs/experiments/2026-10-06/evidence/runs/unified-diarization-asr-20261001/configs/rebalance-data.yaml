@@ -1,0 +1,48 @@
+version: 1
+runtime:
+  python: {path: /ai_sds_wuzz/MODELS/miniconda3/envs/amphionft/bin/python}
+  cwd: {path: ../../..}
+  pythonpath:
+  - {path: ../../../src}
+  - {path: ../../qwen3-asr-sot-speaker-events-20260922/dependencies/audio-data-contract/src}
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/rebalance_data.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  source_data: {path: ../tasks/full-training/attempts/001/data-effective.yaml}
+  output: {path: '{attempt}/artifacts'}
+  world_size: 2
+  batch_size: 8
+  window_samples: 10000
+  # 保留原方案的单人回放 20% 和真实会议 40%，其余用于多人合成。
+  # 单人合成也计入回放；549 条事件数据按合成组内记录数分配。
+  groups:
+    single_speaker:
+      percent: 20
+      selectors:
+      - {dataset_id: aishell, split: '*'}
+      - {dataset_id: kespeech, split: '*'}
+      - {dataset_id: commonvoice_en_clean, split: '*'}
+      - {dataset_id: librispeech, split: '*'}
+      - {dataset_id: sot_multispeaker_zh_en, split: 'train_*_1spk_*'}
+    multi_speaker_synthetic:
+      percent: 40
+      selectors:
+      - {dataset_id: sot_multispeaker_zh_en, split: 'train_*_[2-9]spk_*'}
+      - {dataset_id: sot_speaker_events_treatment_ab, split: '*'}
+    real_meetings:
+      percent: 40
+      selectors:
+      - {dataset_id: aishell4_meeting_sot, split: '*'}
+      - {dataset_id: alimeeting_sdm_meeting_sot, split: '*'}
+recording:
+  attempts_dir: {path: ../tasks/rebalance-data/attempts}
+  result: {path: '{attempt}/artifacts/verification.json'}
+tracking:
+  enabled: false
