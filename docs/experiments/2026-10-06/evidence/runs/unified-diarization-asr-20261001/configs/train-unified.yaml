@@ -1,0 +1,119 @@
+version: 1
+runtime:
+  python:
+    path: /ai_sds_wuzz/MODELS/miniconda3/envs/amphionft/bin/python
+  cwd:
+    path: /222042021/mingdong/workspace/open-audio-llm
+  pythonpath:
+  - path: /222042021/mingdong/workspace/open-audio-llm/src
+  - path: /222042021/mingdong/workspace/open-audio-llm/runs/qwen3-asr-sot-speaker-events-20260922/dependencies/audio-data-contract/src
+  gpus:
+  - 0
+  - 1
+  threads:
+    omp: 2
+    openblas: 1
+  environment:
+    TOKENIZERS_PARALLELISM: false
+    HF_HUB_OFFLINE: '1'
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    PYTHONUNBUFFERED: '1'
+    PYTORCH_ALLOC_CONF: expandable_segments:True
+  distributed:
+    processes: 2
+    port: 29783
+data:
+  config:
+    path: /222042021/mingdong/workspace/open-audio-llm/runs/unified-diarization-asr-20261001/shared/data/unified-train.yaml
+task:
+  kind: train
+  module: open_audio_llm.integrations.ms_swift.train
+  positional:
+  - sft
+  arguments:
+    --model_type: amphion_asr_1.7b
+    --tuner_type: full
+    --lora_rank: 64
+    --lora_alpha: 128
+    --target_modules:
+    - all-linear
+    --freeze_vit: false
+    --freeze_aligner: false
+    --freeze_llm: false
+    --torch_dtype: float32
+    --attn_impl: sdpa
+    --max_length: 16384
+    --per_device_train_batch_size: 8
+    --per_device_eval_batch_size: 1
+    --gradient_accumulation_steps: 4
+    --learning_rate: 1.0e-05
+    --vit_lr: 1.0e-05
+    --aligner_lr: 2.0e-05
+    --max_steps: 1000
+    --lr_scheduler_type: cosine
+    --warmup_ratio: 0.0
+    --warmup_steps: 500
+    --gradient_checkpointing: true
+    --vit_gradient_checkpointing: true
+    --ddp_find_unused_parameters: true
+    --dataloader_num_workers: 4
+    --dataloader_persistent_workers: true
+    --performance_logging: true
+    --save_steps: 500
+    --save_total_limit: 3
+    --logging_steps: 5
+    --report_to: none
+    --seed: 42
+    --audio_encoder_parallel: false
+    --audio_encoder_batching: true
+    --use_logits_to_keep: false
+    --prediction_loss_only: true
+    --optim: adamw_torch_fused
+    --weight_decay: 0.01
+    --max_grad_norm: 1.0
+    --save_only_model: false
+    --bf16: true
+    --fp16: false
+    --ddp_timeout: 300
+    --eval_strategy: 'no'
+    --load_args: false
+    --add_version: false
+    --retention_teacher:
+      path: /ai_sds_wuzz/MODELS/Qwen3-ASR-1.7B/Qwen/Qwen3-ASR-1___7B
+    --callbacks:
+    - sot_training_audit
+    --model:
+      path: /222042021/mingdong/workspace/open-audio-llm/runs/qwen3-asr-sot-speaker-events-20260922/initial-checkpoint
+    --external_plugins:
+    - path: /222042021/mingdong/workspace/open-audio-llm/src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py
+    - path: /222042021/mingdong/workspace/open-audio-llm/runs/unified-diarization-asr-20261001/scripts/training_audit.py
+    --output_dir:
+      path: '{attempt}/artifacts/training'
+preflight:
+- kind: prepare
+  module: open_audio_llm.data.catalog_cache
+  arguments:
+    --data_config:
+      path: /222042021/mingdong/workspace/open-audio-llm/runs/unified-diarization-asr-20261001/shared/data/unified-train.yaml
+    --workers: 4
+    --batch-size: 8
+    --world-size: 2
+    --preflight-report:
+      path: '{attempt}/artifacts/data-preflight.json'
+recording:
+  attempts_dir:
+    path: ../tasks/train/attempts
+tracking:
+  pythonpath:
+  - path: /222042021/mingdong/workspace/open-audio-llm/src
+  enabled: true
+  python:
+    path: /222042021/mingdong/workspace/open-audio-llm/runs/wandb-sync-env/bin/python
+  credentials_file:
+    path: ~/.bashrc
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: unified-diarization-asr-20261001
+  interval: 5
+  startup_timeout: 180
+  finish_timeout: 90

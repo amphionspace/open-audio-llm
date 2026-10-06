@@ -1,0 +1,23 @@
+{
+  "backend": "vllm",
+  "engine_class": "vllm.entrypoints.llm.LLM",
+  "packages": {
+    "vllm": "0.18.0",
+    "torch": "2.10.0",
+    "transformers": "4.57.6",
+    "qwen-asr": "0.0.6"
+  },
+  "encoder_attention": {
+    "scope": "full_clip",
+    "n_window_infer": 13400,
+    "original_n_window_infer": 800,
+    "reason": "Match audio_encoder_batching=true SDPA training full attention per clip, isolating different clips."
+  },
+  "sampling_params": "SamplingParams(n=1, presence_penalty=0.0, frequency_penalty=0.0, repetition_penalty=1.0, temperature=0.0, top_p=1.0, top_k=0, min_p=0.0, seed=42, stop=[], stop_token_ids=[151645, 151643], bad_words=[], include_stop_str_in_output=False, ignore_eos=False, max_tokens=4096, min_tokens=0, logprobs=None, prompt_logprobs=None, skip_special_tokens=True, spaces_between_special_tokens=True, structured_outputs=None, extra_args=None)",
+  "prompt": "Transcribe every utterance from every speaker, including overlapping speech. Output one line per utterance as [S1][0.00-2.50] text, with start and end times in seconds from the beginning of the audio. Sort lines by start time. Keep the same speaker ID across turns; assign IDs by first speech. Use the beginning of the first spoken word and the end of the last spoken word as the utterance boundaries, excluding leading and trailing silence.",
+  "dtype": "torch.bfloat16",
+  "decoder_attention": "AttentionBackendEnum.TRITON_ATTN",
+  "mm_encoder_attention": "AttentionBackendEnum.TRITON_ATTN",
+  "gpu": "NVIDIA GeForce RTX 5090",
+  "cuda": "12.8"
+}

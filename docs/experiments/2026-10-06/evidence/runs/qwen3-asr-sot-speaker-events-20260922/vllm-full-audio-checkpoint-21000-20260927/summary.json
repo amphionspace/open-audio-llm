@@ -1,0 +1,574 @@
+{
+  "latest_step": 21000,
+  "samples": 338,
+  "meetings": 28,
+  "audio_hours": 5.539115989583333,
+  "backend": "vllm",
+  "dtype": "bfloat16",
+  "by_candidate": {
+    "latest": {
+      "alimeeting": {
+        "samples": 138,
+        "meetings": 8,
+        "reference_characters": 81086,
+        "cp_errors": 20916,
+        "cpCER": 0.25794835113336456,
+        "timed_scored_pairs": 137,
+        "timed_reference_characters": 80441,
+        "timed_coverage": 0.9927536231884058,
+        "own_timed_parse_failures": 1,
+        "format_valid_rate": 0.5942028985507246,
+        "speaker_count_accuracy": 0.9202898550724637,
+        "hit_token_limit_count": 1,
+        "tcp_errors_5s": 20270,
+        "tcpCER_5s": 0.251985927574247,
+        "tcp_errors_1s": 33831,
+        "tcpCER_1s": 0.4205691127658781
+      },
+      "aishell4": {
+        "samples": 200,
+        "meetings": 20,
+        "reference_characters": 19131,
+        "cp_errors": 3805,
+        "cpCER": 0.19889185092258638,
+        "timed_scored_pairs": 200,
+        "timed_reference_characters": 19131,
+        "timed_coverage": 1.0,
+        "own_timed_parse_failures": 0,
+        "format_valid_rate": 0.78,
+        "speaker_count_accuracy": 0.785,
+        "hit_token_limit_count": 0,
+        "tcp_errors_5s": 3832,
+        "tcpCER_5s": 0.20030317286080185,
+        "tcp_errors_1s": 5582,
+        "tcpCER_1s": 0.2917777429303225
+      }
+    },
+    "checkpoint7000": {
+      "alimeeting": {
+        "samples": 138,
+        "meetings": 8,
+        "reference_characters": 81086,
+        "cp_errors": 18817,
+        "cpCER": 0.23206225488987,
+        "timed_scored_pairs": 138,
+        "timed_reference_characters": 81086,
+        "timed_coverage": 1.0,
+        "own_timed_parse_failures": 0,
+        "format_valid_rate": 0.7971014492753623,
+        "speaker_count_accuracy": 0.9202898550724637,
+        "hit_token_limit_count": 1,
+        "tcp_errors_5s": 19406,
+        "tcpCER_5s": 0.2393261475470488,
+        "tcp_errors_1s": 37465,
+        "tcpCER_1s": 0.46204030288829145
+      },
+      "aishell4": {
+        "samples": 200,
+        "meetings": 20,
+        "reference_characters": 19131,
+        "cp_errors": 3814,
+        "cpCER": 0.1993622915686582,
+        "timed_scored_pairs": 200,
+        "timed_reference_characters": 19131,
+        "timed_coverage": 1.0,
+        "own_timed_parse_failures": 0,
+        "format_valid_rate": 0.9,
+        "speaker_count_accuracy": 0.775,
+        "hit_token_limit_count": 0,
+        "tcp_errors_5s": 3845,
+        "tcpCER_5s": 0.20098269823846113,
+        "tcp_errors_1s": 5578,
+        "tcpCER_1s": 0.29156865819873506
+      }
+    },
+    "moss_cached": {
+      "alimeeting": {
+        "samples": 138,
+        "meetings": 8,
+        "reference_characters": 81086,
+        "cp_errors": 12695,
+        "cpCER": 0.1565621685617739,
+        "timed_scored_pairs": 138,
+        "timed_reference_characters": 81086,
+        "timed_coverage": 1.0,
+        "own_timed_parse_failures": 0,
+        "format_valid_rate": 0.7753623188405797,
+        "speaker_count_accuracy": 0.8333333333333334,
+        "hit_token_limit_count": 0,
+        "tcp_errors_5s": 12983,
+        "tcpCER_5s": 0.16011395308684606,
+        "tcp_errors_1s": 13794,
+        "tcpCER_1s": 0.17011567964876798
+      },
+      "aishell4": {
+        "samples": 200,
+        "meetings": 20,
+        "reference_characters": 19131,
+        "cp_errors": 2895,
+        "cpCER": 0.15132507448643562,
+        "timed_scored_pairs": 199,
+        "timed_reference_characters": 19010,
+        "timed_coverage": 0.995,
+        "own_timed_parse_failures": 1,
+        "format_valid_rate": 0.965,
+        "speaker_count_accuracy": 0.805,
+        "hit_token_limit_count": 0,
+        "tcp_errors_5s": 2892,
+        "tcpCER_5s": 0.15213045765386637,
+        "tcp_errors_1s": 3315,
+        "tcpCER_1s": 0.17438190426091532
+      }
+    }
+  },
+  "comparisons": {
+    "latest_vs_checkpoint7000": {
+      "cpCER": {
+        "paired_samples": 338,
+        "full_selected_set": true,
+        "paired_samples_by_dataset": {
+          "alimeeting": 138,
+          "aishell4": 200
+        },
+        "statistics": {
+          "alimeeting": {
+            "difference_ci95": [
+              -0.001260960431528707,
+              0.06221218576260545
+            ],
+            "paired_meeting_permutation_p_two_sided": 0.14116858831411686,
+            "ci_excludes_zero": false,
+            "significant_at_005": false,
+            "latest": 0.25794835113336456,
+            "baseline": 0.23206225488987,
+            "latest_ci95": [
+              0.1883699698012501,
+              0.3253921498717444
+            ],
+            "baseline_ci95": [
+              0.1521667316846271,
+              0.3056999579496593
+            ],
+            "difference_latest_minus_baseline": 0.025886096243494555
+          },
+          "aishell4": {
+            "difference_ci95": [
+              -0.01979828762640382,
+              0.02419345438522927
+            ],
+            "paired_meeting_permutation_p_two_sided": 0.979250207497925,
+            "ci_excludes_zero": false,
+            "significant_at_005": false,
+            "latest": 0.19889185092258638,
+            "baseline": 0.1993622915686582,
+            "latest_ci95": [
+              0.15936733520930874,
+              0.2394896042566872
+            ],
+            "baseline_ci95": [
+              0.16153066891895462,
+              0.23949497870422423
+            ],
+            "difference_latest_minus_baseline": -0.00047044064607182356
+          },
+          "equal_weight_corpus_macro": {
+            "difference_ci95": [
+              -0.004812101748972496,
+              0.03428551549555598
+            ],
+            "paired_meeting_permutation_p_two_sided": 0.24653753462465375,
+            "ci_excludes_zero": false,
+            "significant_at_005": false,
+            "latest": 0.22842010102797547,
+            "baseline": 0.21571227322926412,
+            "latest_ci95": [
+              0.18854654134262952,
+              0.2671930658572102
+            ],
+            "baseline_ci95": [
+              0.17173081524368303,
+              0.25703539787663604
+            ],
+            "difference_latest_minus_baseline": 0.012707827798711352
+          }
+        },
+        "excluded_ids": []
+      },
+      "tcpCER_5s": {
+        "paired_samples": 337,
+        "full_selected_set": false,
+        "paired_samples_by_dataset": {
+          "alimeeting": 137,
+          "aishell4": 200
+        },
+        "statistics": {
+          "alimeeting": {
+            "difference_ci95": [
+              -0.00729459033846012,
+              0.03196689989590337
+            ],
+            "paired_meeting_permutation_p_two_sided": 0.3059369406305937,
+            "ci_excludes_zero": false,
+            "significant_at_005": false,
+            "latest": 0.251985927574247,
+            "baseline": 0.24042465906689375,
+            "latest_ci95": [
+              0.17173916215090962,
+              0.32831551000989584
+            ],
+            "baseline_ci95": [
+              0.15783596672435934,
+              0.31452960365541777
+            ],
+            "difference_latest_minus_baseline": 0.011561268507353228
+          },
+          "aishell4": {
+            "difference_ci95": [
+              -0.020449877311298503,
+              0.024582409084883572
+            ],
+            "paired_meeting_permutation_p_two_sided": 0.969290307096929,
+            "ci_excludes_zero": false,
+            "significant_at_005": false,
+            "latest": 0.20030317286080185,
+            "baseline": 0.20098269823846113,
+            "latest_ci95": [
+              0.16026578665251037,
+              0.2415323538756867
+            ],
+            "baseline_ci95": [
+              0.16261092636083582,
+              0.24168171684903197
+            ],
+            "difference_latest_minus_baseline": -0.0006795253776592791
+          },
+          "equal_weight_corpus_macro": {
+            "difference_ci95": [
+              -0.008681882327583355,
+              0.021048124246909165
+            ],
+            "paired_meeting_permutation_p_two_sided": 0.5072949270507295,
+            "ci_excludes_zero": false,
+            "significant_at_005": false,
+            "latest": 0.22614455021752441,
+            "baseline": 0.22070367865267743,
+            "latest_ci95": [
+              0.18116043439338148,
+              0.26872428693436945
+            ],
+            "baseline_ci95": [
+              0.17563345666649427,
+              0.26239845262104794
+            ],
+            "difference_latest_minus_baseline": 0.0054408715648469885
+          }
+        },
+        "excluded_ids": [
+          "alimeeting_sdm-dev_120s-R8009_M8018-00004"
+        ]
+      },
+      "tcpCER_1s": {
+        "paired_samples": 337,
+        "full_selected_set": false,
+        "paired_samples_by_dataset": {
+          "alimeeting": 137,
+          "aishell4": 200
+        },
+        "statistics": {
+          "alimeeting": {
+            "difference_ci95": [
+              -0.10261726330502612,
+              0.013644407958262467
+            ],
+            "paired_meeting_permutation_p_two_sided": 0.24232757672423275,
+            "ci_excludes_zero": false,
+            "significant_at_005": false,
+            "latest": 0.4205691127658781,
+            "baseline": 0.46492460312527195,
+            "latest_ci95": [
+              0.2747738329898756,
+              0.5376288213388759
+            ],
+            "baseline_ci95": [
+              0.29018976382641337,
+              0.5997143560273452
+            ],
+            "difference_latest_minus_baseline": -0.044355490359393845
+          },
+          "aishell4": {
+            "difference_ci95": [
+              -0.028507649194092856,
+              0.03254959473969784
+            ],
+            "paired_meeting_permutation_p_two_sided": 0.992690073099269,
+            "ci_excludes_zero": false,
+            "significant_at_005": false,
+            "latest": 0.2917777429303225,
+            "baseline": 0.29156865819873506,
+            "latest_ci95": [
+              0.2548694914812293,
+              0.33007552742330465
+            ],
+            "baseline_ci95": [
+              0.24565413387081253,
+              0.34030809280651486
+            ],
+            "difference_latest_minus_baseline": 0.0002090847315874278
+          },
+          "equal_weight_corpus_macro": {
+            "difference_ci95": [
+              -0.05440045499336459,
+              0.010807062866824556
+            ],
+            "paired_meeting_permutation_p_two_sided": 0.2685573144268557,
+            "ci_excludes_zero": false,
+            "significant_at_005": false,
+            "latest": 0.3561734278481003,
+            "baseline": 0.3782466306620035,
+            "latest_ci95": [
+              0.2819386005214938,
+              0.41773275491165107
+            ],
+            "baseline_ci95": [
+              0.28761457356282805,
+              0.4509261457539046
+            ],
+            "difference_latest_minus_baseline": -0.02207320281390318
+          }
+        },
+        "excluded_ids": [
+          "alimeeting_sdm-dev_120s-R8009_M8018-00004"
+        ]
+      }
+    },
+    "latest_vs_moss_cached": {
+      "cpCER": {
+        "paired_samples": 338,
+        "full_selected_set": true,
+        "paired_samples_by_dataset": {
+          "alimeeting": 138,
+          "aishell4": 200
+        },
+        "statistics": {
+          "alimeeting": {
+            "difference_ci95": [
+              0.08308646488585222,
+              0.12277612176402221
+            ],
+            "paired_meeting_permutation_p_two_sided": 0.007899921000789992,
+            "ci_excludes_zero": true,
+            "significant_at_005": true,
+            "latest": 0.25794835113336456,
+            "baseline": 0.1565621685617739,
+            "latest_ci95": [
+              0.1883699698012501,
+              0.3253921498717444
+            ],
+            "baseline_ci95": [
+              0.09173608174907735,
+              0.2178368251502205
+            ],
+            "difference_latest_minus_baseline": 0.10138618257159066
+          },
+          "aishell4": {
+            "difference_ci95": [
+              0.020290287628040495,
+              0.0755033920499504
+            ],
+            "paired_meeting_permutation_p_two_sided": 0.0017699823001769983,
+            "ci_excludes_zero": true,
+            "significant_at_005": true,
+            "latest": 0.19889185092258638,
+            "baseline": 0.15132507448643562,
+            "latest_ci95": [
+              0.15936733520930874,
+              0.2394896042566872
+            ],
+            "baseline_ci95": [
+              0.12231038860225045,
+              0.18260919345280438
+            ],
+            "difference_latest_minus_baseline": 0.04756677643615076
+          },
+          "equal_weight_corpus_macro": {
+            "difference_ci95": [
+              0.057946572889238365,
+              0.0918910519295871
+            ],
+            "paired_meeting_permutation_p_two_sided": 1.999980000199998e-05,
+            "ci_excludes_zero": true,
+            "significant_at_005": true,
+            "latest": 0.22842010102797547,
+            "baseline": 0.15394362152410476,
+            "latest_ci95": [
+              0.18854654134262952,
+              0.2671930658572102
+            ],
+            "baseline_ci95": [
+              0.11857229895354546,
+              0.18737017126341587
+            ],
+            "difference_latest_minus_baseline": 0.07447647950387071
+          }
+        },
+        "excluded_ids": []
+      },
+      "tcpCER_5s": {
+        "paired_samples": 336,
+        "full_selected_set": false,
+        "paired_samples_by_dataset": {
+          "alimeeting": 137,
+          "aishell4": 199
+        },
+        "statistics": {
+          "alimeeting": {
+            "difference_ci95": [
+              0.07076552664404025,
+              0.10924714092359655
+            ],
+            "paired_meeting_permutation_p_two_sided": 0.007899921000789992,
+            "ci_excludes_zero": true,
+            "significant_at_005": true,
+            "latest": 0.251985927574247,
+            "baseline": 0.1607762210812894,
+            "latest_ci95": [
+              0.17173916215090962,
+              0.32831551000989584
+            ],
+            "baseline_ci95": [
+              0.0931330762465327,
+              0.22407110808814498
+            ],
+            "difference_latest_minus_baseline": 0.09120970649295759
+          },
+          "aishell4": {
+            "difference_ci95": [
+              0.0203519160819066,
+              0.07646133212742359
+            ],
+            "paired_meeting_permutation_p_two_sided": 0.001879981200187998,
+            "ci_excludes_zero": true,
+            "significant_at_005": true,
+            "latest": 0.20021041557075223,
+            "baseline": 0.15213045765386637,
+            "latest_ci95": [
+              0.15969502459852472,
+              0.24171916218578307
+            ],
+            "baseline_ci95": [
+              0.1229162135147154,
+              0.183123567568792
+            ],
+            "difference_latest_minus_baseline": 0.04807995791688585
+          },
+          "equal_weight_corpus_macro": {
+            "difference_ci95": [
+              0.05236425533866366,
+              0.0863600152749226
+            ],
+            "paired_meeting_permutation_p_two_sided": 1.999980000199998e-05,
+            "ci_excludes_zero": true,
+            "significant_at_005": true,
+            "latest": 0.22609817157249962,
+            "baseline": 0.15645333936757788,
+            "latest_ci95": [
+              0.1808397174011848,
+              0.2688802801042073
+            ],
+            "baseline_ci95": [
+              0.11971193880272683,
+              0.19078827463318732
+            ],
+            "difference_latest_minus_baseline": 0.06964483220492174
+          }
+        },
+        "excluded_ids": [
+          "aishell4-L_R004S02C01-0079",
+          "alimeeting_sdm-dev_120s-R8009_M8018-00004"
+        ]
+      },
+      "tcpCER_1s": {
+        "paired_samples": 336,
+        "full_selected_set": false,
+        "paired_samples_by_dataset": {
+          "alimeeting": 137,
+          "aishell4": 199
+        },
+        "statistics": {
+          "alimeeting": {
+            "difference_ci95": [
+              0.16466643642433665,
+              0.3163007928941239
+            ],
+            "paired_meeting_permutation_p_two_sided": 0.007899921000789992,
+            "ci_excludes_zero": true,
+            "significant_at_005": true,
+            "latest": 0.4205691127658781,
+            "baseline": 0.17085814447856193,
+            "latest_ci95": [
+              0.2747738329898756,
+              0.5376288213388759
+            ],
+            "baseline_ci95": [
+              0.10066513492017888,
+              0.23629541931131687
+            ],
+            "difference_latest_minus_baseline": 0.24971096828731618
+          },
+          "aishell4": {
+            "difference_ci95": [
+              0.09060818466666741,
+              0.14616500890794257
+            ],
+            "paired_meeting_permutation_p_two_sided": 9.99990000099999e-06,
+            "ci_excludes_zero": true,
+            "significant_at_005": true,
+            "latest": 0.29226722777485536,
+            "baseline": 0.17438190426091532,
+            "latest_ci95": [
+              0.25494340098227175,
+              0.33046574404148915
+            ],
+            "baseline_ci95": [
+              0.13980801909216375,
+              0.2120851314741235
+            ],
+            "difference_latest_minus_baseline": 0.11788532351394004
+          },
+          "equal_weight_corpus_macro": {
+            "difference_ci95": [
+              0.13957631382557467,
+              0.21984880669079918
+            ],
+            "paired_meeting_permutation_p_two_sided": 9.99990000099999e-06,
+            "ci_excludes_zero": true,
+            "significant_at_005": true,
+            "latest": 0.3564181702703667,
+            "baseline": 0.1726200243697386,
+            "latest_ci95": [
+              0.28232577181972823,
+              0.4181712335511209
+            ],
+            "baseline_ci95": [
+              0.1332801994703225,
+              0.2097459352259168
+            ],
+            "difference_latest_minus_baseline": 0.1837981459006281
+          }
+        },
+        "excluded_ids": [
+          "aishell4-L_R004S02C01-0079",
+          "alimeeting_sdm-dev_120s-R8009_M8018-00004"
+        ]
+      }
+    }
+  },
+  "encoder_attention": {
+    "scope": "full_clip",
+    "n_window_infer": 13400,
+    "original_n_window_infer": 800,
+    "reason": "Match audio_encoder_batching=true SDPA training full attention per clip, isolating different clips."
+  },
+  "previous_moss_runtime": "Reuse original FP32 Transformers outputs on identical audio; historical reference, different runtime from current vLLM BF16.",
+  "timed_failure_policy": "Keep all outputs and score cpCER from all raw lexical content. If timed parsing cannot represent all words, mark tcpCER unavailable and report paired coverage; do not claim a full-set significant tcpCER difference from a successful subset."
+}
