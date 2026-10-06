@@ -4,8 +4,12 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
+
+# --json transfer results and symlink-safe state directories first shipped in 0.5.0.
+MIN_AB_VERSION = (0, 5, 0)
 
 # Trainer/DeepSpeed state needed only to resume optimisation, not to use the weights.
 RESUME_STATE_FILES = {"optimizer.pt", "scheduler.pt", "scaler.pt", "latest", "zero_to_fp32.py"}
@@ -38,6 +42,30 @@ def regular_files(path):
         not os.path.islink(os.path.join(root, name))
         for root, _, names in os.walk(path) for name in names
     )
+
+
+def preflight_problems(storage, local):
+    """Problems that would make every transfer of this task fail, checked before it starts."""
+    executable = storage["executable"]
+    if not (os.path.isfile(executable) and os.access(executable, os.X_OK)):
+        return [f"AmphionBucket ab is not executable: {executable}"]
+    problems = []
+    try:
+        remote_path(local, storage)
+    except ValueError as exc:
+        problems.append(str(exc))
+    code, version = run([executable, "--version"], timeout=60)
+    found = re.search(r"(\d+)\.(\d+)\.(\d+)", version)
+    if code != 0 or not found or tuple(map(int, found.groups())) < MIN_AB_VERSION:
+        wanted = ".".join(map(str, MIN_AB_VERSION))
+        return problems + [f"AmphionBucket >= {wanted} is required; found {version.strip()!r}"]
+    bucket = storage["remote"].split(":", 1)[0]
+    code, listed = run([executable, "--json", "credentials"], timeout=60)
+    sources = {row.get("bucket"): row.get("source") for row in json_lines(listed)}
+    if code != 0 or sources.get(bucket) in (None, "missing"):
+        found = sources.get(bucket, tail(listed, 5) if code else "not configured")
+        problems.append(f"ab has no bucket {bucket} with credentials (credential source: {found})")
+    return problems
 
 
 class StorageError(RuntimeError):

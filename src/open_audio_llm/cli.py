@@ -18,7 +18,7 @@ from pathlib import Path
 import yaml
 
 from .run_config import absolute, child_environment, command, load_config, preview
-from .storage import StorageError, pull, push, remote_path
+from .storage import StorageError, preflight_problems, pull, push, remote_path
 
 
 def now():
@@ -241,6 +241,11 @@ def execute(config, attempt):
     storage = config.get("storage")
     restored = []
     try:
+        if storage:
+            # Fail before training rather than at the first checkpoint upload.
+            problems = preflight_problems(storage, attempt)
+            if problems:
+                raise ValueError("Object storage is unusable: " + "; ".join(problems))
         for target in (storage or {}).get("restore", []):
             if not Path(target).exists():
                 # Restored inputs are a task-scoped copy; object storage stays authoritative.

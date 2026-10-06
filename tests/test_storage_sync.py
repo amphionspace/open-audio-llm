@@ -24,6 +24,9 @@ if mode == "no-json" and "--json" in args:
     print("ab: error: unrecognized arguments: --json")
     raise SystemExit(2)
 args = [arg for arg in args if arg != "--json"]
+if args[0] == "--version":
+    print("AmphionBucket " + ("0.4.0" if mode == "old-ab" else "0.5.0"))
+    raise SystemExit(0)
 def target(spec):
     return bucket / spec.split(":", 1)[1]
 def result(status, source, destination, error=None):
@@ -283,3 +286,18 @@ def test_readme_shows_the_delivered_checkpoint_location(tmp_path):
     status = json.loads((attempt / "status.json").read_text())
     assert status["checkpoint_handoff"]["checkpoint_remote"] == "whai:open-audio-llm/runs/train/checkpoint-30"
     assert "交付 checkpoint（final，step 30）：`whai:open-audio-llm/runs/train/checkpoint-30`" in (attempt / "README.md").read_text()
+
+
+@pytest.mark.parametrize("mode, message", [
+    ("old-ab", "AmphionBucket >= 0.5.0 is required"),
+    ("no-credentials", "ab has no bucket whai with credentials"),
+])
+def test_task_refuses_to_start_without_usable_storage(tmp_path, monkeypatch, mode, message):
+    storage, _ = fake_storage(tmp_path)
+    monkeypatch.setenv("FAKE_AB_FAIL", mode)
+    path = recipe(tmp_path, storage)
+    assert main(["prepare", "--config", str(path)]) == 1
+    attempt = tmp_path / "runs/prepare/attempts/001"
+    status = json.loads((attempt / "status.json").read_text())
+    assert message in status["error"]
+    assert not (attempt / "artifacts/seen.txt").exists()
