@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
 from pathlib import Path
 
-# `ab push` prints this summary; it is the only machine-readable transfer result.
-SUMMARY = re.compile(r"结果: 完成 (\d+)，跳过 (\d+)，预览 (\d+)，冲突 (\d+)，失败 (\d+)")
+# --json transfer results and symlink-safe state directories first shipped in 0.5.0.
+MIN_AB_VERSION = (0, 5, 0)
 
 # Trainer/DeepSpeed state needed only to resume optimisation, not to use the weights.
 RESUME_STATE_FILES = {"optimizer.pt", "scheduler.pt", "scaler.pt", "latest", "zero_to_fp32.py"}
@@ -43,6 +44,30 @@ def regular_files(path):
     )
 
 
+def preflight_problems(storage, local):
+    """Problems that would make every transfer of this task fail, checked before it starts."""
+    executable = storage["executable"]
+    if not (os.path.isfile(executable) and os.access(executable, os.X_OK)):
+        return [f"AmphionBucket ab is not executable: {executable}"]
+    problems = []
+    try:
+        remote_path(local, storage)
+    except ValueError as exc:
+        problems.append(str(exc))
+    code, version = run([executable, "--version"], timeout=60)
+    found = re.search(r"(\d+)\.(\d+)\.(\d+)", version)
+    if code != 0 or not found or tuple(map(int, found.groups())) < MIN_AB_VERSION:
+        wanted = ".".join(map(str, MIN_AB_VERSION))
+        return problems + [f"AmphionBucket >= {wanted} is required; found {version.strip()!r}"]
+    bucket = storage["remote"].split(":", 1)[0]
+    code, listed = run([executable, "--json", "credentials"], timeout=60)
+    sources = {row.get("bucket"): row.get("source") for row in json_lines(listed)}
+    if code != 0 or sources.get(bucket) in (None, "missing"):
+        found = sources.get(bucket, tail(listed, 5) if code else "not configured")
+        problems.append(f"ab has no bucket {bucket} with credentials (credential source: {found})")
+    return problems
+
+
 class StorageError(RuntimeError):
     """A failed transfer together with the diagnosed cause."""
 
@@ -63,7 +88,26 @@ def tail(output, lines=20):
     return "\n".join(output.splitlines()[-lines:])
 
 
-def diagnose(storage, remote, output, local=None, summary=None, expected=None, pulling=False):
+def json_lines(output):
+    """`ab --json` results; progress and notices on the same streams are plain text."""
+    rows = []
+    for line in output.splitlines():
+        if line.startswith("{"):
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError:
+                pass
+    return rows
+
+
+def transfer(cmd):
+    code, output = run(cmd)
+    rows = json_lines(output)
+    summary = next((row for row in reversed(rows) if "summary" in row), None)
+    return code, output, [row for row in rows if "op" in row], summary
+
+
+def diagnose(storage, remote, output, local=None, items=(), summary=None, expected=None, pulling=False):
     """Find why a transfer failed, checking the cheapest decisive cause first."""
     def problem(cause, detail, evidence=output):
         return {"cause": cause, "detail": detail, "remote": remote, "evidence": tail(evidence)}
@@ -73,19 +117,33 @@ def diagnose(storage, remote, output, local=None, summary=None, expected=None, p
         return problem("local-missing", f"本地路径不存在：{local}")
     if not (os.path.isfile(executable) and os.access(executable, os.X_OK)):
         return problem("ab-missing", f"找不到可执行的 AmphionBucket：{executable}；需安装 ab 或修正 storage.executable")
-    code, remotes = run([executable, "remotes"], timeout=60)
+    code, remotes = run([executable, "--json", "remotes"], timeout=60)
     if code != 0:
+        if "--json" in remotes:
+            return problem("ab-no-json", "ab 不支持 --json 结果输出；需要 AmphionBucket 0.5.0 及以上", remotes)
         return problem("ab-unusable", "ab remotes 无法运行", remotes)
     bucket = remote.split(":", 1)[0]
-    if bucket not in {line.split("\t", 1)[0] for line in remotes.splitlines()[1:]}:
+    if bucket not in {row.get("bucket") for row in json_lines(remotes)}:
         return problem("bucket-not-configured", f"本机 ab 未配置桶 {bucket}；需安装含该桶配置的 ab 版本", remotes)
+    code, credentials = run([executable, "--json", "credentials"], timeout=60)
+    entry = next((row for row in json_lines(credentials) if row.get("bucket") == bucket), {})
+    if entry.get("source") == "missing":
+        profile = entry.get("profile", "")
+        return problem(
+            "credentials-missing",
+            f"桶 {bucket} 没有凭证：在 ~/.config/amphion-bucket/credentials.ini 的 [{profile}] 节"
+            f"或 AMPHION_BUCKET_{profile.upper()}_ACCESS_KEY/SECRET_KEY 中配置",
+            credentials,
+        )
     if summary:
-        done, skipped, _, conflicts, failed = summary
-        if conflicts:
-            lines = [line for line in output.splitlines() if line.startswith("冲突")]
-            return problem("remote-conflict", f"{conflicts} 个远端文件已存在且内容不同；未覆盖", "\n".join(lines) or output)
-        if not failed and done + skipped != expected:
-            return problem("unconfirmed-files", f"ab 只确认了 {done + skipped}/{expected} 个文件（符号链接会被跳过）")
+        counts = summary["summary"]
+        if counts.get("conflict"):
+            lines = [f"{row.get('target')}: {row.get('error', '')}" for row in items if row.get("status") == "conflict"]
+            return problem("remote-conflict", f"{counts['conflict']} 个远端文件已存在且内容不同；未覆盖",
+                           "\n".join(lines) or output)
+        confirmed = counts.get("done", 0) + counts.get("skipped", 0)
+        if not counts.get("failed") and "error" not in summary and confirmed != expected:
+            return problem("unconfirmed-files", f"ab 只确认了 {confirmed}/{expected} 个文件（符号链接会被跳过）")
     # Listing a missing prefix succeeds empty, so this separates access from absence.
     prefix = remote.split(":", 1)[1].rstrip("/") if pulling else remote.split(":", 1)[1].rstrip("/").rsplit("/", 1)[0]
     code, listing = run([executable, "ls", f"{bucket}:{prefix}/" if prefix else f"{bucket}:"], timeout=120)
@@ -95,11 +153,9 @@ def diagnose(storage, remote, output, local=None, summary=None, expected=None, p
         return problem("remote-missing", f"远端没有 {remote}；该文件可能从未上传成功")
     if summary is None:
         return problem("unrecognized-output", "ab 退出或输出与预期不符，无法确认传输结果")
-    # `ab` reports failures as "失败: <local> <-> <remote>: <reason>".
-    reasons = sorted({
-        line.split(" <-> ", 1)[1].split(": ", 1)[-1]
-        for line in output.splitlines() if line.startswith("失败: ") and " <-> " in line
-    })
+    reasons = sorted({row["error"] for row in items if row.get("status") == "failed" and row.get("error")})
+    if summary.get("error"):
+        reasons.append(summary["error"])
     return problem("transfer-failed", "桶可访问，但 ab 传输失败：" + ("；".join(reasons) or "未给出原因"))
 
 
@@ -108,22 +164,24 @@ def push(source, destination, storage, overwrite=False):
     source = Path(source)
     if source.is_dir():
         destination = destination.rstrip("/") + "/"
-    cmd = [storage["executable"], "push", str(source), destination]
+    cmd = [storage["executable"], "--json", "push", str(source), destination]
     if overwrite:
         cmd.append("--overwrite")
-    code, output = run(cmd)
-    match = SUMMARY.search(output)
-    summary = tuple(map(int, match.groups())) if match else None
+    code, output, items, summary = transfer(cmd)
     expected = regular_files(source)
-    if code == 0 and summary and not any(summary[3:]) and summary[0] + summary[1] == expected:
-        return {"source": str(source), "destination": destination, "uploaded": summary[0], "unchanged": summary[1]}
-    raise StorageError(diagnose(storage, destination, output, source, summary, expected))
+    counts = summary["summary"] if summary else {}
+    if (code == 0 and summary and "error" not in summary and not counts.get("conflict")
+            and not counts.get("failed") and counts.get("done", 0) + counts.get("skipped", 0) == expected):
+        return {"source": str(source), "destination": destination,
+                "uploaded": counts["done"], "unchanged": counts["skipped"]}
+    raise StorageError(diagnose(storage, destination, output, source, items, summary, expected))
 
 
 def pull(source, destination, storage):
-    code, output = run([storage["executable"], "pull", source.rstrip("/") + "/", str(destination)])
+    code, output, items, summary = transfer(
+        [storage["executable"], "--json", "pull", source.rstrip("/") + "/", str(destination)])
     if code != 0:
-        raise StorageError(diagnose(storage, source, output, pulling=True))
+        raise StorageError(diagnose(storage, source, output, items=items, summary=summary, pulling=True))
 
 
 def is_resume_state(path):
