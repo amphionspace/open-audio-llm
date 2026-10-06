@@ -1,9 +1,10 @@
 version: 1
 runtime:
-  # Interpreter of the AmphionEval environment: pip install -e '../amphion-eval[legacy-http,tracking]'.
+  # AmphionEval environment installed from requirements-eval.txt.
   python: python
   cwd: {path: ../../..}
-  pythonpath: [{path: ../../../src}]
+  # Empty on purpose: the evaluator must not import open-audio-llm.
+  pythonpath: []
   gpus: []
 task:
   kind: prepare

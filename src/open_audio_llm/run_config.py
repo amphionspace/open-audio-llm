@@ -141,6 +141,10 @@ def load_config(path, attempt=None):
         from .storage import check
 
         check(config["storage"])
+    evaluation = config.get("evaluation")
+    if evaluation is not None:
+        if task["kind"] != "train" or not evaluation.get("python") or not evaluation.get("config"):
+            raise ValueError("evaluation needs python and config on a train task")
     config["config_file"] = str(path)
     return config
 
@@ -241,6 +245,12 @@ def command(config, effective_file=None):
     data = config.get("data", {})
     if data.get("config"):
         options["--data_config"] = data["config"]
+    if config.get("evaluation") and task["kind"] == "train":
+        # Written by the launcher's pre-training AmphionEval check.
+        options["--amphion_eval_check"] = (
+            str(Path(effective_file).parent / "amphion-eval-check.json")
+            if effective_file else "<attempt>/amphion-eval-check.json"
+        )
     storage = config.get("storage")
     if storage and task["kind"] == "train":
         options["--storage_sync"] = {

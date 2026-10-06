@@ -70,6 +70,7 @@ class CatalogSftArguments(CatalogArgumentsMixin, SftArguments):
     checkpoint_handoff: str | None = None
     checkpoint_selection: str = "final"
     storage_sync: str | None = None
+    amphion_eval_check: str | None = None
 
 
 @dataclass
@@ -186,6 +187,7 @@ class CatalogTrainingMixin:
                 handoff, selection=self.args.checkpoint_selection,
                 base_model=self.args.model, tuner_type=self.args.tuner_type,
                 uploads=uploads,
+                amphion_eval_check=getattr(self.args, 'amphion_eval_check', None),
             ))
         restore_audio = None
         if getattr(self.args, "audio_encoder_batching", False):

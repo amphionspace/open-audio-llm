@@ -7,13 +7,12 @@ from pathlib import Path
 
 from transformers import TrainerCallback
 
-# Bump when a field changes meaning or is removed; consumers reject unknown versions.
-# v2: `checkpoint` may be removed locally once `checkpoint_remote` confirms the upload.
-HANDOFF_SCHEMA_VERSION = 2
+from open_audio_llm.handoff import HANDOFF_SCHEMA_VERSION
 
 
 class CheckpointHandoffCallback(TrainerCallback):
-    def __init__(self, path, *, base_model, tuner_type, selection="final", uploads=None):
+    def __init__(self, path, *, base_model, tuner_type, selection="final", uploads=None,
+                 amphion_eval_check=None):
         if selection not in {"final", "best"}:
             raise ValueError("Checkpoint selection must be final or best")
         self.path = Path(path).expanduser().resolve()
@@ -21,6 +20,8 @@ class CheckpointHandoffCallback(TrainerCallback):
         self.base_model = str(base_model)
         self.tuner_type = tuner_type
         self.uploads = uploads
+        # The launcher's pre-training `ae open-audio-llm check` report, if any.
+        self.amphion_eval_check = Path(amphion_eval_check) if amphion_eval_check else None
         self.saved_checkpoint = None
         self.saved_step = None
 
@@ -47,6 +48,10 @@ class CheckpointHandoffCallback(TrainerCallback):
             "global_step": state.global_step, "base_model": self.base_model,
             "tuner_type": self.tuner_type,
             "wandb_run_id": os.environ.get("WANDB_RUN_ID"),
+            "amphion_eval_version": (
+                json.loads(self.amphion_eval_check.read_text())["amphion_eval_version"]
+                if self.amphion_eval_check else None
+            ),
         }
         self.path.parent.mkdir(parents=True, exist_ok=True)
         temporary = self.path.with_suffix(".tmp")
