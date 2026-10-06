@@ -53,7 +53,7 @@ task:
     --dataloader_persistent_workers: true
     --performance_logging: true
     --save_steps: 500
-    --save_total_limit: 3
+    # 训练内评测暂停期间保留全部 checkpoint，评测点（每 2000 步）在训练外补评。
     --logging_steps: 5
     --report_to: none
     --seed: 42
@@ -77,7 +77,8 @@ task:
     - resume_training_audit
     # 2026-10-06 从对象存储下载，SHA256 与 docs/experiments/2026-10-06/weights.json 一致。
     --model: {path: /workspace/model/unified-diarization-20261001/unified-base-checkpoint-1000}
-    --resume_from_checkpoint: {path: /workspace/model/unified-diarization-20261001/lora-002-checkpoint-8000}
+    # 执行 004 从 LoRA 002/checkpoint-8000（2 卡）续训到 10000；005 起在同一 8 卡配置上续训。
+    --resume_from_checkpoint: {path: ../tasks/local-training/attempts/004/artifacts/training/checkpoint-10000}
     --external_plugins:
     - {path: ../../../src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py}
     - {path: ../scripts/resume_training_audit.py}
@@ -85,21 +86,14 @@ task:
     --continuous_training: true
     # 保留 checkpoint 中的调度器与数据游标；重置会把学习率退回 warmup 起点。
     --reset_catalog_sampler: false
-    # 2 卡游标 128000/卡 = 全局 256000 条，换算为 8 卡各 32000 条。
-    # 新路径映射回原机路径后重算的签名必须等于 checkpoint 签名，证明记录与配方未变。
-    --catalog_sampler_migration:
-      world_size: 2
-      previous_paths:
-        "/workspace/workspace/mingdong/repo/open-audio-llm/runs/clean-events-ab-20260928/tasks/06-train-treatment/attempts/001/artifacts/catalog.jsonl": "/222042021/mingdong/workspace/open-audio-llm/runs/clean-events-ab-20260928/tasks/06-train-treatment/attempts/001/artifacts/catalog.jsonl"
-        "/workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/localize-data/attempts/004/artifacts/roots.json": "/222042021/mingdong/workspace/open-audio-llm/runs/unified-diarization-asr-20261001/shared/data/roots.json"
-        "/workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/rebalance-data/attempts/001/artifacts/verification.json": "/222042021/mingdong/workspace/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/rebalance-data/attempts/001/artifacts/verification.json"
-        "/workspace/data/migration/unified-diarization-20261001-transfer/source-alignments.sqlite": "/222042021/mingdong/workspace/open-audio-llm/runs/sot-timestamps-recovery-20260920/recovered/source-alignments.sqlite"
+    # 执行 004 用 --catalog_sampler_migration 把 2 卡游标换算为 8 卡（见 attempts/004/effective.yaml）；
+    # 005 起卡数与路径不变，直接恢复 checkpoint 中的游标。
     --lr_scheduler_kwargs:
       timescale: 10000
     --gradient_checkpointing_kwargs:
       use_reentrant: false
-    --retention_eval_script: {path: ../scripts/local_checkpoint_eval.py}
-    --retention_eval_interval: 2000
+    # 用户 2026-10-06 要求先保证训练连续：固定集打分依赖（原机 score helper）补齐前不在训练中评测，
+    # 每 2000 步 checkpoint 保留并在训练外用 evaluate-a800 补评。
 preflight:
 - kind: prepare
   module: open_audio_llm.data.catalog_cache
