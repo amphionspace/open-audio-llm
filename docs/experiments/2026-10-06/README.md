@@ -88,7 +88,7 @@ Qwen 官方输出解析会压缩长重复后再计分；主 cpCER 是同口径�
 
 ![训练 loss、学习率与固定集 cpCER](trajectories/overview.png)
 
-[轨迹索引](trajectories/index.json)记录每个 CSV 对应的原日志路径、SHA256、记录行数及最后一步。CSV 保存全部已记录的 loss、CE、学习率、梯度范数和 epoch；不补造未记录的 step。图中 LoRA loss 使用最近 100 个日志点的均值，全参历史 loss 使用 1000 步区间均值；CSV 和原始 JSONL 保留未平滑值。不同执行的步数和数据分布独立，曲线不拼接成一次连续训练。
+[轨迹索引](trajectories/index.json)记录每个 CSV 对应的原日志路径、SHA256、记录行数及最后一步。CSV 保留每个日志点的 loss、`ce_sot`、学习率、梯度范数和 epoch；其他字段（如 `ce_asr`、`replay_kl`）保存在归档的原始 JSONL 中，不补造未记录的 step。图中 LoRA loss 使用最近 100 个日志点的均值，全参历史 loss 使用 1000 步区间均值；CSV 和原始 JSONL 保留未平滑值。不同执行的步数和数据分布独立，曲线不拼接成一次连续训练。
 
 - [LoRA 002](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/unified-diarization-local-lora-002)：历史核验记录到 global_step=8000、远端状态 failed。
 - [LoRA 001](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/unified-diarization-local-lora-001)：错误调度执行，已停止。
