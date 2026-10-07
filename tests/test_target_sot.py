@@ -167,7 +167,7 @@ def test_catalog_online_crops_budget_and_frozen_evaluation(record, tmp_path, cac
     from io import BytesIO
 
     import soundfile as sf
-    from audio_data_contract import ArtifactRef, DatasetSpec, write_records
+    from audio_data_contract import ArtifactRef, DatasetSpec, Split, write_records
 
     from open_audio_llm.data.catalog_dataset import CatalogSwiftDataset
     from open_audio_llm.data.catalog_sampler import CatalogBatchSampler
@@ -187,7 +187,7 @@ def test_catalog_online_crops_budget_and_frozen_evaluation(record, tmp_path, cac
             tasks=("speaker_attributed_asr",), artifacts=(
                 ArtifactRef("audio", "audio-index", "data", f"{dataset_id}.jsonl"),
                 ArtifactRef("records", "audio-records", "data", "records.jsonl")),
-            splits={"train": {"records_artifact": "records", "audio_index_artifact": "audio"}}))
+            splits={"train": Split({"records": ("records",), "audio_index": ("audio",)})}))
     write_records([record], tmp_path / "records.jsonl")
     (tmp_path / "catalog.jsonl").write_text("\n".join(json.dumps(s.to_dict()) for s in specs))
     (tmp_path / "roots.json").write_text(json.dumps({"data": str(tmp_path)}))

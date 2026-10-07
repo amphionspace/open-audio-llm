@@ -6,7 +6,7 @@ from dataclasses import replace
 import numpy as np
 import pytest
 import soundfile as sf
-from audio_data_contract import ArtifactRef, AudioRecord, AudioRef, AudioSlot, DatasetSpec, write_records
+from audio_data_contract import ArtifactRef, AudioRecord, AudioRef, AudioSlot, DatasetSpec, Split, write_records
 
 from open_audio_llm.data.catalog_dataset import CatalogSwiftDataset
 from open_audio_llm.data.qwen3_asr import native_messages
@@ -160,7 +160,7 @@ def test_catalog_timed_audio_stays_in_sync_and_cache_tracks_alignment(tmp_path, 
     spec = DatasetSpec(dataset_id='sot', version='v1', languages=('en',), tasks=('speaker_attributed_asr',),
         artifacts=(ArtifactRef('records', 'audio-records', 'data', 'records.jsonl.gz'),
                    ArtifactRef('audio', 'audio-index', 'data', 'audio.jsonl')),
-        splits={'train': {'records_artifact': 'records', 'audio_index_artifact': 'audio'}})
+        splits={'train': Split({'records': ('records',), 'audio_index': ('audio',)})})
     (tmp_path / 'catalog.jsonl').write_text(json.dumps(spec.to_dict()) + '\n')
     (tmp_path / 'roots.json').write_text(json.dumps({'data': str(tmp_path)}))
     source = dict(dataset_id='sot', version='v1', split='train', sot_timestamps=True,
