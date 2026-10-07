@@ -1,0 +1,122 @@
+# 新一轮 SFT：以 LoRA 8 卡执行 005 / checkpoint-25500 合并后的模型为基座，新建 LoRA、优化器、
+# 学习率调度和数据游标。方案 B：每卡每批最多 4 条、不做梯度累积（8 卡每次更新 8–32 条；
+# loss 按全局样本数归一，每条样本权重不变）。数据版本、配比和其余训练参数与 train-local.yaml 相同。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath:
+  - {path: ../../../src}
+  - {path: /workspace/data/audio-data-contract/src}
+  gpus: [0, 1, 2, 3, 4, 5, 6, 7]
+  threads: {omp: 2, openblas: 1}
+  environment:
+    TOKENIZERS_PARALLELISM: false
+    HF_HUB_OFFLINE: '1'
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    PYTHONUNBUFFERED: '1'
+    PYTORCH_ALLOC_CONF: expandable_segments:True
+  distributed:
+    processes: 8
+    port: 29785
+data:
+  config: {path: ../shared/data/local-balanced-train-b4.yaml}
+task:
+  kind: train
+  module: open_audio_llm.integrations.ms_swift.train
+  positional:
+  - sft
+  arguments:
+    --model_type: amphion_asr_1.7b
+    --tuner_type: lora
+    --lora_rank: 32
+    --lora_alpha: 64
+    --target_modules:
+    - all-linear
+    --freeze_vit: true
+    --freeze_aligner: true
+    --freeze_llm: false
+    --torch_dtype: bfloat16
+    --attn_impl: sdpa
+    --max_length: 16384
+    --per_device_train_batch_size: 4
+    --per_device_eval_batch_size: 1
+    --gradient_accumulation_steps: 1
+    --learning_rate: 2.0e-05
+    --max_steps: -1
+    --lr_scheduler_type: inverse_sqrt
+    --warmup_ratio: 0.0
+    --warmup_steps: 500
+    --gradient_checkpointing: true
+    --vit_gradient_checkpointing: true
+    --ddp_find_unused_parameters: true
+    --dataloader_num_workers: 4
+    --dataloader_persistent_workers: true
+    --performance_logging: true
+    --save_steps: 500
+    --save_total_limit: 3
+    --logging_steps: 5
+    --report_to: none
+    --seed: 42
+    --audio_encoder_parallel: false
+    --audio_encoder_batching: true
+    --use_logits_to_keep: false
+    --prediction_loss_only: true
+    --optim: adamw_torch_fused
+    --weight_decay: 0.01
+    --max_grad_norm: 1.0
+    --save_only_model: false
+    --bf16: true
+    --fp16: false
+    --ddp_timeout: 7200
+    --eval_strategy: 'no'
+    --load_args: false
+    # 跳过 ms-swift 对本地 checkpoint 的 ModelScope 版本查询（本机 CA 链不可用，仅拖慢启动）。
+    --check_model: false
+    --add_version: false
+    --callbacks:
+    - local_training_audit
+    --model: {path: ../tasks/merge-25500/attempts/001/artifacts/merged-model}
+    --external_plugins:
+    - {path: ../../../src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py}
+    - {path: ../scripts/local_training_audit.py}
+    --output_dir: {path: '{attempt}/artifacts/training'}
+    --continuous_training: true
+    --lr_scheduler_kwargs:
+      timescale: 10000
+    --gradient_checkpointing_kwargs:
+      use_reentrant: false
+    --retention_eval_script: {path: ../scripts/local_checkpoint_eval.py}
+    --retention_eval_interval: 2000
+preflight:
+- kind: prepare
+  module: open_audio_llm.data.catalog_cache
+  arguments:
+    --data_config: {path: ../shared/data/local-balanced-train-b4.yaml}
+    --workers: 4
+    --batch-size: 4
+    --world-size: 8
+    --preflight-report: {path: '{attempt}/artifacts/data-preflight.json'}
+recording:
+  attempts_dir: {path: ../tasks/sft-25500/attempts}
+tracking:
+  pythonpath:
+  - {path: ../../../src}
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: ~/.config/open-audio-llm/wandb-env.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: unified-diarization-sft-25500
+  interval: 5
+  startup_timeout: 180
+  finish_timeout: 300
+parameters:
+  checkpoint_evaluation:
+    template: {path: evaluate-a800.yaml}
+    # A800 80GB 上与 8 个训练进程共存；同机基线与各 checkpoint 使用同一设置。
+    gpu_memory_utilization: 0.4
+    run_name: unified-diarization-sft-25500-eval
+    # 同机基线：本机 evaluate-a800 中新基座（checkpoint-25500 合并）的输出。
+    baseline_predictions: {path: ../tasks/evaluate-a800/attempts/001/artifacts/evaluation/step25500/predictions.jsonl}
+    baseline_asr_predictions: {path: ../tasks/evaluate-a800/attempts/001/artifacts/evaluation/step25500/asr-predictions.jsonl}

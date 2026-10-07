@@ -9,8 +9,8 @@ import runpy
 from rapidfuzz.distance import Levenshtein
 import yaml
 
-from open_audio_llm.eval.qwen3_asr import normalize
 from open_audio_llm.data.qwen3_asr import native_language
+from asr_normalize import normalize
 
 
 def read_rows(path):

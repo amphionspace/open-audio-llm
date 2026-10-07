@@ -49,3 +49,11 @@ tasks:
   name: 本机 A800 同机基线与 4000/8000 步固定集 vLLM 评测
   config: configs/evaluate-a800.yaml
   depends_on: [localize-data, merge-8000]
+- id: merge-25500
+  name: 合并 LoRA 8 卡执行 005 / checkpoint-25500 作为新 SFT 基座
+  config: configs/merge-25500.yaml
+  depends_on: []
+- id: sft-25500
+  name: 以 checkpoint-25500 合并模型为基座的新一轮 LoRA SFT（每卡 4 条、不累积）
+  config: configs/train-sft-25500.yaml
+  depends_on: [merge-25500, evaluate-a800]

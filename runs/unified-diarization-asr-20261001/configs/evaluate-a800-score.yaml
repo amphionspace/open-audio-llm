@@ -1,3 +1,4 @@
+# evaluate-a800 执行 001 推理已完成但打分导入失败；本配置复用其推理输出只重新打分。
 # 本机 8×A800 固定集评测，同时作为训练中 checkpoint 评测的模板（local_checkpoint_eval.py
 # 只覆盖模型、输出、GPU 和记录名）。推理协议沿用 evaluate-71000.yaml：vLLM 0.18.0、BF16、
 # TRITON_ATTN、完整音频 attention、temperature 0、seed 42、4096 token。
@@ -45,6 +46,7 @@ parameters:
     step4000: {path: /workspace/model/unified-diarization-20261001/lora-002-step4000-merged}
     step8000: {path: ../tasks/merge-8000/attempts/001/artifacts/merged-model}
     step25500: {path: ../tasks/merge-25500/attempts/001/artifacts/merged-model}
+  completed_inference: {path: ../tasks/evaluate-a800/attempts/001/artifacts/evaluation}
   cached_predictions: {}
   cached_asr_predictions: {}
 recording:
