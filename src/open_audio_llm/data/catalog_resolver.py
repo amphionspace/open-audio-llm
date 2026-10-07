@@ -6,7 +6,13 @@ import gzip
 import json
 from pathlib import Path
 
-from audio_data_contract import AudioRef, load_catalog, load_roots, resolve_artifact
+from audio_data_contract import (
+    AudioRef,
+    load_catalog,
+    load_roots,
+    resolve_artifact,
+    resolve_split,
+)
 from lhotse import (
     AudioSource,
     CutSet,
@@ -50,19 +56,11 @@ class LhotseCatalogAudioResolver:
     def iter_cuts(self, dataset_id: str, version: str, split_name: str):
         """Read a Catalog split without decoding audio or writing WAV files."""
         spec = self.catalog.get(dataset_id, version)
-        split = spec.splits[split_name]
 
-        def paths(kind):
-            names = split.get(f"{kind}_artifacts")
-            if names is None:
-                name = split.get(f"{kind}_artifact")
-                names = [name] if name else []
-            return [
-                resolve_artifact(
-                    self.catalog, spec.dataset_id, spec.version, name, self.roots
-                )
-                for name in names
-            ]
+        def paths(role):
+            return resolve_split(
+                self.catalog, spec.dataset_id, spec.version, split_name, role, self.roots
+            )
 
         cut_paths = paths("cuts")
         if cut_paths:
@@ -71,22 +69,6 @@ class LhotseCatalogAudioResolver:
             )
         recording_paths = paths("recordings")
         supervision_paths = paths("supervisions")
-        if "manifest_dir_artifact" in split:
-            directory = resolve_artifact(
-                self.catalog,
-                spec.dataset_id,
-                spec.version,
-                split["manifest_dir_artifact"],
-                self.roots,
-            )
-            prefix = split["manifest_prefix"]
-            source_split = split.get("source_split", split_name)
-            recording_paths = [
-                directory / f"{prefix}_recordings_{source_split}.jsonl.gz"
-            ]
-            supervision_paths = [
-                directory / f"{prefix}_supervisions_{source_split}.jsonl.gz"
-            ]
         if recording_paths:
             recordings = RecordingSet.from_recordings(
                 rec for path in recording_paths for rec in load_manifest_lazy(path)
@@ -109,7 +91,8 @@ class LhotseCatalogAudioResolver:
 
     def get_cut(self, ref: AudioRef):
         spec = self.catalog.get(ref.dataset_id, ref.version)
-        index_name = spec.splits[ref.split].get("audio_index_artifact")
+        index_names = spec.splits[ref.split].artifacts.get("audio_index", ())
+        index_name = index_names[0] if index_names else None
         if index_name:
             row = self._index_row(ref, index_name)
             root = self.roots[row["root_alias"]]
@@ -141,7 +124,8 @@ class LhotseCatalogAudioResolver:
     def get_duration(self, ref: AudioRef):
         """Read indexed duration without resolving an audio path or building a cut."""
         spec = self.catalog.get(ref.dataset_id, ref.version)
-        index_name = spec.splits[ref.split].get("audio_index_artifact")
+        index_names = spec.splits[ref.split].artifacts.get("audio_index", ())
+        index_name = index_names[0] if index_names else None
         if not index_name:
             return self.get_cut(ref).duration
         index = self._get_index(ref, index_name)

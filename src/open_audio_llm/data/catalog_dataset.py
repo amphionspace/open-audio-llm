@@ -16,7 +16,7 @@ from audio_data_contract import (
     AudioRef,
     AudioSlot,
     load_records,
-    resolve_artifact,
+    resolve_split,
 )
 
 from .augment import AugmentConfig, augment_waveform
@@ -202,11 +202,14 @@ class CatalogSwiftDataset(OnlineAudioDataset):
     def _source_records(self, source):
         spec = self.resolver.catalog.get(source["dataset_id"], source["version"])
         split_name = source["split"]
-        split = spec.splits[split_name]
+        record_paths = resolve_split(
+            self.resolver.catalog, spec.dataset_id, spec.version, split_name,
+            "records", self.resolver.roots,
+        )
         single_speaker = source.get("single_speaker_format", False)
         if type(single_speaker) is not bool:
             raise ValueError("single_speaker_format must be a boolean")
-        if "records_artifact" in split or "records_artifacts" in split:
+        if record_paths:
             if single_speaker:
                 raise ValueError(
                     "single_speaker_format requires Lhotse supervision speaker IDs "
@@ -214,14 +217,10 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                 )
             if source.get("exclude_speakers"):
                 raise ValueError("exclude_speakers requires Lhotse supervision speaker IDs")
-            names = split.get("records_artifacts") or [split["records_artifact"]]
             rows = (
                 ResolvedAudioRecord(record)
-                for name in names
-                for record in load_records(resolve_artifact(
-                    self.resolver.catalog, spec.dataset_id, spec.version,
-                    name, self.resolver.roots,
-                ))
+                for path in record_paths
+                for record in load_records(path)
             )
             if source.get("require_clean_pass"):
                 # Portable records must attest the entire example, including
