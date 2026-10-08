@@ -76,10 +76,12 @@ def container_command(config, attempt):
     """The job's startup script: load AmphionKeys, then run this attempt."""
     runtime, cluster = config["runtime"], config["cluster"]
     credentials = Path(cluster["credentials"])
+    # sco's --env rejects more than one variable, so the startup script sets them.
+    environment = [f"{k}={v}" for k, v in cluster.get("environment", {}).items()]
+    if runtime.get("pythonpath"):
+        environment.append(f"PYTHONPATH={os.pathsep.join(runtime['pythonpath'])}")
     launcher = [
-        str(credentials.parent / "load.sh"), credentials.stem, "--",
-        "env", *([f"PYTHONPATH={os.pathsep.join(runtime['pythonpath'])}"]
-                 if runtime.get("pythonpath") else []),
+        str(credentials.parent / "load.sh"), credentials.stem, "--", "env", *environment,
         runtime["python"], "-m", "open_audio_llm.cli", "cluster", "run",
         "--attempt", str(attempt),
     ]
@@ -88,7 +90,6 @@ def container_command(config, attempt):
 
 def submit_command(config, attempt):
     cluster = config["cluster"]
-    environment = ",".join(f"{k}={v}" for k, v in cluster.get("environment", {}).items())
     return [
         str(Path(cluster["sco_home"]) / "bin/sco"), "acp", "jobs", "create",
         f"--workspace-name={cluster['workspace']}",
@@ -101,7 +102,6 @@ def submit_command(config, attempt):
         f"--priority={cluster.get('priority', 'NORMAL')}",
         f"--quota-type={cluster.get('quota_type', 'reserved')}",
         f"--storage-mount={','.join(cluster['mounts'])}",
-        *([f"--env={environment}"] if environment else []),
         *(["--wait"] if cluster.get("wait", True) else []),
         f"--command={container_command(config, attempt)}",
     ]

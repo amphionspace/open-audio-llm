@@ -1,0 +1,12 @@
+version: 1
+name: acp-2node-sft-smoke-20261008
+purpose: 在 SenseCore ACP 算力池上用 2 节点 × 8 卡跑 Qwen3-ASR-1.7B 小步数 LoRA SFT，验证多机 torchrun、W&B 记录与 checkpoint 上传 whai
+policy:
+  evaluation_backend: not-applicable
+  human_review_required: false
+  steps: 30
+tasks:
+- id: train
+  name: 2 节点 LoRA 冒烟训练
+  config: configs/train.yaml
+  depends_on: []

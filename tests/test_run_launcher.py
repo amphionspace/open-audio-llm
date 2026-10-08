@@ -490,10 +490,10 @@ def test_cluster_train_submits_job_and_records_it(tmp_path):
     args = (tmp_path / "sco/args").read_text().splitlines()
     assert args[:3] == ["acp", "jobs", "create"]
     assert "--worker-nodes=2" in args and "--wait" in args
-    assert "--env=NCCL_IB_TIMEOUT=22" in args
     assert f"--storage-mount=volume-id:{tmp_path},env-volume:" in "\n".join(args)
     startup = next(a for a in args if a.startswith("--command="))
-    assert "sensecore --" in startup and f"--attempt {attempt}" in startup
+    assert "sensecore -- env NCCL_IB_TIMEOUT=22 PYTHONPATH=" in startup
+    assert f"--attempt {attempt}" in startup
     # The secret reaches sco through its environment, never its arguments.
     assert (tmp_path / "sco/keys").read_text().split() == ["ak-test", "sk-test"]
     assert "sk-test" not in "".join(args)
