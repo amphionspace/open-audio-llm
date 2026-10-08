@@ -1,0 +1,73 @@
+  - schema_version: dataset-catalog/2.0
+    dataset_id: aishell
+    version: legacy-20260804
+    languages:
+      - zh
+    tasks:
+      - asr
+    aliases: []
+    artifacts:
+      - name: train_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/aishell/versions/legacy-20260804/train_rec_0/aishell_recordings_train.jsonl.gz
+      - name: train_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/aishell/versions/legacy-20260804/train_sup_0/aishell_supervisions_train.jsonl.gz
+      - name: dev_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/aishell/versions/legacy-20260804/dev_rec_0/aishell_recordings_dev.jsonl.gz
+      - name: dev_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/aishell/versions/legacy-20260804/dev_sup_0/aishell_supervisions_dev.jsonl.gz
+      - name: test_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/aishell/versions/legacy-20260804/test_rec_0/aishell_recordings_test.jsonl.gz
+      - name: test_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/aishell/versions/legacy-20260804/test_sup_0/aishell_supervisions_test.jsonl.gz
+    splits:
+      train:
+        artifacts:
+          recordings:
+            - train_rec_0
+          supervisions:
+            - train_sup_0
+        statistics:
+          duration_hours: 150.8520156076389
+          duration_basis: 'sum of supervisions durations; overlapping segments may count speech more than once; sources: legacy_asr:LHOTSE/data_aishell/data/manifests/aishell_supervisions_train.jsonl.gz'
+      dev:
+        artifacts:
+          recordings:
+            - dev_rec_0
+          supervisions:
+            - dev_sup_0
+        statistics:
+          duration_hours: 18.089178784722222
+          duration_basis: 'sum of supervisions durations; overlapping segments may count speech more than once; sources: legacy_asr:LHOTSE/data_aishell/data/manifests/aishell_supervisions_dev.jsonl.gz'
+      test:
+        artifacts:
+          recordings:
+            - test_rec_0
+          supervisions:
+            - test_sup_0
+        statistics:
+          duration_hours: 10.030255260416666
+          duration_basis: 'sum of supervisions durations; overlapping segments may count speech more than once; sources: legacy_asr:LHOTSE/data_aishell/data/manifests/aishell_supervisions_test.jsonl.gz'
+    provenance:
+      source: icefall pre-migration registry
+      snapshot_date: '2026-08-04'
+      upstream_version: unknown
+      reference_duration:
+        hours: 155
+        basis: 参考表登记值；未核实当前文件时长及 split 覆盖
+        url: https://ccnuebbmik1f.feishu.cn/wiki/CEXFwEjPoi2bIukVjk9c5FdOn12?sheet=3d4d23
+        sheet_range: A14:P14
+        sheet_revision: 1594
+        consulted_at: '2026-09-09'
+      local_layout: 本机迁移布局 /workspace/data/datasets/<id>/versions/<version>/<artifact>/；身份与版本不变
