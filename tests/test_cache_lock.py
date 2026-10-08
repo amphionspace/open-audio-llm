@@ -43,3 +43,20 @@ def test_lock_is_exclusive_until_holder_releases(tmp_path):
         waited = time.monotonic() - started
     holder.join()
     assert waited > 0.5
+
+
+def test_lock_open_retries_eexist_from_concurrent_creation(tmp_path, monkeypatch):
+    # quarkfs can fail a plain O_CREAT open with EEXIST when two hosts create it at once.
+    attempts = []
+
+    def flaky_open(path, mode):
+        attempts.append(path)
+        if len(attempts) < 3:
+            raise FileExistsError(17, "File exists", str(path))
+        return open(path, mode)
+
+    monkeypatch.setattr(catalog_cache, "open", flaky_open, raising=False)
+    monkeypatch.setattr(catalog_cache, "LOCK_RETRY_SECONDS", 0)
+    with catalog_cache.exclusive_lock(tmp_path / "build.lock"):
+        assert (tmp_path / "build.lock").exists()
+    assert len(attempts) == 3

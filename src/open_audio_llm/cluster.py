@@ -25,6 +25,8 @@ REQUIRED = ("sco_home", "credentials", "workspace", "aec2", "image", "worker_spe
             "nodes", "mounts")
 # Statuses after which the main launcher will never start torchrun for this attempt.
 FINISHED = {"failed", "completed", "interrupted"}
+# Written by rank 0 after recording, W&B verification and storage sync have ended.
+DONE_MARKER = "cluster-rank0-done.json"
 
 
 def mount_points(cluster):
@@ -197,18 +199,32 @@ def run(attempt):
         raise ValueError(f"Worker has {layout['devices']} GPUs, runtime.distributed."
                          f"processes is {distributed['processes']}")
     del layout["devices"]
+    done = attempt / DONE_MARKER
     if layout["node_rank"] == 0:
+        done.unlink(missing_ok=True)
         distributed.update(layout)
-        with (attempt.parent / ".execution.lock").open("w") as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            return execute(config, attempt)
+        code = 1
+        try:
+            with (attempt.parent / ".execution.lock").open("w") as lock:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                code = execute(config, attempt)
+        finally:
+            done.write_text(json.dumps({"exit_code": code}) + "\n")
+        return code
     # Rank 0 freezes data and verifies W&B before torchrun; join only once it runs.
     while (state := read_status(attempt).get("execution")) != "running":
         if state in FINISHED:
             print(f"Main launcher ended as {state} before training started", file=sys.stderr)
-            return 1
+            code = 1
+            break
         time.sleep(2)
-    config = yaml.safe_load(effective.read_text())
-    config["runtime"]["distributed"].update(layout)
-    return subprocess.run(command(config, effective), env=child_environment(config),
-                          cwd=config["runtime"]["cwd"], check=False).returncode
+    else:
+        config = yaml.safe_load(effective.read_text())
+        config["runtime"]["distributed"].update(layout)
+        code = subprocess.run(command(config, effective), env=child_environment(config),
+                              cwd=config["runtime"]["cwd"], check=False).returncode
+    # ACP deletes every pod once any worker exits with failure, which would cut off
+    # rank 0's W&B verification and storage sync; stay up until rank 0 has finished.
+    while not done.exists():
+        time.sleep(2)
+    return code

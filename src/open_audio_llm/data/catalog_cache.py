@@ -12,6 +12,7 @@ import struct
 import sqlite3
 import time
 from bisect import bisect_right
+from contextlib import contextmanager
 from pathlib import Path
 
 import numpy as np
@@ -43,6 +44,25 @@ def lock_exclusive(lock):
             time.sleep(LOCK_RETRY_SECONDS)
 
 
+@contextmanager
+def exclusive_lock(path):
+    """Open (creating if needed) and exclusively lock a shared lock file.
+
+    quarkfs can answer simultaneous creation of one file from two hosts with
+    EEXIST even without O_EXCL; the file then exists, so opening again succeeds.
+    """
+    while True:
+        try:
+            # Opened outside `with` so FileExistsError from the locked body is not retried.
+            lock = open(path, "a")  # noqa: SIM115
+            break
+        except FileExistsError:
+            time.sleep(LOCK_RETRY_SECONDS)
+    with lock:
+        lock_exclusive(lock)
+        yield
+
+
 
 class AudioIndex:
     """Keep large shared audio indexes outside Python's cyclic object graph."""
@@ -55,8 +75,7 @@ class AudioIndex:
         ).hexdigest()
         self.path = Path(root).expanduser().resolve() / f"audio-{key}.sqlite"
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self.path.with_suffix(".lock").open("a") as lock:
-            lock_exclusive(lock)
+        with exclusive_lock(self.path.with_suffix(".lock")):
             if not self.path.exists():
                 temporary = self.path.with_suffix(".tmp")
                 temporary.unlink(missing_ok=True)
@@ -268,8 +287,7 @@ class SourceRecordIndex:
         _reuse_completed(self.path, _legacy_paths(dataset, source, root))
         self.path.mkdir(parents=True, exist_ok=True)
         # The completion marker is written last. A failed build is never opened.
-        with (self.path / "build.lock").open("a") as lock:
-            lock_exclusive(lock)
+        with exclusive_lock(self.path / "build.lock"):
             if not (self.path / "complete.json").exists():
                 self._build(dataset, source)
         info = json.loads((self.path / "complete.json").read_text())
@@ -386,8 +404,7 @@ class CatalogRecordIndex:
             ).encode()
         ).hexdigest()
         path = self.root / f"signature-{key}.txt"
-        with path.with_suffix(".lock").open("a") as lock:
-            lock_exclusive(lock)
+        with exclusive_lock(path.with_suffix(".lock")):
             if path.exists():
                 return path.read_text().strip()
             digest = hashlib.sha256()

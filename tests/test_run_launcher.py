@@ -522,6 +522,8 @@ def test_cluster_nodes_join_torchrun_with_platform_layout(tmp_path, monkeypatch)
     config = load_config(path, attempt)
     (attempt / "effective.yaml").write_text(yaml.safe_dump(config))
     (attempt / "status.json").write_text(json.dumps({"execution": "running"}))
+    # Workers stay up until rank 0 has finished recording.
+    (attempt / cluster.DONE_MARKER).write_text("{}")
     monkeypatch.setenv("SENSECORE_PYTORCH_NNODES", "2")
     monkeypatch.setenv("SENSECORE_PYTORCH_NODE_RANK", "1")
     monkeypatch.setenv("SENSECORE_ACCELERATE_DEVICE_COUNT", "2")
@@ -544,6 +546,13 @@ def test_cluster_nodes_join_torchrun_with_platform_layout(tmp_path, monkeypatch)
     monkeypatch.setenv("SENSECORE_ACCELERATE_DEVICE_COUNT", "8")
     with pytest.raises(ValueError, match="GPUs"):
         cluster.run(attempt)
+    monkeypatch.setenv("SENSECORE_ACCELERATE_DEVICE_COUNT", "2")
+    monkeypatch.setenv("SENSECORE_PYTORCH_NODE_RANK", "0")
+    from open_audio_llm import cli
+
+    monkeypatch.setattr(cli, "execute", lambda config, attempt: 3)
+    assert cluster.run(attempt) == 3
+    assert json.loads((attempt / cluster.DONE_MARKER).read_text()) == {"exit_code": 3}
 
 
 def test_cluster_submission_failure_is_recorded(tmp_path):
