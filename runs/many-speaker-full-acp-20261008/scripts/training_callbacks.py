@@ -33,14 +33,14 @@ class ManySpeakerTrainingAudit(TrainerCallback):
     def on_step_end(self,args,state,control,**kwargs):
         if state.global_step % STOP_CHECK_STEPS:
             return control
-        if state.is_world_process_zero:
+        path = Path(args.output_dir)/'actual-learning-rates.json'
+        # Checked once after warmup starts; cosine decay legitimately reaches 0 at the last step.
+        if state.is_world_process_zero and not path.exists():
             optimizer = self.trainer.optimizer
             groups = [{'step':state.global_step,'lr':g['lr'],'parameters':sum(p.numel() for p in g['params'])}
                       for g in optimizer.param_groups]
             assert all(g['lr'] > 0 for g in groups if g['parameters'])
-            path = Path(args.output_dir)/'actual-learning-rates.json'
-            if not path.exists():
-                path.write_text(json.dumps(groups,indent=2)+'\n')
+            path.write_text(json.dumps(groups,indent=2)+'\n')
         request = [None]
         if state.is_world_process_zero:
             path = Path(args.output_dir)/'stop-request.json'

@@ -44,11 +44,15 @@ def main():
     if not history_file.exists():
         # Evaluations already finished inside earlier attempts keep their results.
         history = []
-        for training in trainings[:-1]:
-            previous = training/'selection-history.json'
-            if previous.is_file():
-                history += json.loads(previous.read_text())
-            baseline = training/'selection-baseline/summary.json'
+        # Earlier attempts' in-job evaluations and an interrupted selector's finished
+        # checkpoints keep their results instead of being evaluated again.
+        sources = [Path(p) for p in settings.get('previous_selections', [])] + trainings[:-1]
+        for source in sources:
+            if (source/'selection-history.json').is_file():
+                steps = {r['step'] for r in history}
+                history += [r for r in json.loads((source/'selection-history.json').read_text())
+                            if r['step'] not in steps]
+            baseline = source/'selection-baseline/summary.json'
             # Only the summary is needed; the baseline attempt links to model weights.
             if baseline.is_file() and not (state/'selection-baseline/summary.json').exists():
                 (state/'selection-baseline').mkdir(parents=True, exist_ok=True)

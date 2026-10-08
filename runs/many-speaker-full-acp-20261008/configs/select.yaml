@@ -26,9 +26,15 @@ parameters:
   output:
     path: '{attempt}/artifacts'
   # Attempt 003 holds checkpoint-500 and its in-job evaluation; 004 resumes from it.
+  # Training upload kept only weights of checkpoint-1000 and removed the local copy;
+  # it is pulled from object storage into restored/004 (a copy of 004's effective config).
   training_attempts:
   - path: ../tasks/02-train/attempts/003
+  - path: ../tasks/03-select/restored/004
   - path: ../tasks/02-train/attempts/004
+  # Selector attempt 005 already evaluated checkpoint-1500.
+  previous_selections:
+  - path: ../tasks/03-select/attempts/005/artifacts
   interval: 500
   max_steps: 2000
   poll_seconds: 60
