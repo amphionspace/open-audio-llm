@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import time
 import logging
 import torch
 from dataclasses import dataclass
+from pathlib import Path
 
 from swift.arguments import RLHFArguments, SftArguments
 from swift.pipelines.train.rlhf import SwiftRLHF
@@ -88,6 +90,21 @@ class DatasetEpochCallback(TrainerCallback):
 
     def on_epoch_begin(self, args, state, control, **kwargs):
         self.dataset.set_epoch(int(state.epoch or 0))
+
+
+class ReadableCheckpointCallback(TrainerCallback):
+    """Let the development machine read checkpoints that ACP containers write as root.
+
+    safetensors are saved through 0600 temporary files, so umask alone is not enough.
+    Only read bits are added; ownership and content are unchanged.
+    """
+
+    def on_save(self, args, state, control, **kwargs):
+        if state.is_world_process_zero:
+            checkpoint = Path(args.output_dir) / f"checkpoint-{state.global_step}"
+            for path in checkpoint.rglob("*"):
+                if path.is_file():
+                    path.chmod(path.stat().st_mode | 0o444)
 
 
 class CatalogTrainingMixin:
@@ -174,6 +191,9 @@ class CatalogTrainingMixin:
                 trainer.add_callback(RetentionEvaluationCallback(
                     self.args.retention_eval_script, self.args.retention_eval_interval,
                 ))
+        if "SENSECORE_PYTORCH_NODE_RANK" in os.environ:
+            # Registered before uploads, which may remove the local checkpoint.
+            trainer.add_callback(ReadableCheckpointCallback())
         uploads = None
         if storage := getattr(self.args, 'storage_sync', None):
             if trainer.args.save_total_limit:

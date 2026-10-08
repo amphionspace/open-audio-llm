@@ -9,3 +9,11 @@
 进展：提交前完成 CPU 预检及启动配置核验。执行 001（`pt-qxzcopp7`）任务内数据预检通过，但构建 Trainer 时失败：ms-swift 以 `cls(args, trainer)` 构造回调，而 `ManySpeakerEvaluation.__init__` 不接收参数，16 个 rank 均未开始训练。修正构造签名并用桩对象核对 `on_train_begin` 后，执行 002（`pt-k08gzbgz`）重新提交，回调问题已解决，但两节点 rank 同时生成回放排列缓存时失败：quarkfs 上 flock 不能跨主机互斥，固定名 `.tmp` 文件被两边同时创建/改名。改为每个进程写独立临时文件后原子替换（排列确定，内容一致），既有 sampler 测试 23 passed，执行 003（`pt-731vpldk`）重新提交；旧执行与日志保留。状态与远端 W&B 证据以执行记录为准。
 
 证据：`attempts/*/status.json`、`effective.yaml`、`wandb-start-verification.json`、`artifacts/training/actual-training-contract.json`、`actual-learning-rates.json`、`retention-objective.json`、`selection-history.json`、`final-results.json`。
+
+## 第 500 步中文退化分析
+
+- 结果：多人选模 cpER 121.5% → 21.8%；中文选模 cpCER 13.66% → 20.75%。AliMeeting 25/145 条输出触及 4096 token 上限（起点 1 条），AISHELL-4 11.07% → 12.78%。排除这 25 条后两者仍分别差约 2.7 与 1.7 个点。
+- 现象：触顶输出都是段内单字复读，复读字为“对”13 条、“嗯”7 条、“是”2 条等会话应答词；25 条中 24 条集中在 3 场会议（R0014_M0086、R0008_M0064、R0014_M0087）。起点已有 11 条输出含 10 个以上连续相同字符，第 500 步为 28 条，说明是放大了已有倾向。
+- 排除项：新训练数据 8,655 条目标中没有连续 8 个以上相同字符，不是目标文本损坏。
+- 已确认的配方变化：起点训练中 AISHELL-4 + AliMeeting 真实会议占样本 40%，本轮降为 20%，新增的 50% 合成全部是完整朗读句、没有会话应答词。上一轮在原配比下全参续训，第 500 步中文也差 +1.35 点（配对 95% 区间 +0.62 至 +2.14），所以全参续训本身也带来退化，本轮的配比变化使其显著放大。
+- 下一轮处理：真实会话数据（AISHELL-4、AliMeeting，以及 NOTSOFAR、CHiME-6、RAMC）恢复到不低于 40%；新合成改用按词切段并带真实短应答的版本；选模集改用独立的官方 dev，复读条数纳入停止条件。

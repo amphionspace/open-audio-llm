@@ -7,6 +7,7 @@ checkpoint runs the two fixed reporting panels.
 """
 import argparse
 import json
+import os
 from pathlib import Path
 import shutil
 import sys
@@ -23,7 +24,9 @@ def complete_checkpoints(training, interval, max_steps):
     for path in sorted(training.glob('checkpoint-[0-9]*'), key=lambda p: int(p.name.split('-')[1])):
         step = int(path.name.split('-')[1])
         # The sampler state is written after the weights and optimizer, so it marks a finished save.
-        if (step % interval == 0 or step == max_steps) and (path/'catalog_sampler.json').is_file():
+        # ACP writes weights as root with mode 0600; wait until they are readable here.
+        if (step % interval == 0 or step == max_steps) and (path/'catalog_sampler.json').is_file() \
+                and all(os.access(p, os.R_OK) for p in path.glob('model*.safetensors')):
             yield step, path
 
 
