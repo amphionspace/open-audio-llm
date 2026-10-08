@@ -117,8 +117,8 @@ bash examples/serve/vllm/serve.sh \
 插入可学习 `[SEP]`，并把音频注意力改为整段一个窗口
 （`n_window_infer=1000000000`）。要恢复配置里的 800 帧窗口，再设置
 `COT_AUDIO_CHUNKED_ATTN=1`。checkpoint-34479 的评测数字和三阶段训练配置见
-[评测结果](docs/ckpt34479-evaluation.md)与
-[三阶段 SFT](docs/qwen3-asr-three-stage-sft.md)。
+[ts-asr-result](docs/ckpt34479-evaluation.md)与
+[ts-asr训练配置](docs/qwen3-asr-three-stage-sft.md)。
 
 Triton/RAG-ASR embedding bypass 示例：
 
@@ -211,8 +211,8 @@ bash examples/model/convert_amphionasr_checkpoint.sh \
 
 ## 文档
 
-- [checkpoint-34479 评测结果](docs/ckpt34479-evaluation.md)：三阶段 SFT 最终权重的 ASR、热词、TS-ASR 和警务指标。
-- [Qwen3-ASR-1.7B 三阶段 SFT](docs/qwen3-asr-three-stage-sft.md)：从底座到 checkpoint-34479 的数据、学习率和冻结配置。
+- [ts-asr-result](docs/ckpt34479-evaluation.md)：三阶段 SFT 最终权重的 ASR、热词、TS-ASR 和警务指标。
+- [ts-asr训练配置](docs/qwen3-asr-three-stage-sft.md)：从底座到 checkpoint-34479 的数据、学习率和冻结配置。
 - [TS-ASR 回放与联合训练](examples/train/qwen3-asr/TS_ASR.md)：clean 优先数据、encoder 批处理和中文保持验收。
 - `docs/architecture.md`：组件契约和模型组合。
 - `docs/data_boundary.md`：离线样本事实与在线训练随机性的边界。

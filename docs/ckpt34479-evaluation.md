@@ -58,7 +58,7 @@ Common Voice 热词集。K=0：不注入热词（`Hotwords: N/A` 基线）。K=5
 
 ### TS-ASR（concat + `[SEP]`）
 
-正样本：LibriMix 报 WER，AISHELLMix 报 CER。负样本：注册说话人不在场，`reject` 为输出为空的比例（越高越好），`FA` 为误输出比例。
+正样本：LibriMix 报 WER，AISHELLMix 报 CER。负样本：注册说话人不在场，`reject` 为输出为空的比例（越高越好）。误输出比例是 `1 - reject`，不再单列。
 
 | 测试集 | n | 指标 | 34479 |
 |---|---:|---|---:|
@@ -66,12 +66,46 @@ Common Voice 热词集。K=0：不注入热词（`Hotwords: N/A` 基线）。K=5
 | LibriMix test 3mix | 9000 | WER | 8.63 |
 | AISHELLMix test 2mix | 6000 | CER | 4.56 |
 | AISHELLMix test 3mix | 9000 | CER | 17.53 |
-| LibriMix test 2mix-neg | 3000 | reject / FA | 0.910 / 0.090 |
-| LibriMix test 3mix-neg | 3000 | reject / FA | 0.851 / 0.149 |
-| AISHELLMix test 2mix-neg | 3000 | reject / FA | 0.785 / 0.215 |
-| AISHELLMix test 3mix-neg | 3000 | reject / FA | 0.712 / 0.288 |
+| LibriMix test 2mix-neg | 3000 | reject | 0.910 |
+| LibriMix test 3mix-neg | 3000 | reject | 0.851 |
+| AISHELLMix test 2mix-neg | 3000 | reject | 0.785 |
+| AISHELLMix test 3mix-neg | 3000 | reject | 0.712 |
 
-负样本上 LibriMix 2mix / 3mix 的干扰人泄漏率（hyp 匹配干扰人文本）为 5.70% / 4.70%。AISHELLMix 负样本未统计到干扰人文本命中。
+### 话轮 TS-ASR（AliMeeting / AISHELL-4 / AMI-SDM）
+
+这一节不是上面的 LibriMix / AISHELLMix 拼接集，也不是按官方测试语句逐条裁剪的会议语句。Amphion 是 `checkpoint-34479`：vLLM、注册前 3 秒、插入 `[SEP]`、不加静音。Cocktail 是 `Xiaomi-CocktailASR-1`，同一批 manifest 各跑了非 CoT 和 CoT。
+
+样本从会议录音切出，规则如下：
+
+- 只打包完整语句，不从句中切开。相邻语句间隔超过 3 秒、窗口时长超过 27 秒，或说话人会变成 4 个及以上时，先结束当前窗口。
+- 留下的窗口必须正好是 2 个或 3 个说话人，窗口时长至少 1 秒。单人片段丢弃。
+- 一个窗口里每个说话人一条正例。参考文本是这个人在窗内全部语句拼起来，不是单独一句。该人在窗内的语音短于 1 秒则跳过。
+- 混合音频是这段窗口的远场裁剪。注册音频是窗外另一条至少 3 秒、且不与窗口重叠的语句。有近场或头戴麦时，按样本 id 哈希以远场:近场 = 3:1 选取；没有近场则用远场。
+- 每个窗口一条负例：注册说话人不在该窗口的说话人集合里。
+- 评测只用官方 test 场次切出的窗口，不用 train，也不用另外留出的 eval 场次。AliMeeting test 20 场，AISHELL-4 test 20 场，AMI-SDM test 16 场。AMI 另有 8 场从 train 划出的 eval，AliMeeting 的 dev 记为 eval（8 场），这两部分都没进下表。
+
+正例按说话人展开，所以条数多于窗口数。2 人与 3 人分列。中文报 CER，英文 AMI-SDM 报 WER，越低越好。差值是 Cocktail 减去 34479，正值表示 Cocktail 错误更多。
+
+| 测试集 | n | 指标 | 34479 | Cocktail 非 CoT | 差值 | Cocktail CoT | 差值 |
+|---|---:|---|---:|---:|---:|---:|---:|
+| AliMeeting 2mix | 1377 | CER | 7.28 | 51.64 | +44.36 | 52.99 | +45.71 |
+| AliMeeting 3mix | 2430 | CER | 28.13 | 86.87 | +58.74 | 71.04 | +42.91 |
+| AISHELL-4 2mix | 947 | CER | 17.89 | 24.32 | +6.43 | 21.50 | +3.61 |
+| AISHELL-4 3mix | 1361 | CER | 25.94 | 44.32 | +18.38 | 38.94 | +13.00 |
+| AMI-SDM 2mix | 553 | WER | 17.83 | 31.71 | +13.88 | 34.27 | +16.44 |
+| AMI-SDM 3mix | 2556 | WER | 33.31 | 58.78 | +25.47 | 59.93 | +26.62 |
+
+负例参考文本为空，WER 为 0 没有识别意义。`reject` 是输出为空的比例，越高越好；误输出比例是 `1 - reject`。
+
+| 测试集 | n | 34479 reject | Cocktail 非 CoT | Cocktail CoT |
+|---|---:|---:|---:|---:|
+| AliMeeting neg | 1829 | 0.865 | 0.002 | 0.042 |
+| AISHELL-4 neg | 1053 | 0.884 | 0.013 | 0.008 |
+| AMI-SDM neg | 1465 | 0.772 | 0.006 | 0.009 |
+
+AliMeeting 上 Cocktail 的 CER 被重复生成拉高。非 CoT 的 2mix 插入错误 33795、替换 3288；3mix 有 372 条假设退化成很长的「对对对」或「嗯嗯嗯」。CoT 只把 AliMeeting 3mix 和 AISHELL-4 明显拉低，其余集合持平或略差。Cocktail 几乎不拒识。
+
+两边的推理前端也不相同，不能把差距全部算成切窗差异。Amphion 是注册音频前 3 秒与混合音频之间插入 `[SEP]`，中间不加静音。Cocktail 官方预处理是注册裁到 1–4 秒，再接 1 秒静音和混合音频；CoT 使用 `<think>` / `<answer>` 提示，非 CoT 使用普通转写提示。
 
 ### 警务
 
