@@ -31,7 +31,7 @@ def main():
     predictions.update(settings['cached_predictions'])
     for name, path in predictions.items():
         mapped = {r['id']: r for r in read_rows(path)}
-        assert set(mapped) == {c['id'] for c in clips} and len(mapped) == 338
+        assert set(mapped) == {c['id'] for c in clips}
         rows = [scoring['score_one'](c, mapped[c['id']], 'qwen') for c in clips]
         candidates[name] = {r['id']: r for r in rows}
         (root / name).mkdir(exist_ok=True)

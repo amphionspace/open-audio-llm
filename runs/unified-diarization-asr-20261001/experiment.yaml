@@ -57,3 +57,23 @@ tasks:
   name: 以 checkpoint-25500 合并模型为基座的新一轮 LoRA SFT（每卡 4 条、不累积）
   config: configs/train-sft-25500.yaml
   depends_on: [merge-25500, evaluate-a800]
+- id: audit-meeting-windows
+  name: 真实会议训练窗口与原始人工标注逐窗口核对
+  config: configs/audit-meeting-windows.yaml
+  depends_on: [localize-data]
+- id: score-training-losses
+  name: 用 8000 合并模型逐条计算训练样本 loss，定位异常数据
+  config: configs/score-training-losses.yaml
+  depends_on: [merge-8000]
+- id: prepare-full-training-data
+  name: 质检后的清理数据配置与留出会议选模集
+  config: configs/prepare-full-training-data.yaml
+  depends_on: [audit-meeting-windows, score-training-losses]
+- id: evaluate-select
+  name: 选模集上的起点模型基线
+  config: configs/evaluate-select.yaml
+  depends_on: [prepare-full-training-data]
+- id: full-8000
+  name: 从 8000 合并模型开始的全参数训练（清理数据、加噪、选模集评测）
+  config: configs/train-full-8000.yaml
+  depends_on: [prepare-full-training-data, evaluate-select]

@@ -128,6 +128,9 @@ def _legacy_source_identity(dataset, source):
     paths = []
     if source.get("sot_timestamps"):
         paths.append(Path(source["sot_alignment_index"]))
+    if source.get("exclude_records"):
+        # The ID list changes the indexed records; its size/mtime keys the cache.
+        paths.append(Path(source["exclude_records"]))
     for names in split.artifacts.values():
         for artifact in names:
             paths.append(resolve_artifact(

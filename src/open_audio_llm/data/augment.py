@@ -21,6 +21,8 @@ class AugmentConfig:
     spec_aug_prob: float = 0.0
     speed_factors: tuple[float, ...] = (0.9, 1.0, 1.1)
     noise_snr_db: tuple[float, float] = (5.0, 20.0)
+    # Datasets already recorded in the target noise condition (e.g. far-field meetings).
+    noise_exclude_datasets: tuple[str, ...] = ()
     time_mask_width: int = 30
     frequency_mask_width: int = 16
 

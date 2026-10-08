@@ -1,0 +1,61 @@
+# 选模集评测：AISHELL-4 留出 10 场、AliMeeting 留出 8 场训练会议（prepare-full-training-data），
+# 只用于训练中挑选 checkpoint；与 MOSS 的最终比较仍用固定集 evaluate-a800。推理与打分协议同固定集。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python}
+  cwd: {path: ../../..}
+  pythonpath:
+  - {path: ../../../src}
+  gpus: [0]
+  threads: {omp: 4, openblas: 1}
+  environment:
+    TOKENIZERS_PARALLELISM: false
+    HF_HUB_OFFLINE: '1'
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: eval
+  backend: vllm
+  script: {path: ../scripts/evaluate.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts/evaluation'}
+  primary_candidate: step8000
+  training_step: 8000
+  reference_plan: {path: ../tasks/prepare-full-training-data/attempts/001/artifacts/selection/plan.json}
+  reference_clips: {path: ../tasks/prepare-full-training-data/attempts/001/artifacts/selection/clips.jsonl}
+  # 2026-10-06 从原机补传的同一批 338 条切片与打分脚本，按原仓库相对位置放置（score.py 依赖
+  # ../../aishell4-moss-compare-20260920/score.py）；infer.py 逐条核对 clips.jsonl 中的 SHA256。
+  clip_audio_dir: {path: ../tasks/prepare-full-training-data/attempts/001/artifacts/selection/audio}
+  scoring_helpers: {path: ../../qwen3-asr-sot-speaker-events-20260922/statistical-moss-comparison-500-20260922/score.py}
+  # 独立打分环境（meeteval 0.4.3、pyannote.metrics 4.1）；已对归档 4000 步原始预测逐条复现 cpCER 20.27%。
+  scoring_python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-score/bin/python}
+  # ASR 回访使用本机化后的同一 evaluation 分组（与 unified-train.yaml 一致）。
+  data_config: {path: ../tasks/localize-data/attempts/004/artifacts/local-balanced-train.yaml}
+  # 与训练进程共存时使用的显存比例；同机基线和各 checkpoint 一致。
+  gpu_memory_utilization: 0.4
+  attention_config: {backend: TRITON_ATTN}
+  mm_encoder_attn_backend: TRITON_ATTN
+  single_speaker_prompt: Transcribe the single speaker. Output [S1] followed by the transcription.
+  models:
+    step8000: {path: ../tasks/merge-8000/attempts/001/artifacts/merged-model}
+  cached_predictions: {}
+  cached_asr_predictions: {}
+recording:
+  attempts_dir: {path: ../tasks/evaluate-select/attempts}
+  result: {path: '{attempt}/artifacts/evaluation/summary.json'}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: ~/.config/open-audio-llm/wandb-env.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: unified-diarization-select-eval
+  interval: 5
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file: {path: '{attempt}/artifacts/evaluation/summary.json'}
+    prefix: evaluate

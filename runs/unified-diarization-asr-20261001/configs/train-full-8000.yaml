@@ -1,0 +1,119 @@
+# 全参数训练：以 LoRA 002 / checkpoint-8000 合并模型（固定集会议 cpCER 最好，A800 20.44%）为起点，
+# 音频编码器、aligner、LLM 全部更新。数据为 2026-10-07 质检后的清理版本（prepare-full-training-data）：
+# 隔离 R1021_M1947、移除空目标窗口、留出 18 场会议作选模集、去掉 dense 合成档位，合成与单人 ASR 加 MUSAN 噪声。
+# 每卡每批最多 4 条、不累积；训练内评测在选模集上进行（每 1000 步），固定集只用于与 MOSS 的最终比较。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath:
+  - {path: ../../../src}
+  - {path: /workspace/data/audio-data-contract/src}
+  gpus: [0, 1, 2, 3, 4, 5, 6, 7]
+  threads: {omp: 2, openblas: 1}
+  environment:
+    TOKENIZERS_PARALLELISM: false
+    HF_HUB_OFFLINE: '1'
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    PYTHONUNBUFFERED: '1'
+    PYTORCH_ALLOC_CONF: expandable_segments:True
+  distributed:
+    processes: 8
+    port: 29785
+data:
+  config: {path: ../tasks/prepare-full-training-data/attempts/001/artifacts/train-data.yaml}
+task:
+  kind: train
+  module: open_audio_llm.integrations.ms_swift.train
+  positional:
+  - sft
+  arguments:
+    --model_type: amphion_asr_1.7b
+    --tuner_type: full
+    --freeze_vit: false
+    --freeze_aligner: false
+    --freeze_llm: false
+    --torch_dtype: bfloat16
+    --attn_impl: sdpa
+    --max_length: 16384
+    --per_device_train_batch_size: 4
+    --per_device_eval_batch_size: 1
+    --gradient_accumulation_steps: 1
+    # 沿用统一格式全参训练的 LLM/aligner 学习率；音频编码器取 LLM 的一半，降低遗忘风险。
+    --learning_rate: 1.0e-05
+    --vit_lr: 5.0e-06
+    --aligner_lr: 1.0e-05
+    --max_steps: -1
+    --lr_scheduler_type: inverse_sqrt
+    --warmup_ratio: 0.0
+    --warmup_steps: 500
+    --gradient_checkpointing: true
+    --vit_gradient_checkpointing: true
+    --ddp_find_unused_parameters: true
+    --dataloader_num_workers: 4
+    --dataloader_persistent_workers: true
+    --performance_logging: true
+    --save_steps: 500
+    # 不轮转删除：选模最好的 checkpoint 需要保留到训练结束后再清理其余点。
+    --logging_steps: 5
+    --report_to: none
+    --seed: 42
+    --audio_encoder_parallel: false
+    --audio_encoder_batching: true
+    --use_logits_to_keep: false
+    --prediction_loss_only: true
+    --optim: adamw_torch_fused
+    --weight_decay: 0.01
+    --max_grad_norm: 1.0
+    --save_only_model: false
+    --bf16: true
+    --fp16: false
+    --ddp_timeout: 7200
+    --eval_strategy: 'no'
+    --load_args: false
+    # 跳过 ms-swift 对本地 checkpoint 的 ModelScope 版本查询（本机 CA 链不可用，仅拖慢启动）。
+    --check_model: false
+    --add_version: false
+    --model: {path: ../tasks/merge-8000/attempts/001/artifacts/merged-model}
+    --external_plugins:
+    - {path: ../../../src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py}
+    --output_dir: {path: '{attempt}/artifacts/training'}
+    --continuous_training: true
+    --lr_scheduler_kwargs:
+      timescale: 10000
+    --gradient_checkpointing_kwargs:
+      use_reentrant: false
+    --retention_eval_script: {path: ../scripts/local_checkpoint_eval.py}
+    --retention_eval_interval: 1000
+preflight:
+- kind: prepare
+  module: open_audio_llm.data.catalog_cache
+  arguments:
+    --data_config: {path: ../tasks/prepare-full-training-data/attempts/001/artifacts/train-data.yaml}
+    --workers: 4
+    --batch-size: 4
+    --world-size: 8
+    --preflight-report: {path: '{attempt}/artifacts/data-preflight.json'}
+recording:
+  attempts_dir: {path: ../tasks/full-8000/attempts}
+tracking:
+  pythonpath:
+  - {path: ../../../src}
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: ~/.config/open-audio-llm/wandb-env.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: unified-diarization-full-8000
+  interval: 5
+  startup_timeout: 180
+  finish_timeout: 300
+parameters:
+  checkpoint_evaluation:
+    template: {path: evaluate-select.yaml}
+    # A800 80GB 上与 8 个训练进程共存；同机基线与各 checkpoint 使用同一设置。
+    gpu_memory_utilization: 0.4
+    run_name: unified-diarization-full-8000-select
+    # 选模基线：起点模型（8000 合并）在选模集上的输出。
+    baseline_predictions: {path: ../tasks/evaluate-select/attempts/001/artifacts/evaluation/step8000/predictions.jsonl}
+    baseline_asr_predictions: {path: ../tasks/evaluate-select/attempts/001/artifacts/evaluation/step8000/asr-predictions.jsonl}

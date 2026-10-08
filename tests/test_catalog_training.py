@@ -1159,3 +1159,30 @@ def test_indexed_metadata_preserves_audio_sampling_and_resume(catalog_config, tm
     catalog_config['train'] = [{**source, 'weight': 3} for source in catalog_config['train']]
     reweighted = CatalogSwiftDataset(catalog_config, message_format='qwen3_asr')
     assert reweighted.records[0].record == indexed.records[0].record
+
+
+def test_exclude_records_drops_listed_ids_and_keys_the_cache(catalog_config, tmp_path):
+    catalog_config['metadata_cache'] = str(tmp_path / 'cache')
+    full = CatalogSwiftDataset(catalog_config)
+    ids = [full.records[i].record.id for i in range(len(full))]
+    listed = tmp_path / 'excluded.txt'
+    listed.write_text(ids[0] + '\n')
+    catalog_config['train'][0]['exclude_records'] = str(listed)
+    kept = CatalogSwiftDataset(catalog_config)
+    assert [kept.records[i].record.id for i in range(len(kept))] == ids[1:]
+    listed.write_text('\n'.join(ids) + '\n')
+    with pytest.raises(ValueError, match='Empty source'):
+        CatalogSwiftDataset(catalog_config)
+    catalog_config['train'][0]['exclude_records'] = str(tmp_path / 'missing.txt')
+    with pytest.raises(ValueError, match='exclude_records'):
+        CatalogSwiftDataset(catalog_config)
+
+
+def test_noise_exclude_datasets_keeps_listed_audio_clean(catalog_config):
+    catalog_config['augmentation'] = {'noise_prob': 1}
+    noisy = sf.read(BytesIO(CatalogSwiftDataset(catalog_config)[0]['audios'][0]))[0]
+    catalog_config['augmentation']['noise_exclude_datasets'] = ['speech']
+    clean = sf.read(BytesIO(CatalogSwiftDataset(catalog_config)[0]['audios'][0]))[0]
+    reference = sf.read(BytesIO(CatalogSwiftDataset(catalog_config, training=False)[0]['audios'][0]))[0]
+    assert not np.allclose(noisy, reference, atol=1e-4)
+    np.testing.assert_allclose(clean, reference, atol=1e-4)
