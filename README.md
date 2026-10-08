@@ -77,6 +77,8 @@ open-audio-llm eval --config examples/configs/eval/comparison.yaml
 open-audio-llm model --config examples/configs/model/convert-legacy.yaml
 ```
 
+训练配置加上 `cluster` 段即改为向 SenseCore ACP 算力池提交多机任务，密钥来自 submodule `third_party/amphionkeys`，准备和用法见 [ACP 训练](docs/acp.md)。
+
 训练、数据准备、合成、评测、服务、rollout 和模型处理配置见 [examples/configs](examples/configs/README.md)。shell 文件是薄入口，不再接受 `MODEL`、`MAX_STEPS`、`OUTPUT_DIR` 等业务环境变量。数据加载器只从 YAML 读取 Catalog、roots 和缓存路径。
 
 训练和评测必须同步 W&B，并核验远端 run URL 和实际指标；记录保存在每次执行目录。凭据留在环境中。要部署的 checkpoint 用 vLLM 推理和对比，第三方基线用官方推理方式；不会自动回退后端。评测实现由独立的 AmphionEval 提供，本项目通过 CLI 调用，协议和用法见 [使用 AmphionEval 评测](docs/amphion_eval.md)。

@@ -434,3 +434,133 @@ def test_deployment_renders_paths_readonly_models_and_no_environment_overrides(
     assert service["volumes"][0]["read_only"]
     assert service["gpus"] == "all"
     assert "${" not in yaml.safe_dump(compose)
+
+
+def cluster_recipe(tmp_path):
+    path, config = recipe(tmp_path)
+    keys = tmp_path / "keys"
+    keys.mkdir()
+    (keys / "sensecore.env").write_text(
+        "# test-only\nAMPHION_BUCKET_SENSECORE_ACCESS_KEY=ak-test\n"
+        "AMPHION_BUCKET_SENSECORE_SECRET_KEY=sk-test\n"
+    )
+    (keys / "load.sh").write_text("")
+    sco = tmp_path / "sco"
+    (sco / "bin").mkdir(parents=True)
+    (sco / "bin/sco").write_text(
+        "#!/bin/sh\n"
+        'printf "%s\\n" "$@" > "$SCO_HOME/args"\n'
+        'echo "$SCO_ACCESS_KEY_ID $SCO_ACCESS_KEY_SECRET" > "$SCO_HOME/keys"\n'
+        "echo 'job pt-test1234 submitted successfully, please wait for scheduling!'\n"
+    )
+    (sco / "bin/sco").chmod(0o755)
+    config["task"] = {
+        "kind": "train",
+        "module": "open_audio_llm.integrations.ms_swift.train",
+        "positional": ["sft"],
+    }
+    config["runtime"].update(
+        gpus=[0, 1], distributed={"processes": 2, "port": 29781},
+        pythonpath=[{"path": "."}],
+    )
+    config["tracking"] = {"enabled": True, "name": "acp-test"}
+    config["cluster"] = {
+        "kind": "acp",
+        "sco_home": {"path": "sco"},
+        "credentials": {"path": "keys/sensecore.env"},
+        "workspace": "workspace-test",
+        "aec2": "cluster-test",
+        "image": "registry.example/image:tag",
+        "worker_spec": "N3lS.Ii.I60.94c944g",
+        "nodes": 2,
+        "mounts": [f"volume-id:{tmp_path}", f"env-volume:{Path(sys.executable).parent}"],
+        "environment": {"NCCL_IB_TIMEOUT": 22},
+    }
+    path.write_text(yaml.safe_dump(config))
+    return path, config
+
+
+def test_cluster_train_submits_job_and_records_it(tmp_path):
+    path, _ = cluster_recipe(tmp_path)
+    assert main(["train", "--config", str(path)]) == 0
+    attempt = tmp_path / "tasks/prepare/attempts/001"
+    status = json.loads((attempt / "status.json").read_text())
+    assert status["execution"] == "submitted"
+    assert status["cluster"]["job"] == "pt-test1234"
+    args = (tmp_path / "sco/args").read_text().splitlines()
+    assert args[:3] == ["acp", "jobs", "create"]
+    assert "--worker-nodes=2" in args and "--wait" in args
+    assert f"--storage-mount=volume-id:{tmp_path},env-volume:" in "\n".join(args)
+    startup = next(a for a in args if a.startswith("--command="))
+    assert "sensecore -- env NCCL_IB_TIMEOUT=22 PYTHONPATH=" in startup
+    assert f"--attempt {attempt}" in startup
+    # The secret reaches sco through its environment, never its arguments.
+    assert (tmp_path / "sco/keys").read_text().split() == ["ak-test", "sk-test"]
+    assert "sk-test" not in "".join(args)
+
+
+def test_cluster_rejects_paths_the_container_cannot_see(tmp_path):
+    path, config = cluster_recipe(tmp_path)
+    mounts = config["cluster"]["mounts"]
+    config["cluster"]["mounts"] = ["volume-id:/elsewhere", mounts[1]]
+    path.write_text(yaml.safe_dump(config))
+    with pytest.raises(ValueError, match="outside cluster mounts"):
+        load_config(path)
+    config["cluster"]["mounts"] = mounts
+    config["runtime"]["python"] = "python"
+    path.write_text(yaml.safe_dump(config))
+    with pytest.raises(ValueError, match="absolute path"):
+        load_config(path)
+
+
+def test_cluster_nodes_join_torchrun_with_platform_layout(tmp_path, monkeypatch):
+    from open_audio_llm import cluster
+
+    path, _ = cluster_recipe(tmp_path)
+    attempt = tmp_path / "tasks/prepare/attempts/001"
+    attempt.mkdir(parents=True)
+    config = load_config(path, attempt)
+    (attempt / "effective.yaml").write_text(yaml.safe_dump(config))
+    (attempt / "status.json").write_text(json.dumps({"execution": "running"}))
+    # Workers stay up until rank 0 has finished recording.
+    (attempt / cluster.DONE_MARKER).write_text("{}")
+    monkeypatch.setenv("SENSECORE_PYTORCH_NNODES", "2")
+    monkeypatch.setenv("SENSECORE_PYTORCH_NODE_RANK", "1")
+    monkeypatch.setenv("SENSECORE_ACCELERATE_DEVICE_COUNT", "2")
+    monkeypatch.setenv("MASTER_ADDR", "10.0.0.1")
+    monkeypatch.setenv("MASTER_PORT", "23456")
+    launched = []
+    monkeypatch.setattr(
+        subprocess, "run",
+        lambda cmd, **k: launched.append(cmd) or subprocess.CompletedProcess(cmd, 0),
+    )
+    assert cluster.run(attempt) == 0
+    cmd = launched[0]
+    assert cmd[cmd.index("--nnodes") + 1] == "2"
+    assert cmd[cmd.index("--node_rank") + 1] == "1"
+    assert cmd[cmd.index("--master_addr") + 1] == "10.0.0.1"
+    assert cmd[cmd.index("--master_port") + 1] == "23456"
+    (attempt / "status.json").write_text(json.dumps({"execution": "failed"}))
+    launched.clear()
+    assert cluster.run(attempt) == 1 and not launched
+    monkeypatch.setenv("SENSECORE_ACCELERATE_DEVICE_COUNT", "8")
+    with pytest.raises(ValueError, match="GPUs"):
+        cluster.run(attempt)
+    monkeypatch.setenv("SENSECORE_ACCELERATE_DEVICE_COUNT", "2")
+    monkeypatch.setenv("SENSECORE_PYTORCH_NODE_RANK", "0")
+    from open_audio_llm import cli
+
+    monkeypatch.setattr(cli, "execute", lambda config, attempt: 3)
+    assert cluster.run(attempt) == 3
+    assert json.loads((attempt / cluster.DONE_MARKER).read_text()) == {"exit_code": 3}
+
+
+def test_cluster_submission_failure_is_recorded(tmp_path):
+    path, _ = cluster_recipe(tmp_path)
+    (tmp_path / "sco/bin/sco").write_text("#!/bin/sh\necho 'quota denied' >&2\nexit 3\n")
+    assert main(["train", "--config", str(path)]) == 1
+    status = json.loads(
+        (tmp_path / "tasks/prepare/attempts/001/status.json").read_text()
+    )
+    assert status["execution"] == "failed"
+    assert "quota denied" in status["error"]

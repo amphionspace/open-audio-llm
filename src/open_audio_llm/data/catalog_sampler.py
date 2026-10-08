@@ -249,14 +249,13 @@ class CatalogBatchSampler(Sampler):
 
         import numpy as np
 
-        from .catalog_cache import lock_exclusive
+        from .catalog_cache import exclusive_lock
 
         key = hashlib.sha256(json.dumps([
             self.dataset.seed, source, cycle, self.shuffle, indexes.start, indexes.stop,
         ]).encode()).hexdigest()
         path = root / f"permutation-{key}.npy"
-        with path.with_suffix(".lock").open("a") as lock:
-            lock_exclusive(lock)
+        with exclusive_lock(path.with_suffix(".lock")):
             if not path.exists():
                 with path.with_suffix(".tmp").open("wb") as stream:
                     np.save(stream, np.asarray(build(), dtype=np.int64))

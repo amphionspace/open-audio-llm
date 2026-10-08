@@ -1,0 +1,85 @@
+version: 1
+runtime:
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  cwd: {path: ../../..}
+  pythonpath:
+    - {path: ../../../src}
+    - {path: /workspace/data/audio-data-contract/src}
+  gpus: [0, 1, 2, 3, 4, 5, 6, 7]
+  # ACP 提供节点数、rank、master 地址和端口；processes 等于单节点卡数。
+  distributed: {processes: 8, port: 29531}
+  threads: {omp: 2, openblas: 1}
+  environment:
+    TOKENIZERS_PARALLELISM: false
+    HF_HUB_OFFLINE: true
+data:
+  config: {path: data.yaml}
+task:
+  kind: train
+  module: open_audio_llm.integrations.ms_swift.train
+  positional: [sft]
+  arguments:
+    --model: {path: /workspace/model/Qwen3-ASR-1.7B}
+    --model_type: "amphion_asr_1.7b"
+    --external_plugins: [{path: "../../../src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py"}]
+    --tuner_type: "lora"
+    --lora_rank: 32
+    --lora_alpha: 64
+    --target_modules: "all-linear"
+    --freeze_vit: true
+    --freeze_aligner: true
+    --freeze_llm: false
+    --torch_dtype: "bfloat16"
+    --attn_impl: "sdpa"
+    --max_length: 1024
+    --per_device_train_batch_size: 4
+    --gradient_accumulation_steps: 1
+    --learning_rate: 0.00005
+    --max_steps: 30
+    --lr_scheduler_type: "cosine"
+    --warmup_ratio: 0.1
+    --ddp_find_unused_parameters: false
+    --dataloader_num_workers: 2
+    --save_steps: 10  # 两个中间 checkpoint、一个最终 checkpoint。
+    --logging_steps: 5
+    --report_to: "none"
+    --check_model: false
+    --seed: 42
+    --add_version: false
+    --output_dir: {path: "{attempt}/artifacts/training"}
+    --checkpoint_handoff: {path: "{attempt}/artifacts/checkpoint-handoff.json"}
+storage:
+  # /workspace 上的 venv；任务内 ab 从 AmphionKeys 变量读取 whai 凭据。
+  executable: {path: /workspace/workspace/mingdong/.local/share/amphion-bucket/cluster-venv/bin/ab}
+  remote: whai:open-audio-llm
+  local_root: {path: ../../..}
+recording:
+  attempts_dir: {path: ../tasks/01-train/attempts}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  # 任务内 HOME 不是本账号，W&B key 放在 /workspace。
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: acp-2node-sft-smoke-20261008
+  interval: 5
+cluster:
+  kind: acp
+  sco_home: {path: /workspace/workspace/mingdong/.local-tools/sco}
+  credentials: {path: ../../../third_party/amphionkeys/sensecore.env}
+  workspace: workspace-whai
+  aec2: cluster-whai
+  image: registry.cn-sh-01.sensecore.cn/ccr-wh/amphion-base:amphion-base-20260923072955
+  worker_spec: N3lS.Ii.I60.94c944g
+  nodes: 2
+  priority: NORMAL
+  quota_type: reserved
+  wait: true
+  mounts:
+    - 01a0c847-3d8d-7b42-8c75-50cbd189bb56:/workspace
+  environment:
+    NCCL_IB_TIMEOUT: 22
+    NCCL_IB_RETRY_CNT: 13
+    NCCL_IB_AR_THRESHOLD: 0

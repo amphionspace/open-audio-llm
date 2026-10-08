@@ -1,0 +1,16 @@
+# 冒烟训练数据：只验证多机训练、记录与上传链路，不作为能力对照。
+seed: 42
+sampling_rate: 16000
+train:
+  # aishell 没有 clean 训练版本，按规则使用现有非 clean 训练集。
+  - dataset_id: aishell
+    version: legacy-20260804
+    split: train
+    task: asr
+    min_duration: 0.5
+    max_duration: 20.0
+    max_samples: 2400  # 30 步 × 16 卡 × 每卡 4 条 = 1920 条，留余量。
+catalog: catalog
+roots: /workspace/data/registry/roots.json
+# 任务容器只挂载 /workspace；多 rank 争用由 catalog_cache.lock_exclusive 处理。
+metadata_cache: ../shared/metadata-cache
