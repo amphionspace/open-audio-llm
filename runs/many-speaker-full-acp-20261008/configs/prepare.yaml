@@ -1,0 +1,119 @@
+version: 1
+runtime:
+  python:
+    path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  cwd:
+    path: ../../..
+  pythonpath:
+  - path: ../../../src
+  - path: /workspace/data/audio-data-contract/src
+  gpus: []
+  threads:
+    omp: 1
+    openblas: 1
+  environment:
+    PYTHONUNBUFFERED: '1'
+    TOKENIZERS_PARALLELISM: 'false'
+task:
+  kind: prepare
+  script:
+    path: ../scripts/prepare.py
+  accepts_config: true
+  arguments: {}
+parameters:
+  output:
+    path: '{attempt}/artifacts'
+  source_data:
+    path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/prepare-full-training-data/attempts/001/artifacts/train-data.yaml
+  source_dataset: sot_multispeaker_zh_en
+  source_version: synthetic-v2-timed-trial-v1-20260920
+  alignments:
+    path: /workspace/data/migration/unified-diarization-20261001-transfer/source-alignments.sqlite
+  dataset_id: sot_many_speaker_zh
+  ami_dataset_id: ami_sdm_meeting_replay
+  version: v1-20261008
+  root_alias: many_speaker_20261008
+  seed: 20261008
+  speaker_counts:
+  - 6
+  - 7
+  - 8
+  - 9
+  - 10
+  - 11
+  - 12
+  train_per_count: 1000
+  dev_per_count: 10
+  target_seconds: 180
+  utterance_seconds:
+  - 1.0
+  - 15.0
+  gap_seconds:
+  - 0.15
+  - 0.7
+  overlap_probability: 0.2
+  overlap_seconds:
+  - 0.2
+  - 0.8
+  edge_context_seconds: 0.05
+  tail_seconds: 0.8
+  gain_db:
+  - -1.0
+  - 1.0
+  reverberation_mix: 0.15
+  snr_db:
+  - 15.0
+  - 25.0
+  noise_subset: free-sound
+  noise_recordings:
+    path: /workspace/data/datasets/musan/versions/legacy-20260804/noise_recordings/musan_recordings_noise.jsonl.gz
+  rir_recordings:
+    path: /workspace/data/datasets/real_rir_slr28/versions/prepared-20260908/recordings/real_rir_slr28_recordings_all.jsonl.gz
+  tokenizer:
+    path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/merge-8000/attempts/001/artifacts/merged-model
+  max_tokens: 16384
+  workers: 16
+  batch_size: 2
+  weights:
+    many_speaker: 5000
+    synthetic: 1800
+    meeting: 2000
+    replay: 1000
+    english_meeting: 200
+  ami_recordings:
+    path: /workspace/data/datasets/ami_sdm/versions/icefall-20260908/train_rec_0/ami_sdm_recordings_train.jsonl.gz
+  ami_supervisions:
+    path: /workspace/data/datasets/ami_sdm/versions/icefall-20260908/train_sup_0/ami_sdm_supervisions_train.jsonl.gz
+  ami_heldout_recordings:
+  - path: /workspace/data/datasets/ami_sdm/versions/icefall-20260908/dev_rec_0/ami_sdm_recordings_dev.jsonl.gz
+  - path: /workspace/data/datasets/ami_sdm/versions/icefall-20260908/test_rec_0/ami_sdm_recordings_test.jsonl.gz
+  reference_plan:
+    path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/build-meeting-benchmark/attempts/003/artifacts/plan.json
+  dev_recordings:
+    path: /workspace/data/datasets/aishell/versions/legacy-20260804/dev_rec_0/aishell_recordings_dev.jsonl.gz
+  dev_supervisions:
+    path: /workspace/data/datasets/aishell/versions/legacy-20260804/dev_sup_0/aishell_supervisions_dev.jsonl.gz
+  source_speech_reserve_ratio: 2.0
+  source_recordings:
+    aishell:
+    - file:
+        path: /workspace/data/datasets/aishell/versions/legacy-20260804/train_rec_0/aishell_recordings_train.jsonl.gz
+      sha256: 2d490287e8d680e030bc276f8def0f15770f23441c7f7baf04e0b0fdb4cd372a
+    aishell2:
+    - file:
+        path: /workspace/data/datasets/aishell2/versions/legacy-20260804/train_rec_0/aishell2_recordings_train.jsonl.gz
+      sha256: 6bc4d05821a5d287c0e9c9b402abc49ff87bebbd5f5d97770263bf6f0c732304
+    kespeech:
+    - file:
+        path: /workspace/data/datasets/kespeech/versions/legacy-20260804/train_rec_0/kespeech-asr_recordings_train_phase1.jsonl.gz
+      sha256: f1ed873b6f03708d18e4983283aadd7fef3e06436575186e4141332d1a71e5a1
+    - file:
+        path: /workspace/data/datasets/kespeech/versions/legacy-20260804/train_rec_1/kespeech-asr_recordings_train_phase2.jsonl.gz
+      sha256: 89095d701ff3cc66ecea0b90d77829f41e6ace3d5fadcf928af6bc2769af02c2
+recording:
+  attempts_dir:
+    path: ../tasks/01-prepare/attempts
+  result:
+    path: '{attempt}/artifacts/report.json'
+tracking:
+  enabled: false

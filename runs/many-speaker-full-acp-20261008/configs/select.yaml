@@ -1,0 +1,55 @@
+version: 1
+# Runs on the development machine beside ACP training. The selector itself loads no
+# model; each checkpoint panel is a separate `eval` task with the vLLM backend.
+runtime:
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  cwd: /workspace/workspace/mingdong/repo/open-audio-llm
+  pythonpath:
+  - /workspace/workspace/mingdong/repo/open-audio-llm/runs/many-speaker-full-acp-20261008/shared/code/src
+  gpus:
+  - 0
+  threads:
+    omp: 2
+    openblas: 1
+  environment:
+    TOKENIZERS_PARALLELISM: false
+    HF_HUB_OFFLINE: '1'
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script:
+    path: ../scripts/local_selection.py
+  accepts_config: true
+  arguments: {}
+parameters:
+  output:
+    path: '{attempt}/artifacts'
+  # Attempt 003 holds checkpoint-500 and its in-job evaluation; 004 resumes from it.
+  training_attempts:
+  - path: ../tasks/02-train/attempts/003
+  - path: ../tasks/02-train/attempts/004
+  interval: 500
+  max_steps: 2000
+  poll_seconds: 60
+recording:
+  attempts_dir:
+    path: ../tasks/03-select/attempts
+  result:
+    path: '{attempt}/artifacts/final-results.json'
+tracking:
+  pythonpath:
+  - /workspace/workspace/mingdong/repo/open-audio-llm/runs/many-speaker-full-acp-20261008/shared/code/src
+  enabled: true
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  credentials_file: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: many-speaker-full-acp-20261008-select
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file:
+      path: '{attempt}/artifacts/selection-decision.json'
+    prefix: selection

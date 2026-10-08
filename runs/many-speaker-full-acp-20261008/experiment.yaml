@@ -1,0 +1,21 @@
+version: 1
+name: many-speaker-full-acp-20261008
+purpose: 全参数训练补齐 6–12 人合成会议，英文只作少量回放
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training_coverage: all_eligible_records
+  training_steps: 2000
+tasks:
+- id: prepare
+  name: 准备多人合成与少量英文回放
+  config: configs/prepare.yaml
+  depends_on: []
+- id: train
+  name: ACP 16 卡全参数训练与周期及结束评测
+  config: configs/train.yaml
+  depends_on: [prepare]
+- id: select
+  name: 开发机异步选模与结束评测
+  config: configs/select.yaml
+  depends_on: [prepare]

@@ -8,6 +8,7 @@ import hashlib
 import json
 import logging
 import os
+import socket
 import struct
 import sqlite3
 import time
@@ -77,7 +78,11 @@ class AudioIndex:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with exclusive_lock(self.path.with_suffix(".lock")):
             if not self.path.exists():
-                temporary = self.path.with_suffix(".tmp")
+                # flock does not exclude other hosts on quarkfs; a per-process
+                # temporary keeps concurrent builders from sharing one file.
+                temporary = self.path.with_name(
+                    f"{self.path.stem}.{socket.gethostname()}.{os.getpid()}.tmp"
+                )
                 temporary.unlink(missing_ok=True)
                 db = sqlite3.connect(temporary)
                 try:
