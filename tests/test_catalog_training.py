@@ -1186,3 +1186,16 @@ def test_noise_exclude_datasets_keeps_listed_audio_clean(catalog_config):
     reference = sf.read(BytesIO(CatalogSwiftDataset(catalog_config, training=False)[0]['audios'][0]))[0]
     assert not np.allclose(noisy, reference, atol=1e-4)
     np.testing.assert_allclose(clean, reference, atol=1e-4)
+
+
+def test_cache_identity_ignores_declared_roles_the_loader_never_reads(catalog_config, tmp_path):
+    from open_audio_llm.data.catalog_cache import source_identity
+
+    specs = [json.loads(line) for line in Path(catalog_config['catalog']).read_text().splitlines()]
+    specs[0]['artifacts'].append({'name': 'punc', 'kind': 'lhotse-supervisions',
+                                  'root_alias': 'data', 'relative_path': 'missing-punc.jsonl.gz'})
+    specs[0]['splits']['train']['artifacts']['punctuated_supervisions'] = ['punc']
+    Path(catalog_config['catalog']).write_text('\n'.join(json.dumps(s) for s in specs))
+    dataset = CatalogSwiftDataset(catalog_config)
+    identity = source_identity(dataset, dict(dataset.sources[0]))
+    assert not any('missing-punc' in path for path, *_ in identity['files'])
