@@ -82,7 +82,7 @@ HEAD 替代来源。修改同步入口时保留旧入口及其哈希，训练源
 成品语言为 `zh-en`，`metadata.primary_language` 按源语句总时长选择 `zh` 或 `en`，
 用于原生 Qwen3-ASR 的单语言输出头。混合任务提示明确要求保留两种原文、不翻译。
 
-AmphionEval 的 `ae open-audio-llm ts-asr` 同时支持普通 ASR 和此任务（见 [使用 AmphionEval 评测](../../../docs/amphion_eval.md)）。纯中文按 cpCER、纯英文按
+AmphionEval 的 `ae open-audio-llm ts-asr` 同时支持普通 ASR 和此任务（见 [使用 AmphionEval 评测](../../../docs/guides/evaluation.md)）。纯中文按 cpCER、纯英文按
 cpWER，中英混合按 cpMER 评分：中文字与英文词各计一个单位，再匹配说话人使总编辑
 距离最小。另报告人数准确率、格式正确率和空输出率。不同人数、语言、重叠区间分别
 报告；v2 的总体分数不能直接与条件分布不同的 v1 总分比较。

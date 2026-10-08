@@ -109,4 +109,4 @@ noise_sources:
 ```
 
 替换为真实注册的数据集后再启用增强。完整训练流程与限制见
-[在线训练数据](../../../docs/online_training_data.md)。
+[在线训练数据](../../../docs/guides/online-training-data.md)。

@@ -71,3 +71,29 @@ kubectl -n audiollm rollout status deployment/amphion-spec --timeout=15m
 远端 registry 部署前应把清单中的两个 `image` 改成实际镜像地址和不可变 tag/digest。
 默认每个模型申请一张 GPU；共享同一张 GPU 需要由集群显式配置 device-plugin
 time-slicing，清单不会假设 GPU 能隐式共享。
+
+## 配置化 vLLM 服务
+
+本仓库的 vLLM 服务都从 YAML 启动，无需手工 export：
+
+```bash
+open-audio-llm serve --config examples/configs/serve/vllm.yaml
+open-audio-llm serve --config examples/configs/serve/tsasr.yaml
+```
+
+Qwen3-ASR embedding bypass 在 `serve/vllm.yaml` 中通过 `--enable-mm-embeds` 和对应插件运行时设置开启，仍使用根项目的 `vllm.general_plugins`，无需单独安装插件子目录。原理见 [vLLM Triton Audio Embedding Bypass](../reference/vllm-triton-bypass.md)。
+
+### 目标说话人 ASR（TS-ASR）
+
+TS-ASR 使用独立服务配置 [serve/tsasr.yaml](../../examples/configs/serve/tsasr.yaml)：在注册音和混合音之间插入可学习 `[SEP]`，音频注意力使用全局窗口 `n_window_infer=1000000000`。普通 ASR 配置保持 SEP 关闭。需要分块注意力时，在 TS-ASR YAML 中设置 `COT_AUDIO_CHUNKED_ATTN: '1'` 并移除 `--hf-overrides`。实现位于 `src/open_audio_llm/tsasr/`。checkpoint-34479 的服务方式见 [评测结果](../models/ckpt34479-evaluation.md)。
+
+## Compose 部署
+
+Compose 由配置生成有效文件，默认只检查配置：
+
+```bash
+open-audio-llm deploy --config examples/configs/deploy/vllm.yaml --dry-run
+open-audio-llm deploy --config examples/configs/deploy/vllm.yaml
+```
+
+需要启动时，在部署 YAML 中显式设置 `operation: [up, --build]`。镜像版本、GPU 和模型只读挂载约束沿用原 profile。
