@@ -8,6 +8,7 @@ import hashlib
 import json
 import logging
 import os
+import shutil
 import socket
 import struct
 import sqlite3
@@ -293,24 +294,45 @@ class SourceRecordIndex:
         self.path = Path(root) / self.key
         Path(root).mkdir(parents=True, exist_ok=True)
         _reuse_completed(self.path, _legacy_paths(dataset, source, root))
-        self.path.mkdir(parents=True, exist_ok=True)
         # The completion marker is written last. A failed build is never opened.
-        with exclusive_lock(self.path / "build.lock"):
-            if not (self.path / "complete.json").exists():
-                self._build(dataset, source)
+        if not (self.path / "complete.json").exists():
+            # flock does not exclude other hosts on quarkfs, so each builder writes
+            # a private directory and publishes it with one rename.
+            with exclusive_lock(Path(root) / f"{self.key}.lock"):
+                if not (self.path / "complete.json").exists():
+                    staging = Path(root) / (
+                        f"{self.key}.{socket.gethostname()}.{os.getpid()}.tmp"
+                    )
+                    shutil.rmtree(staging, ignore_errors=True)
+                    staging.mkdir()
+                    self._build(dataset, source, staging)
+                    self._publish(staging)
         info = json.loads((self.path / "complete.json").read_text())
         self.count = info["count"]
         self.hotwords = info["hotwords"]
         self.metadata = np.memmap(self.path / "metadata.bin", dtype=_META, mode="r")
         self._fd = None
 
-    def _build(self, dataset, source):
+    def _publish(self, staging):
+        try:
+            staging.rename(self.path)
+        except OSError:
+            if not (self.path / "complete.json").exists():
+                shutil.rmtree(staging)
+                # Deleting it here could race with another host's publication.
+                raise RuntimeError(
+                    f"Incomplete index directory from an earlier build: {self.path}"
+                ) from None
+            # Another host published the same deterministic index first.
+            shutil.rmtree(staging)
+
+    def _build(self, dataset, source, directory):
         count, hotwords = 0, set()
         logging.getLogger(__name__).warning("Building Catalog index: %s", source)
         with (
-            (self.path / "records.jsonl").open("wb") as records,
-            (self.path / "metadata.bin").open("wb") as metadata,
-            (self.path / "ids.jsonl").open("w") as ids,
+            (directory / "records.jsonl").open("wb") as records,
+            (directory / "metadata.bin").open("wb") as metadata,
+            (directory / "ids.jsonl").open("w") as ids,
         ):
             for row in dataset._source_records(source):
                 cuts = {name: cut.to_dict() for name, cut in (row.cuts or {}).items()}
@@ -343,7 +365,7 @@ class SourceRecordIndex:
                     )
         if not count:
             raise ValueError(f"Empty source: {source}")
-        (self.path / "complete.json").write_text(
+        (directory / "complete.json").write_text(
             json.dumps({"count": count, "hotwords": sorted(hotwords)})
         )
 

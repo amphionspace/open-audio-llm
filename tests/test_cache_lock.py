@@ -2,6 +2,8 @@ import fcntl
 import multiprocessing
 import time
 
+import pytest
+
 from open_audio_llm.data import catalog_cache
 from open_audio_llm.data.catalog_cache import lock_exclusive
 
@@ -60,3 +62,27 @@ def test_lock_open_retries_eexist_from_concurrent_creation(tmp_path, monkeypatch
     with catalog_cache.exclusive_lock(tmp_path / "build.lock"):
         assert (tmp_path / "build.lock").exists()
     assert len(attempts) == 3
+
+
+def test_source_index_publish_keeps_first_complete_build(tmp_path):
+    index = catalog_cache.SourceRecordIndex.__new__(catalog_cache.SourceRecordIndex)
+    index.path = tmp_path / "key"
+    for name in ("a.tmp", "b.tmp"):
+        staging = tmp_path / name
+        staging.mkdir()
+        (staging / "complete.json").write_text(name)
+        index._publish(staging)
+        assert not staging.exists()
+    assert (index.path / "complete.json").read_text() == "a.tmp"
+
+
+def test_source_index_publish_rejects_incomplete_directory(tmp_path):
+    index = catalog_cache.SourceRecordIndex.__new__(catalog_cache.SourceRecordIndex)
+    index.path = tmp_path / "key"
+    (index.path / "partial").mkdir(parents=True)
+    staging = tmp_path / "a.tmp"
+    staging.mkdir()
+    (staging / "complete.json").write_text("{}")
+    with pytest.raises(RuntimeError, match="Incomplete index directory"):
+        index._publish(staging)
+    assert not staging.exists() and (index.path / "partial").exists()
