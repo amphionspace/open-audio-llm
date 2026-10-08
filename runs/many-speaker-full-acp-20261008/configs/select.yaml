@@ -35,6 +35,11 @@ parameters:
   # Selector attempt 005 already evaluated checkpoint-1500.
   previous_selections:
   - path: ../tasks/03-select/attempts/005/artifacts
+  - path: ../tasks/03-select/attempts/006/artifacts
+  # Attempt 004 failed at step 1999 before saving checkpoint-2000, and the Chinese
+  # stop rule fired at 1000 and 1500; report the stage with its last checkpoint.
+  final_checkpoint:
+    path: ../tasks/02-train/attempts/004/artifacts/training/checkpoint-1500
   interval: 500
   max_steps: 2000
   poll_seconds: 60

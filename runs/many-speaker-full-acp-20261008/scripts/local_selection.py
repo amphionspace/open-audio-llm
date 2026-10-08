@@ -58,6 +58,11 @@ def main():
                 (state/'selection-baseline').mkdir(parents=True, exist_ok=True)
                 shutil.copy2(baseline, state/'selection-baseline/summary.json')
         history_file.write_text(json.dumps(history, indent=2)+'\n')
+        # The latest earlier decision covers that history until a new checkpoint is evaluated.
+        for source in reversed(sources):
+            if (source/'selection-decision.json').is_file():
+                shutil.copy2(source/'selection-decision.json', state/'selection-decision.json')
+                break
     while True:
         finished = json.loads((running/'status.json').read_text())['execution'] in {'completed', 'failed'}
         done = {r['step'] for r in json.loads(history_file.read_text())}
@@ -72,9 +77,11 @@ def main():
         if finished and not pending:
             break
         time.sleep(settings['poll_seconds'])
-    if json.loads((running/'status.json').read_text())['execution'] != 'completed':
+    # An explicitly configured checkpoint reports a stage that ended without its last save.
+    chosen = settings.get('final_checkpoint')
+    if not chosen and json.loads((running/'status.json').read_text())['execution'] != 'completed':
         raise SystemExit(f'Training attempt did not complete: {running}')
-    final_evaluation(state, running/'effective.yaml')
+    final_evaluation(state, running/'effective.yaml', chosen)
 
 
 if __name__ == '__main__':

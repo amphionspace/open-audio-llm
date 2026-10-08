@@ -8,7 +8,7 @@ import yaml
 from checkpoint_eval import evaluate
 
 
-def main(output, effective):
+def main(output, effective, chosen=None):
     output = Path(output)
     training = yaml.safe_load(Path(effective).read_text())
     settings = training['parameters']['final_evaluation']
@@ -19,7 +19,7 @@ def main(output, effective):
             os.environ.pop(key,None)
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     decision = json.loads((output/'selection-decision.json').read_text())
-    chosen = decision['best_checkpoint'] or decision['checkpoint']
+    chosen = chosen or decision['best_checkpoint'] or decision['checkpoint']
     step = int(Path(chosen).name.removeprefix('checkpoint-'))
     name = training['tracking']['name']+'-'+Path(effective).parent.name
     fixed = evaluate(settings['fixed_template'],chosen,output/'final-evaluation/fixed',name+'-final-fixed',step,
