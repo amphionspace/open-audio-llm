@@ -55,7 +55,7 @@ v2 相对 v1 的变化：`checkpoint` 不再保证存在于本地，新增 `chec
 
 ### 1. 准备两个环境
 
-模型服务环境（vLLM）按 [README](../README.md#安装) 建 conda env `vllm`。评测环境单独建，不装模型运行时：
+模型服务环境（vLLM）按 [安装指南](../get-started/installation.md) 建 conda env `vllm`。评测环境单独建，不装模型运行时：
 
 ```bash
 source /path/to/miniconda3/etc/profile.d/conda.sh
@@ -67,7 +67,7 @@ python -m pip install -r requirements-eval.txt \
 ae --version   # amphion-eval 0.6.0 (… open-audio-llm handoff schema 2)
 ```
 
-[requirements-eval.txt](../requirements-eval.txt) 固定 `amphion-eval[open-audio-llm,legacy-http,tracking]==0.6.0`（GitLab 包仓库项目 42，`GITLAB_TOKEN` 需 read_api，不写进仓库）。`audio-data-contract` 不在包仓库中，需先从其仓库安装。评测配置的 `runtime.pythonpath` 为空：评测进程不 import 本项目。升级 AmphionEval 时同时修改该文件。
+[requirements-eval.txt](../../requirements-eval.txt) 固定 `amphion-eval[open-audio-llm,legacy-http,tracking]==0.6.0`（GitLab 包仓库项目 42，`GITLAB_TOKEN` 需 read_api，不写进仓库）。`audio-data-contract` 不在包仓库中，需先从其仓库安装。评测配置的 `runtime.pythonpath` 为空：评测进程不 import 本项目。升级 AmphionEval 时同时修改该文件。
 
 如果 conda 报证书错误，先 `export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt`。
 
@@ -79,11 +79,11 @@ open-audio-llm serve --config examples/configs/serve/vllm.yaml    # 普通 / 热
 open-audio-llm serve --config examples/configs/serve/tsasr.yaml   # TS-ASR
 ```
 
-LoRA checkpoint 先按 [merge-lora.yaml](../examples/configs/model/merge-lora.yaml) 合并，再把合并结果填进 serve YAML 的 `task.model`。
+LoRA checkpoint 先按 [merge-lora.yaml](../../examples/configs/model/merge-lora.yaml) 合并，再把合并结果填进 serve YAML 的 `task.model`。
 
 ### 3. 运行评测
 
-在 [eval/comparison.yaml](../examples/configs/eval/comparison.yaml) 中：
+在 [eval/comparison.yaml](../../examples/configs/eval/comparison.yaml) 中：
 
 - `runtime.python` 填评测环境的解释器，例如 `/path/to/miniconda3/envs/amphion-eval/bin/python`。
 - `task.server_url` 和 `--port`、`--model` 与服务一致。

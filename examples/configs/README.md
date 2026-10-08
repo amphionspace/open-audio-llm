@@ -5,7 +5,7 @@
 | 配置 | 用途 |
 |---|---|
 | [train/sft.yaml](train/sft.yaml) | Catalog SFT |
-| [train/sft-acp.yaml](train/sft-acp.yaml) | 同一 SFT 提交到 SenseCore ACP 算力池（2 节点 × 8 卡），见 [ACP 训练](../../docs/acp.md) |
+| [train/sft-acp.yaml](train/sft-acp.yaml) | 同一 SFT 提交到 SenseCore ACP 算力池（2 节点 × 8 卡），见 [ACP 训练](../../docs/guides/acp.md) |
 | [train/grpo.yaml](train/grpo.yaml) | 使用 vLLM rollout 的 GRPO |
 | [train/qwen3-asr.yaml](train/qwen3-asr.yaml) | Qwen3-ASR 热词训练 |
 | [train/ts-replay.yaml](train/ts-replay.yaml)、[ts-full.yaml](train/ts-full.yaml)、[ts-joint.yaml](train/ts-joint.yaml) | TS 回放与联合训练 |
@@ -29,4 +29,4 @@ CLI 只接受配置、任务选择、已有执行记录恢复与预览，不接�
 
 `{attempt}` 在启动时替换为新执行目录。生效配置、数据配置快照、日志、退出码和 W&B 核验保存在该目录。训练和评测必须启用 W&B；凭据保留在环境中，由 CPU 记录器加载配置指定的 `~/.bashrc`，DDP 工作者不重复写状态。
 
-GRPO 与 rollout 分配不同 GPU。TS/SOT 配方的 CPU 预检查使用与训练相同的数据配置、batch 和 world size。详见 [实验规范](../../docs/experiments.md)。
+GRPO 与 rollout 分配不同 GPU。TS/SOT 配方的 CPU 预检查使用与训练相同的数据配置、batch 和 world size。详见 [实验规范](../../docs/guides/experiments.md)。
