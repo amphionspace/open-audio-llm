@@ -77,3 +77,27 @@ tasks:
   name: 从 8000 合并模型开始的全参数训练（清理数据、加噪、选模集评测）
   config: configs/train-full-8000.yaml
   depends_on: [prepare-full-training-data, evaluate-select]
+- id: build-meeting-benchmark
+  name: 180 秒会议评测集（中文/英文真实会议 + 6/8/10 人合成会议）
+  config: configs/build-meeting-benchmark.yaml
+  depends_on: []
+- id: evaluate-meeting-benchmark
+  name: 我们的模型在 180 秒会议评测集上的 vLLM 推理与打分
+  config: configs/evaluate-meeting-benchmark.yaml
+  depends_on: [build-meeting-benchmark]
+- id: evaluate-moss-fixed
+  name: MOSS-Transcribe-Diarize 官方 vLLM 推理（固定集）
+  config: configs/evaluate-moss-fixed.yaml
+  depends_on: []
+- id: evaluate-moss-meeting-benchmark
+  name: MOSS-Transcribe-Diarize 官方 vLLM 推理（180 秒会议评测集）
+  config: configs/evaluate-moss-meeting-benchmark.yaml
+  depends_on: [build-meeting-benchmark]
+- id: score-fixed-moss
+  name: 固定集上 MOSS（vLLM / 原生 FP32）与我们模型的同口径对比
+  config: configs/score-fixed-moss.yaml
+  depends_on: [evaluate-moss-fixed]
+- id: score-meeting-benchmark
+  name: 180 秒会议评测集汇总打分（我们的模型 + MOSS）
+  config: configs/score-meeting-benchmark.yaml
+  depends_on: [evaluate-meeting-benchmark, evaluate-moss-meeting-benchmark]
