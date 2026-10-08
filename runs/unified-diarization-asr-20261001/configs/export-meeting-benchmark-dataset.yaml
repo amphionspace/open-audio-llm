@@ -1,0 +1,46 @@
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: []
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/export_meeting_benchmark_dataset.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  # build-meeting-benchmark 执行 003 的同一批 424 段；导出为 audio-data-contract 数据集，供 AmphionEval 评测集引用。
+  clips: {path: ../tasks/build-meeting-benchmark/attempts/003/artifacts/clips.jsonl}
+  clip_audio_dir: {path: ../tasks/build-meeting-benchmark/attempts/003/artifacts/audio}
+  # 根目录别名指向数据集目录本身；其他机器下载对象存储备份后在 roots 中把该别名指向下载位置。
+  dataset_root: {path: /workspace/data/datasets/meeting_180s_benchmark}
+  root_alias: meeting_180s_benchmark
+  dataset_id: meeting_180s_benchmark
+  version: v1-20261008
+  provenance:
+    status: complete
+    synthetic: partial
+    description: 部署长度（约 180 秒）会议转写评测集：AISHELL-4 test、AliMeeting Test、AMI SDM test 各会议均匀取 6 个窗口，另有中文 / 英文 / 中英混合 6、8、10 人远场合成会议各 10 段；共 424 段 21.2 小时。仅用于评测。
+    windowing: 在 150–210 秒内的说话空隙处切，不切断句子；无空隙时把跨界句子完整并入窗口（最长 244 秒）。真实会议远场通道取均值。
+    references: 说话人标签按首次发言排序为 S1、S2…；时间相对片段起点；真实会议为原始人工标注，合成会议为合成时间线。
+    sources:
+    - aishell4@legacy-20260804:test
+    - alimeeting_sdm@icefall-20260908:test
+    - ami_sdm@icefall-20260908:test
+    - aishell@legacy-20260804:test（合成说话人）
+    - librispeech@legacy-20260804:test-clean（合成说话人）
+    - real_rir_slr28@prepared-20260908（合成混响）
+    - musan@legacy-20260804:noise sound-bible（合成噪声，SNR 10–20 dB）
+    limitations: 合成噪声与 open-audio-llm 训练加噪同为 MUSAN；无 8 人以上真实会议；切点对齐说话空隙。
+    builder: open-audio-llm runs/unified-diarization-asr-20261001 configs/build-meeting-benchmark.yaml（执行 003）与 export-meeting-benchmark-dataset.yaml
+    backup: whai:open-audio-llm/datasets/meeting_180s_benchmark/
+recording:
+  attempts_dir: {path: ../tasks/export-meeting-benchmark-dataset/attempts}
+  result: {path: '{attempt}/artifacts/report.json'}
+tracking:
+  enabled: false

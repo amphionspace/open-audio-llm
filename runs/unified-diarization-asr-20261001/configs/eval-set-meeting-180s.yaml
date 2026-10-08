@@ -1,0 +1,16 @@
+# AmphionEval 共享评测集 open-audio-llm/meeting-180s@20261008 的登记内容（数据见 audio-data-contract
+# meeting_180s_benchmark@v1-20261008）。打分用 diarization 协议：cpER 全样本、DER 完整解析样本、说话人数准确率。
+task: diarization
+tags: [meeting, multi-speaker, timestamps, far-field]
+sampling_rate: 16000
+groups:
+- {name: 中文真实会议, section: 真实会议, labels: [aishell4_test, alimeeting_test], aggregate: macro, description: AISHELL-4 与 AliMeeting 测试会议的 180 秒远场窗口}
+- {name: 英文真实会议, section: 真实会议, labels: [ami_test], aggregate: macro, description: AMI 单远场麦克风测试会议的 180 秒窗口}
+- {name: 6–10 人合成会议, section: 合成会议, labels: [synthetic_zh, synthetic_en, synthetic_zh-en], aggregate: macro, description: 训练未见说话人的 6、8、10 人远场合成会议}
+evaluation:
+- {dataset_id: meeting_180s_benchmark, version: v1-20261008, split: aishell4_test, task: speaker_attributed_asr, label: aishell4_test, tags: [zh, meeting, far-field, multi-speaker, timestamps], display: AISHELL-4 会议（中文，1–7 人）, description: 20 场测试会议各 6 个约 180 秒窗口，8 通道取均值}
+- {dataset_id: meeting_180s_benchmark, version: v1-20261008, split: alimeeting_test, task: speaker_attributed_asr, label: alimeeting_test, tags: [zh, meeting, far-field, multi-speaker, timestamps], display: AliMeeting 会议（中文，2–4 人）, description: 20 场 Test 会议各 6 个约 180 秒窗口}
+- {dataset_id: meeting_180s_benchmark, version: v1-20261008, split: ami_test, task: speaker_attributed_asr, label: ami_test, tags: [en, meeting, far-field, multi-speaker, timestamps], display: AMI 会议（英文，3–4 人）, description: 16 场 SDM 测试会议各约 6 个 180 秒窗口}
+- {dataset_id: meeting_180s_benchmark, version: v1-20261008, split: synthetic_zh, task: speaker_attributed_asr, label: synthetic_zh, tags: [zh, synthetic, far-field, multi-speaker, timestamps], display: 中文多人合成会议（6/8/10 人）, description: AISHELL 测试说话人，真实混响加噪声}
+- {dataset_id: meeting_180s_benchmark, version: v1-20261008, split: synthetic_en, task: speaker_attributed_asr, label: synthetic_en, tags: [en, synthetic, far-field, multi-speaker, timestamps], display: 英文多人合成会议（6/8/10 人）, description: LibriSpeech test-clean 说话人，真实混响加噪声}
+- {dataset_id: meeting_180s_benchmark, version: v1-20261008, split: synthetic_zh-en, task: speaker_attributed_asr, label: synthetic_zh-en, tags: [code-switch, synthetic, far-field, multi-speaker, timestamps], display: 中英混合多人合成会议（6/8/10 人）, description: 中英说话人各半，真实混响加噪声}

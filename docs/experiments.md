@@ -10,7 +10,7 @@
 2. **训练中**：W&B 同步并核验远端；训练内评测只用选模集，不用对外比较的评测集；核验实际生效的学习率、可训练参数和数据游标，不以配置为准。
 3. **训练后标准评测**：对候选 checkpoint 跑两套固定评测并与基线同口径比较：
    - 固定集（338 条，`evaluate-a800`）：与历史结果和 MOSS 15.53%（官方 vLLM）对比；
-   - 180 秒会议评测集（`evaluate-meeting-benchmark` → `score-meeting-benchmark`）：中文、英文、6/8/10 人和复读条数；MOSS 输出已缓存，复用即可。
+   - 180 秒会议评测集（`evaluate-meeting-benchmark` → `score-meeting-benchmark`）：中文、英文、6/8/10 人和复读条数；MOSS 输出已缓存，复用即可。该集已登记为 AmphionEval 共享评测集 `open-audio-llm/meeting-180s@20261008`（数据 `meeting_180s_benchmark@v1-20261008`），训练后评测可直接写 `eval_set` 引用。
    新 checkpoint 只需加入 `models`，已完成的推理通过 `completed_inference` 复用。
 4. **归档**：执行记录、原始输出、逐条打分和保留的 checkpoint 用 `scripts/stage_experiment_upload.py` 暂存后 `ab push` 到 `whai:open-audio-llm/runs/<实验>/`，路径与本地一致；清单和排除规则提交到 `docs/experiments/<日期>/`。保留：每次训练最后可续训的 checkpoint 和选中的最佳点；合并模型、已确认退化的中间点可不传，但须在清单中写明。
 5. **结论**：阶段结束时写 `docs/experiments/<日期>/README.md`（结论先行，执行表含做了什么、结果、决定）和 `results.json`（机器可读的关键指标）。失败或中止的执行同样记录原因，不删除。

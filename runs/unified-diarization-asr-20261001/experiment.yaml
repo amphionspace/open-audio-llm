@@ -101,3 +101,7 @@ tasks:
   name: 180 秒会议评测集汇总打分（我们的模型 + MOSS）
   config: configs/score-meeting-benchmark.yaml
   depends_on: [evaluate-meeting-benchmark, evaluate-moss-meeting-benchmark]
+- id: export-meeting-benchmark-dataset
+  name: 180 秒会议评测集导出为 audio-data-contract 数据集（meeting_180s_benchmark@v1-20261008）
+  config: configs/export-meeting-benchmark-dataset.yaml
+  depends_on: [build-meeting-benchmark]
