@@ -1,0 +1,35 @@
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath:
+  - {path: ../../../src}
+  gpus: [0, 1, 2, 3, 4, 5, 6, 7]
+  threads: {omp: 4, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+    HF_HUB_OFFLINE: '1'
+    TOKENIZERS_PARALLELISM: false
+task:
+  kind: prepare
+  script: {path: ../scripts/score_training_losses.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  # 固定集会议 cpCER 最好的点（A800 同机 20.44%），用来给训练样本打分。
+  model: {path: ../tasks/merge-8000/attempts/001/artifacts/merged-model}
+  model_type: amphion_asr_1.7b
+  plugin: {path: ../../../src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py}
+  data_config: {path: ../tasks/localize-data/attempts/004/artifacts/local-balanced-train.yaml}
+  max_length: 16384
+  # 真实会议全量打分；合成按固定种子抽样 3%。单人 ASR 回放（公开集）不在本次范围：
+  # 无增强的验证读取会改用带标点标注，本机化只链接了训练实际使用的文件。
+  full_sources: [meeting_sot]
+  skip_sources: [aishell, kespeech, commonvoice_en_clean, librispeech]
+  sample_rate: 0.03
+  seed: 42
+recording:
+  attempts_dir: {path: ../tasks/score-training-losses/attempts}
+tracking:
+  enabled: false

@@ -1,0 +1,44 @@
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath:
+  - {path: ../../../src}
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/audit_meeting_windows.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  # 训练目标时间与原始标注的允许偏差（秒）；窗口内未写入目标的已标注语音达到该时长即计为漏标窗口。
+  time_tolerance_seconds: 0.02
+  unlabeled_speech_min_seconds: 0.5
+  datasets:
+    aishell4:
+      supervisions:
+      - {path: /workspace/data/datasets/aishell4/versions/legacy-20260804/train_sup_0/aishell4_supervisions_train_L.jsonl.gz}
+      - {path: /workspace/data/datasets/aishell4/versions/icefall-20260908/train_sup_1/aishell4_supervisions_train_M.jsonl.gz}
+      - {path: /workspace/data/datasets/aishell4/versions/icefall-20260908/train_sup_2/aishell4_supervisions_train_S.jsonl.gz}
+      views:
+        train_30s: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/aishell4-train_30s.jsonl.gz}
+        train_120s: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/aishell4-train_120s.jsonl.gz}
+        train_300s: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/aishell4-train_300s.jsonl.gz}
+        train_600s: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/aishell4-train_600s.jsonl.gz}
+    alimeeting_sdm:
+      supervisions:
+      - {path: /workspace/data/datasets/alimeeting_sdm/versions/icefall-20260908/train_sup_0/alimeeting_sdm_supervisions_train.jsonl.gz}
+      views:
+        train_30s: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/alimeeting_sdm-train_30s.jsonl.gz}
+        train_120s: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/alimeeting_sdm-train_120s.jsonl.gz}
+        train_300s: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/alimeeting_sdm-train_300s.jsonl.gz}
+        train_600s: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/alimeeting_sdm-train_600s.jsonl.gz}
+recording:
+  attempts_dir: {path: ../tasks/audit-meeting-windows/attempts}
+  result: {path: '{attempt}/artifacts/summary.json'}
+tracking:
+  enabled: false

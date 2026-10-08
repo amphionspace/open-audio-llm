@@ -1,0 +1,31 @@
+# 固定集 338 条上，用归档 MOSS 对照打分口径比较：官方 vLLM 推理的 MOSS、此前原生 FP32 推理的 MOSS、
+# 我们 A800 同机评测的 LoRA 8000（evaluate-a800 执行 002）。只打分，不推理。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-score/bin/python}
+  cwd: {path: ../../..}
+  pythonpath:
+  - {path: ../../../src}
+  gpus: []
+  threads: {omp: 4, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/score_fixed_moss.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  scoring_helpers: {path: ../../qwen3-asr-sot-speaker-events-20260922/statistical-moss-comparison-500-20260922/score.py}
+  clips: {path: ../../qwen3-asr-sot-speaker-events-20260922/vllm-full-audio-checkpoint-21000-20260927/clips.jsonl}
+  primary: step8000
+  candidates:
+    step8000: {file: {path: ../tasks/evaluate-a800/attempts/002/artifacts/evaluation/step8000/predictions.jsonl}, format: qwen}
+    moss_vllm: {file: {path: ../tasks/evaluate-moss-fixed/attempts/001/artifacts/predictions.jsonl}, format: moss}
+    moss_native_fp32: {file: {path: ../../qwen3-asr-sot-speaker-events-20260922/statistical-moss-comparison-500-20260922/moss/predictions.jsonl}, format: moss}
+recording:
+  attempts_dir: {path: ../tasks/score-fixed-moss/attempts}
+  result: {path: '{attempt}/artifacts/summary.json'}
+tracking:
+  enabled: false

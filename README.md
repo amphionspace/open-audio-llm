@@ -100,6 +100,8 @@ open-audio-llm deploy --config examples/configs/deploy/vllm.yaml
 
 截至 2026-10-06 的[最新实验结果、训练轨迹与权重归档](docs/experiments/2026-10-06/README.md)：包含 speaker-events、clean/events A/B、统一格式全参训练及 LoRA 两次执行；说明已评测结果、失败状态和对象存储下载方式。
 
+2026-10-08 [阶段归档](docs/experiments/2026-10-08/README.md)：8×A800 续训与全参训练、数据质检、180 秒会议评测集，以及与 MOSS-Transcribe-Diarize（官方 vLLM）的同口径对比；迭代流程见 [实验规范](docs/experiments.md#自我迭代流程)。
+
 每个实验根目录只放概览、方案和目录；每项任务提供中文输入、完成条件、进展和证据，失败与补充执行归入原任务的 `attempts`，完成状态与质量结论分开记录。
 
 ```bash

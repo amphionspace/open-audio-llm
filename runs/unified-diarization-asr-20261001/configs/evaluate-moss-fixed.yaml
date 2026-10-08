@@ -1,0 +1,47 @@
+# MOSS-Transcribe-Diarize 第三方基线：固定集 338 条（与 MOSS 原生 FP32 结果和我们模型对照）。
+# 官方推荐 SGLang Omni；本机不使用 SGLang，按官方说明用固定提交的 vLLM nightly（cu130），
+# 模型在自己的环境中以 OpenAI 兼容 /v1/audio/transcriptions 服务运行，客户端只发音频。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/moss-vllm/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: []
+  gpus: [3]
+  threads: {omp: 4, openblas: 1}
+  environment:
+    HF_HUB_OFFLINE: '1'
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: eval
+  backend: vllm
+  script: {path: ../scripts/infer_served_moss.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  model: {path: /workspace/model/MOSS-Transcribe-Diarize}
+  served_model_name: moss-transcribe-diarize
+  # 官方安装命令固定的 vLLM 提交 68b4a1d5（0.23.1rc1.dev949），见模型 README。
+  serve_arguments: [--trust-remote-code, --gpu-memory-utilization, '0.6']
+  port: 8731
+  startup_timeout: 1800
+  request_timeout: 1800
+  concurrency: 16
+  # 官方示例：response_format json、temperature 0；提示词使用服务端默认值。
+  request: {response_format: json, temperature: 0}
+  clips: {path: ../../qwen3-asr-sot-speaker-events-20260922/vllm-full-audio-checkpoint-21000-20260927/clips.jsonl}
+  clip_audio_dir: {path: ../../qwen3-asr-sot-speaker-events-20260922/statistical-moss-comparison-500-20260922/audio}
+recording:
+  attempts_dir: {path: ../tasks/evaluate-moss-fixed/attempts}
+  result: {path: '{attempt}/artifacts/inference-complete.json'}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: ~/.config/open-audio-llm/wandb-env.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: moss-transcribe-diarize-vllm-fixed
+  interval: 5
+  startup_timeout: 180
+  finish_timeout: 300

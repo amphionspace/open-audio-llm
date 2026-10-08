@@ -150,6 +150,9 @@ def _legacy_source_identity(dataset, source):
     paths = []
     if source.get("sot_timestamps"):
         paths.append(Path(source["sot_alignment_index"]))
+    if source.get("exclude_records"):
+        # The ID list changes the indexed records; its size/mtime keys the cache.
+        paths.append(Path(source["exclude_records"]))
     # Only roles the loader reads key the index; declared alternatives such as
     # punctuated or clean supervisions may be absent locally and never change it.
     for role in READ_ROLES:

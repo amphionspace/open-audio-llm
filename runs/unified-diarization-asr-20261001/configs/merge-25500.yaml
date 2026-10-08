@@ -1,0 +1,24 @@
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath:
+  - {path: ../../../src}
+  gpus: []
+  threads: {omp: 16, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+    HF_HUB_OFFLINE: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/merge_adapter.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts/merged-model'}
+  adapter: {path: ../tasks/local-training/attempts/005/artifacts/training/checkpoint-25500}
+  base: {path: /workspace/model/unified-diarization-20261001/unified-base-checkpoint-1000}
+recording:
+  attempts_dir: {path: ../tasks/merge-25500/attempts}
+tracking:
+  enabled: false

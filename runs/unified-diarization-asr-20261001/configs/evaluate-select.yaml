@@ -1,13 +1,12 @@
-# 本机 8×A800 固定集评测，同时作为训练中 checkpoint 评测的模板（local_checkpoint_eval.py
-# 只覆盖模型、输出、GPU 和记录名）。推理协议沿用 evaluate-71000.yaml：vLLM 0.18.0、BF16、
-# TRITON_ATTN、完整音频 attention、temperature 0、seed 42、4096 token。
+# 选模集评测：AISHELL-4 留出 10 场、AliMeeting 留出 8 场训练会议（prepare-full-training-data），
+# 只用于训练中挑选 checkpoint；与 MOSS 的最终比较仍用固定集 evaluate-a800。推理与打分协议同固定集。
 version: 1
 runtime:
   python: {path: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python}
   cwd: {path: ../../..}
   pythonpath:
   - {path: ../../../src}
-  gpus: [0, 1, 2, 3]
+  gpus: [0]
   threads: {omp: 4, openblas: 1}
   environment:
     TOKENIZERS_PARALLELISM: false
@@ -22,14 +21,13 @@ task:
   arguments: {}
 parameters:
   output: {path: '{attempt}/artifacts/evaluation'}
-  # 新一轮 SFT 的基座（LoRA 8 卡执行 005 / checkpoint-25500 合并）为主候选，与历史点同机对照。
-  primary_candidate: step25500
-  training_step: 25500
-  reference_plan: {path: ../../qwen3-asr-sot-speaker-events-20260922/vllm-full-audio-checkpoint-21000-20260927/plan.json}
-  reference_clips: {path: ../../qwen3-asr-sot-speaker-events-20260922/vllm-full-audio-checkpoint-21000-20260927/clips.jsonl}
+  primary_candidate: step8000
+  training_step: 8000
+  reference_plan: {path: ../tasks/prepare-full-training-data/attempts/001/artifacts/selection/plan.json}
+  reference_clips: {path: ../tasks/prepare-full-training-data/attempts/001/artifacts/selection/clips.jsonl}
   # 2026-10-06 从原机补传的同一批 338 条切片与打分脚本，按原仓库相对位置放置（score.py 依赖
   # ../../aishell4-moss-compare-20260920/score.py）；infer.py 逐条核对 clips.jsonl 中的 SHA256。
-  clip_audio_dir: {path: ../../qwen3-asr-sot-speaker-events-20260922/statistical-moss-comparison-500-20260922/audio}
+  clip_audio_dir: {path: ../tasks/prepare-full-training-data/attempts/001/artifacts/selection/audio}
   scoring_helpers: {path: ../../qwen3-asr-sot-speaker-events-20260922/statistical-moss-comparison-500-20260922/score.py}
   # 独立打分环境（meeteval 0.4.3、pyannote.metrics 4.1）；已对归档 4000 步原始预测逐条复现 cpCER 20.27%。
   scoring_python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-score/bin/python}
@@ -41,14 +39,11 @@ parameters:
   mm_encoder_attn_backend: TRITON_ATTN
   single_speaker_prompt: Transcribe the single speaker. Output [S1] followed by the transcription.
   models:
-    unified: {path: /workspace/model/unified-diarization-20261001/unified-base-checkpoint-1000}
-    step4000: {path: /workspace/model/unified-diarization-20261001/lora-002-step4000-merged}
     step8000: {path: ../tasks/merge-8000/attempts/001/artifacts/merged-model}
-    step25500: {path: ../tasks/merge-25500/attempts/001/artifacts/merged-model}
   cached_predictions: {}
   cached_asr_predictions: {}
 recording:
-  attempts_dir: {path: ../tasks/evaluate-a800/attempts}
+  attempts_dir: {path: ../tasks/evaluate-select/attempts}
   result: {path: '{attempt}/artifacts/evaluation/summary.json'}
 tracking:
   pythonpath: [{path: ../../../src}]
@@ -57,7 +52,7 @@ tracking:
   credentials_file: {path: ~/.config/open-audio-llm/wandb-env.sh}
   entity: 1016097967-amphion
   project: open-audio-llm
-  name: unified-diarization-a800-eval
+  name: unified-diarization-select-eval
   interval: 5
   startup_timeout: 180
   finish_timeout: 300

@@ -64,7 +64,7 @@ def main():
             if code:
                 raise RuntimeError(f'vLLM inference exited {code}')
         subprocess.run(
-            [settings['scoring_python'], str(Path(__file__).with_name('score.py')),
+            [settings['scoring_python'], str(Path(__file__).with_name(settings.get('scoring_script', 'score.py'))),
              '--config', str(args.config)],
             env={**os.environ, 'CUDA_VISIBLE_DEVICES': ''}, check=True,
         )

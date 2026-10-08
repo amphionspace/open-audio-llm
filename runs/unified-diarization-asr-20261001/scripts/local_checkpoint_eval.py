@@ -30,9 +30,13 @@ for source in base.iterdir():
         'model.safetensors.index.json'} and not (output / source.name).exists():
         shutil.copy2(source, output / source.name)
 '''
-    subprocess.run([sys.executable, '-c', merge_code, str(checkpoint), str(merged),
-                    training['task']['arguments']['--model']],
-                   env={**os.environ, 'CUDA_VISIBLE_DEVICES': ''}, check=True)
+    if (checkpoint / 'adapter_config.json').exists():
+        subprocess.run([sys.executable, '-c', merge_code, str(checkpoint), str(merged),
+                        training['task']['arguments']['--model']],
+                       env={**os.environ, 'CUDA_VISIBLE_DEVICES': ''}, check=True)
+    else:
+        # Full-parameter checkpoints already hold the complete model.
+        merged = checkpoint
     # load_config resolves paths against the original template before copying it.
     from open_audio_llm.run_config import load_config
     config = load_config(Path(settings['template']), output / 'eval-attempt')

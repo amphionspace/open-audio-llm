@@ -1,0 +1,72 @@
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath:
+  - {path: ../../../src}
+  gpus: []
+  threads: {omp: 4, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/prepare_full_training_data.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  seed: 42
+  # 2026-10-07 数据质检（tasks/audit-meeting-windows、tasks/score-training-losses）后的清理方案，用户确认：
+  # 隔离音频与标注不匹配的会议；移除空目标窗口；留出会议作选模集；去掉全部 dense 合成档位；只加噪声。
+  roots: {path: ../tasks/localize-data/attempts/004/artifacts/roots.json}
+  source_data: {path: ../shared/data/local-balanced-train-b4.yaml}
+  catalog: {path: ../../clean-events-ab-20260928/tasks/06-train-treatment/attempts/001/artifacts/catalog.jsonl}
+  reference_plan: {path: ../../qwen3-asr-sot-speaker-events-20260922/vllm-full-audio-checkpoint-21000-20260927/plan.json}
+  meetings:
+    aishell4:
+      label: aishell4
+      audio_index: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/aishell4-train-audio-index.jsonl.gz}
+      views:
+        train_30s: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/aishell4-train_30s.jsonl.gz}
+        train_120s: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/aishell4-train_120s.jsonl.gz}
+        train_300s: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/aishell4-train_300s.jsonl.gz}
+        train_600s: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/aishell4-train_600s.jsonl.gz}
+      quarantine_meetings: []
+      holdout_meetings: 10
+      # 与固定集 AISHELL-4 部分一致：每场 10 个约 30 秒窗口。
+      selection_view: train_30s
+      selection_max_duration: 35
+      selection_per_meeting: 10
+    alimeeting:
+      label: alimeeting
+      audio_index: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/alimeeting_sdm-train-audio-index.jsonl.gz}
+      views:
+        train_30s: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/alimeeting_sdm-train_30s.jsonl.gz}
+        train_120s: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/alimeeting_sdm-train_120s.jsonl.gz}
+        train_300s: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/alimeeting_sdm-train_300s.jsonl.gz}
+        train_600s: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/alimeeting_sdm-train_600s.jsonl.gz}
+      # 远场音频能量与标注语音区间相关系数 0.02（正常会议 0.31–0.55），训练 loss 中位数 1.44。
+      quarantine_meetings: [R1021_M1947]
+      holdout_meetings: 8
+      # 与固定集 AliMeeting 部分一致：全部 120 秒窗口。
+      selection_view: train_120s
+      selection_max_duration: 130
+  exclude_records_datasets: [aishell4_meeting_sot, alimeeting_sdm_meeting_sot]
+  drop_split_suffixes: [_dense]
+  rescale_dataset_ids: [sot_multispeaker_zh_en]
+  rescale_split_pattern: '_[2-9]spk_'
+  noise_catalog_entries:
+  - {registry: {path: /workspace/data/registry/catalog/datasets.yaml}, dataset_id: musan, version: legacy-20260804}
+  noise_sources:
+  - {dataset_id: musan, version: legacy-20260804, split: noise}
+  augmentation:
+    noise_prob: 0.5
+    # MOSS 论文对合成数据使用 SNR 0–15 dB。
+    noise_snr_db: [0.0, 15.0]
+    noise_exclude_datasets: [aishell4_meeting_sot, alimeeting_sdm_meeting_sot]
+  batching: {max_samples: 4}
+recording:
+  attempts_dir: {path: ../tasks/prepare-full-training-data/attempts}
+  result: {path: '{attempt}/artifacts/report.json'}
+tracking:
+  enabled: false

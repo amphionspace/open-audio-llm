@@ -66,11 +66,10 @@ def read_data_config(path):
             selected if selected.is_absolute() else path.parent / selected
         )
     for source in config.get("train", []) + config.get("validation", []) + config.get('evaluation', []):
-        if source.get("sot_alignment_index"):
-            selected = Path(source["sot_alignment_index"]).expanduser()
-            source["sot_alignment_index"] = str(
-                selected if selected.is_absolute() else path.parent / selected
-            )
+        for key in ("sot_alignment_index", "exclude_records"):
+            if source.get(key):
+                selected = Path(source[key]).expanduser()
+                source[key] = str(selected if selected.is_absolute() else path.parent / selected)
     if not config.get("train"):
         raise ValueError("data config requires at least one train source")
     return config
@@ -140,6 +139,8 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                 raise ValueError("exclude_speakers must be a list of speaker IDs")
             if type(source.get("require_clean_pass", False)) is not bool:
                 raise ValueError("require_clean_pass must be a boolean")
+            if source.get("exclude_records") is not None and not Path(source["exclude_records"]).is_file():
+                raise ValueError("exclude_records must name an existing file of record IDs")
             for key in ("samples", "reps", "max_samples"):
                 value = source.get(key)
                 if value is not None and (type(value) is not int or value <= 0):
@@ -230,8 +231,13 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         else:
             cuts = self.resolver.iter_cuts(spec.dataset_id, spec.version, split_name)
             rows = self._cut_records(cuts, source, spec)
+        excluded_ids = set()
+        if source.get("exclude_records"):
+            excluded_ids = set(Path(source["exclude_records"]).read_text().split())
         count = 0
         for row in rows:
+            if row.record.id in excluded_ids:
+                continue
             if source.get("ts_holdout") and not in_ts_partition(row.record, source["ts_holdout"]):
                 continue
             # Portable TS records omit durations: read indexed metadata, not audio.
@@ -384,6 +390,8 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                 if resolved.record.metadata.get("sot_output_format") in {TIMESTAMP_FORMAT, TARGET_FORMAT}:
                     # Aligned times are fixed; time warping and delayed RIRs invalidate them.
                     augmentation = replace(augmentation, speed_prob=0.0, rir_prob=0.0)
+                if resolved.dataset_id in augmentation.noise_exclude_datasets:
+                    augmentation = replace(augmentation, noise_prob=0.0)
                 audio = augment_waveform(
                     audio,
                     self.sampling_rate,

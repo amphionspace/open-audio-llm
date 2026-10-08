@@ -1,5 +1,6 @@
-# LoRA 002 在本机 8×A800 上续训：从 checkpoint-8000 恢复 adapter、AdamW、调度器和数据游标。
-# 训练契约与 train-local.yaml 相同，仅卡数和路径不同：8 卡 × 每卡 1 条 × 累积 4 = 每次更新 32 条。
+# 新一轮 SFT：以 LoRA 8 卡执行 005 / checkpoint-25500 合并后的模型为基座，新建 LoRA、优化器、
+# 学习率调度和数据游标。方案 B：每卡每批最多 4 条、不做梯度累积（8 卡每次更新 8–32 条；
+# loss 按全局样本数归一，每条样本权重不变）。数据版本、配比和其余训练参数与 train-local.yaml 相同。
 version: 1
 runtime:
   python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
@@ -19,7 +20,7 @@ runtime:
     processes: 8
     port: 29785
 data:
-  config: {path: ../tasks/localize-data/attempts/004/artifacts/local-balanced-train.yaml}
+  config: {path: ../shared/data/local-balanced-train-b4.yaml}
 task:
   kind: train
   module: open_audio_llm.integrations.ms_swift.train
@@ -38,9 +39,9 @@ task:
     --torch_dtype: bfloat16
     --attn_impl: sdpa
     --max_length: 16384
-    --per_device_train_batch_size: 1
+    --per_device_train_batch_size: 4
     --per_device_eval_batch_size: 1
-    --gradient_accumulation_steps: 4
+    --gradient_accumulation_steps: 1
     --learning_rate: 2.0e-05
     --max_steps: -1
     --lr_scheduler_type: inverse_sqrt
@@ -53,7 +54,7 @@ task:
     --dataloader_persistent_workers: true
     --performance_logging: true
     --save_steps: 500
-    # 训练内评测暂停期间保留全部 checkpoint，评测点（每 2000 步）在训练外补评。
+    --save_total_limit: 3
     --logging_steps: 5
     --report_to: none
     --seed: 42
@@ -74,37 +75,30 @@ task:
     --check_model: false
     --add_version: false
     --callbacks:
-    - resume_training_audit
-    # 2026-10-06 从对象存储下载，SHA256 与 docs/experiments/2026-10-06/weights.json 一致。
-    --model: {path: /workspace/model/unified-diarization-20261001/unified-base-checkpoint-1000}
-    # 执行 004 从 LoRA 002/checkpoint-8000（2 卡）续训到 10000；005 起在同一 8 卡配置上续训。
-    --resume_from_checkpoint: {path: ../tasks/local-training/attempts/004/artifacts/training/checkpoint-10000}
+    - local_training_audit
+    --model: {path: ../tasks/merge-25500/attempts/001/artifacts/merged-model}
     --external_plugins:
     - {path: ../../../src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py}
-    - {path: ../scripts/resume_training_audit.py}
+    - {path: ../scripts/local_training_audit.py}
     --output_dir: {path: '{attempt}/artifacts/training'}
     --continuous_training: true
-    # 保留 checkpoint 中的调度器与数据游标；重置会把学习率退回 warmup 起点。
-    --reset_catalog_sampler: false
-    # 执行 004 用 --catalog_sampler_migration 把 2 卡游标换算为 8 卡（见 attempts/004/effective.yaml）；
-    # 005 起卡数与路径不变，直接恢复 checkpoint 中的游标。
     --lr_scheduler_kwargs:
       timescale: 10000
     --gradient_checkpointing_kwargs:
       use_reentrant: false
-    # 用户 2026-10-06 要求先保证训练连续：固定集打分依赖（原机 score helper）补齐前不在训练中评测，
-    # 每 2000 步 checkpoint 保留并在训练外用 evaluate-a800 补评。
+    --retention_eval_script: {path: ../scripts/local_checkpoint_eval.py}
+    --retention_eval_interval: 2000
 preflight:
 - kind: prepare
   module: open_audio_llm.data.catalog_cache
   arguments:
-    --data_config: {path: ../tasks/localize-data/attempts/004/artifacts/local-balanced-train.yaml}
+    --data_config: {path: ../shared/data/local-balanced-train-b4.yaml}
     --workers: 4
-    --batch-size: 1
+    --batch-size: 4
     --world-size: 8
     --preflight-report: {path: '{attempt}/artifacts/data-preflight.json'}
 recording:
-  attempts_dir: {path: ../tasks/local-training/attempts}
+  attempts_dir: {path: ../tasks/sft-25500/attempts}
 tracking:
   pythonpath:
   - {path: ../../../src}
@@ -113,16 +107,16 @@ tracking:
   credentials_file: {path: ~/.config/open-audio-llm/wandb-env.sh}
   entity: 1016097967-amphion
   project: open-audio-llm
-  name: unified-diarization-local-lora
+  name: unified-diarization-sft-25500
   interval: 5
   startup_timeout: 180
   finish_timeout: 300
 parameters:
   checkpoint_evaluation:
     template: {path: evaluate-a800.yaml}
-    # A800 80GB 上与 8 个训练进程共存；基线与各 checkpoint 使用同一设置。
+    # A800 80GB 上与 8 个训练进程共存；同机基线与各 checkpoint 使用同一设置。
     gpu_memory_utilization: 0.4
-    run_name: unified-diarization-local-lora-a800-eval
-    # 同机基座：A800 上重新生成的 checkpoint-1000 输出，不混用 RTX 5090 结果。
-    baseline_predictions: {path: ../tasks/evaluate-a800/attempts/001/artifacts/evaluation/unified/predictions.jsonl}
-    baseline_asr_predictions: {path: ../tasks/evaluate-a800/attempts/001/artifacts/evaluation/unified/asr-predictions.jsonl}
+    run_name: unified-diarization-sft-25500-eval
+    # 同机基线：本机 evaluate-a800 中新基座（checkpoint-25500 合并）的输出。
+    baseline_predictions: {path: ../tasks/evaluate-a800/attempts/001/artifacts/evaluation/step25500/predictions.jsonl}
+    baseline_asr_predictions: {path: ../tasks/evaluate-a800/attempts/001/artifacts/evaluation/step25500/asr-predictions.jsonl}

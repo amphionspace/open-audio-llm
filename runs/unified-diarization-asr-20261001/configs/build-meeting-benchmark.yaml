@@ -1,0 +1,75 @@
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath:
+  - {path: ../../../src}
+  gpus: []
+  threads: {omp: 4, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/build_meeting_benchmark.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  seed: 42
+  # 部署按约 180 秒切段（用户 2026-10-08）：在 150–210 秒内的说话空隙处切，不切断句子；
+  # 找不到空隙时把跨界句子完整并入窗口，最长到 240 秒。
+  target_seconds: 180
+  min_seconds: 150
+  max_seconds: 210
+  limit_seconds: 240
+  # 编码器整段注意力需覆盖最长窗口（100 帧/秒，实测最长 244 秒）；与训练时整段注意力一致。
+  n_window_infer: 26000
+  max_model_len: 12288
+  reference_plan: {path: ../../qwen3-asr-sot-speaker-events-20260922/vllm-full-audio-checkpoint-21000-20260927/plan.json}
+  # 真实会议：均与训练、选模集不重叠；每场均匀取 6 个窗口。
+  real:
+  - label: aishell4_test
+    language: zh
+    windows_per_meeting: 6
+    recordings: {path: /workspace/data/datasets/aishell4/versions/legacy-20260804/test_rec_0/aishell4_recordings_test.jsonl.gz}
+    supervisions: {path: /workspace/data/datasets/aishell4/versions/legacy-20260804/test_sup_0/aishell4_supervisions_test.jsonl.gz}
+  - label: alimeeting_test
+    language: zh
+    windows_per_meeting: 6
+    recordings: {path: /workspace/data/datasets/alimeeting_sdm/versions/icefall-20260908/test_rec_0/alimeeting_sdm_recordings_test.jsonl.gz}
+    supervisions: {path: /workspace/data/datasets/alimeeting_sdm/versions/icefall-20260908/test_sup_0/alimeeting_sdm_supervisions_test.jsonl.gz}
+  - label: ami_test
+    language: en
+    windows_per_meeting: 6
+    recordings: {path: /workspace/data/datasets/ami_sdm/versions/icefall-20260908/test_rec_0/ami_sdm_recordings_test.jsonl.gz}
+    supervisions: {path: /workspace/data/datasets/ami_sdm/versions/icefall-20260908/test_sup_0/ami_sdm_supervisions_test.jsonl.gz}
+  # 合成会议：真实数据没有 8 人及以上，用训练未见的测试集说话人补齐 6/8/10 人档。
+  synthetic:
+    speaker_counts: [6, 8, 10]
+    samples_per_cell: 10
+    target_seconds: 180
+    max_utterance_seconds: 15
+    gap_seconds: [0.2, 1.2]
+    overlap_probability: 0.2
+    overlap_seconds: [0.5, 2.0]
+    # 噪声与训练加噪同为 MUSAN（只取 sound-bible 子集），此档主要测多人容量，抗噪结论偏乐观。
+    snr_db: [10.0, 20.0]
+    noise_subset: sound-bible
+    noise_recordings: {path: /workspace/data/datasets/musan/versions/legacy-20260804/noise_recordings/musan_recordings_noise.jsonl.gz}
+    rir_recordings: {path: /workspace/data/datasets/real_rir_slr28/versions/prepared-20260908/recordings/real_rir_slr28_recordings_all.jsonl.gz}
+    sources:
+      zh:
+        recordings: {path: /workspace/data/datasets/aishell/versions/legacy-20260804/test_rec_0/aishell_recordings_test.jsonl.gz}
+        supervisions: {path: /workspace/data/datasets/aishell/versions/legacy-20260804/test_sup_0/aishell_supervisions_test.jsonl.gz}
+      en:
+        recordings: {path: /workspace/data/datasets/librispeech/versions/legacy-20260804/test_clean_rec_0/librispeech_recordings_test-clean.jsonl.gz}
+        supervisions: {path: /workspace/data/datasets/librispeech/versions/legacy-20260804/test_clean_sup_0/librispeech_supervisions_test-clean.jsonl.gz}
+    languages:
+      zh: {zh: 1.0}
+      en: {en: 1.0}
+      zh-en: {zh: 0.5, en: 0.5}
+recording:
+  attempts_dir: {path: ../tasks/build-meeting-benchmark/attempts}
+  result: {path: '{attempt}/artifacts/report.json'}
+tracking:
+  enabled: false

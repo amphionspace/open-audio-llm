@@ -49,3 +49,55 @@ tasks:
   name: 本机 A800 同机基线与 4000/8000 步固定集 vLLM 评测
   config: configs/evaluate-a800.yaml
   depends_on: [localize-data, merge-8000]
+- id: merge-25500
+  name: 合并 LoRA 8 卡执行 005 / checkpoint-25500 作为新 SFT 基座
+  config: configs/merge-25500.yaml
+  depends_on: []
+- id: sft-25500
+  name: 以 checkpoint-25500 合并模型为基座的新一轮 LoRA SFT（每卡 4 条、不累积）
+  config: configs/train-sft-25500.yaml
+  depends_on: [merge-25500, evaluate-a800]
+- id: audit-meeting-windows
+  name: 真实会议训练窗口与原始人工标注逐窗口核对
+  config: configs/audit-meeting-windows.yaml
+  depends_on: [localize-data]
+- id: score-training-losses
+  name: 用 8000 合并模型逐条计算训练样本 loss，定位异常数据
+  config: configs/score-training-losses.yaml
+  depends_on: [merge-8000]
+- id: prepare-full-training-data
+  name: 质检后的清理数据配置与留出会议选模集
+  config: configs/prepare-full-training-data.yaml
+  depends_on: [audit-meeting-windows, score-training-losses]
+- id: evaluate-select
+  name: 选模集上的起点模型基线
+  config: configs/evaluate-select.yaml
+  depends_on: [prepare-full-training-data]
+- id: full-8000
+  name: 从 8000 合并模型开始的全参数训练（清理数据、加噪、选模集评测）
+  config: configs/train-full-8000.yaml
+  depends_on: [prepare-full-training-data, evaluate-select]
+- id: build-meeting-benchmark
+  name: 180 秒会议评测集（中文/英文真实会议 + 6/8/10 人合成会议）
+  config: configs/build-meeting-benchmark.yaml
+  depends_on: []
+- id: evaluate-meeting-benchmark
+  name: 我们的模型在 180 秒会议评测集上的 vLLM 推理与打分
+  config: configs/evaluate-meeting-benchmark.yaml
+  depends_on: [build-meeting-benchmark]
+- id: evaluate-moss-fixed
+  name: MOSS-Transcribe-Diarize 官方 vLLM 推理（固定集）
+  config: configs/evaluate-moss-fixed.yaml
+  depends_on: []
+- id: evaluate-moss-meeting-benchmark
+  name: MOSS-Transcribe-Diarize 官方 vLLM 推理（180 秒会议评测集）
+  config: configs/evaluate-moss-meeting-benchmark.yaml
+  depends_on: [build-meeting-benchmark]
+- id: score-fixed-moss
+  name: 固定集上 MOSS（vLLM / 原生 FP32）与我们模型的同口径对比
+  config: configs/score-fixed-moss.yaml
+  depends_on: [evaluate-moss-fixed]
+- id: score-meeting-benchmark
+  name: 180 秒会议评测集汇总打分（我们的模型 + MOSS）
+  config: configs/score-meeting-benchmark.yaml
+  depends_on: [evaluate-meeting-benchmark, evaluate-moss-meeting-benchmark]
