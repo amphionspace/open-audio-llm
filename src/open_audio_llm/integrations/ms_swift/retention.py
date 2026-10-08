@@ -61,6 +61,129 @@ def supervised_forward(model, head, inputs, labels):
     return outputs, shifted[mask], rows, mask.sum(-1)
 
 
+class _ChunkedLinearCrossEntropy(torch.autograd.Function):
+    """Token cross-entropy for every label token in one matmul.
+
+    Audio positions are omitted before this runs. Logits are not saved; backward
+    recomputes the same projection. The whole label span is one matrix so the
+    temporary vocabulary tensor is ``label_tokens * vocab``, not ``B * T * vocab``.
+    """
+
+    @staticmethod
+    def forward(ctx, hidden, weight, targets):
+        ctx.save_for_backward(hidden, weight, targets)
+        logits = F.linear(hidden, weight).float()
+        return F.cross_entropy(logits, targets, reduction="none")
+
+    @staticmethod
+    @once_differentiable
+    def backward(ctx, grad_output):
+        hidden, weight, targets = ctx.saved_tensors
+        probability = F.linear(hidden, weight).float().softmax(-1)
+        valid = targets != -100
+        probability[torch.arange(hidden.shape[0], device=targets.device), targets.clamp_min(0)] -= valid.to(probability.dtype)
+        probability.mul_((grad_output * valid).unsqueeze(-1))
+        grad = probability.to(hidden.dtype)
+        return grad @ weight, grad.transpose(0, 1) @ hidden, None
+
+
+def _supervised_positions(labels):
+    shifted = F.pad(labels[:, 1:], (0, 1), value=-100)
+    mask = shifted != -100
+    if not mask.any():
+        raise ValueError("Batch has no supervised tokens")
+    return shifted, mask
+
+
+def chunked_supervised_loss(model, head, inputs, labels):
+    """Local token-mean loss, projecting only positions that predict a label.
+
+    ``lm_head`` is bypassed so a long audio prompt never becomes a vocabulary
+    matrix. The returned scalar matches ``ForCausalLMLoss`` reduction ``mean``
+    on this rank; the caller applies the trainer's global token denominator.
+    """
+    if head.bias is not None:
+        raise ValueError("Chunked supervised loss requires an unbiased lm_head")
+    shifted, mask = _supervised_positions(labels)
+    inputs = dict(inputs)
+    inputs.pop("use_cache", None)
+    captured = {}
+
+    def capture(hidden):
+        captured["hidden"] = hidden
+        return hidden.new_empty(0)
+
+    original = head.forward
+    head.forward = capture
+    try:
+        outputs = model(**inputs, use_cache=False)
+    finally:
+        head.forward = original
+    hidden = captured["hidden"]
+    if hidden.shape[:mask.ndim] != mask.shape:
+        raise ValueError(
+            f"Hidden states {tuple(hidden.shape)} do not match labels {tuple(mask.shape)}")
+    selected = hidden[mask]
+    targets = shifted[mask]
+    token_losses = _ChunkedLinearCrossEntropy.apply(selected, head.weight, targets)
+    with torch.no_grad():
+        predicted = F.linear(selected, head.weight).argmax(-1)
+        token_acc = predicted.eq(targets).float()
+    outputs.logits = None
+    return outputs, token_losses.sum() / targets.shape[0], token_acc
+
+
+def install_chunked_supervised_loss(trainer):
+    """Replace the dense vocabulary loss on the normal SFT path.
+
+    Retention already projects supervised positions and is left unchanged.
+    Evaluation gathers predictions only when ``prediction_loss_only`` is false;
+    the dense logits tensor would otherwise be copied back at ``eval_steps``.
+    """
+    head = trainer.model.thinker.lm_head
+    if head.bias is not None:
+        raise ValueError("Chunked supervised loss requires an unbiased lm_head")
+    if getattr(trainer.args, "enable_dft_loss", False) or getattr(trainer.args, "enable_channel_loss", False):
+        raise ValueError("Chunked supervised loss does not implement DFT or channel loss")
+    if trainer.label_smoother is not None:
+        raise ValueError("Chunked supervised loss does not implement label smoothing")
+    trainer.args.prediction_loss_only = True
+    LOG.warning(
+        "Supervised loss projects every label token in one matmul "
+        "and does not allocate [batch, sequence, vocab] logits"
+    )
+
+    def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
+        inputs = dict(inputs)
+        if inputs.pop("compute_loss_func", None) is not None:
+            raise ValueError("A custom loss function cannot be combined with chunked supervised loss")
+        if inputs.pop("loss_scale", None) is not None:
+            raise ValueError("Token loss_scale cannot be combined with chunked supervised loss")
+        inputs.pop("text_position_ids", None)
+        inputs.pop("channel", None)
+        labels = inputs.pop("labels")
+        outputs, loss, token_acc = chunked_supervised_loss(model, head, inputs, labels)
+        shift_count = (labels[:, 1:] != -100).sum()
+        if num_items_in_batch is not None:
+            loss = loss * (shift_count / num_items_in_batch)
+        if (getattr(self.args, "average_tokens_across_devices", False)
+                and self.model_accepts_loss_kwargs and num_items_in_batch is not None):
+            loss = loss * self.accelerator.num_processes
+        mode = "train" if model.training else "eval"
+        self.custom_metrics[mode]["token_acc"].update(token_acc.detach())
+        outputs.loss = loss
+        if not compute_loss.logged:
+            LOG.warning(
+                "Chunked supervised loss tokens: supervised %s / padded sequence %s",
+                int(shift_count), int(labels.numel()),
+            )
+            compute_loss.logged = True
+        return (loss, outputs) if return_outputs else loss
+
+    compute_loss.logged = False
+    trainer.compute_loss = MethodType(compute_loss, trainer)
+
+
 def average_answer_parts(values, rows, counts, prefix=None):
     if prefix is None:
         return values.new_zeros(len(counts)).scatter_add(0, rows, values) / counts.clamp_min(1)

@@ -358,12 +358,13 @@ class Qwen3ASRTemplate(Template):
         if not inputs.audios:
             return super()._encode(inputs)
         extra = getattr(inputs, 'extra_kwargs', None) or {}
-        enrollments = (extra.get('chat_template_kwargs') or {}).get('enroll_wavs')
+        chat_kwargs = extra.get('chat_template_kwargs') or getattr(inputs, 'chat_template_kwargs', None) or {}
+        enrollments = chat_kwargs.get('enroll_wavs')
         if enrollments:
             from open_audio_llm.audio.target_sot import extract_segments, segment_tokens
 
-            if len(inputs.audios) != 1 or not 1 <= len(enrollments) <= 3:
-                raise ValueError('Conditional SOT needs 1--3 enrollments and one mixture')
+            if len(inputs.audios) != 1 or not 1 <= len(enrollments) <= 5:
+                raise ValueError('Conditional SOT needs 1--5 enrollments and one mixture')
             wavs = [load_audio(p, sampling_rate=self.sampling_rate)
                     for p in [*enrollments, inputs.audios[0]]]
             features, lengths = extract_segments(self.feature_extractor, wavs)
@@ -375,7 +376,7 @@ class Qwen3ASRTemplate(Template):
             encoded['input_features'] = augment_features(
                 features, torch.tensor([sum(lengths)]), extra.get('audio_augmentation'))
             encoded['feature_attention_mask'] = torch.ones((1, sum(lengths)), dtype=torch.long)
-            encoded['enrollment_lengths'] = torch.tensor([lengths[:-1] + [0] * (4 - len(lengths))])
+            encoded['enrollment_lengths'] = torch.tensor([lengths[:-1] + [0] * (6 - len(lengths))])
             return encoded
         try:
             audios = load_batch(
@@ -470,7 +471,7 @@ class Qwen3ASRTemplate(Template):
             res['feature_attention_mask'] = torch.concat(feature_attention_mask)
         if any('enrollment_lengths' in b for b in batch):
             res['enrollment_lengths'] = torch.cat([
-                b.get('enrollment_lengths', torch.zeros((b['input_features'].shape[0], 3), dtype=torch.long))
+                b.get('enrollment_lengths', torch.zeros((b['input_features'].shape[0], 5), dtype=torch.long))
                 for b in batch
             ])
         return res

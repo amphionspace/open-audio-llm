@@ -29,10 +29,15 @@ def parse_speakers(text):
         labels.append(label)
         end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
         speakers[label] = (speakers.get(label, "") + " " + text[match.end():end]).strip()
-    valid = (bool(matches) and not preamble.strip()
-             and labels == list(range(1, len(matches) + 1))
-             and all(normalize(value) for value in speakers.values()))
-    return list(speakers.values()), valid
+    structural = (bool(matches) and not preamble.strip()
+                  and labels == list(range(1, len(matches) + 1)))
+    values = list(speakers.values())
+    if not structural:
+        return values, False
+    # A turn whose text is only punctuation has no cp units. Drop it here;
+    # timestamped DER still sees the original interval.
+    lexical = [value for value in values if normalize(value)]
+    return lexical, bool(lexical)
 
 
 def attribution_summary(counts, reference_units):
@@ -87,7 +92,10 @@ def score_speakers(reference, prediction, chinese, mixed=False):
     references, reference_valid = parse_speakers(reference)
     hypotheses, valid = parse_speakers(prediction)
     if not reference_valid:
-        raise ValueError("SOT reference must contain ordered, nonempty speaker labels")
+        # Tagged turns that normalize away are still a reference; they add no words.
+        if references or TAG.search(reference) is None:
+            raise ValueError("SOT reference must contain ordered, nonempty speaker labels")
+        references = []
 
     def units(text):
         return transcription_units(text, chinese, mixed)
@@ -96,6 +104,10 @@ def score_speakers(reference, prediction, chinese, mixed=False):
     hypotheses = [units(text) for text in hypotheses]
     hypotheses = [text for text in hypotheses if text]
     size = max(len(references), len(hypotheses))
+    if size == 0:
+        return {"errors": 0, "reference_units": 0, "reference_speakers": 0,
+                "predicted_speakers": 0, "format_valid": valid, "empty_output": True,
+                "speaker_attribution": attribution_summary([{key: 0 for key in ATTRIBUTION_COUNTS}], 0)}
     cost = [[Levenshtein.distance(references[i] if i < len(references) else [],
                                   hypotheses[j] if j < len(hypotheses) else [])
              for j in range(size)] for i in range(size)]
@@ -122,7 +134,8 @@ def summarize_sot(items, chinese):
     units = sum(row["reference_units"] for row in scores)
     return {"task": "speaker_attributed_asr", "language": items[0]["language"],
             "metric": "cpMER" if mixed else "cpCER" if chinese else "cpWER", "utterances": len(items),
-            "errors": errors, "reference_units": units, "error_rate": errors / units,
+            "errors": errors, "reference_units": units,
+            "error_rate": errors / units if units else None,
             "speaker_count_accuracy": sum(row["reference_speakers"] == row["predicted_speakers"] for row in scores) / len(scores),
             "format_valid_rate": sum(row["format_valid"] for row in scores) / len(scores),
             "empty_output_rate": sum(row["empty_output"] for row in scores) / len(scores),

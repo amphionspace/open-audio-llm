@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 import hashlib
@@ -27,6 +28,8 @@ from .records import ResolvedAudioRecord
 from .sot import TIMESTAMP_FORMAT, with_sot_timestamps
 from .sot_alignment import AlignmentIndex
 from .target_sot import EnrollmentConfig, TARGET_FORMAT, eligible_candidates
+
+LOG = logging.getLogger(__name__)
 
 
 def in_ts_partition(record, selection):
@@ -366,7 +369,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             result[slot.name] = buffer.getvalue()
         return result
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx, _overlength_attempts=0):
         import soundfile as sf
 
         started = time.perf_counter()
@@ -387,7 +390,26 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                 "config": asdict(self.augmentation),
             }
         encode_started = time.perf_counter()
-        result = self.encode(sample) if self.encode is not None else sample
+        try:
+            result = self.encode(sample) if self.encode is not None else sample
+        except Exception as error:
+            # ``delete`` turns into MaxLengthError. The map-style encoder drops
+            # that row; a DataLoader worker must do the same, or one rank exits
+            # and the others wait forever in the gradient sync.
+            from swift.template import MaxLengthError
+
+            if not isinstance(error, MaxLengthError) or not self.training or _overlength_attempts >= 8:
+                raise
+            epoch, record_idx, occurrence = (
+                idx if isinstance(idx, tuple) else (self.epoch, idx, None)
+            )
+            LOG.warning("Dropping over-length sample %s: %s", self.records[record_idx].record.id, error)
+            replacement = (int(record_idx) + (_overlength_attempts + 1) * 100003) % len(self.records)
+            next_occurrence = None if occurrence is None else f"{occurrence}:overlength:{_overlength_attempts + 1}"
+            return self.__getitem__(
+                (epoch, replacement, next_occurrence),
+                _overlength_attempts=_overlength_attempts + 1,
+            )
         if self.config.get("objective", {}).get("sample_mean"):
             # Metadata is consumed by the training loss, never model.forward.
             if sample["task"] == "asr":

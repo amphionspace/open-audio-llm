@@ -46,6 +46,42 @@ def attach_separator(tower):
         nn.init.normal_(tower.sep_token.weight, std=0.02)
 
 
+ENROLL_SLOTS = 5
+
+
+def audio_attention_mode(tower):
+    """Qwen3-ASR attention spans ``n_window_infer`` mel frames, about 10 ms each."""
+    n_window = int(tower.n_window)
+    infer = int(tower.n_window_infer)
+    return {
+        "n_window": n_window,
+        "n_window_infer": infer,
+        "conv_chunk_frames": n_window * 2,
+        "attention_window_seconds": infer / 100,
+        "global": infer >= 60000,
+    }
+
+
+def enable_global_audio_attention(model, max_seconds=600):
+    """Keep the trained 100-frame convolution and let attention see the whole clip.
+
+    Window attention is a ``cu_seqlens`` span, not a separate weight tensor.
+    ``n_window`` stays 50 so convolution boundaries match the checkpoint.
+    """
+    tower = model.thinker.audio_tower
+    info = audio_attention_mode(tower)
+    if info["conv_chunk_frames"] != 100:
+        raise ValueError("Global attention keeps the native 100-frame convolution chunks")
+    needed = int(max_seconds * 100)
+    info["changed"] = info["n_window_infer"] < needed
+    if info["changed"]:
+        tower.n_window_infer = needed
+        tower.config.n_window_infer = needed
+        info["n_window_infer"] = needed
+    info["global"] = True
+    return info
+
+
 def encode_segments(tower, packed, lengths):
     """Encode one example; all its segments attend jointly, never other examples."""
     from open_audio_llm.integrations.ms_swift.audio_batching import conv_segments
@@ -53,7 +89,7 @@ def encode_segments(tower, packed, lengths):
     if len(lengths) == 1:
         return tower(packed[:, :lengths[0]], feature_lens=torch.tensor(
             lengths, device=packed.device)).last_hidden_state
-    if not 2 <= len(lengths) <= 4 or any(n <= 0 for n in lengths) or sum(lengths) > packed.shape[-1]:
+    if not 2 <= len(lengths) <= ENROLL_SLOTS + 1 or any(n <= 0 for n in lengths) or sum(lengths) > packed.shape[-1]:
         raise ValueError("Invalid enrollment/mixture frame lengths")
     if not hasattr(tower, "sep_token"):
         raise ValueError("Checkpoint has no enrollment SEP parameter")
@@ -122,10 +158,10 @@ def enable_target_audio(model, model_dir=None):
                 raise ValueError("Enrollment metadata batch mismatch")
             outputs = []
             for features, total, row in zip(input_features, lengths, rows):
-                if len(row) != 3 or any(n < 0 for n in row) or any(
-                    row[i] > 0 and row[i - 1] == 0 for i in (1, 2)
+                if len(row) != ENROLL_SLOTS or any(n < 0 for n in row) or any(
+                    row[i] > 0 and row[i - 1] == 0 for i in range(1, ENROLL_SLOTS)
                 ):
-                    raise ValueError("Enrollment lengths require 1--3 positive entries then zeros")
+                    raise ValueError("Enrollment lengths require 1--5 positive entries then zeros")
                 enroll = [n for n in row if n > 0]
                 if sum(enroll) >= total:
                     raise ValueError("Enrollment consumes the mixture")

@@ -162,12 +162,12 @@ def test_conditional_template_packs_independent_features(monkeypatch):
     features, lengths = extract_segments(template.feature_extractor, list(wavs.values()))
     torch.testing.assert_close(output["input_features"], features, rtol=0, atol=0)
     assert output["tags"].count("<|audio_pad|>") == segment_tokens(lengths)
-    assert output["enrollment_lengths"].tolist() == [[101, 207, 0]]
+    assert output["enrollment_lengths"].tolist() == [[101, 207, 0, 0, 0]]
     assert lengths[-1] == 3101
     monkeypatch.setattr(module.Template, "_data_collator", lambda *args, **kw: {})
     ordinary = {"input_features": torch.zeros(1, 128, 100), "feature_attention_mask": torch.ones(1, 100)}
     batch = template._data_collator([output, ordinary])
-    assert batch["enrollment_lengths"].tolist() == [[101, 207, 0], [0, 0, 0]]
+    assert batch["enrollment_lengths"].tolist() == [[101, 207, 0, 0, 0], [0, 0, 0, 0, 0]]
 
 
 @pytest.mark.parametrize("cached", [False, True])
@@ -250,7 +250,7 @@ def test_full_forward_and_checkpoint_round_trip(tmp_path):
     inputs = {"input_ids": torch.tensor([[1] + [60] * tokens + [2, 3]]),
                   "attention_mask": torch.ones(1, tokens + 3, dtype=torch.long),
                   "input_features": features, "feature_attention_mask": torch.ones(1, sum(lengths), dtype=torch.long),
-                  "enrollment_lengths": torch.tensor([[101, 0, 0]]), "use_cache": False}
+                  "enrollment_lengths": torch.tensor([[101, 0, 0, 0, 0]]), "use_cache": False}
     # The public top-level forward delegates to thinker through the existing Swift patch.
     output = model.thinker(**inputs).logits
     output.square().mean().backward()
@@ -279,7 +279,7 @@ def test_vllm_request_uses_same_segment_embeddings(monkeypatch):
 
     calls = []
     engine = SimpleNamespace(generate=lambda prompts, params, **kwargs: (
-        calls.append(prompts) or [SimpleNamespace(outputs=[SimpleNamespace(text="", finish_reason="stop")])]))
+        calls.append((prompts, params)) or [SimpleNamespace(outputs=[SimpleNamespace(text="", finish_reason="stop")])]))
     monkeypatch.setitem(sys.modules, "vllm", SimpleNamespace(SamplingParams=lambda **kwargs: kwargs))
     wavs = {"ref": np.ones(16000, dtype=np.float32), "mixture": np.zeros(32000, dtype=np.float32)}
     monkeypatch.setattr(module, "read_waveform", lambda p: wavs[p])
@@ -293,12 +293,15 @@ def test_vllm_request_uses_same_segment_embeddings(monkeypatch):
     runner.processor = SimpleNamespace(feature_extractor=extractor, tokenizer=tokenizer)
     runner.engine, runner.backend, runner.max_model_len = engine, "vllm", 16384
     result = runner.transcribe("mixture", ["ref"], "targets_only")
-    assert result == {"prediction": "", "finish_reason": "stop", "backend": "vllm", "duration": 2}
+    assert result["prediction"] == "" and result["finish_reason"] == "stop"
+    assert result["backend"] == "vllm" and result["duration"] == 2
     features, lengths = extract_segments(extractor, list(wavs.values()))
-    expected = encode_segments(runner.tower, features[0], lengths)
-    request = calls[0][0]
+    expected = encode_segments(runner.tower, features[0], lengths).unsqueeze(0)
+    request = calls[0][0][0]
+    assert calls[0][1][0]["repetition_penalty"] == 1.05
+    assert calls[0][1][0]["temperature"] == 0
     torch.testing.assert_close(request["multi_modal_data"]["audio"]["audio_embeds"], expected, rtol=0, atol=0)
-    assert request["prompt"].startswith(target_prompt(1, "targets_only"))
+    assert target_prompt(1, "targets_only") in request["prompt"]
     assert request["prompt"].count("<|audio_pad|>") == 1
     runner.max_model_len = 25
     with pytest.raises(ValueError, match="no audio was truncated"):

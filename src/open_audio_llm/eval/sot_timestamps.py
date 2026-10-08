@@ -9,6 +9,7 @@ from scipy.optimize import linear_sum_assignment
 from open_audio_llm.data.sot import TIMESTAMP_FORMAT
 
 from .qwen3_asr import normalize
+from .meeting_scores import summarize_meeting_scores
 from .sot import TAG, summarize_sot, transcription_units
 
 LINE = re.compile(r"\[S([1-9]\d*)\]\[(\d+\.\d{2})-(\d+\.\d{2})\] (.+)")
@@ -57,9 +58,9 @@ def parse_intervals(text, duration):
 
 
 def timing_counts(reference, prediction, duration, chinese, mixed):
-    refs, valid, _ = parse_intervals(reference, duration)
-    if not valid:
-        raise ValueError("Invalid timestamp reference")
+    # Overlapping turns of one speaker are valid meeting speech. The boundary
+    # metric still uses the parsed intervals; cp, tcp and DER are unaffected.
+    refs, _, _ = parse_intervals(reference, duration)
     hyps, format_valid, attempted = parse_intervals(prediction, duration)
     _, ref_text = untimed_groups(reference)
     _, hyp_text = untimed_groups(prediction)
@@ -69,6 +70,10 @@ def timing_counts(reference, prediction, duration, chinese, mixed):
     def units(text):
         return transcription_units(text, chinese, mixed)
 
+    if size == 0:
+        return {"reference_segments": len(refs), "predicted_segments": attempted,
+                "matched_segments": 0, "within_collar_segments": 0,
+                "boundary_absolute_error_seconds": 0.0, "format_valid": format_valid}
     cost = [[Levenshtein.distance(units(ref_text[ref_labels[i]]) if i < len(ref_labels) else [],
                                   units(hyp_text[hyp_labels[j]]) if j < len(hyp_labels) else [])
              for j in range(size)] for i in range(size)]
@@ -80,7 +85,9 @@ def timing_counts(reference, prediction, duration, chinese, mixed):
             continue
         left = sorted((s for s in refs if s[0] == ref_labels[i]), key=lambda s: s[1])
         right = sorted((s for s in hyps if s[0] == hyp_labels[j]), key=lambda s: s[1])
-        if not right:
+        # A punctuation-only turn is kept in the speaker list but dropped by the
+        # interval parser. It has no boundary to score.
+        if not left or not right:
             continue
         # Pair turns by transcript edit distance after speaker assignment.
         # Time never affects matching, so boundary error cannot choose its own pairing.
@@ -121,4 +128,6 @@ def summarize_timed_sot(items, chinese):
                            chinese, row["language"] == "zh-en") for row in items]
     result["format_valid_rate"] = sum(row["format_valid"] for row in counts) / len(counts)
     result["timestamps"] = summarize_timing(counts)
+    result["cp_error_rate"] = result["error_rate"]
+    result.update(summarize_meeting_scores(items, fixed_targets=False))
     return result

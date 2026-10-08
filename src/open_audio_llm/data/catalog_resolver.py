@@ -31,6 +31,9 @@ class LhotseCatalogAudioResolver:
         self._cuts: dict[tuple[str, str, str], dict[str, object]] = {}
         self._audio_indexes = {}
         self.index_cache = index_cache
+        from .pyav_backend import install_pyav_backend
+
+        install_pyav_backend()
 
     def _load_split(self, ref: AudioRef) -> dict[str, object]:
         key = (ref.dataset_id, ref.version, ref.split)

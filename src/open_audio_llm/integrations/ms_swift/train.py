@@ -61,6 +61,7 @@ class CatalogSftArguments(CatalogArgumentsMixin, SftArguments):
     performance_logging: bool = True
     audio_encoder_parallel: bool = False
     audio_encoder_batching: bool = False
+    audio_encoder_global: bool = False
     retention_teacher: str | None = None
     retention_eval_script: str | None = None
     retention_eval_interval: int = 2000
@@ -152,6 +153,10 @@ class CatalogTrainingMixin:
                 from .retention import install_retention_objective
 
                 install_retention_objective(trainer, self.args)
+            else:
+                from .retention import install_chunked_supervised_loss
+
+                install_chunked_supervised_loss(trainer)
             install_catalog_loader(trainer, self._get_resume_checkpoint(trainer))
             if getattr(self.args, 'retention_eval_script', None):
                 from .retention_eval import RetentionEvaluationCallback
@@ -159,6 +164,12 @@ class CatalogTrainingMixin:
                 trainer.add_callback(RetentionEvaluationCallback(
                     self.args.retention_eval_script, self.args.retention_eval_interval,
                 ))
+        if getattr(self.args, "audio_encoder_global", False):
+            from open_audio_llm.audio.target_sot import enable_global_audio_attention
+
+            logging.getLogger(__name__).warning(
+                "audio encoder attention %s",
+                enable_global_audio_attention(trainer.model, max_seconds=10**7))
         restore_audio = None
         if getattr(self.args, "audio_encoder_batching", False):
             from .audio_batching import enable_batched_audio

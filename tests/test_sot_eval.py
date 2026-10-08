@@ -26,6 +26,24 @@ def test_missing_extra_and_untagged_speech_are_counted():
     assert empty['errors'] == 6 and empty['empty_output'] and not empty['format_valid']
 
 
+def test_punctuation_only_speaker_is_scored_with_the_other_speakers():
+    result = score_speakers('[S1] hello there\n[S2] .', '[S1] hello there', False)
+    assert result['errors'] == 0 and result['reference_units'] == 2
+    assert result['reference_speakers'] == 1
+
+
+def test_punctuation_only_turn_does_not_abort_boundary_counts():
+    from open_audio_llm.eval.sot_timestamps import summarize_timed_sot
+    from open_audio_llm.data.sot import TIMESTAMP_FORMAT
+
+    reference = "[S1][0.00-2.00] hello there\n[S2][1.00-1.40] ."
+    row = dict(source="sot", language="en", task="speaker_attributed_asr", duration=2.0,
+               sot_output_format=TIMESTAMP_FORMAT, reference=reference, prediction=reference)
+    result = summarize_timed_sot([row], False)
+    assert result["cp_error_rate"] == 0
+    assert result["der"] == 0
+
+
 def test_same_speaker_fragments_stay_together_but_duplicate_lines_violate_format():
     result = score_speakers('[S1] 一二\n[S2] 三四', '[S1] 一\n[S2] 三四\n[S1] 二', True)
     assert result['errors'] == 0 and not result['format_valid']

@@ -1,0 +1,660 @@
+# target-sot-20261004. Emilia2 dialog and long are target_sot_emilia@20261004, reps 1.
+# Meetings, synthetic and short stay on target_sot_recipe@20260930.
+# K>=1 samples enrollment online from metadata.recipe.k. Long and short have no absent speakers.
+# Timestamp SOT disables speed and RIR. Dynamic batch budget covers a 600s mixture plus five 5s enrollments.
+# Dialog and long dev are target_sot_eval@20261004. AliMeeting dev stays on 20261001. Test stays out.
+seed: 42
+sampling_rate: 16000
+train:
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k0_aishell4
+    reps: 2
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k0_alimeeting
+    reps: 2
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k0_ami
+    reps: 2
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k0_chime6
+    reps: 2
+  - dataset_id: target_sot_emilia
+    version: "20261004"
+    split: k0_dialog_en
+    reps: 1
+  - dataset_id: target_sot_emilia
+    version: "20261004"
+    split: k0_dialog_zh
+    reps: 1
+  - dataset_id: target_sot_emilia
+    version: "20261004"
+    split: k0_long_en
+    reps: 1
+  - dataset_id: target_sot_emilia
+    version: "20261004"
+    split: k0_long_zh
+    reps: 1
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k0_ramc
+    reps: 2
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k1_aishell4
+    reps: 2
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 1
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k1_alimeeting
+    reps: 2
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 1
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k1_ami
+    reps: 2
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 1
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k1_chime6
+    reps: 2
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 1
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_emilia
+    version: "20261004"
+    split: k1_dialog_en
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 1
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_emilia
+    version: "20261004"
+    split: k1_dialog_zh
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 1
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_emilia
+    version: "20261004"
+    split: k1_long_en
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 1
+      absent_probability: 0.0
+      mode: all
+  - dataset_id: target_sot_emilia
+    version: "20261004"
+    split: k1_long_zh
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 1
+      absent_probability: 0.0
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k1_ramc
+    reps: 2
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 1
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k1_short_en
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 1
+      absent_probability: 0.0
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k1_short_zh
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 1
+      absent_probability: 0.0
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k1_syn_en
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 1
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k1_syn_zh
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 1
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k2_aishell4
+    reps: 2
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 2
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k2_alimeeting
+    reps: 2
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 2
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k2_ami
+    reps: 2
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 2
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k2_chime6
+    reps: 2
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 2
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_emilia
+    version: "20261004"
+    split: k2_dialog_en
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 2
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_emilia
+    version: "20261004"
+    split: k2_dialog_zh
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 2
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k2_ramc
+    reps: 2
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 2
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k2_syn_en
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 2
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k2_syn_zh
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 2
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k2_syn_zhen
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 2
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k3_aishell4
+    reps: 2
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 3
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k3_alimeeting
+    reps: 2
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 3
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k3_ami
+    reps: 2
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 3
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k3_chime6
+    reps: 2
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 3
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_emilia
+    version: "20261004"
+    split: k3_dialog_en
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 3
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_emilia
+    version: "20261004"
+    split: k3_dialog_zh
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 3
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k3_ramc
+    reps: 2
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 3
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k3_syn_en
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 3
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k3_syn_zh
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 3
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k3_syn_zhen
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 3
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k4_aishell4
+    reps: 2
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 4
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k4_alimeeting
+    reps: 2
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 4
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k4_ami
+    reps: 2
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 4
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k4_chime6
+    reps: 2
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 4
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_emilia
+    version: "20261004"
+    split: k4_dialog_en
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 4
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_emilia
+    version: "20261004"
+    split: k4_dialog_zh
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 4
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k4_syn_en
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 4
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k4_syn_zh
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 4
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k4_syn_zhen
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 4
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k5_aishell4
+    reps: 2
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 5
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k5_ami
+    reps: 2
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 5
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_emilia
+    version: "20261004"
+    split: k5_dialog_en
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 5
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_emilia
+    version: "20261004"
+    split: k5_dialog_zh
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 5
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k5_syn_en
+    reps: 3
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 5
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k5_syn_zh
+    reps: 3
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 5
+      absent_probability: 0.2
+      mode: all
+  - dataset_id: target_sot_recipe
+    version: "20260930"
+    split: k5_syn_zhen
+    reps: 1
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 5
+      absent_probability: 0.2
+      mode: all
+# Dev only. Test splits stay out of this file. AliMeeting's four durations
+# cover the same meetings, so those hours are not additive. Dialog enroll is a
+# subset of the plain clips; long has no enrollment split.
+validation:
+  - &eval_plain
+    dataset_id: target_sot_eval
+    version: "20261001"
+    split: alimeeting_dev_30s_plain
+  - <<: *eval_plain
+    split: alimeeting_dev_120s_plain
+  - <<: *eval_plain
+    split: alimeeting_dev_300s_plain
+  - <<: *eval_plain
+    split: alimeeting_dev_600s_plain
+  - &emilia_plain
+    dataset_id: target_sot_eval
+    version: "20261004"
+    split: dialog_zh_dev_2to5_plain
+  - <<: *emilia_plain
+    split: dialog_zh_dev_6plus_plain
+  - <<: *emilia_plain
+    split: dialog_en_dev_2to5_plain
+  - <<: *emilia_plain
+    split: dialog_en_dev_6plus_plain
+  - <<: *emilia_plain
+    split: long_zh_dev_plain
+  - <<: *emilia_plain
+    split: long_en_dev_plain
+  - &eval_enroll
+    dataset_id: target_sot_eval
+    version: "20261001"
+    split: alimeeting_dev_30s_enroll
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 5
+      absent_probability: 0.0
+      mode: all
+  - <<: *eval_enroll
+    split: alimeeting_dev_120s_enroll
+  - <<: *eval_enroll
+    split: alimeeting_dev_300s_enroll
+  - <<: *eval_enroll
+    split: alimeeting_dev_600s_enroll
+  - &emilia_enroll
+    dataset_id: target_sot_eval
+    version: "20261004"
+    split: dialog_zh_dev_2to5_enroll
+    enrollment:
+      probability: 1.0
+      min_seconds: 1.0
+      max_seconds: 5.0
+      max_targets: 5
+      absent_probability: 0.0
+      mode: all
+  - <<: *emilia_enroll
+    split: dialog_zh_dev_6plus_enroll
+  - <<: *emilia_enroll
+    split: dialog_en_dev_2to5_enroll
+  - <<: *emilia_enroll
+    split: dialog_en_dev_6plus_enroll
+batching:
+  max_duration: 800
+  max_samples: 8
+  num_buckets: 8
+  buffer_size: 2048
+  batch_merge: 1
+  merge_window: 1
+  drop_last: false
+augmentation:
+  speed_prob: 0
+  rir_prob: 0
+  noise_prob: 0
+  spec_aug_prob: 0
+  frequency_mask_width: 8
+  time_mask_width: 20

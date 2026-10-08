@@ -31,8 +31,8 @@ class EnrollmentConfig:
         if not (math.isfinite(self.min_seconds) and math.isfinite(self.max_seconds)
                 and 1 <= self.min_seconds <= self.max_seconds <= 5):
             raise ValueError("Invalid enrollment duration range")
-        if type(self.max_targets) is not int or not 1 <= self.max_targets <= 3:
-            raise ValueError("max_targets must be 1, 2 or 3")
+        if type(self.max_targets) is not int or not 1 <= self.max_targets <= 5:
+            raise ValueError("max_targets must be an integer from 1 to 5")
         if self.mode not in {"random", "all", "targets_only"}:
             raise ValueError("Unknown enrollment mode")
         if not 0 <= self.absent_probability <= 1 or not 0 <= self.probability <= 1:
@@ -40,12 +40,17 @@ class EnrollmentConfig:
 
 
 def target_prompt(count, mode):
-    if not 1 <= count <= 3 or mode not in {"all", "targets_only"}:
-        raise ValueError("Expected 1--3 enrollments and all/targets_only mode")
-    prefix = (f"前 {count} 段音频为参考说话人，依次编号 T1 至 T{count}，最后一段为待转写音频。\n")
-    scope = ("仅转写参考说话人的发言，" if mode == "targets_only" else
-             "转写所有人的发言，其他说话人按首次发声编号 S1、S2……。\n")
-    return prefix + scope + "每次发言一行：[编号][开始秒-结束秒] 文本。"
+    if not 1 <= count <= 5 or mode not in {"all", "targets_only"}:
+        raise ValueError("Expected 1--5 enrollments and all/targets_only mode")
+    prefix = (
+        f"The first {count} audio clips are reference speakers, numbered T1 through T{count} in order. "
+        "The last clip is the audio to transcribe.\n"
+    )
+    scope = (
+        "Transcribe only the reference speakers. " if mode == "targets_only" else
+        "Transcribe every speaker. Number the other speakers S1, S2, and so on, by when each first speaks.\n"
+    )
+    return prefix + scope + "Write one line per utterance: [ID][start-end] text."
 
 
 def parse_target_segments(text, duration, *, count=3, mode="all"):
@@ -142,7 +147,11 @@ def sample_enrollment(record, config, seed, *, fixed=None):
     if fixed is None:
         if not groups or rng.random() >= config.probability:
             return record
-        k = rng.randint(1, min(config.max_targets, len(groups)))
+        limit = min(config.max_targets, len(groups))
+        assigned = record.metadata.get("recipe", {}).get("k")
+        k = min(int(assigned), limit) if assigned else rng.randint(1, limit)
+        if k < 1:
+            return record
         available, selected = sorted(groups), []
         for _ in range(k):
             absent = rng.random() < config.absent_probability

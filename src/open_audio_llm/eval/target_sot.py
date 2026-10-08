@@ -11,6 +11,7 @@ from scipy.optimize import linear_sum_assignment
 
 from open_audio_llm.data.target_sot import LINE, parse_target_segments
 
+from .meeting_scores import summarize_meeting_scores
 from .sot import transcription_units
 from .sot_timestamps import COLLAR_SECONDS, summarize_timing
 
@@ -114,6 +115,8 @@ def summarize_target_sot(rows):
                 format_valid_rate=sums.pop("format_valid") / len(rows),
                 timestamps=summarize_timing(counts))
     sums["timestamps"]["method"] = "fixed_targets_anonymous_text_assignment_v1"
+    sums["cp_error_rate"] = sums["error_rate"]
+    sums.update(summarize_meeting_scores(rows, fixed_targets=True))
     return sums
 
 

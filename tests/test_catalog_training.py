@@ -54,6 +54,23 @@ def test_clean_training_uses_only_explicit_pass_and_invalidates_cache(catalog_co
     assert filtered.records[0].record.target == "clean transcript"
 
 
+def test_overlength_training_sample_is_replaced(catalog_config):
+    from swift.template import MaxLengthError
+
+    dataset = CatalogSwiftDataset(catalog_config, encode=lambda sample: sample)
+    seen = []
+
+    def encode(sample):
+        seen.append(sample["messages"][-1]["content"])
+        if len(seen) == 1:
+            raise MaxLengthError("Current length of row(16515) is larger than the max_length(16384).")
+        return {"input_ids": [1], "labels": [1]}
+
+    dataset.encode = encode
+    assert dataset[0]["input_ids"] == [1]
+    assert len(seen) == 2
+
+
 @pytest.mark.parametrize("cached", [False, True])
 def test_clean_labels_outside_recording_are_removed_before_trimming(catalog_config, tmp_path, cached):
     segments = list(SupervisionSet.from_file(tmp_path / "supervisions.jsonl.gz"))

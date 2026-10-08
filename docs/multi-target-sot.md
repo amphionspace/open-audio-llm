@@ -15,11 +15,11 @@
 两位目标、`targets_only` 的完整 system prompt：
 
 ```text
-前 2 段音频为参考说话人，依次编号 T1 至 T2，最后一段为待转写音频。
-仅转写参考说话人的发言，每次发言一行：[编号][开始秒-结束秒] 文本。
+The first 2 audio clips are reference speakers, numbered T1 through T2 in order. The last clip is the audio to transcribe.
+Transcribe only the reference speakers. Write one line per utterance: [ID][start-end] text.
 ```
 
-`all` 把第二句换成「转写所有人的发言，其他说话人按首次发声编号 S1、S2……。」并保留行格式说明。无需在 prompt 中解释注册时长、数据采样或模型实现。
+`all` 把第二句换成 “Transcribe every speaker. Number the other speakers S1, S2, and so on, by when each first speaks.” 并保留行格式说明。无需在 prompt 中解释注册时长、数据采样或模型实现。
 
 ```text
 language Chinese<asr_text>[T2][0.32-2.48] 我先介绍一下。
