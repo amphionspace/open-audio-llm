@@ -1,0 +1,12 @@
+# AmphionEval 共享评测集 open-audio-llm/meeting-selection-panel@20261008 的登记内容（数据见 audio-data-contract
+# meeting_selection_panel@v1-20261008）。训练中选模与结束评测使用；diarization 协议：cpER 全样本、DER 完整解析样本、复读条数。
+# CHiME-6 dev 划分已在同一数据集中，只作报告，不进本评测集（控制每个 checkpoint 的推理时长）。
+task: diarization
+tags: [meeting, multi-speaker, timestamps, far-field]
+sampling_rate: 16000
+groups:
+- {name: 中文真实会议, section: 选模面板, labels: [alimeeting_dev], aggregate: macro, description: AliMeeting 官方 Eval 8 场会议的全部 120 秒远场窗口}
+- {name: 英文多人真实会议, section: 选模面板, labels: [notsofar_dev], aggregate: macro, description: NOTSOFAR 官方 dev 36 场会议，每场一台设备的全部 120 秒窗口}
+evaluation:
+- {dataset_id: meeting_selection_panel, version: v1-20261008, split: alimeeting_dev, task: speaker_attributed_asr, label: alimeeting_dev, tags: [zh, meeting, far-field, multi-speaker, timestamps], display: AliMeeting 开发集会议（中文，1–4 人）, description: 8 场官方 Eval 会议全部 138 个约 120 秒窗口，8 通道取均值}
+- {dataset_id: meeting_selection_panel, version: v1-20261008, split: notsofar_dev, task: speaker_attributed_asr, label: notsofar_dev, tags: [en, meeting, far-field, multi-speaker, timestamps], display: NOTSOFAR 开发集会议（英文，3–7 人）, description: 36 场官方 dev 会议每场一台单通道设备，共 146 个约 120 秒窗口}

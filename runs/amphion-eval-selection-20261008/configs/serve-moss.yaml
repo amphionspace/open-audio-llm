@@ -1,0 +1,24 @@
+# MOSS-Transcribe-Diarize 第三方基线：官方说明的固定提交 vLLM nightly（conda env moss-vllm，0.23.1rc1.dev949+g68b4a1d5），
+# 在自己的环境中独立进程运行，OpenAI 兼容 /v1/audio/transcriptions；与历史缓存输出使用同一服务参数。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/moss-vllm/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: []
+  gpus: [3]
+  threads: {omp: 4, openblas: 1}
+  environment:
+    HF_HUB_OFFLINE: '1'
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: serve
+  backend: vllm
+  model: {path: /workspace/model/MOSS-Transcribe-Diarize}
+  arguments:
+    --host: 127.0.0.1
+    --port: 8762
+    --served-model-name: moss-transcribe-diarize
+    --gpu-memory-utilization: 0.4
+  flags: [--trust-remote-code]
+recording:
+  attempts_dir: {path: ../tasks/03-serve-moss/attempts}

@@ -1,0 +1,66 @@
+# 新链路（vLLM HTTP + ae open-audio-llm meeting）与现有实验脚本的一致性核对；只读两边已有输出，不做推理。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/amphion-eval/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: [{path: /workspace/workspace/mingdong/repo/amphion-eval-meeting/src}]
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/compare_consistency.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  comparisons:
+  # 245 条中文选模集（执行 001）：旧分数为 checkpoint 选模用的 meeteval cpCER（Qwen3-ASR 折叠复读后的文本），
+  # 旧输出为离线 Qwen3ASRModel.LLM（vLLM 0.18.0）；新链路为同一合并模型的 vLLM 服务。
+  - name: zh245-step8000
+    evaluation: {path: ../tasks/04-consistency-zh245/attempts/001/artifacts/evaluation}
+    old_predictions: {path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/evaluate-select/attempts/002/artifacts/evaluation/step8000/predictions.jsonl}
+    old_format: open_audio_llm
+    old_summary: {file: {path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/evaluate-select/attempts/002/artifacts/evaluation/summary.json}, kind: selection, candidate: step8000}
+    groups: {zh245: [aishell4, alimeeting]}
+  # 新链路自身的重复性：同一服务、同一配置再跑一次（连续批处理的批组成不同）。
+  - name: zh245-step8000-repeat
+    evaluation: {path: ../tasks/04-consistency-zh245/attempts/002/artifacts/evaluation}
+    old_predictions: {path: ../tasks/04-consistency-zh245/attempts/001/artifacts/evaluation/predictions.jsonl}
+    old_format: open_audio_llm
+    old_summary: {file: {path: ../tasks/04-consistency-zh245/attempts/001/artifacts/evaluation/summary.json}, kind: ae}
+    groups: {zh245: [aishell4, alimeeting]}
+  - name: meeting180-step8000
+    evaluation: {path: ../tasks/05-consistency-meeting180/attempts/002/artifacts/evaluation}
+    old_predictions: {path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/score-meeting-benchmark/attempts/001/artifacts/evaluation/step8000/predictions.jsonl}
+    old_format: open_audio_llm
+    old_summary: {file: {path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/score-meeting-benchmark/attempts/001/artifacts/evaluation/benchmark-summary.json}, kind: benchmark, candidate: step8000}
+    groups: &groups180
+      real_zh: [aishell4_test, alimeeting_test]
+      real_en: [ami_test]
+      synthetic_6-10spk: [synthetic_zh, synthetic_en, synthetic_zh-en]
+  # MOSS：旧输出为同一官方 vLLM 构建的缓存结果，新链路由 ae 重新请求同一服务。
+  - name: meeting180-moss
+    evaluation: {path: ../tasks/05-consistency-meeting180-moss/attempts/001/artifacts/evaluation}
+    old_predictions: {path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/evaluate-moss-meeting-benchmark/attempts/001/artifacts/predictions.jsonl}
+    old_format: moss
+    old_summary: {file: {path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/score-meeting-benchmark/attempts/001/artifacts/evaluation/benchmark-summary.json}, kind: benchmark, candidate: moss_vllm}
+    groups: *groups180
+recording:
+  attempts_dir: {path: ../tasks/08-compare-consistency/attempts}
+  result: {path: '{attempt}/artifacts/consistency.json'}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: amphion-eval-selection-20261008-consistency
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file: {path: '{attempt}/artifacts/metrics.json'}
+    prefix: consistency

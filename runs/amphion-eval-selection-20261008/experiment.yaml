@@ -1,0 +1,20 @@
+version: 1
+# 服务任务（serve-*）长期运行，评测任务开始前须已就绪（评测启动器检查 /version）；不作为 depends_on。
+name: amphion-eval-selection-20261008
+purpose: 选模与结束评测改用独立数据和标准链路（open-audio-llm serve + ae），并与实验脚本做一致性核对
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+tasks:
+- {id: build-panel, name: 构建独立选模面板数据集, config: configs/build-panel.yaml, depends_on: []}
+- {id: export-zh245, name: 现有 245 条中文选模集转为本地评测数据, config: configs/export-zh245.yaml, depends_on: []}
+- {id: serve-step8000, name: 起点 8000 步合并模型 vLLM 服务, config: configs/serve-step8000.yaml, depends_on: []}
+- {id: serve-moss, name: MOSS 官方 vLLM 服务, config: configs/serve-moss.yaml, depends_on: []}
+- {id: consistency-zh245, name: 一致性核对：245 条中文集, config: configs/eval-step8000-zh245.yaml, depends_on: [export-zh245]}
+- {id: consistency-meeting180, name: 一致性核对：180 秒会议集（8000）, config: configs/eval-step8000-meeting180.yaml, depends_on: []}
+- {id: consistency-meeting180-moss, name: 一致性核对：180 秒会议集（MOSS）, config: configs/eval-moss-meeting180.yaml, depends_on: []}
+- {id: baseline-select, name: 选模脚本起点基线（面板 + 多人 70 条）, config: configs/select-baseline.yaml, depends_on: [build-panel]}
+- {id: baseline-panel-moss, name: 面板基线（MOSS）, config: configs/eval-moss-panel.yaml, depends_on: [build-panel]}
+- {id: baseline-chime6, name: CHiME-6 dev 基线（8000）, config: configs/eval-step8000-chime6.yaml, depends_on: [build-panel]}
+- {id: baseline-chime6-moss, name: CHiME-6 dev 基线（MOSS）, config: configs/eval-moss-chime6.yaml, depends_on: [build-panel]}
+- {id: compare-consistency, name: 新旧链路逐条比较, config: configs/compare-consistency.yaml, depends_on: [consistency-zh245, consistency-meeting180, consistency-meeting180-moss]}

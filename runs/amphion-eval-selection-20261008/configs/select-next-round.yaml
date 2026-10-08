@@ -1,0 +1,65 @@
+# 下一轮训练的本机异步选模与结束评测模板（复制到新实验的 configs/ 后修改）。
+# 每个保存点用 open-audio-llm serve（vLLM HTTP，按保存的全参权重）起服务，选模面板由 AmphionEval
+# （ae open-audio-llm meeting）评测；停止条件：中文保持连续 patience 次超出容差，或复读条数连续 patience 次
+# 超过起点基线 + loops.max_increase。训练结束后对选中的 checkpoint 跑结束评测面板并与起点基线比较。
+# 训练配置需加载读取 stop-request.json 的回调（见 many-speaker-full-acp-20261008 scripts/training_callbacks.py）。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../../../src}]
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/select_checkpoints.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  tracking_prefix: amphion-eval-selection-20261008-select
+  base_model: {path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/merge-8000/attempts/001/artifacts/merged-model}
+  # 填写本轮训练执行目录（续训时按顺序列出全部执行）；为空时只计算起点基线。
+  training_attempts: []
+  interval: 500
+  max_steps: 2000
+  poll_seconds: 60
+  # 每个 checkpoint 独占一张卡起服务；本机与他人共享：启动前按 nvidia-smi 选卡，不用 GPU 0。
+  gpus: [1, 2]
+  port_base: 8771
+  server_startup_timeout: 1800
+  serve_template: {path: serve-step8000.yaml}
+  delete_request_audio: true
+  panels:
+    selection: {template: {path: eval-step8000-panel.yaml}}
+    many_speaker: {template: {path: eval-step8000-many70.yaml}}
+  retention: {panel: selection, group: 中文真实会议, tolerance: 0.01}
+  target: {panel: many_speaker, group: many_speaker}
+  loops: {max_increase: 0}
+  patience: 2
+  # 结束评测：独立的 180 秒共享评测集与 CHiME-6 dev（仅报告）；基线为本实验用新链路测得的起点 8000 步结果。
+  final_panels:
+    meeting180: {template: {path: eval-step8000-meeting180.yaml}}
+    chime6: {template: {path: eval-step8000-chime6.yaml}}
+  final_baseline:
+    meeting180: {path: ../tasks/05-consistency-meeting180/attempts/002/artifacts/evaluation/summary.json}
+    chime6: {path: ../tasks/07-baseline-chime6/attempts/001/artifacts/evaluation/summary.json}
+recording:
+  attempts_dir: {path: ../tasks/09-select-next-round/attempts}
+  result: {path: '{attempt}/artifacts/final-results.json'}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: amphion-eval-selection-20261008-select-next-round
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file: {path: '{attempt}/artifacts/selection-decision.json'}
+    prefix: selection

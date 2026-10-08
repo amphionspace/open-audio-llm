@@ -1,0 +1,59 @@
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: []
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/build_panel.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  # 根目录别名指向数据集目录本身；其他机器下载备份后在 roots 中把别名指向下载位置。
+  dataset_root: {path: /workspace/data/datasets/meeting_selection_panel}
+  root_alias: meeting_selection_panel
+  dataset_id: meeting_selection_panel
+  version: v1-20261008
+  sources:
+    # AliMeeting 官方 Eval（dev）8 场会议的全部 120 秒窗口；8 路远场通道取均值。
+    alimeeting_dev:
+      records: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/alimeeting_sdm-dev_120s.jsonl.gz}
+      audio_index: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/alimeeting_sdm-dev-audio-index.jsonl.gz}
+      roots: {legacy_asr: {path: /workspace/data/datasets/alimeeting/source/openslr-119-local-20260826}}
+      # 原索引相对旧 legacy_asr 根目录（AliMeeting/Eval_Ali/...）；本机同一批文件在 openslr-119 目录下，按帧数与通道数核对。
+      strip_prefix: {legacy_asr: AliMeeting/}
+      selection: all
+    # NOTSOFAR 官方 dev 36 场会议，每场按排序轮换取一台设备的全部 120 秒窗口（设备间不同步，不重复评同一场对话）。
+    notsofar_dev:
+      records: {path: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261008/notsofar_sdm/notsofar_sdm-dev_120s.jsonl.gz}
+      audio_index: {path: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261008/notsofar_sdm/notsofar_sdm-dev-audio-index.jsonl.gz}
+      roots: {aidc_data: {path: /workspace/data}}
+      selection: one_device_per_meeting
+    # CHiME-6 官方 dev 2 场晚宴的全部 120 秒窗口（阵列 U01 4 通道均值）；只作报告，不进默认选模面板。
+    chime6_dev:
+      records: {path: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261008/chime6/chime6-dev_120s.jsonl.gz}
+      audio_index: {path: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261008/chime6/chime6-dev-audio-index.jsonl.gz}
+      roots: {real_meetings_20261008_chime6: {path: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261008/chime6}}
+      selection: all
+  provenance:
+    status: complete
+    synthetic: none
+    description: 独立会议选模面板：AliMeeting 官方 Eval 8 场全部 120 秒窗口（中文）、NOTSOFAR 官方 dev 36 场每场一台设备的全部 120 秒窗口（英文 3–7 人）、CHiME-6 官方 dev 2 场全部 120 秒窗口（英文晚宴，仅报告）。不进训练，不按难度筛选。
+    windowing: 沿用 meeting-long-v1-20260920（AliMeeting）与 real-meetings-v1-20261008（NOTSOFAR、CHiME-6）的 120 秒视图，在说话空隙处切、不切断句子；远场通道取均值。
+    references: 沿用源视图的目标与 turns：说话人按首次发言排序为 S1、S2…，时间相对窗口起点，原始人工标注。
+    sources:
+    - alimeeting_sdm_meeting_sot@meeting-long-v1-20260920:dev_120s（alimeeting_sdm@icefall-20260908:dev）
+    - notsofar_sdm_meeting_sot@real-meetings-v1-20261008:dev_120s（notsofar_sdm@icefall-20260908:dev）
+    - chime6_meeting_sot@real-meetings-v1-20261008:dev_120s（chime6@speaker-records-v1-20260912:dev）
+    limitations: 窗口约 120 秒，短于部署的 180 秒；NOTSOFAR dev 12 位说话人中 10 位也出现在 NOTSOFAR train；CHiME-6 dev 只有 2 场会议；无 8 人以上真实会议。
+    builder: open-audio-llm runs/amphion-eval-selection-20261008 configs/build-panel.yaml
+recording:
+  attempts_dir: {path: ../tasks/01-build-panel/attempts}
+  result: {path: '{attempt}/artifacts/report.json'}
+tracking:
+  enabled: false

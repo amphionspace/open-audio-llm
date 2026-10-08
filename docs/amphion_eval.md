@@ -122,3 +122,12 @@ evaluation:
 多目标注册 SOT 的已有预测用 `ae open-audio-llm rescore-target-sot` 打分，见 [多目标 SOT](multi-target-sot.md)。
 
 训练中的周期评测使用 `--retention_eval_script`：训练在保存点暂停，以子进程运行该脚本，参数为 checkpoint 路径和输出目录。训练进程不 import 任何评测代码，脚本内部可以调用 `ae`。
+
+### 5. 会议选模与结束评测
+
+带时间戳的说话人转写（SOT 会议）用 `ae open-audio-llm meeting` 评测：按评测集读取 audio-data-contract 记录，经 vLLM HTTP 服务推理，cpER 计全部样本（从原始输出宽松读取说话人，复读保留在分数里），DER 只计完整解析的样本，并报告复读条数。第三方基线（如 MOSS-Transcribe-Diarize 官方 vLLM）用 `--server-api transcriptions --output-format moss_transcribe_diarize` 走同一打分。
+
+- 选模：`open-audio-llm/meeting-selection-panel@20261008`（AliMeeting 官方 Eval 全部窗口、NOTSOFAR dev 每场一台设备，均约 120 秒）加本轮多人合成选模集；起点模型先按同一流程测基线。
+- 结束评测：`open-audio-llm/meeting-180s@20261008` 与 CHiME-6 dev（仅报告）。
+- 本机异步选模脚本与配置模板见 [amphion-eval-selection-20261008](../runs/amphion-eval-selection-20261008/README.md)：每个保存点起一次服务、并行评测各面板、按中文保持与复读条数决定停止和最佳点。
+

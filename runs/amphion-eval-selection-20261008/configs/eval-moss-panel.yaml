@@ -1,0 +1,49 @@
+# 独立选模面板基线：MOSS-Transcribe-Diarize（官方 vLLM）。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/amphion-eval/bin/python}
+  cwd: {path: ../../..}
+  # AmphionEval 的 meeting 评测器在 MR 合并、发布前从分支源码运行；评测进程不 import 本项目。
+  pythonpath: [{path: /workspace/workspace/mingdong/repo/amphion-eval-meeting/src}]
+  gpus: []
+  threads: {omp: 4, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+    AUDIO_DATA_CATALOG: /workspace/workspace/mingdong/repo/audio-data-contract-panel/catalog/meeting_selection_panel.yaml
+    AUDIO_DATA_ROOTS_FILE: /workspace/workspace/mingdong/repo/open-audio-llm-eval/runs/amphion-eval-selection-20261008/configs/roots.json
+task:
+  kind: eval
+  backend: vllm
+  server_url: http://127.0.0.1:8762
+  module: amphion_eval.cli
+  positional: [open-audio-llm, meeting]
+  arguments:
+    --model: {path: /workspace/model/MOSS-Transcribe-Diarize}
+    --data_config: {path: /workspace/workspace/mingdong/repo/amphion-eval-meeting/src/amphion_eval/defaults/eval-sets/open-audio-llm/meeting-selection-panel@20261008/eval-set.yaml}
+    --split_group: evaluation
+    --samples_per_source: 0
+    --batch_size: 16
+    --max_new_tokens: 4096
+    --worker-timeout: 3600
+    --server-url: http://127.0.0.1:8762
+    --served-model: moss-transcribe-diarize
+    --server-api: transcriptions
+    --output-format: moss_transcribe_diarize
+    --output_dir: {path: '{attempt}/artifacts/evaluation'}
+recording:
+  attempts_dir: {path: ../tasks/06-baseline-panel-moss/attempts}
+  result: {path: '{attempt}/artifacts/evaluation/summary.json'}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: amphion-eval-selection-20261008-moss-panel
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file: {path: '{attempt}/artifacts/evaluation/summary.json'}
+    prefix: evaluation
