@@ -1,0 +1,374 @@
+{
+  "period": "2026-10-06..2026-10-08",
+  "experiment": "runs/unified-diarization-asr-20261001",
+  "target": {
+    "model": "MOSS-Transcribe-Diarize",
+    "fixed_set_cpCER": 0.15529726504904895
+  },
+  "best_checkpoint": "step8000",
+  "models": {
+    "unified": "runs/unified-diarization-asr-20261001/tasks/train/attempts/003/artifacts/training/checkpoint-1000 (whai: same path)",
+    "step8000": "LoRA 002 checkpoint-8000 merged (adapter whai:.../local-training/attempts/002/artifacts/training/checkpoint-8000/)",
+    "step25500": "LoRA local-training 005 checkpoint-25500 merged (adapter uploaded under the same path)",
+    "full2500": "full-8000 attempt 001 checkpoint-2500 (uploaded, with optimizer)",
+    "moss_vllm": "MOSS-Transcribe-Diarize 0.9B via official vLLM 0.23.1rc1.dev949+g68b4a1d58"
+  },
+  "fixed_set": {
+    "definition": "338 clips, AISHELL-4 test subset + AliMeeting dev 120 s windows; equal-weight macro cpCER; same-host A800 vLLM 0.18.0",
+    "results": {
+      "unified": {
+        "cpCER_macro": 0.21839883256271728,
+        "aishell4": 0.18833307197741886,
+        "alimeeting": 0.2484645931480157
+      },
+      "step4000": {
+        "cpCER_macro": 0.20654204822402955,
+        "aishell4": 0.1842036485285662,
+        "alimeeting": 0.22888044791949289
+      },
+      "step8000": {
+        "cpCER_macro": 0.2043926206451823,
+        "aishell4": 0.19021483456170613,
+        "alimeeting": 0.21857040672865846
+      },
+      "step25500": {
+        "cpCER_macro": 0.211687771193828,
+        "aishell4": 0.20009408812921436,
+        "alimeeting": 0.22328145425844165
+      },
+      "moss_vllm": {
+        "cpCER_macro": 0.15529726504904895,
+        "aishell4": 0.1512205321206419,
+        "alimeeting": 0.15937399797745602
+      },
+      "moss_native_fp32": {
+        "cpCER_macro": 0.15394362152410476,
+        "aishell4": 0.15132507448643562,
+        "alimeeting": 0.1565621685617739
+      }
+    },
+    "step8000_minus_moss_vllm": {
+      "qwen": 0.2043926206451823,
+      "moss": 0.15529726504904895,
+      "qwen_ci95": [
+        0.16302620735143847,
+        0.24279533372260684
+      ],
+      "moss_ci95": [
+        0.12018233457456778,
+        0.18837591378572943
+      ],
+      "difference_qwen_minus_moss": 0.049095355596133344,
+      "difference_ci95": [
+        0.03445738547053649,
+        0.06254674271914534
+      ],
+      "paired_meeting_permutation_p_two_sided": 5.999940000599994e-05,
+      "ci_excludes_zero": true,
+      "significant_at_005": true
+    }
+  },
+  "meeting_benchmark": {
+    "definition": "424 clips, 180 s deployment-length windows; AmphionEval 0.6.0 diarization protocol",
+    "results": {
+      "unified": {
+        "headline_cp_error_rate": {
+          "real_zh": 0.30311881932466034,
+          "real_en": 0.6406181015452539,
+          "synthetic_6-10spk": 0.8365669690956232
+        },
+        "by_dataset": {
+          "aishell4_test": {
+            "cp_error_rate": 0.23179798924479775,
+            "cp_error_rate_without_loops": 0.23179798924479775,
+            "der": 0.16238428779853822,
+            "speaker_count_accuracy": 0.45,
+            "repetition_loops": 0
+          },
+          "alimeeting_test": {
+            "cp_error_rate": 0.37443964940452296,
+            "cp_error_rate_without_loops": 0.21321899903213842,
+            "der": 0.24943476877450185,
+            "speaker_count_accuracy": 0.9333333333333333,
+            "repetition_loops": 5
+          },
+          "ami_test": {
+            "cp_error_rate": 0.6406181015452539,
+            "cp_error_rate_without_loops": 0.5565074696843765,
+            "der": 0.49596708338114254,
+            "speaker_count_accuracy": 0.2765957446808511,
+            "repetition_loops": 1
+          },
+          "synthetic_en": {
+            "cp_error_rate": 0.8684879750054494,
+            "cp_error_rate_without_loops": 0.8684879750054494,
+            "der": 0.5797706401188283,
+            "speaker_count_accuracy": 0.0,
+            "repetition_loops": 0
+          },
+          "synthetic_zh": {
+            "cp_error_rate": 0.8692868333219808,
+            "cp_error_rate_without_loops": 0.8692868333219808,
+            "der": 0.6757040714530407,
+            "speaker_count_accuracy": 0.0,
+            "repetition_loops": 0
+          },
+          "synthetic_zh-en": {
+            "cp_error_rate": 0.7719260989594394,
+            "cp_error_rate_without_loops": 0.7719260989594394,
+            "der": 0.5233714060863232,
+            "speaker_count_accuracy": 0.0,
+            "repetition_loops": 0
+          }
+        },
+        "repetition_loops": 6,
+        "speaker_count_accuracy": 0.4528301886792453
+      },
+      "step8000": {
+        "headline_cp_error_rate": {
+          "real_zh": 0.32505837866134935,
+          "real_en": 0.6162093976663513,
+          "synthetic_6-10spk": 0.8588119814040978
+        },
+        "by_dataset": {
+          "aishell4_test": {
+            "cp_error_rate": 0.22893383212532148,
+            "cp_error_rate_without_loops": 0.22893383212532148,
+            "der": 0.15323197613158554,
+            "speaker_count_accuracy": 0.49166666666666664,
+            "repetition_loops": 0
+          },
+          "alimeeting_test": {
+            "cp_error_rate": 0.4211829251973772,
+            "cp_error_rate_without_loops": 0.21242582051592587,
+            "der": 0.21873571292466612,
+            "speaker_count_accuracy": 0.925,
+            "repetition_loops": 8
+          },
+          "ami_test": {
+            "cp_error_rate": 0.6162093976663513,
+            "cp_error_rate_without_loops": 0.5758270116348914,
+            "der": 0.4850653566657319,
+            "speaker_count_accuracy": 0.2553191489361702,
+            "repetition_loops": 4
+          },
+          "synthetic_en": {
+            "cp_error_rate": 0.9353338661629005,
+            "cp_error_rate_without_loops": 0.9353338661629005,
+            "der": 0.609457075147093,
+            "speaker_count_accuracy": 0.0,
+            "repetition_loops": 0
+          },
+          "synthetic_zh": {
+            "cp_error_rate": 0.859478237177304,
+            "cp_error_rate_without_loops": 0.859478237177304,
+            "der": 0.537379964065945,
+            "speaker_count_accuracy": 0.0,
+            "repetition_loops": 0
+          },
+          "synthetic_zh-en": {
+            "cp_error_rate": 0.7816238408720889,
+            "cp_error_rate_without_loops": 0.7816238408720889,
+            "der": 0.5694619476304674,
+            "speaker_count_accuracy": 0.0,
+            "repetition_loops": 0
+          }
+        },
+        "repetition_loops": 12,
+        "speaker_count_accuracy": 0.45754716981132076
+      },
+      "full2500": {
+        "headline_cp_error_rate": {
+          "real_zh": 0.31427452014063817,
+          "real_en": 1.1128771155261221,
+          "synthetic_6-10spk": 0.7330336958405882
+        },
+        "by_dataset": {
+          "aishell4_test": {
+            "cp_error_rate": 0.23749123217208323,
+            "cp_error_rate_without_loops": 0.23749123217208323,
+            "der": 0.1750961864538314,
+            "speaker_count_accuracy": 0.43333333333333335,
+            "repetition_loops": 0
+          },
+          "alimeeting_test": {
+            "cp_error_rate": 0.3910578081091931,
+            "cp_error_rate_without_loops": 0.21697283833037234,
+            "der": 0.23556752567761619,
+            "speaker_count_accuracy": 0.9166666666666666,
+            "repetition_loops": 7
+          },
+          "ami_test": {
+            "cp_error_rate": 1.1128771155261221,
+            "cp_error_rate_without_loops": 0.680497140966873,
+            "der": 0.5372719198481378,
+            "speaker_count_accuracy": 0.2872340425531915,
+            "repetition_loops": 8
+          },
+          "synthetic_en": {
+            "cp_error_rate": 0.8216958511952336,
+            "cp_error_rate_without_loops": 0.8216958511952336,
+            "der": 0.5699066779013244,
+            "speaker_count_accuracy": 0.0,
+            "repetition_loops": 0
+          },
+          "synthetic_zh": {
+            "cp_error_rate": 0.6342892173557659,
+            "cp_error_rate_without_loops": 0.6342892173557659,
+            "der": 0.5039252060232277,
+            "speaker_count_accuracy": 0.06666666666666667,
+            "repetition_loops": 0
+          },
+          "synthetic_zh-en": {
+            "cp_error_rate": 0.7431160189707652,
+            "cp_error_rate_without_loops": 0.7431160189707652,
+            "der": 0.6050060441381608,
+            "speaker_count_accuracy": 0.0,
+            "repetition_loops": 0
+          }
+        },
+        "repetition_loops": 15,
+        "speaker_count_accuracy": 0.45047169811320753
+      },
+      "moss_vllm": {
+        "headline_cp_error_rate": {
+          "real_zh": 0.1643375860055908,
+          "real_en": 0.22722590139808682,
+          "synthetic_6-10spk": 0.19602989071769894
+        },
+        "by_dataset": {
+          "aishell4_test": {
+            "cp_error_rate": 0.1647182604629413,
+            "cp_error_rate_without_loops": 0.1647182604629413,
+            "der": 0.05832919927303017,
+            "speaker_count_accuracy": 0.6083333333333333,
+            "repetition_loops": 0
+          },
+          "alimeeting_test": {
+            "cp_error_rate": 0.16395691154824032,
+            "cp_error_rate_without_loops": 0.16395691154824032,
+            "der": 0.06646314740437896,
+            "speaker_count_accuracy": 0.8833333333333333,
+            "repetition_loops": 0
+          },
+          "ami_test": {
+            "cp_error_rate": 0.22722590139808682,
+            "cp_error_rate_without_loops": 0.22722590139808682,
+            "der": 0.13732997844555295,
+            "speaker_count_accuracy": 0.5638297872340425,
+            "repetition_loops": 0
+          },
+          "synthetic_en": {
+            "cp_error_rate": 0.2591731453898133,
+            "cp_error_rate_without_loops": 0.2591731453898133,
+            "der": 0.16997297144924237,
+            "speaker_count_accuracy": 0.2,
+            "repetition_loops": 0
+          },
+          "synthetic_zh": {
+            "cp_error_rate": 0.17941557114637968,
+            "cp_error_rate_without_loops": 0.17941557114637968,
+            "der": 0.14485519252189946,
+            "speaker_count_accuracy": 0.4666666666666667,
+            "repetition_loops": 0
+          },
+          "synthetic_zh-en": {
+            "cp_error_rate": 0.1495009556169038,
+            "cp_error_rate_without_loops": 0.1495009556169038,
+            "der": 0.11656789552326106,
+            "speaker_count_accuracy": 0.4666666666666667,
+            "repetition_loops": 0
+          }
+        },
+        "repetition_loops": 0,
+        "speaker_count_accuracy": 0.6273584905660378
+      }
+    },
+    "comparisons": {
+      "step8000_vs_unified": {
+        "real_zh": {
+          "difference": 0.021939559336689007,
+          "ci95": [
+            -0.01351725398383885,
+            0.06457492990801356
+          ]
+        },
+        "real_en": {
+          "difference": -0.024408703878902593,
+          "ci95": [
+            -0.23111235616084136,
+            0.12524722676068445
+          ]
+        },
+        "synthetic_6-10spk": {
+          "difference": 0.022245012308474532,
+          "ci95": [
+            -0.010230205279907478,
+            0.05424413720771648
+          ]
+        }
+      },
+      "step8000_vs_full2500": {
+        "real_zh": {
+          "difference": 0.010783858520711176,
+          "ci95": [
+            -0.08297582355426303,
+            0.09928137054872044
+          ]
+        },
+        "real_en": {
+          "difference": -0.4966677178597708,
+          "ci95": [
+            -0.8598805800398066,
+            -0.17075537367899263
+          ]
+        },
+        "synthetic_6-10spk": {
+          "difference": 0.12577828556350956,
+          "ci95": [
+            0.08395818874756467,
+            0.16835473104797338
+          ]
+        }
+      },
+      "step8000_vs_moss_vllm": {
+        "real_zh": {
+          "difference": 0.16072079265575853,
+          "ci95": [
+            0.07403205116160694,
+            0.25067652336484897
+          ]
+        },
+        "real_en": {
+          "difference": 0.38898349626826445,
+          "ci95": [
+            0.3226019594440647,
+            0.4743218102366633
+          ]
+        },
+        "synthetic_6-10spk": {
+          "difference": 0.6627820906863988,
+          "ci95": [
+            0.6152871739894245,
+            0.7080827598096654
+          ]
+        }
+      }
+    }
+  },
+  "selection_set": {
+    "definition": "245 clips from 18 held-out training meetings (seen by step8000)",
+    "step8000": 0.1366,
+    "full-8000": {
+      "500": 0.1501,
+      "1000": 0.1571,
+      "2000": 0.1662
+    }
+  },
+  "decisions": [
+    "local-training 003 stopped: effective LR 5e-6 instead of 1.51e-5 (ms-swift 4.5 scheduler bypass), fixed in PR #31",
+    "sft-25500 stopped by user after 6000 steps without fixed-set gain over its base",
+    "full-8000 paused at 2500 steps: local GPU training discontinued; selection-set cpCER rose each evaluation",
+    "MOSS target restated on official vLLM serving: 15.53% fixed-set cpCER"
+  ]
+}

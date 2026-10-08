@@ -1,0 +1,103 @@
+{
+  "candidates": {
+    "step8000": {
+      "cpCER_macro": 0.2043926206451823,
+      "by_dataset": {
+        "aishell4": {
+          "cpCER": 0.19021483456170613,
+          "tcpCER_5s": 0.19303747843813707,
+          "timed_coverage": 1.0,
+          "speaker_count_accuracy": 0.795,
+          "hit_token_limit_count": 0
+        },
+        "alimeeting": {
+          "cpCER": 0.21857040672865846,
+          "tcpCER_5s": 0.2223811755420171,
+          "timed_coverage": 1.0,
+          "speaker_count_accuracy": 0.9057971014492754,
+          "hit_token_limit_count": 0
+        }
+      }
+    },
+    "moss_vllm": {
+      "cpCER_macro": 0.15529726504904895,
+      "by_dataset": {
+        "aishell4": {
+          "cpCER": 0.1512205321206419,
+          "tcpCER_5s": 0.15207785376117833,
+          "timed_coverage": 0.995,
+          "speaker_count_accuracy": 0.8,
+          "hit_token_limit_count": 0
+        },
+        "alimeeting": {
+          "cpCER": 0.15937399797745602,
+          "tcpCER_5s": 0.16271612855486767,
+          "timed_coverage": 1.0,
+          "speaker_count_accuracy": 0.8260869565217391,
+          "hit_token_limit_count": 0
+        }
+      }
+    },
+    "moss_native_fp32": {
+      "cpCER_macro": 0.15394362152410476,
+      "by_dataset": {
+        "aishell4": {
+          "cpCER": 0.15132507448643562,
+          "tcpCER_5s": 0.15213045765386637,
+          "timed_coverage": 0.995,
+          "speaker_count_accuracy": 0.805,
+          "hit_token_limit_count": 0
+        },
+        "alimeeting": {
+          "cpCER": 0.1565621685617739,
+          "tcpCER_5s": 0.16011395308684606,
+          "timed_coverage": 1.0,
+          "speaker_count_accuracy": 0.8333333333333334,
+          "hit_token_limit_count": 0
+        }
+      }
+    }
+  },
+  "comparisons": {
+    "step8000_vs_moss_vllm": {
+      "qwen": 0.2043926206451823,
+      "moss": 0.15529726504904895,
+      "qwen_ci95": [
+        0.16302620735143847,
+        0.24279533372260684
+      ],
+      "moss_ci95": [
+        0.12018233457456778,
+        0.18837591378572943
+      ],
+      "difference_qwen_minus_moss": 0.049095355596133344,
+      "difference_ci95": [
+        0.03445738547053649,
+        0.06254674271914534
+      ],
+      "paired_meeting_permutation_p_two_sided": 5.999940000599994e-05,
+      "ci_excludes_zero": true,
+      "significant_at_005": true
+    },
+    "step8000_vs_moss_native_fp32": {
+      "qwen": 0.2043926206451823,
+      "moss": 0.15394362152410476,
+      "qwen_ci95": [
+        0.16302620735143847,
+        0.24279533372260684
+      ],
+      "moss_ci95": [
+        0.11848226243340287,
+        0.18782085825276412
+      ],
+      "difference_qwen_minus_moss": 0.05044899912107753,
+      "difference_ci95": [
+        0.03566367414951274,
+        0.06391891606084824
+      ],
+      "paired_meeting_permutation_p_two_sided": 6.999930000699993e-05,
+      "ci_excludes_zero": true,
+      "significant_at_005": true
+    }
+  }
+}
