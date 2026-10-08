@@ -22,3 +22,10 @@
 - 没有 8 人以上的真实会议；CHiME-6 测试集（2 场多阵列晚宴）未纳入。
 
 配置：[configs/build-meeting-benchmark.yaml](../../configs/build-meeting-benchmark.yaml)；脚本：[scripts/build_meeting_benchmark.py](../../scripts/build_meeting_benchmark.py)。音频与清单在 `attempts/003/artifacts/`（不入 Git）。
+
+## 团队共享登记（2026-10-08）
+
+- 数据集：audio-data-contract `meeting_180s_benchmark@v1-20261008`（PR #19），6 个划分对应上表；portable AudioRecord（`speaker_attributed_asr`）+ 音频索引，根目录别名 `meeting_180s_benchmark` 指向数据集目录（本机 `/workspace/data/datasets/meeting_180s_benchmark`）。导出见 [export-meeting-benchmark-dataset](../../configs/export-meeting-benchmark-dataset.yaml)（执行 004）。
+- 评测集：AmphionEval `open-audio-llm/meeting-180s@20261008`（MR !17），已发布到团队 COS；登记内容见 [eval-set-meeting-180s.yaml](../../configs/eval-set-meeting-180s.yaml)。
+- 备份：`whai:open-audio-llm/datasets/meeting_180s_benchmark/`（431 个文件，与本机核对一致）。其他机器下载后在 `AUDIO_DATA_ROOTS_FILE` 中把别名指向下载位置，训练后评测写 `eval_set: open-audio-llm/meeting-180s@20261008`。
+- `ae run --manifest` 需要的 Lhotse cut 清单含本机绝对路径，不进 catalog；本机副本在导出执行的 `artifacts/cuts/`。

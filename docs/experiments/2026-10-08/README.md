@@ -41,6 +41,10 @@
 
 PR #31（游标迁移、调度器、W&B 重试）、PR #33（catalog 2.0 / AmphionEval 0.6.0）已合入。本分支另含：`exclude_records` 与 `noise_exclude_datasets`、全参 checkpoint 评测、180 秒评测集与 MOSS 基线脚本。
 
+## 共享登记
+
+180 秒会议评测集已登记为 audio-data-contract 数据集 `meeting_180s_benchmark@v1-20261008`（PR #19）和 AmphionEval 共享评测集 `open-audio-llm/meeting-180s@20261008`（MR !17，已发布到团队 COS），数据备份在 `whai:open-audio-llm/datasets/meeting_180s_benchmark/`。其他项目和模型可按名字引用同一批片段。
+
 ## 留存位置
 
 - Git：配置、脚本、任务 README、本目录汇总 JSON（`meeting-benchmark-summary.json`、`fixed-set-*.json`、`meeting-benchmark-composition.json`）。
