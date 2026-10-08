@@ -30,7 +30,7 @@ def prepare(data_root, catalog_path, roots_path, output, alignment_index=None):
     for split, sources in sot.items():
         original = synthetic['splits'][split]
         cells = {}
-        for name in original['records_artifacts']:
+        for name in original['artifacts']['records']:
             parts = Path(artifacts[name]['relative_path']).parts
             language, speakers, profile = parts[1], int(parts[2].removesuffix('spk')), parts[3]
             cells.setdefault((language, speakers, profile), []).append(name)
@@ -40,8 +40,9 @@ def prepare(data_root, catalog_path, roots_path, output, alignment_index=None):
                 raise ValueError(f'Invalid synthesis cell: {prefix}')
             alias = f'{split}_{language}_{speakers}spk_{profile}'
             synthetic['splits'][alias] = {
-                'group': split, 'records_artifacts': names,
-                'audio_index_artifact': original['audio_index_artifact'],
+                'group': split,
+                'artifacts': {'records': names,
+                              'audio_index': original['artifacts']['audio_index']},
             }
             source = {'dataset_id': synthetic['dataset_id'], 'version': synthetic['version'],
                       'split': alias, 'max_duration': 28}

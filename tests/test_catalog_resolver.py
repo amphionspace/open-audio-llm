@@ -2,7 +2,7 @@ import json
 
 import numpy as np
 import soundfile as sf
-from audio_data_contract import ArtifactRef, AudioRef, DatasetSpec
+from audio_data_contract import ArtifactRef, AudioRef, DatasetSpec, Split
 from lhotse import CutSet, MonoCut, Recording
 
 from open_audio_llm.data.catalog_resolver import LhotseCatalogAudioResolver
@@ -36,7 +36,7 @@ def test_catalog_resolver_reads_exact_cut_without_writing(tmp_path):
                 "manifests/cuts.jsonl.gz",
             ),
         ),
-        splits={"train": {"cuts_artifact": "cuts"}},
+        splits={"train": Split({"cuts": ("cuts",)})},
     )
     catalog_path = tmp_path / "catalog.jsonl"
     catalog_path.write_text(json.dumps(spec.to_dict()) + "\n", encoding="utf-8")

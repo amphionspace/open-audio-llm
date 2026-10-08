@@ -13,6 +13,7 @@ from audio_data_contract import (
     AudioRef,
     AudioSlot,
     DatasetSpec,
+    Split,
     write_records,
 )
 from lhotse import (
@@ -92,7 +93,7 @@ def test_native_ts_reads_registered_audio_index_and_budgets_concat(catalog_confi
         dataset_id="ts", version="1", languages=("en",), tasks=("ts_asr",),
         artifacts=(ArtifactRef("records", "audio-records", "data", "ts.jsonl.gz"),
                    ArtifactRef("index", "audio-index", "data", "index.jsonl.gz")),
-        splits={"train": {"records_artifacts": ["records"], "audio_index_artifact": "index"}},
+        splits={"train": Split({"records": ("records",), "audio_index": ("index",)})},
     )
     with Path(catalog_config["catalog"]).open("a") as stream:
         stream.write("\n" + json.dumps(spec.to_dict()))
@@ -194,8 +195,8 @@ def catalog_config(tmp_path):
                 ),
             ),
             splits={
-                "train": {"cuts_artifacts": ["c0", "c1"]},
-                "dev": {"recordings_artifacts": ["r"], "supervisions_artifacts": ["s"]},
+                "train": Split({"cuts": ("c0", "c1")}),
+                "dev": Split({"recordings": ("r",), "supervisions": ("s",)}),
             },
         )
     ]
@@ -216,7 +217,7 @@ def catalog_config(tmp_path):
                 artifacts=(
                     ArtifactRef("r", "lhotse-recordings", "data", f"{name}.jsonl.gz"),
                 ),
-                splits={"train": {"recordings_artifact": "r"}},
+                splits={"train": Split({"recordings": ("r",)})},
             )
         )
     (tmp_path / "catalog.jsonl").write_text(
@@ -284,7 +285,7 @@ def test_cache_identity_changes_for_index_inputs(catalog_config, tmp_path, chang
             specs[0]['version'] = '2'
             source['version'] = '2'
         else:
-            specs[0]['splits']['train']['cuts_artifacts'].reverse()
+            specs[0]['splits']['train']['artifacts']['cuts'].reverse()
         Path(catalog_config['catalog']).write_text('\n'.join(json.dumps(s) for s in specs))
         from audio_data_contract import load_catalog
         dataset.resolver.catalog = load_catalog(catalog_config['catalog'])
@@ -431,7 +432,7 @@ def test_single_speaker_format_rejects_portable_records(catalog_config, tmp_path
         languages=("en",),
         tasks=("asr",),
         artifacts=(ArtifactRef("records", "audio-records", "data", "portable.jsonl.gz"),),
-        splits={"train": {"records_artifact": "records"}},
+        splits={"train": Split({"records": ("records",)})},
     )
     with Path(catalog_config["catalog"]).open("a") as stream:
         stream.write("\n" + json.dumps(spec.to_dict()))
@@ -504,7 +505,7 @@ def test_sot_catalog_uses_mixture_without_enrollment_and_excludes_teacher_kl(cat
     write_records([record], tmp_path / 'sot.jsonl.gz')
     spec = DatasetSpec('sot', '1', ('zh',), ('speaker_attributed_asr',),
         (ArtifactRef('records', 'audio-records', 'data', 'sot.jsonl.gz'),),
-        {'train': {'records_artifact': 'records'}})
+        {'train': Split({'records': ('records',)})})
     with Path(catalog_config['catalog']).open('a') as stream:
         stream.write('\n' + json.dumps(spec.to_dict()))
     catalog_config.update(train=[{'dataset_id': 'sot', 'version': '1', 'split': 'train'}],
@@ -1002,7 +1003,7 @@ def test_portable_records_artifact_preserves_segment_refs(catalog_config, tmp_pa
         languages=("en",),
         tasks=("asr",),
         artifacts=(ArtifactRef("records", "audio-record", "data", "records.jsonl"),),
-        splits={"train": {"records_artifact": "records"}},
+        splits={"train": Split({"records": ("records",)})},
     )
     with Path(catalog_config["catalog"]).open("a") as stream:
         stream.write("\n" + json.dumps(spec.to_dict()))
@@ -1158,3 +1159,14 @@ def test_indexed_metadata_preserves_audio_sampling_and_resume(catalog_config, tm
     catalog_config['train'] = [{**source, 'weight': 3} for source in catalog_config['train']]
     reweighted = CatalogSwiftDataset(catalog_config, message_format='qwen3_asr')
     assert reweighted.records[0].record == indexed.records[0].record
+def test_cache_identity_ignores_declared_roles_the_loader_never_reads(catalog_config, tmp_path):
+    from open_audio_llm.data.catalog_cache import source_identity
+
+    specs = [json.loads(line) for line in Path(catalog_config['catalog']).read_text().splitlines()]
+    specs[0]['artifacts'].append({'name': 'punc', 'kind': 'lhotse-supervisions',
+                                  'root_alias': 'data', 'relative_path': 'missing-punc.jsonl.gz'})
+    specs[0]['splits']['train']['artifacts']['punctuated_supervisions'] = ['punc']
+    Path(catalog_config['catalog']).write_text('\n'.join(json.dumps(s) for s in specs))
+    dataset = CatalogSwiftDataset(catalog_config)
+    identity = source_identity(dataset, dict(dataset.sources[0]))
+    assert not any('missing-punc' in path for path, *_ in identity['files'])

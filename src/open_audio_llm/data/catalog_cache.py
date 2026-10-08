@@ -122,37 +122,26 @@ class AudioIndex:
         return {"path": self.path, "_connection": None, "_pid": None}
 
 
+READ_ROLES = ("cuts", "recordings", "supervisions", "records", "audio_index")
+
+
 def _legacy_source_identity(dataset, source):
     spec = dataset.resolver.catalog.get(source["dataset_id"], source["version"])
     split = spec.splits[source["split"]]
     paths = []
     if source.get("sot_timestamps"):
         paths.append(Path(source["sot_alignment_index"]))
-    for name, value in split.items():
-        names = (
-            [value]
-            if name.endswith("_artifact")
-            else value
-            if name.endswith("_artifacts")
-            else []
-        )
-        for artifact in names:
-            path = resolve_artifact(
+    # Only roles the loader reads key the index; declared alternatives such as
+    # punctuated or clean supervisions may be absent locally and never change it.
+    for role in READ_ROLES:
+        for artifact in split.artifacts.get(role, ()):
+            paths.append(resolve_artifact(
                 dataset.resolver.catalog,
                 spec.dataset_id,
                 spec.version,
                 artifact,
                 dataset.resolver.roots,
-            )
-            if name == "manifest_dir_artifact":
-                prefix = split["manifest_prefix"]
-                part = split.get("source_split", source["split"])
-                paths.extend(
-                    path / f"{prefix}_{kind}_{part}.jsonl.gz"
-                    for kind in ("recordings", "supervisions")
-                )
-            else:
-                paths.append(path)
+            ))
     return {
         "format": 1,
         **({"sot_timestamp_format": TIMESTAMP_FORMAT}
@@ -160,7 +149,7 @@ def _legacy_source_identity(dataset, source):
         # Earlier portable indexes ignored require_clean_pass. Never reuse them
         # for clean-only training, even if their old source flag was true.
         **({"clean_record_filter": 1} if source.get("require_clean_pass") and
-           ("records_artifact" in split or "records_artifacts" in split) else {}),
+           "records" in split.artifacts else {}),
         "spec": spec.to_dict(),
         # Replay quotas do not change the indexed records or their audio cost.
         "source": {k: v for k, v in source.items() if k != "weight"},
@@ -176,12 +165,7 @@ def _legacy_source_identity(dataset, source):
 def source_identity(dataset, source):
     identity = _legacy_source_identity(dataset, source)
     split = identity["spec"]["splits"][source["split"]]
-    artifacts = set()
-    for name, value in split.items():
-        if name.endswith("_artifact"):
-            artifacts.add(value)
-        elif name.endswith("_artifacts"):
-            artifacts.update(value)
+    artifacts = {name for names in split["artifacts"].values() for name in names}
     aliases = {artifact["root_alias"] for artifact in identity["spec"]["artifacts"]
                if artifact["name"] in artifacts}
     identity["roots"] = {alias: identity["roots"][alias] for alias in sorted(aliases)}
