@@ -505,6 +505,10 @@ def run_recipe(path, resume=None, dry_run=False):
     with (directory / ".execution.lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         config, attempt = allocate(path, resume, dry_run)
+        if "cluster" in config:
+            from .cluster import submit
+
+            return submit(config, attempt)
         return execute(config, attempt)
 
 
@@ -570,6 +574,9 @@ def experiment(options):
                 "last_task": task["id"],
             }
             update_readme(path.parent / "README.md", summary)
+            if latest.get("execution") == "submitted":
+                print(f"{task['id']}: 已提交到集群，完成后再运行后续任务")
+                return code
         if code:
             return code
         completed.add(task["id"])
@@ -629,8 +636,17 @@ def main(argv=None):
     ).add_parser("sync")
     sync_parser.add_argument("--config", type=Path, required=True)
     sync_parser.add_argument("--attempt", type=Path, required=True)
+    # Runs inside a submitted cluster job; the attempt was allocated at submission.
+    cluster_parser = sub.add_parser("cluster").add_subparsers(
+        dest="operation", required=True
+    ).add_parser("run")
+    cluster_parser.add_argument("--attempt", type=Path, required=True)
     options = parser.parse_args(argv)
     try:
+        if options.action == "cluster":
+            from .cluster import run
+
+            return run(options.attempt)
         if options.action == "storage":
             return storage_sync(options.config, options.attempt)
         if options.action == "experiment":

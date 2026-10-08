@@ -1,0 +1,87 @@
+version: 1
+runtime:
+  # The job container only sees the AFS mount, so interpreters are absolute /workspace paths.
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  cwd: {path: ../../..}
+  pythonpath:
+    - {path: ../../../src}
+    - {path: ../../../../audio-data-contract/src}
+  gpus: [0, 1, 2, 3, 4, 5, 6, 7]
+  # ACP supplies node count, rank, master address and port; processes must match the worker's GPUs.
+  distributed: {processes: 8, port: 29501}
+  threads: {omp: 2, openblas: 1}
+  environment:
+    TOKENIZERS_PARALLELISM: false
+data:
+  config: {path: ../data/catalog_mixed.yaml}
+task:
+  kind: train
+  module: open_audio_llm.integrations.ms_swift.train
+  positional: [sft]
+  arguments:
+    --model: {path: "../../../models/open-audio-llm"}
+    --external_plugins: [{path: "../../../src/open_audio_llm/integrations/ms_swift/register_audio_llm.py"}]
+    --dataloader_num_workers: 2
+    --freeze_vit: true
+    --freeze_aligner: false
+    --freeze_llm: false
+    --tuner_type: "lora"
+    --deepspeed: "zero2"
+    --torch_dtype: "bfloat16"
+    --lora_rank: 64
+    --lora_alpha: 128
+    --target_modules: "all-linear"
+    --max_length: 2048
+    --per_device_train_batch_size: 1
+    --gradient_accumulation_steps: 4
+    --learning_rate: 0.00001
+    --max_steps: 1000
+    --lr_scheduler_type: "cosine"
+    --warmup_ratio: 0.05
+    --gradient_checkpointing: true
+    --save_steps: 200
+    --eval_steps: 200
+    --logging_steps: 10
+    --report_to: "none"
+    # Skip ms-swift's ModelScope latest-version lookup for local checkpoints.
+    --check_model: false
+    --output_dir: {path: "{attempt}/artifacts/training"}
+    --ddp_timeout: 180000000
+storage:
+  # A venv on /workspace; in the job ab authenticates with the AmphionKeys variables.
+  executable: {path: /workspace/workspace/mingdong/.local/share/amphion-bucket/cluster-venv/bin/ab}
+  remote: whai:open-audio-llm
+  local_root: {path: ../../..}
+recording:
+  attempts_dir: {path: ../../../runs/catalog-sft-acp/tasks/run/attempts}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  # HOME inside the job is not this account, so ~/.bashrc cannot provide the key.
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: catalog-sft-acp
+  interval: 5
+cluster:
+  kind: acp
+  # sco installed with SCO_HOME here; its profile holds only region and zone, no keys.
+  sco_home: {path: /workspace/workspace/mingdong/.local-tools/sco}
+  # Read by sco at submission and loaded into the job, where ab reads the same variables.
+  credentials: {path: ../../../third_party/amphionkeys/sensecore.env}
+  workspace: workspace-whai
+  aec2: cluster-whai
+  image: registry.cn-sh-01.sensecore.cn/ccr-wh/amphion-base:amphion-base-20260923072955
+  worker_spec: N3lS.Ii.I60.94c944g  # one full 8x A800-80G node
+  nodes: 2
+  priority: NORMAL
+  quota_type: reserved
+  wait: true  # queue instead of failing while the pool is busy
+  mounts:
+    - 01a0c847-3d8d-7b42-8c75-50cbd189bb56:/workspace
+  environment:
+    # IB settings used by the pool's existing multi-node jobs.
+    NCCL_IB_TIMEOUT: 22
+    NCCL_IB_RETRY_CNT: 13
+    NCCL_IB_AR_THRESHOLD: 0

@@ -146,6 +146,10 @@ def load_config(path, attempt=None):
         if task["kind"] != "train" or not evaluation.get("python") or not evaluation.get("config"):
             raise ValueError("evaluation needs python and config on a train task")
     config["config_file"] = str(path)
+    if "cluster" in config:
+        from .cluster import check as check_cluster
+
+        check_cluster(config)
     return config
 
 
@@ -233,6 +237,18 @@ def command(config, effective_file=None):
                 str(dist["processes"]),
                 "--master_port",
                 str(dist["port"]),
+            ]
+            if "nodes" in dist:
+                # Filled from the cluster's node layout when the job starts.
+                cmd += [
+                    "--nnodes",
+                    str(dist["nodes"]),
+                    "--node_rank",
+                    str(dist["node_rank"]),
+                    "--master_addr",
+                    dist["master_addr"],
+                ]
+            cmd += [
                 "--module",
                 task["module"],
             ]
@@ -275,6 +291,14 @@ def command(config, effective_file=None):
 
 
 def preview(config, effective_file=None):
+    if "cluster" in config:
+        from .cluster import submit_command
+
+        attempt = Path(effective_file).parent
+        return {
+            "config": config,
+            "cluster_submit_command": submit_command(config, attempt),
+        }
     return {
         "config": config,
         "command": command(config, effective_file),

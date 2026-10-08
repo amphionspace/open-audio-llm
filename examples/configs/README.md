@@ -5,6 +5,7 @@
 | 配置 | 用途 |
 |---|---|
 | [train/sft.yaml](train/sft.yaml) | Catalog SFT |
+| [train/sft-acp.yaml](train/sft-acp.yaml) | 同一 SFT 提交到 SenseCore ACP 算力池（2 节点 × 8 卡），见 [ACP 训练](../../docs/acp.md) |
 | [train/grpo.yaml](train/grpo.yaml) | 使用 vLLM rollout 的 GRPO |
 | [train/qwen3-asr.yaml](train/qwen3-asr.yaml) | Qwen3-ASR 热词训练 |
 | [train/ts-replay.yaml](train/ts-replay.yaml)、[ts-full.yaml](train/ts-full.yaml)、[ts-joint.yaml](train/ts-joint.yaml) | TS 回放与联合训练 |
