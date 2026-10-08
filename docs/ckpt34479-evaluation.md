@@ -1,5 +1,7 @@
 # checkpoint-34479 评测结果
 
+权重对象存储位置：`/cos-amphion-delivery/AmphionASR-1.7B/releases/20260926`
+
 权重为 Qwen3-ASR-1.7B 经过三阶段全参 SFT 后的 `checkpoint-34479`。训练配置见 [三阶段 SFT](qwen3-asr-three-stage-sft.md)。模型是完整 SFT checkpoint，无需合并 LoRA。
 
 同一套权重支持三种任务，不要混在同一个 vLLM 服务里发：
