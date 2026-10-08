@@ -122,14 +122,19 @@ class AudioIndex:
         return {"path": self.path, "_connection": None, "_pid": None}
 
 
+READ_ROLES = ("cuts", "recordings", "supervisions", "records", "audio_index")
+
+
 def _legacy_source_identity(dataset, source):
     spec = dataset.resolver.catalog.get(source["dataset_id"], source["version"])
     split = spec.splits[source["split"]]
     paths = []
     if source.get("sot_timestamps"):
         paths.append(Path(source["sot_alignment_index"]))
-    for names in split.artifacts.values():
-        for artifact in names:
+    # Only roles the loader reads key the index; declared alternatives such as
+    # punctuated or clean supervisions may be absent locally and never change it.
+    for role in READ_ROLES:
+        for artifact in split.artifacts.get(role, ()):
             paths.append(resolve_artifact(
                 dataset.resolver.catalog,
                 spec.dataset_id,

@@ -1159,3 +1159,14 @@ def test_indexed_metadata_preserves_audio_sampling_and_resume(catalog_config, tm
     catalog_config['train'] = [{**source, 'weight': 3} for source in catalog_config['train']]
     reweighted = CatalogSwiftDataset(catalog_config, message_format='qwen3_asr')
     assert reweighted.records[0].record == indexed.records[0].record
+def test_cache_identity_ignores_declared_roles_the_loader_never_reads(catalog_config, tmp_path):
+    from open_audio_llm.data.catalog_cache import source_identity
+
+    specs = [json.loads(line) for line in Path(catalog_config['catalog']).read_text().splitlines()]
+    specs[0]['artifacts'].append({'name': 'punc', 'kind': 'lhotse-supervisions',
+                                  'root_alias': 'data', 'relative_path': 'missing-punc.jsonl.gz'})
+    specs[0]['splits']['train']['artifacts']['punctuated_supervisions'] = ['punc']
+    Path(catalog_config['catalog']).write_text('\n'.join(json.dumps(s) for s in specs))
+    dataset = CatalogSwiftDataset(catalog_config)
+    identity = source_identity(dataset, dict(dataset.sources[0]))
+    assert not any('missing-punc' in path for path, *_ in identity['files'])
