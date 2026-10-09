@@ -2,6 +2,8 @@
 
 权重对象存储位置：`/cos-amphion-delivery/AmphionASR-1.7B/releases/20260926`（v3-34479 这一份）
 
+RAG 对象存储位置：`/cos-amphion-delivery/amphionasr-rag/20261009`
+
 两列都是 Qwen3-ASR-1.7B 的全参 SFT checkpoint，不需要合并 LoRA。训练配置见 [三阶段 SFT](qwen3-asr-three-stage-sft.md)。
 
 | 列名 | 阶段 | checkpoint |
@@ -20,7 +22,7 @@
 | 目标说话人 ASR（TS-ASR） | 注册音频前 3 秒 + 混合音频；只转写注册说话人；人不在场应输出空 | 插入 `[SEP]` |
 
 - 中英为主。底座 Qwen3-ASR-1.7B 还列了粤语及其他语种，本轮 SFT 与本次评测只覆盖中英。
-- 热词是 prompt 偏置，把词写进 system。本次评测不含双塔检索 adapter；K=0 / K=50 是随机组词协议，不是 RAG。
+- 热词是 prompt 偏置，把词写进 system。random 的 K=0 / K=50 从 10 万词表组词；RAG 的 K=50 用上面的 `amphionasr-rag` 从 1 万词表召回 top-50。
 - TS-ASR 传输为「注册 3 秒 + 混合音频」，中间不加静音。服务分别提 Mel、分别卷积，再在 audio transformer 前插入可学习 `[SEP]`（`thinker.audio_tower.sep_token.weight`）。
 - 目标说话人缺席时仍可能误输出文字，空输出不能当成可靠的说话人验证。
 
@@ -30,7 +32,7 @@
 
 中文按字（CER），英文按词（WER）；热词的 B- / U- 与主指标同一粒度。JSON 字段名统一为 `wer` / `b_wer` / `u_wer`。下表为百分比，越低越好。各测试集失败数均为 0。
 
-v2 的普通 ASR、热词、LibriMix / AISHELLMix、话轮来自已有实验：`exp/eval_vllm/sft_v2_ckpt33407_asr_full`、`exp/eval_vllm/sft_v2_ckpt33407_hw_random`、`exp/eval/sft_v2_ckpt33407_tsasr`、`exp/eval/sft_v2_ckpt33407_tsasr_turn_taking`。v3 对应 `exp/eval_vllm/police_tt_v0_ckpt34479_asr_full`、`exp/eval_vllm/police_tt_v0_ckpt34479_hw_random`、`exp/eval/police_tt_v0_ckpt34479_tsasr`、`exp/eval/sft_v3_ckpt34479_tsasr_turn_taking`。v2 原先没有警务三项，本轮补在 `exp/eval_vllm/sft_v2_ckpt33407_police`，协议与 v3 的 `exp/eval_vllm/police_tt_v0_ckpt34479_police` 相同。
+v2 的普通 ASR、热词、LibriMix / AISHELLMix、话轮来自已有实验：`exp/eval_vllm/sft_v2_ckpt33407_asr_full`、`exp/eval_vllm/sft_v2_ckpt33407_hw_random`、`exp/eval/sft_v2_ckpt33407_tsasr`、`exp/eval/sft_v2_ckpt33407_tsasr_turn_taking`。v3 对应 `exp/eval_vllm/police_tt_v0_ckpt34479_asr_full`、`exp/eval_vllm/police_tt_v0_ckpt34479_hw_random`、`exp/eval/police_tt_v0_ckpt34479_tsasr`、`exp/eval/sft_v3_ckpt34479_tsasr_turn_taking`。v2 原先没有警务三项，本轮补在 `exp/eval_vllm/sft_v2_ckpt33407_police`，协议与 v3 的 `exp/eval_vllm/police_tt_v0_ckpt34479_police` 相同。RAG K=50 在 `exp/eval_vllm/sft_v2_ckpt33407_hw_rag_k50` 和 `exp/eval_vllm/sft_v3_ckpt34479_hw_rag_k50`，检索权重是 `deploy/amphionasr-rag`。
 
 ### ASR-full
 
@@ -56,16 +58,22 @@ v2 的普通 ASR、热词、LibriMix / AISHELLMix、话轮来自已有实验：`
 
 合计按全部 16 个测试集的 ref token 加权。v2-33407 是 `157134 / 2652385 = 5.924%`，v3-34479 是 `149801 / 2652385 = 5.648%`。
 
-### 热词（random，K=0 / K=50）
+### 热词
 
-Common Voice 热词集。K=0：不注入热词（`Hotwords: N/A` 基线）。K=50：真实热词与从 10 万词表抽出的干扰词一并 pad 到 50，写入 `Hotwords:`。中文、英文分别用独立 100k 词表。B- 为热词覆盖片段，U- 为其余片段。
+Common Voice 热词集。中文报 CER，英文报 WER。B- 为热词覆盖片段，U- 为其余片段。
 
-| 测试集 | K | n | v2-33407 | B- | U- | KER | v3-34479 | B- | U- | KER |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Common Voice zh | 0 | 10550 | CER 4.41 | 8.48 | 2.59 | 23.16 | CER 4.26 | 8.13 | 2.65 | 22.54 |
-| Common Voice zh | 50 | 10550 | CER 1.94 | 0.64 | 2.51 | 1.18 | CER 1.73 | 0.47 | 2.30 | 0.86 |
-| Common Voice en | 0 | 16294 | WER 8.69 | 28.38 | 6.73 | 39.66 | WER 7.86 | 27.08 | 5.95 | 38.51 |
-| Common Voice en | 50 | 16294 | WER 5.77 | 2.07 | 6.14 | 2.72 | WER 5.07 | 1.79 | 5.40 | 2.30 |
+- random K=0：不注入热词（`Hotwords: N/A`）。
+- random K=50：真实热词与从 10 万词表抽出的干扰词一并 pad 到 50。
+- RAG K=50：`amphionasr-rag` 做双塔召回，音频按帧与热词向量取最大相似度，从 1 万词表取 top-50 写入 `Hotwords:`。识别仍用 v2-33407 和 v3-34479。
+
+| 测试集 | 供给 | K | n | v2-33407 | B- | U- | v3-34479 | B- | U- |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Common Voice zh | random | 0 | 10550 | 4.41 | 8.48 | 2.59 | 4.26 | 8.13 | 2.65 |
+| Common Voice zh | random | 50 | 10550 | 1.94 | 0.64 | 2.51 | 1.73 | 0.47 | 2.30 |
+| Common Voice zh | RAG | 50 | 10550 | 2.87 | 2.73 | 2.94 | 2.59 | 2.13 | 2.80 |
+| Common Voice en | random | 0 | 16294 | 8.69 | 28.38 | 6.73 | 7.86 | 27.08 | 5.95 |
+| Common Voice en | random | 50 | 16294 | 5.77 | 2.07 | 6.14 | 5.07 | 1.79 | 5.40 |
+| Common Voice en | RAG | 50 | 16294 | 8.69 | 11.35 | 8.43 | 7.92 | 10.05 | 7.71 |
 
 ### TS-ASR（concat + `[SEP]`）
 
