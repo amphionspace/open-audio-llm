@@ -45,10 +45,12 @@ parameters:
     many_speaker: {template: {path: eval-step8000-many70.yaml}}
   # Stop only on loop-excluded Chinese cpER (AliMeeting dev, start 22.10%): it moved <0.5 point between
   # reruns, while one looping sample moved the loop-inclusive rate 3-5 points. Loops are recorded and
-  # limit eligibility (start 17 + 3) but do not stop a long run.
+  # limit eligibility (start 17 + 6) but do not stop a long run.
   retention: {panel: selection, label: alimeeting_dev, field: cp_error_rate_without_loops, tolerance: 0.01}
   target: {panel: many_speaker, group: many_speaker}
-  loops: {max_increase: 3, stop: false}
+  # decode-loop-study-20261009: three default reruns gave loop counts with SD 2.5-3.1 and a
+  # ~1 point loop-excluded Chinese range, so +3 loops was within noise.
+  loops: {max_increase: 6, stop: false}
   patience: 2
   final_panels:
     meeting180: {template: {path: eval-step8000-meeting180.yaml}}
