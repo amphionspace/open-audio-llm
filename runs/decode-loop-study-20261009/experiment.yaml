@@ -1,0 +1,11 @@
+version: 1
+name: decode-loop-study-20261009
+purpose: 只推理评测：比较部署解码设置（默认、repetition_penalty 1.05/1.1）对复读与排除复读 cpER 的影响，并测默认解码下重跑波动
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training: none
+tasks:
+- {id: 01-decode-runs, name: 5 个模型 × 3 种解码设置 + 2 个模型默认解码各重跑 2 次（完整评测集）, config: configs/study.yaml, depends_on: []}
+- {id: 02-fixed-best, name: 固定 338 条集用复读最少的解码设置（rp1.1）各跑一次, config: configs/fixed-best.yaml, depends_on: [01-decode-runs]}
+- {id: 03-analyze, name: 汇总指标、共同子集 cpER、复读配对比较与重跑波动, config: configs/analyze.yaml, depends_on: [01-decode-runs, 02-fixed-best]}

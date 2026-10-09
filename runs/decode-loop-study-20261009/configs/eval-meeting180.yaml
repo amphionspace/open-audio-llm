@@ -1,0 +1,50 @@
+# 180 秒会议评测集 open-audio-llm/meeting-180s@20261008，424 条。
+# AmphionEval 0.7.0（amphion-eval 环境安装的发布版）经 HTTP 评测部署服务；评测进程不加载模型权重。
+# 模型、服务地址、W&B 名称和执行目录由 study 配置逐个作业填入；解码设置只在服务端生效（ae 请求只带 temperature 0 与 max_tokens）。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/amphion-eval/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: []
+  gpus: []
+  threads: {omp: 4, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+    AUDIO_DATA_CATALOG: /workspace/data/audio-data-contract/catalog/meeting_180s_benchmark.yaml
+    AUDIO_DATA_ROOTS_FILE: {path: roots.json}
+task:
+  kind: eval
+  backend: vllm
+  server_url: http://127.0.0.1:8811
+  module: amphion_eval.cli
+  positional: [open-audio-llm, meeting]
+  arguments:
+    --model: {path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/merge-8000/attempts/001/artifacts/merged-model}
+    --data_config: {path: /workspace/workspace/mingdong/miniconda3/envs/amphion-eval/lib/python3.12/site-packages/amphion_eval/defaults/eval-sets/open-audio-llm/meeting-180s@20261008/eval-set.yaml}
+    --split_group: evaluation
+    --samples_per_source: 0
+    --batch_size: 16
+    --max_new_tokens: 4096
+    --worker-timeout: 3600
+    --server-url: http://127.0.0.1:8811
+    --served-model: placeholder
+    --server-api: chat
+    --output-format: open_audio_llm
+    --output_dir: {path: '{attempt}/artifacts/evaluation'}
+recording:
+  attempts_dir: {path: ../tasks/01-decode-runs/eval-template/attempts}
+  result: {path: '{attempt}/artifacts/evaluation/summary.json'}
+tracking:
+  pythonpath: [{path: ../shared/code/src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: decode-loop-study-20261009-meeting180
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file: {path: '{attempt}/artifacts/evaluation/summary.json'}
+    prefix: evaluation

@@ -1,0 +1,74 @@
+# 固定 338 条中文集用复读最少的解码设置（repetition_penalty 1.1，见 03-analyze）各跑一次；
+# 默认解码的固定集结果已在 01-decode-runs 各模型 default/r1 中。驱动脚本、模板与核验同 study.yaml。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../shared/code/src}]
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/run_study.py}
+  accepts_config: true
+  resume_supported: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  tracking_prefix: decode-loop-study-20261009
+  serve_template: {path: serve.yaml}
+  server_startup_timeout: 1800
+  poll_seconds: 60
+  # 0.3 × 80 GB 的固定占用加约 5 GB 余量；不足时等待，不与共用 GPU 的任务争显存。
+  min_free_mib: 30000
+  delete_request_audio: true
+  # AmphionEval 0.7.0 按 str.splitlines() 读 worker-predictions.jsonl，模型输出含 U+2028 时其后样本全部判失败；
+  # 此时用 AmphionEval 自身的 score_sample/summarize 对完整服务端答案补分（见 scripts/rescore.py）。
+  rescore_python: /workspace/workspace/mingdong/miniconda3/envs/amphion-eval/bin/python
+  rescore_script: {path: ../scripts/rescore.py}
+  # GPU 6/7 留给 many-speaker-long 两臂选模（8791/8801），4/5 为其他用户；0–3 的选模已结束。
+  gpus:
+  - {id: 1, port: 8811}
+  - {id: 2, port: 8812}
+  - {id: 0, port: 8813}
+  - {id: 3, port: 8814}
+  models:
+    start: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/merge-8000/attempts/001/artifacts/merged-model
+    realmix500: /workspace/workspace/mingdong/repo/open-audio-llm/runs/many-speaker-real-mix-acp-20261009/tasks/03-select/attempts/003/artifacts/models/checkpoint-500
+    realmix1500: /workspace/workspace/mingdong/repo/open-audio-llm/runs/many-speaker-real-mix-acp-20261009/tasks/03-select/attempts/003/artifacts/models/checkpoint-1500
+    lrhalf500: /workspace/workspace/mingdong/repo/open-audio-llm/runs/many-speaker-lr-half-acp-20261009/tasks/03-select/attempts/003/artifacts/models/checkpoint-500
+    lrhalf2000: /workspace/workspace/mingdong/repo/open-audio-llm/runs/many-speaker-lr-half-acp-20261009/tasks/03-select/attempts/003/artifacts/models/checkpoint-2000
+  # 服务端默认解码参数（--override-generation-config）；ae 请求只带 temperature 0 与 max_tokens 4096。
+  # default 即当前部署：不传覆盖，模型 generation_config.json 不含 repetition_penalty（vLLM 取 1.0）。
+  # frequency_penalty 与提前终止不在 vLLM 服务端默认参数白名单内，ae 0.7.0 请求端也不能设置，故不加组。
+  settings:
+    default: {}
+    rp1.05: {repetition_penalty: 1.05}
+    rp1.1: {repetition_penalty: 1.1}
+  panels:
+    panel: {template: {path: eval-panel.yaml}}
+    many70: {template: {path: eval-many70.yaml}}
+    meeting180: {template: {path: eval-meeting180.yaml}}
+    chime6: {template: {path: eval-chime6.yaml}}
+    fixed338: {template: {path: eval-fixed338.yaml}}
+  jobs:
+  - {models: [start, realmix500, realmix1500, lrhalf500, lrhalf2000], settings: [rp1.1], repeats: [1], panels: [fixed338]}
+recording:
+  attempts_dir: {path: ../tasks/02-fixed-best/attempts}
+  result: {path: '{attempt}/artifacts/study-progress.json'}
+tracking:
+  pythonpath: [{path: ../shared/code/src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: decode-loop-study-20261009-fixed-best
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file: {path: '{attempt}/artifacts/study-progress.json'}
+    prefix: study
