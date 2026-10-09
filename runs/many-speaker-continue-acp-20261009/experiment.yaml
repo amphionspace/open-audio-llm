@@ -1,0 +1,14 @@
+version: 1
+name: many-speaker-continue-acp-20261009
+purpose: 在 5e-6 长训练（8000 步）权重上继续 24000 步，同配比、新采样种子，作为蒸馏阶段的基座
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training_coverage: all_eligible_records
+  training_steps: 24000
+inputs:
+  init_model: ../many-speaker-long-acp-20261009/tasks/03-select-lr5e-6/attempts/001/artifacts/models/checkpoint-8000
+  data_config: configs/data/train-data-seed43.yaml
+tasks:
+- {id: train, name: ACP 16 卡全参数 24000 步续训, config: configs/train.yaml, depends_on: []}
+- {id: select, name: 开发机异步选模与结束评测, config: configs/select.yaml, depends_on: []}
