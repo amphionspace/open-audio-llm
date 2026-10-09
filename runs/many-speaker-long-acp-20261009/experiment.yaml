@@ -1,0 +1,15 @@
+version: 1
+name: many-speaker-long-acp-20261009
+purpose: 长训练对照峰值学习率（1e-5 与 5e-6 两臂，各 8000 步），数据配比与起点同 many-speaker-real-mix-acp-20261009
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training_coverage: all_eligible_records
+  training_steps: 8000
+inputs:
+  data_config: ../many-speaker-real-mix-acp-20261009/tasks/01-prepare/attempts/002/artifacts/train-data.yaml
+tasks:
+- {id: train-lr5e-6, name: ACP 16 卡全参数 8000 步（峰值学习率 5e-6）, config: configs/train-lr5e-6.yaml, depends_on: []}
+- {id: train-lr1e-5, name: ACP 16 卡全参数 8000 步（峰值学习率 1e-5）, config: configs/train-lr1e-5.yaml, depends_on: []}
+- {id: select-lr5e-6, name: 开发机异步选模与结束评测（5e-6 臂）, config: configs/select-lr5e-6.yaml, depends_on: []}
+- {id: select-lr1e-5, name: 开发机异步选模与结束评测（1e-5 臂）, config: configs/select-lr1e-5.yaml, depends_on: []}
