@@ -1,0 +1,77 @@
+# 开发机异步选模与结束评测（模板来自 amphion-eval-selection-20261008 的 select-next-round.yaml）。
+# 每个保存点复制权重到本执行（缺失时从对象存储拉回），用 open-audio-llm serve（vLLM HTTP）起服务，
+# 由 AmphionEval（ae open-audio-llm meeting，未发布前从 ../amphion-eval-meeting/src 运行）评测选模面板。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../shared/code/src}]
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/select_checkpoints.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  tracking_prefix: many-speaker-lr-half-acp-20261009-select
+  base_model: {path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/merge-8000/attempts/001/artifacts/merged-model}
+  # Same-chain start-model baseline on the independent panel (amphion-eval-selection-20261008
+  # 06-baseline-select attempt 001): AliMeeting dev 22.12%, NOTSOFAR dev 125.77%, 6-12 speaker 112.51%,
+  # 17 loops. Copied into tracking/ so it stays with this experiment.
+  baseline: {path: ../tracking/selection-baseline-step8000.json}
+  training_attempts:
+  - {path: ../tasks/02-train/attempts/001}
+  interval: 500
+  max_steps: 2000
+  poll_seconds: 60
+  # One GPU per checkpoint; shared machine: pick by nvidia-smi before launching, never GPU 0.
+  gpus: [3, 4]
+  port_base: 8771
+  server_startup_timeout: 1800
+  readable_timeout: 1800
+  serve_template: {path: serve-step8000.yaml}
+  delete_request_audio: true
+  stop_request: {path: ../tasks/03-select/control/stop-request.json}
+  storage:
+    executable: /workspace/workspace/mingdong/.local/share/amphion-bucket/cluster-venv/bin/ab
+    remote: whai:open-audio-llm
+    local_root: /workspace/workspace/mingdong/repo/open-audio-llm
+  panels:
+    selection: {template: {path: eval-step8000-panel.yaml}}
+    many_speaker: {template: {path: eval-step8000-many70.yaml}}
+  # Chinese retention on AliMeeting dev within 1 point of the start model; repetition loops on the
+  # panels may not exceed the start model's 17 (template default max_increase 0); either rule
+  # failing for `patience` consecutive checkpoints writes the stop request.
+  retention: {panel: selection, group: 中文真实会议, tolerance: 0.01}
+  target: {panel: many_speaker, group: many_speaker}
+  loops: {max_increase: 0}
+  patience: 2
+  final_panels:
+    meeting180: {template: {path: eval-step8000-meeting180.yaml}}
+    chime6: {template: {path: eval-step8000-chime6.yaml}}
+    fixed338: {template: {path: eval-step8000-fixed.yaml}}
+  # Same-chain start-model results; the fixed set has none yet and is measured at the end.
+  final_baseline:
+    meeting180: {path: ../tracking/final-baseline-step8000-meeting180.json}
+    chime6: {path: ../tracking/final-baseline-step8000-chime6.json}
+recording:
+  attempts_dir: {path: ../tasks/03-select/attempts}
+  result: {path: '{attempt}/artifacts/final-results.json'}
+tracking:
+  pythonpath: [{path: ../shared/code/src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: many-speaker-lr-half-acp-20261009-select
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file: {path: '{attempt}/artifacts/selection-decision.json'}
+    prefix: selection
