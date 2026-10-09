@@ -26,6 +26,7 @@ import json
 import os
 from pathlib import Path
 import signal
+import socket
 import subprocess
 import sys
 import threading
@@ -134,6 +135,11 @@ def evaluate_model(settings, model, step, gpu, port, prefix):
     serve['runtime']['gpus'] = [gpu]
     serve['recording'] = {'attempts_dir': {'path': str(folder / 'serve/attempts')}}
     (folder / 'serve.yaml').write_text(yaml.safe_dump(serve, sort_keys=False, allow_unicode=True))
+    # vLLM listens with SO_REUSEPORT, so a second server on a busy port starts "successfully" and
+    # the kernel splits requests between them; refuse a port that already has a listener.
+    with socket.socket() as probe:
+        if probe.connect_ex(('127.0.0.1', port)) == 0:
+            raise RuntimeError(f'Port {port} already has a listener; give each selector its own port_base')
     with (folder / 'serve.log').open('a') as log:
         server = subprocess.Popen([sys.executable, '-m', 'open_audio_llm.cli', 'serve', '--config',
                                    str(folder / 'serve.yaml')], stdout=log, stderr=subprocess.STDOUT,
