@@ -72,7 +72,9 @@ task:
     --save_only_model: false
     --bf16: true
     --fp16: false
-    --ddp_timeout: 14400
+    # Evaluation runs on the development machine, so no rank waits for it. Attempt 001
+    # hung 2 h after a worker rank failed while peers waited on a collective.
+    --ddp_timeout: 1800
     --eval_strategy: 'no'
     --load_args: false
     --check_model: false

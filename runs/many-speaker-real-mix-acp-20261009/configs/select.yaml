@@ -23,8 +23,10 @@ parameters:
   # 06-baseline-select attempt 001): AliMeeting dev 22.12%, NOTSOFAR dev 125.77%, 6-12 speaker 112.51%,
   # 17 loops. Copied into tracking/ so it stays with this experiment.
   baseline: {path: ../tracking/selection-baseline-step8000.json}
+  # Attempt 001 failed at step 486 before any checkpoint (CHiME-6 audio was regenerated
+  # while it trained); attempt 002 restarts from the same start point.
   training_attempts:
-  - {path: ../tasks/02-train/attempts/001}
+  - {path: ../tasks/02-train/attempts/002}
   interval: 500
   max_steps: 2000
   poll_seconds: 60
