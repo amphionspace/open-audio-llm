@@ -1,0 +1,25 @@
+version: 1
+name: many-speaker-real-mix-acp-20261009
+purpose: 只改配比：真实会话恢复到 45%，6–12 人改用词级合成，起点与超参数同上一轮
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training_coverage: all_eligible_records
+  training_steps: 2000
+tasks:
+- id: prepare
+  name: 组装本轮训练数据配置
+  config: configs/prepare.yaml
+  depends_on: []
+- id: train
+  name: ACP 16 卡全参数训练
+  config: configs/train.yaml
+  depends_on: [prepare]
+- id: select
+  name: 开发机异步选模与结束评测（vLLM 服务 + AmphionEval）
+  config: configs/select.yaml
+  depends_on: [prepare]
+- id: export-fixed
+  name: 固定 338 条集导出为 AmphionEval 可读数据
+  config: configs/export-fixed.yaml
+  depends_on: []

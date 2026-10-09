@@ -1,0 +1,32 @@
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: []
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/export_clips.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  # 固定 338 条中文集（AISHELL-4 test 200 条、AliMeeting dev 138 条），历史 MOSS 对照用的同一批片段。
+  # AliMeeting 部分与本轮独立选模面板的 AliMeeting dev 窗口相同，只有 AISHELL-4 部分独立于选模。
+  clips: {path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/qwen3-asr-sot-speaker-events-20260922/vllm-full-audio-checkpoint-21000-20260927/clips.jsonl}
+  clip_audio_dir: {path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/qwen3-asr-sot-speaker-events-20260922/statistical-moss-comparison-500-20260922/audio}
+  dataset_id: legacy_zh_fixed_338
+  version: '20260927'
+  splits: {aishell4: aishell4, alimeeting: alimeeting}
+  language: zh
+  records_alias: legacy_zh_fixed_338
+  audio_alias: legacy_zh_fixed_338_audio
+  description: qwen3-asr-sot-speaker-events-20260922 固定 338 条中文集（AISHELL-4 test、AliMeeting dev），结束评测报告用；不是共享登记
+recording:
+  attempts_dir: {path: ../tasks/04-export-fixed/attempts}
+  result: {path: '{attempt}/artifacts/report.json'}
+tracking:
+  enabled: false
