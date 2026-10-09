@@ -64,10 +64,10 @@ conda activate amphion-eval
 python -m pip install /path/to/audio-data-contract
 python -m pip install -r requirements-eval.txt \
   --extra-index-url "https://__token__:${GITLAB_TOKEN}@git.amphiondev.com/api/v4/projects/42/packages/pypi/simple"
-ae --version   # amphion-eval 0.6.0 (… open-audio-llm handoff schema 2)
+ae --version   # amphion-eval 0.7.0 (… open-audio-llm handoff schema 2)
 ```
 
-[requirements-eval.txt](../requirements-eval.txt) 固定 `amphion-eval[open-audio-llm,legacy-http,tracking]==0.6.0`（GitLab 包仓库项目 42，`GITLAB_TOKEN` 需 read_api，不写进仓库）。`audio-data-contract` 不在包仓库中，需先从其仓库安装。评测配置的 `runtime.pythonpath` 为空：评测进程不 import 本项目。升级 AmphionEval 时同时修改该文件。
+[requirements-eval.txt](../requirements-eval.txt) 固定 `amphion-eval[open-audio-llm,legacy-http,tracking]==0.7.0`（GitLab 包仓库项目 42，`GITLAB_TOKEN` 需 read_api，不写进仓库）。`audio-data-contract` 不在包仓库中，需先从其仓库安装。评测配置的 `runtime.pythonpath` 为空：评测进程不 import 本项目。升级 AmphionEval 时同时修改该文件。
 
 如果 conda 报证书错误，先 `export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt`。
 
