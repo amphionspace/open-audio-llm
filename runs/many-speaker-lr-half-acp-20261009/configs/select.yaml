@@ -29,7 +29,8 @@ parameters:
   max_steps: 2000
   poll_seconds: 60
   # One GPU per checkpoint; shared machine: pick by nvidia-smi before launching, never GPU 0.
-  gpus: [3, 4]
+  # GPUs 4-7 were busy with the shared Qwen/MOSS cleaning services (vLLM could not get 23.8 GiB on GPU 4).
+  gpus: [0, 3]
   # 8771 is used by many-speaker-real-mix-acp-20261009; two selectors once shared it.
   port_base: 8781
   server_startup_timeout: 1800
