@@ -1,0 +1,49 @@
+# 一致性核对：起点 8000 步模型在共享评测集 open-audio-llm/meeting-180s@20261008 上的新链路结果。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/amphion-eval/bin/python}
+  cwd: {path: ../../..}
+  # AmphionEval 的 meeting 评测器在 MR 合并、发布前从分支源码运行；评测进程不 import 本项目。
+  pythonpath: [{path: /workspace/workspace/mingdong/repo/amphion-eval-meeting/src}]
+  gpus: []
+  threads: {omp: 4, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+    AUDIO_DATA_CATALOG: /workspace/data/audio-data-contract/catalog/meeting_180s_benchmark.yaml
+    AUDIO_DATA_ROOTS_FILE: /workspace/workspace/mingdong/repo/open-audio-llm/runs/many-speaker-real-mix-acp-20261009/configs/roots.json
+task:
+  kind: eval
+  backend: vllm
+  server_url: http://127.0.0.1:8761
+  module: amphion_eval.cli
+  positional: [open-audio-llm, meeting]
+  arguments:
+    --model: {path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/merge-8000/attempts/001/artifacts/merged-model}
+    --data_config: {path: /workspace/workspace/mingdong/repo/amphion-eval-meeting/src/amphion_eval/defaults/eval-sets/open-audio-llm/meeting-180s@20261008/eval-set.yaml}
+    --split_group: evaluation
+    --samples_per_source: 0
+    --batch_size: 16
+    --max_new_tokens: 4096
+    --worker-timeout: 3600
+    --server-url: http://127.0.0.1:8761
+    --served-model: step8000
+    --server-api: chat
+    --output-format: open_audio_llm
+    --output_dir: {path: '{attempt}/artifacts/evaluation'}
+recording:
+  attempts_dir: {path: ../tasks/05-consistency-meeting180/attempts}
+  result: {path: '{attempt}/artifacts/evaluation/summary.json'}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: many-speaker-real-mix-acp-20261009-step8000-meeting180
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file: {path: '{attempt}/artifacts/evaluation/summary.json'}
+    prefix: evaluation
