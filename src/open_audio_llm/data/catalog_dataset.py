@@ -378,7 +378,8 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                 cut = self.resolver.get_cut(ref)
             elif ref.start is not None or ref.duration is not None:
                 cut = cut.truncate(offset=ref.start or 0.0, duration=ref.duration)
-            if slot.purpose == "enrollment" and ref.channel is not None:
+            if ref.channel is not None:
+                # A channel-view record reads one original microphone instead of the mean.
                 cut = cut.with_channels(list(ref.channel) if isinstance(ref.channel, tuple) else ref.channel)
             started = time.perf_counter()
             audio = load_mono(cut, self.sampling_rate)

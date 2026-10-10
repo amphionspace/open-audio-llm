@@ -1019,6 +1019,44 @@ def test_portable_records_artifact_preserves_segment_refs(catalog_config, tmp_pa
     assert sample["duration"] == 0.125
 
 
+def test_mixture_channel_ref_reads_one_microphone(catalog_config, tmp_path):
+    sr = 16000
+    channels = np.stack([np.full(sr, 0.1), np.full(sr, 0.5)], axis=1).astype(np.float32)
+    sf.write(tmp_path / "array.wav", channels, sr, subtype="FLOAT")
+    (tmp_path / "array-index.jsonl").write_text(json.dumps({
+        "cut_id": "meeting", "root_alias": "data", "relative_path": "array.wav",
+        "sample_rate": sr, "channels": 2, "num_frames": sr, "duration": 1.0,
+    }) + "\n")
+    record = AudioRecord(
+        "view",
+        "speaker_attributed_asr",
+        (AudioSlot("mixture", AudioRef("array", "1", "train", "meeting",
+                                        channel=1, start=0.25, duration=0.5)),),
+        "[S1][0.00-0.50] hello",
+        language="en",
+    )
+    write_records([record], tmp_path / "array-records.jsonl")
+    spec = DatasetSpec(
+        dataset_id="array",
+        version="1",
+        languages=("en",),
+        tasks=("speaker_attributed_asr",),
+        artifacts=(
+            ArtifactRef("records", "audio-records", "data", "array-records.jsonl"),
+            ArtifactRef("index", "jsonl-metadata", "data", "array-index.jsonl"),
+        ),
+        splits={"train": Split({"records": ("records",), "audio_index": ("index",)})},
+    )
+    with Path(catalog_config["catalog"]).open("a") as stream:
+        stream.write("\n" + json.dumps(spec.to_dict()))
+    catalog_config["train"] = [{"dataset_id": "array", "version": "1", "split": "train"}]
+    catalog_config["augmentation"] = {}
+    sample = CatalogSwiftDataset(catalog_config)[0]
+    waveform, _ = sf.read(BytesIO(sample["audios"][0]))
+    # The original second microphone, not the 0.3 channel mean.
+    np.testing.assert_allclose(waveform, np.full(sr // 2, 0.5), atol=1e-6)
+
+
 def test_catalog_to_real_template_and_model_backward(catalog_config):
     from swift.template import TemplateMeta
     from tokenizers import Tokenizer
