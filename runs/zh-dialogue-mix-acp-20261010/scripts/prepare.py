@@ -101,6 +101,7 @@ def main():
     data.update(catalog=str(output / 'catalog.jsonl'), roots=str(output / 'roots.json'))
     # A new sampling seed draws different records than earlier rounds that used the same sources.
     data['seed'] = settings['seed']
+    data['replay']['window_samples'] = settings['replay_window_samples']
     (output / 'train-data.yaml').write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True))
 
     exclude_files = sorted({s['exclude_records'] for s in train if 'exclude_records' in s})
