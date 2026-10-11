@@ -1,0 +1,43 @@
+# 起点（中文远场配比选出的 14000 步）在本轮新增结束评测集上的结果，与本轮最优直接对照。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../shared/code/src}]
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/evaluate_start.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  tracking_prefix: zh-dialogue-mix-acp-20261010-start
+  model: {path: ../../zh-farfield-mix-acp-20261010/tasks/03-select/attempts/001/artifacts/models/checkpoint-14000}
+  step: 14000
+  # Shared machine: one resident vLLM (~36 GB) on GPU 3; this server takes 0.3 of the memory.
+  gpu: 3
+  port: 8871
+  server_startup_timeout: 1800
+  serve_template: {path: serve-step8000.yaml}
+  delete_request_audio: true
+  panels:
+    aishell5_dev: {template: {path: eval-final-aishell5-dev.yaml}}
+    cs_dialogue_test: {template: {path: eval-final-cs-dialogue-test.yaml}}
+recording:
+  attempts_dir: {path: ../tasks/04-start-eval/attempts}
+  result: {path: '{attempt}/artifacts/start-results.json'}
+tracking:
+  pythonpath: [{path: ../shared/code/src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: zh-dialogue-mix-acp-20261010-start-eval
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300

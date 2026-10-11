@@ -25,10 +25,11 @@
 
 ## 判定
 
-与之前相同：只在排除复读的 AliMeeting dev cpER 连续 2 次高于基线（8000 合并模型，22.10%）+ 1 点时停止；复读条数不超过 17 + 6 的 checkpoint 才作为候选。结束评测 meeting-180s（重点看中文真实会议）、CHiME-6 dev、固定 338 条集，与起点和 MOSS 对照。执行完成与质量达标分开记录。
+与之前相同：只在排除复读的 AliMeeting dev cpER 连续 2 次高于基线（8000 合并模型，22.10%）+ 1 点时停止；复读条数不超过 17 + 6 的 checkpoint 才作为候选。结束评测 meeting-180s（重点看中文真实会议）、CHiME-6 dev、固定 338 条集，以及新增的 AISHELL-5 dev 与 CS-Dialogue test（检验新数据本身的收益，起点 14000 步结果见 04-start-eval），与起点和 MOSS 对照。执行完成与质量达标分开记录。
 
 ## 任务
 
 - [01-prepare](tasks/01-prepare/README.md)：数据配置。
 - [02-train](tasks/02-train/README.md)：ACP 训练。
 - [03-select](tasks/03-select/README.md)：开发机选模，停止文件 `tasks/03-select/control/stop-request.json`。
+- [04-start-eval](tasks/04-start-eval/README.md)：起点在新增结束评测集上的结果。
