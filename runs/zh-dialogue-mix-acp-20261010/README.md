@@ -33,3 +33,4 @@
 - [02-train](tasks/02-train/README.md)：ACP 训练。
 - [03-select](tasks/03-select/README.md)：开发机选模，停止文件 `tasks/03-select/control/stop-request.json`。
 - [04-start-eval](tasks/04-start-eval/README.md)：起点在新增结束评测集上的结果。
+- [05-dialogue-track](tasks/05-dialogue-track/README.md)：训练期间每个保存点在 AISHELL-5 dev、CS-Dialogue test 上的结果。

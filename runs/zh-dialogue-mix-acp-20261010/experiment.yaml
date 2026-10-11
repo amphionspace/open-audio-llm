@@ -13,3 +13,4 @@ tasks:
 - {id: train, name: ACP 16 卡全参数 24000 步, config: configs/train.yaml, depends_on: [prepare]}
 - {id: select, name: 开发机异步选模与结束评测, config: configs/select.yaml, depends_on: [prepare]}
 - {id: start-eval, name: 起点在新增结束评测集上的结果, config: configs/eval-start.yaml, depends_on: []}
+- {id: dialogue-track, name: 训练期间的对话评测跟踪, config: configs/track-dialogue.yaml, depends_on: [select]}
