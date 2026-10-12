@@ -246,6 +246,7 @@ class CatalogBatchSampler(Sampler):
         if root is None:
             return build()
         import os
+        import socket
 
         import numpy as np
 
@@ -255,11 +256,19 @@ class CatalogBatchSampler(Sampler):
             self.dataset.seed, source, cycle, self.shuffle, indexes.start, indexes.stop,
         ]).encode()).hexdigest()
         path = root / f"permutation-{key}.npy"
-        with exclusive_lock(path.with_suffix(".lock")):
-            if not path.exists():
-                with path.with_suffix(".tmp").open("wb") as stream:
-                    np.save(stream, np.asarray(build(), dtype=np.int64))
-                os.replace(path.with_suffix(".tmp"), path)
+        # Caches published by another user (ACP runs as root) have read-only lock files.
+        if not path.exists():
+            with exclusive_lock(path.with_suffix(".lock")):
+                if not path.exists():
+                    # flock does not exclude ranks on other hosts on quarkfs. The
+                    # permutation is deterministic, so each writer uses its own temporary
+                    # file and any atomic replace leaves identical content.
+                    temporary = path.with_name(
+                        f"{path.stem}.{socket.gethostname()}.{os.getpid()}.tmp"
+                    )
+                    with temporary.open("wb") as stream:
+                        np.save(stream, np.asarray(build(), dtype=np.int64))
+                    os.replace(temporary, path)
         return np.load(path, mmap_mode="r")
 
     def _batches(self):

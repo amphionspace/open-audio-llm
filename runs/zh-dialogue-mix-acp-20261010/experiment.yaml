@@ -1,0 +1,16 @@
+version: 1
+name: zh-dialogue-mix-acp-20261010
+purpose: 中文对话配比（新增 AISHELL-5 车载远场与 CS-Dialogue 中英混说对话，英文会议与旧合成降权），从中文远场配比选出的 14000 步权重继续 24000 步
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training_coverage: all_eligible_records
+  training_steps: 24000
+inputs:
+  init_model: ../zh-farfield-mix-acp-20261010/tasks/03-select/attempts/001/artifacts/models/checkpoint-14000
+tasks:
+- {id: prepare, name: 中文对话配比的数据配置, config: configs/prepare.yaml, depends_on: []}
+- {id: train, name: ACP 16 卡全参数 24000 步, config: configs/train.yaml, depends_on: [prepare]}
+- {id: select, name: 开发机异步选模与结束评测, config: configs/select.yaml, depends_on: [prepare]}
+- {id: start-eval, name: 起点在新增结束评测集上的结果, config: configs/eval-start.yaml, depends_on: []}
+- {id: dialogue-track, name: 训练期间的对话评测跟踪, config: configs/track-dialogue.yaml, depends_on: [select]}

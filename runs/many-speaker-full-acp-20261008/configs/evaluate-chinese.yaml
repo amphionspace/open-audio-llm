@@ -1,0 +1,64 @@
+version: 1
+runtime:
+  python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+  cwd: /workspace/workspace/mingdong/repo/open-audio-llm
+  pythonpath:
+  - /workspace/workspace/mingdong/repo/open-audio-llm/runs/many-speaker-full-acp-20261008/shared/code/src
+  gpus:
+  - 0
+  threads:
+    omp: 4
+    openblas: 1
+  environment:
+    TOKENIZERS_PARALLELISM: false
+    HF_HUB_OFFLINE: '1'
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: eval
+  backend: vllm
+  script: /workspace/workspace/mingdong/repo/open-audio-llm/runs/many-speaker-full-acp-20261008/scripts/evaluate.py
+  accepts_config: true
+  arguments: {}
+parameters:
+  output:
+    path: '{attempt}/artifacts/evaluation'
+  primary_candidate: latest
+  training_step: 8000
+  reference_plan: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/prepare-full-training-data/attempts/001/artifacts/selection/plan.json
+  reference_clips: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/prepare-full-training-data/attempts/001/artifacts/selection/clips.jsonl
+  clip_audio_dir: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/prepare-full-training-data/attempts/001/artifacts/selection/audio
+  scoring_helpers: /workspace/workspace/mingdong/repo/open-audio-llm/runs/qwen3-asr-sot-speaker-events-20260922/statistical-moss-comparison-500-20260922/score.py
+  scoring_python: /workspace/workspace/mingdong/miniconda3/envs/oal-score/bin/python
+  data_config: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/localize-data/attempts/004/artifacts/local-balanced-train.yaml
+  gpu_memory_utilization: 0.4
+  attention_config:
+    backend: TRITON_ATTN
+  mm_encoder_attn_backend: TRITON_ATTN
+  single_speaker_prompt: Transcribe the single speaker. Output [S1] followed by the
+    transcription.
+  models:
+    latest: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/merge-8000/attempts/001/artifacts/merged-model
+  cached_predictions: {}
+  cached_asr_predictions: {}
+recording:
+  attempts_dir:
+    path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/many-speaker-full-acp-20261008/tasks/evaluate-chinese/attempts
+  result:
+    path: '{attempt}/artifacts/evaluation/summary.json'
+tracking:
+  pythonpath:
+  - /workspace/workspace/mingdong/repo/open-audio-llm/runs/many-speaker-full-acp-20261008/shared/code/src
+  enabled: true
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  credentials_file: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: many-speaker-full-20261008-chinese
+  interval: 5
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file:
+      path: '{attempt}/artifacts/evaluation/summary.json'
+    prefix: evaluation

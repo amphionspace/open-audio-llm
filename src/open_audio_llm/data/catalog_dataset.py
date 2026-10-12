@@ -21,6 +21,7 @@ from audio_data_contract import (
 
 from .augment import AugmentConfig, augment_waveform
 from .catalog_resolver import LhotseCatalogAudioResolver
+from .lance_source import SAMPLES_ROLE, lance_records, read_lance_audio
 from .online_dataset import TASK_TEMPLATES, OnlineAudioDataset
 from .records import ResolvedAudioRecord
 from .sot import TIMESTAMP_FORMAT, with_sot_timestamps
@@ -75,17 +76,22 @@ def read_data_config(path):
     return config
 
 
-def load_mono(cut, sampling_rate):
+def to_mono(audio, source_rate, sampling_rate):
+    """Downmix channels-first audio and resample it to the training rate."""
     from scipy.signal import resample_poly
 
+    audio = np.asarray(audio, dtype=np.float32).mean(axis=0)
+    if source_rate != sampling_rate:
+        ratio = Fraction(sampling_rate, source_rate)
+        audio = resample_poly(audio, ratio.numerator, ratio.denominator)
+    return np.asarray(audio, dtype=np.float32)
+
+
+def load_mono(cut, sampling_rate):
     audio = cut.load_audio()
     if audio is None or audio.size == 0:
         raise ValueError(f"cut {cut.id!r} contains no audio")
-    audio = np.asarray(audio, dtype=np.float32).mean(axis=0)
-    if cut.sampling_rate != sampling_rate:
-        ratio = Fraction(sampling_rate, cut.sampling_rate)
-        audio = resample_poly(audio, ratio.numerator, ratio.denominator)
-    return np.asarray(audio, dtype=np.float32)
+    return to_mono(audio, cut.sampling_rate, sampling_rate)
 
 
 class CatalogSwiftDataset(OnlineAudioDataset):
@@ -106,6 +112,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         self.training = training
         self.message_format = message_format
         self._audio_cuts = {}
+        self._lance_releases = {}
         self._sot_alignments = {}
         self.config = config
         self.source_ranges = []
@@ -200,6 +207,21 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             )
         ]
 
+    def _lance_release(self, dataset_id, version, split_name):
+        """Open the pinned release once per process; None for non-Lance splits."""
+        spec = self.resolver.catalog.get(dataset_id, version)
+        names = spec.splits[split_name].artifacts.get(SAMPLES_ROLE)
+        if not names:
+            return None
+        key = (spec.dataset_id, spec.version, names[0])
+        if key not in self._lance_releases:
+            from audio_data_contract.tts_lance import open_release
+
+            self._lance_releases[key] = open_release(
+                self.resolver.catalog, *key, self.resolver.roots
+            )
+        return self._lance_releases[key]
+
     def _source_records(self, source):
         spec = self.resolver.catalog.get(source["dataset_id"], source["version"])
         split_name = source["split"]
@@ -210,7 +232,11 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         single_speaker = source.get("single_speaker_format", False)
         if type(single_speaker) is not bool:
             raise ValueError("single_speaker_format must be a boolean")
-        if record_paths:
+        lance = SAMPLES_ROLE in spec.splits[split_name].artifacts
+        predicate = source.get("lance_filter")
+        if predicate is not None and (not lance or not isinstance(predicate, str) or not predicate.strip()):
+            raise ValueError("lance_filter must be a non-empty SQL string on a Lance source")
+        if record_paths or lance:
             if single_speaker:
                 raise ValueError(
                     "single_speaker_format requires Lhotse supervision speaker IDs "
@@ -219,9 +245,13 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             if source.get("exclude_speakers"):
                 raise ValueError("exclude_speakers requires Lhotse supervision speaker IDs")
             rows = (
-                ResolvedAudioRecord(record)
-                for path in record_paths
-                for record in load_records(path)
+                lance_records(self._lance_release(spec.dataset_id, spec.version, split_name), spec, split_name, predicate)
+                if lance
+                else (
+                    ResolvedAudioRecord(record)
+                    for path in record_paths
+                    for record in load_records(path)
+                )
             )
             if source.get("require_clean_pass"):
                 # Portable records must attest the entire example, including
@@ -371,17 +401,23 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         result = {}
         for slot in resolved.record.audio_slots:
             ref = slot.ref
-            cut = (resolved.cuts or {}).get(slot.name) or self._audio_cuts.get(
-                (ref.dataset_id, ref.version, ref.split, ref.cut_id)
-            )
-            if cut is None:
-                cut = self.resolver.get_cut(ref)
-            elif ref.start is not None or ref.duration is not None:
-                cut = cut.truncate(offset=ref.start or 0.0, duration=ref.duration)
-            if slot.purpose == "enrollment" and ref.channel is not None:
-                cut = cut.with_channels(list(ref.channel) if isinstance(ref.channel, tuple) else ref.channel)
+            release = self._lance_release(ref.dataset_id, ref.version, ref.split)
+            if release is None:
+                cut = (resolved.cuts or {}).get(slot.name) or self._audio_cuts.get(
+                    (ref.dataset_id, ref.version, ref.split, ref.cut_id)
+                )
+                if cut is None:
+                    cut = self.resolver.get_cut(ref)
+                elif ref.start is not None or ref.duration is not None:
+                    cut = cut.truncate(offset=ref.start or 0.0, duration=ref.duration)
+                if ref.channel is not None:
+                    # A channel-view record reads one original microphone instead of the mean.
+                    cut = cut.with_channels(list(ref.channel) if isinstance(ref.channel, tuple) else ref.channel)
             started = time.perf_counter()
-            audio = load_mono(cut, self.sampling_rate)
+            if release is None:
+                audio = load_mono(cut, self.sampling_rate)
+            else:
+                audio = to_mono(*read_lance_audio(release, ref.cut_id), self.sampling_rate)
             if self.collect_metrics:
                 self._sample_metrics["decode_s"] += time.perf_counter() - started
             started = time.perf_counter()

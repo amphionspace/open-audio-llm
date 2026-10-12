@@ -1,0 +1,80 @@
+version: 1
+runtime:
+  python:
+    path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  cwd:
+    path: ../../..
+  pythonpath: []
+  gpus: []
+  threads:
+    omp: 1
+    openblas: 1
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script:
+    path: ../scripts/prepare.py
+  accepts_config: true
+  arguments: {}
+parameters:
+  output:
+    path: '{attempt}/artifacts'
+  # AISHELL-4/AliMeeting/AMI windows, 1-5 speaker synthesis and replay sources, with their
+  # exclusions and clean rules, come unchanged from the previous round.
+  source_data:
+    path: ../../many-speaker-full-acp-20261008/tasks/01-prepare/attempts/004/artifacts/train-data.yaml
+  # The previous 6-12 speaker whole-sentence synthesis is replaced by the word-level version.
+  dropped_datasets: [sot_many_speaker_zh]
+  catalogs:
+  - catalog: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261008/notsofar_sdm/catalog.jsonl
+    roots: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261008/notsofar_sdm/roots.json
+  - catalog: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261008/chime6/catalog.jsonl
+    roots: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261008/chime6/roots.json
+  - catalog: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261008/magicdata_ramc/catalog.jsonl
+    roots: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261008/magicdata_ramc/roots.json
+  - catalog: /workspace/workspace/mingdong/data/amphiondata/many-speaker-v2-20261008/data/catalog.jsonl
+    roots: /workspace/workspace/mingdong/data/amphiondata/many-speaker-v2-20261008/data/roots.json
+  # Sample proportions (percent). Real conversation restored above the 40% of the starting
+  # point's training after step 500 of the previous round regressed on AliMeeting backchannels.
+  weights:
+    aishell4: 12
+    alimeeting: 12
+    ami: 6
+    notsofar: 6
+    chime6: 4
+    ramc: 5
+    word_zh: 17
+    word_en: 8
+    old_synthetic: 15
+    replay: 15
+  meetings:
+    notsofar:
+      dataset_id: notsofar_sdm_meeting_sot
+      splits: [train_30s, train_120s, train_300s, train_600s]
+      deduplicate_devices: true
+    chime6:
+      dataset_id: chime6_meeting_sot
+      splits: [train_30s, train_120s, train_300s, train_600s]
+    ramc:
+      dataset_id: magicdata_ramc_meeting_sot
+      splits: [train_30s, train_120s, train_300s, train_600s]
+  word_synthesis:
+    dataset_id: sot_many_speaker_word_zh_en
+    speaker_counts: [6, 7, 8, 9, 10, 11, 12]
+    languages: {zh: word_zh, en: word_en}
+  max_duration: 650
+  # Real far-field recordings and the synthesis (already mixed with RIR and noise) get no
+  # added training noise, like the existing meeting sources.
+  noise_exclude_datasets:
+  - notsofar_sdm_meeting_sot
+  - chime6_meeting_sot
+  - magicdata_ramc_meeting_sot
+  - sot_many_speaker_word_zh_en
+recording:
+  attempts_dir:
+    path: ../tasks/01-prepare/attempts
+  result:
+    path: '{attempt}/artifacts/report.json'
+tracking:
+  enabled: false

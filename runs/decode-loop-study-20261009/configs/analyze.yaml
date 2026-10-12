@@ -1,0 +1,42 @@
+# 汇总 01-decode-runs 与 02-fixed-best 各作业的 AmphionEval 逐条打分：每个划分的指标、
+# 共同子集 cpER（该模型所有执行都未复读的样本）、复读配对比较与默认解码重跑波动。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../shared/code/src}]
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/analyze.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  jobs_dirs:
+  - {path: ../tasks/01-decode-runs/attempts/002/artifacts/jobs}
+  - {path: ../tasks/01-decode-runs/attempts/003/artifacts/jobs}
+  - {path: ../tasks/02-fixed-best/attempts/001/artifacts/jobs}
+  setting_order: [default, rp1.05, rp1.1]
+  # 每个执行都跑的评测集（共 928 条）；复读总数与配对比较只在这些集上算。
+  core_panels: [panel, many70, meeting180, chime6]
+recording:
+  attempts_dir: {path: ../tasks/03-analyze/attempts}
+  result: {path: '{attempt}/artifacts/analysis-metrics.json'}
+tracking:
+  pythonpath: [{path: ../shared/code/src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: decode-loop-study-20261009-analysis
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file: {path: '{attempt}/artifacts/analysis-metrics.json'}
+    prefix: analysis

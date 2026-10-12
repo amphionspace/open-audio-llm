@@ -1,0 +1,31 @@
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: []
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/export_clips.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  # 现有中文选模集 245 条（AISHELL-4 / AliMeeting 官方 train 留出窗口），仅用于新旧链路一致性核对。
+  clips: {path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/prepare-full-training-data/attempts/001/artifacts/selection/clips.jsonl}
+  clip_audio_dir: {path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/prepare-full-training-data/attempts/001/artifacts/selection/audio}
+  dataset_id: legacy_zh_selection_245
+  version: '20261001'
+  splits: {aishell4: aishell4, alimeeting: alimeeting}
+  language: zh
+  records_alias: legacy_zh_selection_245
+  audio_alias: legacy_zh_selection_245_audio
+  description: unified-diarization-asr-20261001 prepare-full-training-data 执行 001 的 245 条中文选模片段（起点模型训练见过的会议），只作一致性核对
+recording:
+  attempts_dir: {path: ../tasks/02-export-zh245/attempts}
+  result: {path: '{attempt}/artifacts/report.json'}
+tracking:
+  enabled: false

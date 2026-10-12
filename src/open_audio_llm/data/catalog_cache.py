@@ -8,6 +8,8 @@ import hashlib
 import json
 import logging
 import os
+import shutil
+import socket
 import struct
 import sqlite3
 import time
@@ -75,36 +77,43 @@ class AudioIndex:
         ).hexdigest()
         self.path = Path(root).expanduser().resolve() / f"audio-{key}.sqlite"
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with exclusive_lock(self.path.with_suffix(".lock")):
-            if not self.path.exists():
-                temporary = self.path.with_suffix(".tmp")
-                temporary.unlink(missing_ok=True)
-                db = sqlite3.connect(temporary)
-                try:
-                    db.execute(
-                        "CREATE TABLE audio (id TEXT PRIMARY KEY, duration REAL, payload TEXT)"
+        # Indexes published by another user (ACP runs as root) are read-only here,
+        # including their lock files, so only lock when a build is needed.
+        if not self.path.exists():
+            with exclusive_lock(self.path.with_suffix(".lock")):
+                if not self.path.exists():
+                    # flock does not exclude other hosts on quarkfs; a per-process
+                    # temporary keeps concurrent builders from sharing one file.
+                    temporary = self.path.with_name(
+                        f"{self.path.stem}.{socket.gethostname()}.{os.getpid()}.tmp"
                     )
-                    opener = gzip.open if source.suffix == ".gz" else open
-                    with opener(source, "rt", encoding="utf-8") as stream:
-                        batch = []
-                        for line in stream:
-                            if not line.strip():
-                                continue
-                            row = json.loads(line)
-                            batch.append((row["cut_id"], row["duration"], line))
-                            if len(batch) == 10000:
-                                db.executemany(
-                                    "INSERT OR REPLACE INTO audio VALUES (?, ?, ?)",
-                                    batch,
-                                )
-                                batch.clear()
-                        db.executemany(
-                            "INSERT OR REPLACE INTO audio VALUES (?, ?, ?)", batch
+                    temporary.unlink(missing_ok=True)
+                    db = sqlite3.connect(temporary)
+                    try:
+                        db.execute(
+                            "CREATE TABLE audio (id TEXT PRIMARY KEY, duration REAL, payload TEXT)"
                         )
-                    db.commit()
-                finally:
-                    db.close()
-                os.replace(temporary, self.path)
+                        opener = gzip.open if source.suffix == ".gz" else open
+                        with opener(source, "rt", encoding="utf-8") as stream:
+                            batch = []
+                            for line in stream:
+                                if not line.strip():
+                                    continue
+                                row = json.loads(line)
+                                batch.append((row["cut_id"], row["duration"], line))
+                                if len(batch) == 10000:
+                                    db.executemany(
+                                        "INSERT OR REPLACE INTO audio VALUES (?, ?, ?)",
+                                        batch,
+                                    )
+                                    batch.clear()
+                            db.executemany(
+                                "INSERT OR REPLACE INTO audio VALUES (?, ?, ?)", batch
+                            )
+                        db.commit()
+                    finally:
+                        db.close()
+                    os.replace(temporary, self.path)
         self._connection, self._pid = None, None
 
     def _db(self):
@@ -141,7 +150,7 @@ class AudioIndex:
         return {"path": self.path, "_connection": None, "_pid": None}
 
 
-READ_ROLES = ("cuts", "recordings", "supervisions", "records", "audio_index")
+READ_ROLES = ("cuts", "recordings", "supervisions", "records", "audio_index", "samples")
 
 
 def _legacy_source_identity(dataset, source):
@@ -288,24 +297,45 @@ class SourceRecordIndex:
         self.path = Path(root) / self.key
         Path(root).mkdir(parents=True, exist_ok=True)
         _reuse_completed(self.path, _legacy_paths(dataset, source, root))
-        self.path.mkdir(parents=True, exist_ok=True)
         # The completion marker is written last. A failed build is never opened.
-        with exclusive_lock(self.path / "build.lock"):
-            if not (self.path / "complete.json").exists():
-                self._build(dataset, source)
+        if not (self.path / "complete.json").exists():
+            # flock does not exclude other hosts on quarkfs, so each builder writes
+            # a private directory and publishes it with one rename.
+            with exclusive_lock(Path(root) / f"{self.key}.lock"):
+                if not (self.path / "complete.json").exists():
+                    staging = Path(root) / (
+                        f"{self.key}.{socket.gethostname()}.{os.getpid()}.tmp"
+                    )
+                    shutil.rmtree(staging, ignore_errors=True)
+                    staging.mkdir()
+                    self._build(dataset, source, staging)
+                    self._publish(staging)
         info = json.loads((self.path / "complete.json").read_text())
         self.count = info["count"]
         self.hotwords = info["hotwords"]
         self.metadata = np.memmap(self.path / "metadata.bin", dtype=_META, mode="r")
         self._fd = None
 
-    def _build(self, dataset, source):
+    def _publish(self, staging):
+        try:
+            staging.rename(self.path)
+        except OSError:
+            if not (self.path / "complete.json").exists():
+                shutil.rmtree(staging)
+                # Deleting it here could race with another host's publication.
+                raise RuntimeError(
+                    f"Incomplete index directory from an earlier build: {self.path}"
+                ) from None
+            # Another host published the same deterministic index first.
+            shutil.rmtree(staging)
+
+    def _build(self, dataset, source, directory):
         count, hotwords = 0, set()
         logging.getLogger(__name__).warning("Building Catalog index: %s", source)
         with (
-            (self.path / "records.jsonl").open("wb") as records,
-            (self.path / "metadata.bin").open("wb") as metadata,
-            (self.path / "ids.jsonl").open("w") as ids,
+            (directory / "records.jsonl").open("wb") as records,
+            (directory / "metadata.bin").open("wb") as metadata,
+            (directory / "ids.jsonl").open("w") as ids,
         ):
             for row in dataset._source_records(source):
                 cuts = {name: cut.to_dict() for name, cut in (row.cuts or {}).items()}
@@ -338,7 +368,7 @@ class SourceRecordIndex:
                     )
         if not count:
             raise ValueError(f"Empty source: {source}")
-        (self.path / "complete.json").write_text(
+        (directory / "complete.json").write_text(
             json.dumps({"count": count, "hotwords": sorted(hotwords)})
         )
 
@@ -407,6 +437,9 @@ class CatalogRecordIndex:
             ).encode()
         ).hexdigest()
         path = self.root / f"signature-{key}.txt"
+        if path.exists():
+            # Signatures published by another user (ACP runs as root) have read-only locks.
+            return path.read_text().strip()
         with exclusive_lock(path.with_suffix(".lock")):
             if path.exists():
                 return path.read_text().strip()
@@ -434,7 +467,12 @@ class CatalogRecordIndex:
                             digest.update(str(int(meta["slots"])).encode() + b"]")
                 digest.update(b"]")
             digest.update(b"}")
-            path.write_text(digest.hexdigest() + "\n")
+            # Readers outside the lock must never see a partial signature.
+            temporary = path.with_name(
+                f"{path.stem}.{socket.gethostname()}.{os.getpid()}.tmp"
+            )
+            temporary.write_text(digest.hexdigest() + "\n")
+            os.replace(temporary, path)
             return digest.hexdigest()
 
 

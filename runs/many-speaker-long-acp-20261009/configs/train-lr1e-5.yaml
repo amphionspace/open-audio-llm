@@ -1,0 +1,145 @@
+version: 1
+runtime:
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  cwd: /workspace/workspace/mingdong/repo/open-audio-llm
+  pythonpath:
+  - /workspace/workspace/mingdong/repo/open-audio-llm/runs/many-speaker-long-acp-20261009/shared/code/src
+  - /workspace/workspace/mingdong/repo/open-audio-llm/runs/many-speaker-long-acp-20261009/shared/code/audio-data-contract-src
+  gpus:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  threads:
+    omp: 2
+    openblas: 1
+  environment:
+    TOKENIZERS_PARALLELISM: false
+    HF_HUB_OFFLINE: '1'
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    PYTHONUNBUFFERED: '1'
+    PYTORCH_ALLOC_CONF: expandable_segments:True
+  distributed:
+    processes: 8
+    port: 29785
+data:
+  config: /workspace/workspace/mingdong/repo/open-audio-llm/runs/many-speaker-real-mix-acp-20261009/tasks/01-prepare/attempts/002/artifacts/train-data.yaml
+task:
+  kind: train
+  module: open_audio_llm.integrations.ms_swift.train
+  positional:
+  - sft
+  arguments:
+    --model_type: amphion_asr_1.7b
+    --tuner_type: full
+    --freeze_vit: false
+    --freeze_aligner: false
+    --freeze_llm: false
+    --torch_dtype: bfloat16
+    --attn_impl: sdpa
+    --max_length: 16384
+    --per_device_train_batch_size: 2
+    --per_device_eval_batch_size: 1
+    --gradient_accumulation_steps: 1
+    --learning_rate: 1.0e-05
+    --vit_lr: 5.0e-06
+    --aligner_lr: 1.0e-05
+    --max_steps: 8000
+    --lr_scheduler_type: cosine
+    --warmup_ratio: 0.0
+    --warmup_steps: 500
+    --gradient_checkpointing: true
+    --vit_gradient_checkpointing: true
+    --ddp_find_unused_parameters: true
+    --dataloader_num_workers: 4
+    --dataloader_persistent_workers: true
+    --performance_logging: true
+    --save_steps: 1000
+    --logging_steps: 5
+    --report_to: none
+    --seed: 42
+    --audio_encoder_parallel: false
+    --audio_encoder_batching: true
+    --use_logits_to_keep: false
+    --prediction_loss_only: true
+    --optim: adamw_torch_fused
+    --weight_decay: 0.01
+    --max_grad_norm: 1.0
+    --save_only_model: false
+    --bf16: true
+    --fp16: false
+    # Evaluation runs on the development machine, so no rank waits for it. Attempt 001
+    # hung 2 h after a worker rank failed while peers waited on a collective.
+    --ddp_timeout: 1800
+    --eval_strategy: 'no'
+    --load_args: false
+    --check_model: false
+    --add_version: false
+    --model: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/merge-8000/attempts/001/artifacts/merged-model
+    --external_plugins:
+    - /workspace/workspace/mingdong/repo/open-audio-llm/runs/many-speaker-long-acp-20261009/shared/code/src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py
+    - /workspace/workspace/mingdong/repo/open-audio-llm/runs/many-speaker-long-acp-20261009/scripts/training_callbacks.py
+    --output_dir:
+      path: '{attempt}/artifacts/training'
+    --continuous_training: false
+    --gradient_checkpointing_kwargs:
+      use_reentrant: false
+    --callbacks:
+    - many_speaker_training_audit
+preflight:
+- kind: prepare
+  module: open_audio_llm.data.catalog_cache
+  arguments:
+    --data_config: /workspace/workspace/mingdong/repo/open-audio-llm/runs/many-speaker-real-mix-acp-20261009/tasks/01-prepare/attempts/002/artifacts/train-data.yaml
+    --workers: 4
+    --batch-size: 2
+    --world-size: 16
+    --preflight-report:
+      path: '{attempt}/artifacts/data-preflight.json'
+recording:
+  attempts_dir:
+    path: ../tasks/02-train-lr1e-5/attempts
+tracking:
+  pythonpath:
+  - /workspace/workspace/mingdong/repo/open-audio-llm/runs/many-speaker-long-acp-20261009/shared/code/src
+  enabled: true
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  credentials_file: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: many-speaker-long-acp-20261009-lr1e-5
+  interval: 5
+  startup_timeout: 180
+  finish_timeout: 300
+parameters:
+  # Written by the development-machine selector (tasks/03-select); the ACP training directory
+  # belongs to root and is not writable there. The directory exists before submission; the file must not.
+  stop_request: /workspace/workspace/mingdong/repo/open-audio-llm/runs/many-speaker-long-acp-20261009/tasks/03-select-lr1e-5/control/stop-request.json
+  stage_max_steps: 8000
+  analysis_base_commit: b18268e
+cluster:
+  kind: acp
+  sco_home: /workspace/workspace/mingdong/.local-tools/sco
+  credentials: /workspace/workspace/mingdong/repo/open-audio-llm/third_party/amphionkeys/sensecore.env
+  workspace: workspace-whai
+  aec2: cluster-whai
+  image: registry.cn-sh-01.sensecore.cn/ccr-wh/amphion-base:amphion-base-20260923072955
+  worker_spec: N3lS.Ii.I60.94c944g
+  nodes: 2
+  priority: NORMAL
+  quota_type: reserved
+  wait: true
+  mounts:
+  - 01a0c847-3d8d-7b42-8c75-50cbd189bb56:/workspace
+  environment:
+    NCCL_IB_TIMEOUT: 22
+    NCCL_IB_RETRY_CNT: 13
+    NCCL_IB_AR_THRESHOLD: 0
+storage:
+  executable: /workspace/workspace/mingdong/.local/share/amphion-bucket/cluster-venv/bin/ab
+  remote: whai:open-audio-llm
+  local_root: /workspace/workspace/mingdong/repo/open-audio-llm

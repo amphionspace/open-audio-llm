@@ -1,0 +1,19 @@
+version: 1
+name: many-speaker-lr-half-acp-20261009
+purpose: 只降峰值学习率（减半），数据配比、起点与其余超参数同 many-speaker-real-mix-acp-20261009
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training_coverage: all_eligible_records
+  training_steps: 2000
+inputs:
+  data_config: ../many-speaker-real-mix-acp-20261009/tasks/01-prepare/attempts/002/artifacts/train-data.yaml
+tasks:
+- id: train
+  name: ACP 16 卡全参数训练
+  config: configs/train.yaml
+  depends_on: []
+- id: select
+  name: 开发机异步选模与结束评测（vLLM 服务 + AmphionEval）
+  config: configs/select.yaml
+  depends_on: []

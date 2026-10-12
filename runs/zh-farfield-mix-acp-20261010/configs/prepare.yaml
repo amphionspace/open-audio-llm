@@ -1,0 +1,109 @@
+version: 1
+runtime:
+  python:
+    path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  cwd:
+    path: ../../..
+  pythonpath: []
+  gpus: []
+  threads:
+    omp: 1
+    openblas: 1
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script:
+    path: ../scripts/prepare.py
+  accepts_config: true
+  arguments: {}
+parameters:
+  output:
+    path: '{attempt}/artifacts'
+  # English meetings, word-level and earlier synthesis and replay come unchanged from the previous round.
+  source_data:
+    path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-first-mix-acp-20261010/tasks/01-prepare/attempts/001/artifacts/train-data.yaml
+  # Replaced by the teacher-reviewed v2 windows (real-meetings-20261010).
+  dropped_sources:
+  - {dataset_id: aishell4_meeting_sot, version: meeting-long-v1-20260920}
+  - {dataset_id: alimeeting_sdm_meeting_sot, version: meeting-long-v1-20260920}
+  - {dataset_id: magicdata_ramc_meeting_sot, version: real-meetings-v1-20261008}
+  catalogs:
+  - {catalog: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261010/aishell4/catalog.jsonl, roots: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261010/aishell4/roots.json}
+  - {catalog: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261010/alimeeting_sdm/catalog.jsonl, roots: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261010/alimeeting_sdm/roots.json}
+  - {catalog: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261010/magicdata_ramc/catalog.jsonl, roots: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261010/magicdata_ramc/roots.json}
+  - {catalog: /workspace/workspace/mingdong/data/amphiondata/zh-farfield-20261009/channel-views-v2/catalog.jsonl, roots: /workspace/workspace/mingdong/data/amphiondata/zh-farfield-20261009/channel-views-v2/roots.json}
+  - {catalog: /workspace/workspace/mingdong/data/amphiondata/zh-farfield-20261009/farsim-alimeeting-near/catalog.jsonl, roots: /workspace/workspace/mingdong/data/amphiondata/zh-farfield-20261009/farsim-alimeeting-near/roots.json}
+  # Alias-unique view: both simulation products name their root farfield_simulated.
+  - {catalog: /workspace/workspace/mingdong/data/amphiondata/zh-farfield-20261009/farsim-ramc-v2/alias-unique/catalog.jsonl, roots: /workspace/workspace/mingdong/data/amphiondata/zh-farfield-20261009/farsim-ramc-v2/alias-unique/roots.json}
+  - {catalog: /workspace/workspace/mingdong/data/amphiondata/zh-farfield-20261009/replay/catalog.jsonl, roots: /workspace/workspace/mingdong/data/amphiondata/zh-farfield-20261009/replay/roots.json}
+  - {catalog: /workspace/workspace/mingdong/data/amphiondata/zh-farfield-20261009/replay/3dspeaker-clean/catalog.jsonl, roots: /workspace/workspace/mingdong/data/amphiondata/zh-farfield-20261009/replay/3dspeaker-clean/roots.json}
+  # Sample proportions (percent), user decision 2026-10-10: Chinese real conversation stays 48, split
+  # between the 8-channel mean and one original microphone, plus near-to-far simulation; replay 18 ->
+  # 12 + Chinese far-field single-speaker replay 6. English meetings (6) and synthesis (28) unchanged.
+  weights:
+    aishell4_mean: 10
+    aishell4_channel: 10
+    alimeeting_mean: 8
+    alimeeting_channel: 8
+    alimeeting_nearsim: 4
+    ramc: 5
+    ramc_farsim: 3
+    zh_far_replay: 6
+    replay: 12
+  kept_weight: 34
+  replay:
+    previous_weight: 18
+    match:
+    - {dataset_id: sot_multispeaker_zh_en, split_contains: 1spk}
+    - {dataset_id: aishell}
+    - {dataset_id: kespeech}
+    - {dataset_id: commonvoice_en_clean}
+    - {dataset_id: librispeech}
+  # zh-v2-train-excluded-records.txt: the 18 zh245 selection-set meetings and empty-target windows
+  # (both also excluded from v1). Channel views and the near-to-far simulation were built without them.
+  groups:
+    aishell4_mean:
+      sources:
+      - {dataset_id: aishell4_meeting_sot, version: real-meetings-v2-20261010, splits: [train_30s, train_120s, train_300s, train_600s], max_duration: 650, exclude_records: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261010/zh-v2-train-excluded-records.txt}
+    aishell4_channel:
+      sources:
+      - {dataset_id: aishell4_meeting_sot, version: meeting-channel-view-v2-20261010, splits: [train_30s, train_120s, train_300s, train_600s], max_duration: 650}
+    alimeeting_mean:
+      sources:
+      - {dataset_id: alimeeting_sdm_meeting_sot, version: real-meetings-v2-20261010, splits: [train_30s, train_120s, train_300s, train_600s], max_duration: 650, exclude_records: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261010/zh-v2-train-excluded-records.txt}
+    alimeeting_channel:
+      sources:
+      - {dataset_id: alimeeting_sdm_meeting_sot, version: meeting-channel-view-v2-20261010, splits: [train_30s, train_120s, train_300s, train_600s], max_duration: 650}
+    alimeeting_nearsim:
+      sources:
+      - {dataset_id: alimeeting_near_farsim_meeting_sot, version: near-farsim-v1-20261009, splits: [train_30s, train_120s, train_300s, train_600s], max_duration: 650}
+    ramc:
+      sources:
+      - {dataset_id: magicdata_ramc_meeting_sot, version: real-meetings-v2-20261010, splits: [train_30s, train_120s, train_300s, train_600s], max_duration: 650, exclude_records: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261010/zh-v2-train-excluded-records.txt}
+    ramc_farsim:
+      sources:
+      - {dataset_id: magicdata_ramc_farsim_meeting_sot, version: ramc-v2-farsim-v1-20261010, splits: [train_30s, train_120s, train_300s, train_600s], max_duration: 650, exclude_records: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261010/zh-v2-train-excluded-records.txt}
+    zh_far_replay:
+      sources:
+      - {dataset_id: realman_zh_far_asr, version: zh-far-replay-v1-20261009, splits: [train], task: asr, single_speaker_format: true, max_duration: 20}
+      # Clean version exists for 3D-Speaker only; use its upstream pass marks.
+      - {dataset_id: threed_speaker_zh_far_asr, version: zh-far-replay-clean-v1-20261010, splits: [train], task: asr, single_speaker_format: true, require_clean_pass: true, max_duration: 20}
+      - {dataset_id: vitw_zh_far_asr, version: zh-far-replay-v1-20261009, splits: [train_far_field, train_far_field_noise, train_far_field_recording], task: asr, single_speaker_format: true, max_duration: 20}
+  # Earlier rounds sampled with seeds 42-44.
+  seed: 45
+  # Simulated far-field (already mixed with RIR and noise) and real far-field recordings get no
+  # added training noise, like the existing meeting sources.
+  noise_exclude_datasets:
+  - alimeeting_near_farsim_meeting_sot
+  - magicdata_ramc_farsim_meeting_sot
+  - realman_zh_far_asr
+  - threed_speaker_zh_far_asr
+  - vitw_zh_far_asr
+recording:
+  attempts_dir:
+    path: ../tasks/01-prepare/attempts
+  result:
+    path: '{attempt}/artifacts/report.json'
+tracking:
+  enabled: false

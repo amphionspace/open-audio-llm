@@ -95,6 +95,11 @@ def verify(wandb, run, expected, timeout, terminal=None):
         time.sleep(1)
 
 
+# Resuming needs the logged events; retry transient API timeouts within ~5 minutes.
+HISTORY_READ_ATTEMPTS = 5
+HISTORY_READ_RETRY_SECONDS = 60
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--attempt", type=Path, required=True)
@@ -133,11 +138,19 @@ def main():
     for prefix in ("train/*", "validation/*", "eval/*", "perf/*"):
         run.define_metric(prefix, step_metric="global_step")
     remote = wandb.Api().run(f"{run.entity}/{run.project}/{run.id}")
-    seen = {
-        row["sync_event"]
-        for row in remote.scan_history(keys=["sync_event"])
-        if "sync_event" in row
-    }
+    # A busy W&B service once timed out here and aborted a running evaluation.
+    for attempt_number in range(HISTORY_READ_ATTEMPTS):
+        try:
+            seen = {
+                row["sync_event"]
+                for row in remote.scan_history(keys=["sync_event"])
+                if "sync_event" in row
+            }
+            break
+        except wandb.errors.CommError:
+            if attempt_number + 1 == HISTORY_READ_ATTEMPTS:
+                raise
+            time.sleep(HISTORY_READ_RETRY_SECONDS)
     try:
         while True:
             events = collect_metrics(config)

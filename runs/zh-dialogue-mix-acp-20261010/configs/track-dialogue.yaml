@@ -1,0 +1,55 @@
+# 训练期间每个保存点在新增结束评测集（AISHELL-5 dev、CS-Dialogue test）上的结果；起点 14000 步结果见 04-start-eval。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../shared/code/src}]
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/track_dialogue.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  tracking_prefix: zh-dialogue-mix-acp-20261010-dialogue
+  # The selector's complete copies (03-select attempt 004, which continues 003); training attempt 002.
+  models: {path: ../tasks/03-select/attempts/004/artifacts/models}
+  training_attempt: {path: ../tasks/02-train/attempts/002}
+  selection_attempt: {path: ../tasks/03-select/attempts/004}
+  # 001 在 6000 步因 vLLM 引擎加载超时失败；002 沿用其 2000/4000 步结果并评完 6000–24000 步，
+  # 但结果路径指向逐行的 history.jsonl，记录结果时解析失败；003 沿用 002 的全部结果，只补写 results.json。
+  previous_history: {path: ../tasks/05-dialogue-track/attempts/002/artifacts/history.jsonl}
+  interval: 2000
+  max_steps: 24000
+  poll_seconds: 120
+  # Shared machine: one resident vLLM (~36 GB) on GPU 3; this server takes 0.3 of the memory.
+  gpu: 3
+  port: 8872
+  server_startup_timeout: 1800
+  serve_template: {path: serve-step8000.yaml}
+  delete_request_audio: true
+  panels:
+    aishell5_dev: {template: {path: eval-final-aishell5-dev.yaml}}
+    cs_dialogue_test: {template: {path: eval-final-cs-dialogue-test.yaml}}
+recording:
+  attempts_dir: {path: ../tasks/05-dialogue-track/attempts}
+  result: {path: '{attempt}/artifacts/results.json'}
+tracking:
+  pythonpath: [{path: ../shared/code/src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: zh-dialogue-mix-acp-20261010-dialogue-track
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file: {path: '{attempt}/artifacts/history.jsonl'}
+    format: jsonl
+    prefix: dialogue

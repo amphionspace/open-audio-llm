@@ -1,0 +1,14 @@
+version: 1
+name: zh-farfield-mix-acp-20261010
+purpose: 中文远场配比（v2 修正标注 + 单麦视角 + 模拟远场 + 中文远场回放），从中文优先配比选出的 4000 步权重继续 24000 步
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training_coverage: all_eligible_records
+  training_steps: 24000
+inputs:
+  init_model: ../zh-first-mix-acp-20261010/tasks/03-select/attempts/001/artifacts/models/checkpoint-4000
+tasks:
+- {id: prepare, name: 中文远场配比的数据配置, config: configs/prepare.yaml, depends_on: []}
+- {id: train, name: ACP 16 卡全参数 24000 步, config: configs/train.yaml, depends_on: [prepare]}
+- {id: select, name: 开发机异步选模与结束评测, config: configs/select.yaml, depends_on: [prepare]}

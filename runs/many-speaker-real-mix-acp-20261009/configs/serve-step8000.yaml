@@ -1,0 +1,38 @@
+# 起点 8000 步合并模型的 vLLM HTTP 服务（部署推理栈）。解码与编码器注意力沿用实验脚本的离线配置，便于一致性核对：
+# BF16、TRITON_ATTN、eager、seed 42、max_model_len 12288、每批最多 16 条；编码器整段注意力（n_window_infer 26000 ≥ 最长 244 秒片段）。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: []
+  gpus: [1]
+  threads: {omp: 4, openblas: 1}
+  environment:
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    HF_HUB_OFFLINE: '1'
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: serve
+  backend: vllm
+  model: {path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/merge-8000/attempts/001/artifacts/merged-model}
+  arguments:
+    --host: 127.0.0.1
+    --port: 8761
+    --served-model-name: step8000
+    --dtype: bfloat16
+    --max-model-len: 12288
+    --max-num-seqs: 16
+    --max-num-batched-tokens: 16384
+    # 本机 GPU 与其他用户共享：固定占用约 24 GB，留出余量。
+    --gpu-memory-utilization: 0.3
+    --seed: 42
+    --limit-mm-per-prompt: {audio: 1}
+    --attention-config: {backend: TRITON_ATTN}
+    --mm-encoder-attn-backend: TRITON_ATTN
+    --hf-overrides:
+      thinker_config:
+        audio_config:
+          n_window_infer: 26000
+  flags: [--enforce-eager]
+recording:
+  attempts_dir: {path: ../tasks/03-serve/attempts}

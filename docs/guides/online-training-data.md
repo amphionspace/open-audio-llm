@@ -90,6 +90,30 @@ augmentation:
 音频槽位按照契约渲染顺序传入。来源可配置 `task`；在线热词参数放在顶层
 `hotwords`，例如 `max_hotwords`、`hotword_prompt_prob`。
 
+### Lance 来源
+
+Catalog 中 `tts-lance-release` 产物（split 角色 `samples`，如 DATA-TTS-UNIFIED 的
+`<dataset_id>@tts-unified-v0.1`）可以直接作为训练来源，写法与其他来源相同：
+
+```yaml
+train:
+  - dataset_id: aishell3
+    version: tts-unified-v0.1
+    split: train
+    samples: 20000
+```
+
+- 元数据：按契约的读取规则 `tts-asr-rules/v1` 过滤（排除原始 dev/test、标记和语言不一致、
+  超过 30 秒的行），只读标量列，不读音频；记录 ID 为 `<数据集>@<版本>:train:<sample_id>`。
+- 音频：采样时按 `sample_id` 索引从表内取编码字节，解码、下混、重采样后与其他来源一样增强；
+  不落盘。发布 manifest 的 sha256 和 Lance 快照版本由契约逐项核对。
+- 需要 `pip install -e '.[lance]'`（`pylance`、`pyarrow`）。
+- 元数据同样驻留内存或进入 `metadata_cache`；未配置 `samples` 或启用 `shard_rotation` 时会扫描整张表，
+  大表建议限定 `samples`。
+- `lance_filter`：Lance SQL 谓词，在扫描时下推到表（如 `language = 'zh'`），只对 Lance 来源有效；
+  它是来源配置的一部分，会改变 `metadata_cache` 身份。
+- 无 clean 标记，`require_clean_pass: true` 会得到空来源并报错。
+
 ## 与 icefall 一致的混合语义
 
 - `samples`：过滤后每轮选取的数量上限；未配置则使用整个来源。

@@ -1,0 +1,76 @@
+version: 1
+runtime:
+  python:
+    path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  cwd:
+    path: ../../..
+  pythonpath: []
+  gpus: []
+  threads:
+    omp: 1
+    openblas: 1
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script:
+    path: ../scripts/prepare.py
+  accepts_config: true
+  arguments: {}
+parameters:
+  output:
+    path: '{attempt}/artifacts'
+  # Every source of the previous round is kept; English meetings and the earlier synthesis are scaled down.
+  source_data:
+    path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-farfield-mix-acp-20261010/tasks/01-prepare/attempts/002/artifacts/train-data.yaml
+  catalogs:
+  - {catalog: /workspace/data/datasets/cs_dialogue_meeting_sot/versions/meeting-v1-20261010/catalog.jsonl, roots: /workspace/data/datasets/cs_dialogue_meeting_sot/versions/meeting-v1-20261010/roots.json}
+  - {catalog: /workspace/data/datasets/aishell5_meeting_sot/versions/far-mic-v1-20261010/catalog.jsonl, roots: /workspace/data/datasets/aishell5_meeting_sot/versions/far-mic-v1-20261010/roots.json}
+  # Aliases registered on 2026-10-10 resolve to the registry copies of the same files.
+  prefer_roots:
+    path: /workspace/data/registry/roots.json
+  # Sample proportions (percent). Chinese focus (user, 2026-10-10: English far field is not key):
+  # English meetings 6 -> 3, earlier 1-5 speaker synthesis 10 -> 4; the freed 9 go to the new Chinese
+  # conversations. Chinese real conversation rises from 48 to 57; word-level 6-12 speaker synthesis
+  # (18) and all replay (18) stay.
+  rescale:
+    english_meetings:
+      previous_weight: 6
+      weight: 3
+      match:
+      - {dataset_id: ami_sdm_meeting_replay}
+      - {dataset_id: notsofar_sdm_meeting_sot}
+      - {dataset_id: chime6_meeting_sot}
+    earlier_synthesis:
+      previous_weight: 10
+      weight: 4
+      match:
+      - {dataset_id: sot_multispeaker_zh_en, split_excludes: 1spk}
+      - {dataset_id: sot_speaker_events_treatment_ab}
+  kept_weight: 84
+  groups:
+    # In-car far field, 2-4 speakers; each of the four cabin microphones is its own view.
+    aishell5:
+      weight: 5
+      sources:
+      - {dataset_id: aishell5_meeting_sot, version: far-mic-v1-20261010, splits: [train_30s, train_120s, train_300s, train_600s], max_duration: 650, exclude_records: /workspace/data/datasets/aishell5_meeting_sot/versions/far-mic-v1-20261010/train-empty-target-records.txt}
+    # Two-party Mandarin-English code-switching conversations (phone, near field).
+    cs_dialogue:
+      weight: 4
+      sources:
+      - {dataset_id: cs_dialogue_meeting_sot, version: meeting-v1-20261010, splits: [train_30s, train_120s, train_300s, train_600s], max_duration: 650, exclude_records: /workspace/data/datasets/cs_dialogue_meeting_sot/versions/meeting-v1-20261010/train-empty-target-records.txt}
+  # Every source needs a quota of at least one sample per window; the smallest source
+  # (sot_speaker_events_treatment_ab, 0.0022%) gets 1.1 at 50000 (0.22 at the earlier 10000).
+  replay_window_samples: 50000
+  # Earlier rounds sampled with seeds 42-45.
+  seed: 46
+  # Real recordings get no added training noise, like the existing meeting sources.
+  noise_exclude_datasets:
+  - aishell5_meeting_sot
+recording:
+  attempts_dir:
+    path: ../tasks/01-prepare/attempts
+  result:
+    path: '{attempt}/artifacts/report.json'
+tracking:
+  enabled: false
