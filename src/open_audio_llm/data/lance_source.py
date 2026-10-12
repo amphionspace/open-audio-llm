@@ -13,15 +13,17 @@ from .records import ResolvedAudioRecord
 SAMPLES_ROLE = "samples"
 
 
-def lance_records(release, spec, split_name):
+def lance_records(release, spec, split_name, predicate=None):
     """Yield ASR records kept by the contract's read rules; no audio is read.
 
     The template slot is named "primary" like Lhotse-backed ASR sources, and the
     ID carries the dataset key because sample IDs are only unique per release.
+    `predicate` is a Lance SQL filter evaluated by the table scan, before rows
+    reach Python, e.g. "language = 'zh'".
     """
     from audio_data_contract.tts_lance import iter_asr_samples
 
-    for record, _ in iter_asr_samples(release, with_audio=False):
+    for record, _ in iter_asr_samples(release, with_audio=False, filter=predicate):
         duration = record.metadata.get("duration_seconds")
         if duration is None:
             raise ValueError(f"{spec.key}: {record.id} has no duration_seconds")

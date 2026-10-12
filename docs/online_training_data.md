@@ -109,7 +109,9 @@ train:
   不落盘。发布 manifest 的 sha256 和 Lance 快照版本由契约逐项核对。
 - 需要 `pip install -e '.[lance]'`（`pylance`、`pyarrow`）。
 - 元数据同样驻留内存或进入 `metadata_cache`；未配置 `samples` 或启用 `shard_rotation` 时会扫描整张表，
-  大表建议限定 `samples`。目前没有 Lance 谓词下推（如按语言筛选）。
+  大表建议限定 `samples`。
+- `lance_filter`：Lance SQL 谓词，在扫描时下推到表（如 `language = 'zh'`），只对 Lance 来源有效；
+  它是来源配置的一部分，会改变 `metadata_cache` 身份。
 - 无 clean 标记，`require_clean_pass: true` 会得到空来源并报错。
 
 ## 与 icefall 一致的混合语义

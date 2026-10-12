@@ -233,6 +233,9 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         if type(single_speaker) is not bool:
             raise ValueError("single_speaker_format must be a boolean")
         lance = SAMPLES_ROLE in spec.splits[split_name].artifacts
+        predicate = source.get("lance_filter")
+        if predicate is not None and (not lance or not isinstance(predicate, str) or not predicate.strip()):
+            raise ValueError("lance_filter must be a non-empty SQL string on a Lance source")
         if record_paths or lance:
             if single_speaker:
                 raise ValueError(
@@ -242,7 +245,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             if source.get("exclude_speakers"):
                 raise ValueError("exclude_speakers requires Lhotse supervision speaker IDs")
             rows = (
-                lance_records(self._lance_release(spec.dataset_id, spec.version, split_name), spec, split_name)
+                lance_records(self._lance_release(spec.dataset_id, spec.version, split_name), spec, split_name, predicate)
                 if lance
                 else (
                     ResolvedAudioRecord(record)

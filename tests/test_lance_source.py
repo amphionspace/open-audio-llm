@@ -24,13 +24,13 @@ def wav_bytes(seconds):
 
 @pytest.fixture
 def lance_config(tmp_path):
-    rows = [("a", "你好", "train"), ("b", "世界", "train"), ("c", "测试集", "test")]
+    rows = [("a", "你好", "train"), ("b", "hello", "train"), ("c", "测试集", "test")]
     count = len(rows)
     table = pa.table({
         "sample_id": [row[0] for row in rows],
         "text": [row[1] for row in rows],
         "text_kind": ["source_transcript"] * count,
-        "language": ["zh"] * count,
+        "language": ["zh", "en", "zh"],
         "speaker_id": ["spk"] * count,
         "speaker_scope": ["demo"] * count,
         "duration_seconds": [1.0, 2.0, 1.0],
@@ -89,4 +89,17 @@ def test_lance_release_trains_with_embedded_audio(lance_config, tmp_path, cached
     audio, rate = sf.read(BytesIO(sample["audios"][0]))
     assert rate == 16000 and len(audio) == 2 * 16000
     assert sample["duration"] == pytest.approx(2.0)
-    assert "世界" in json.dumps(sample["messages"], ensure_ascii=False)
+    assert "hello" in json.dumps(sample["messages"], ensure_ascii=False)
+
+
+def test_lance_filter_is_pushed_into_the_scan(lance_config):
+    lance_config["train"][0]["lance_filter"] = "language = 'en'"
+    dataset = CatalogSwiftDataset(lance_config)
+    assert [dataset.records[i].record.id for i in range(len(dataset))] == [
+        "demo@tts-unified-v0.1:train:b"]
+
+
+def test_lance_filter_is_rejected_for_other_sources(lance_config):
+    lance_config["train"][0]["lance_filter"] = ""
+    with pytest.raises(ValueError, match="lance_filter"):
+        CatalogSwiftDataset(lance_config)
