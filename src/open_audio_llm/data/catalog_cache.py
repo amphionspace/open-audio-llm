@@ -150,7 +150,7 @@ class AudioIndex:
         return {"path": self.path, "_connection": None, "_pid": None}
 
 
-READ_ROLES = ("cuts", "recordings", "supervisions", "records", "audio_index")
+READ_ROLES = ("cuts", "recordings", "supervisions", "records", "audio_index", "samples")
 
 
 def _legacy_source_identity(dataset, source):
