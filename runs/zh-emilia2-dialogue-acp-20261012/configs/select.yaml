@@ -20,6 +20,8 @@ parameters:
   tracking_prefix: zh-emilia2-dialogue-acp-20261012-select
   # Start model (dialogue round step 18000); its step-0 baseline is measured on every panel by this selector.
   base_model: {path: ../../zh-dialogue-mix-acp-20261010/tasks/03-select/attempts/004/artifacts/models/checkpoint-18000}
+  # 002 在 4000 步因 W&B 接口超时（service process busy）失败（2026-10-12 13:51 UTC）；003 起沿用 002 的基线与 1000-3000 步结果。
+  previous_state: {path: ../tasks/03-select/attempts/002/artifacts}
   training_attempts:
   - {path: ../tasks/02-train/attempts/001}
   interval: 1000
