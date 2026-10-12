@@ -40,3 +40,17 @@ WenetSpeech、KeSpeech 两种格式都退化（识别能力本身）；CS-Dialog
 - [01-prepare](tasks/01-prepare/)：数据配置。
 - [02-train](tasks/02-train/)：ACP 训练。
 - [03-select](tasks/03-select/)：开发机选模，停止文件 `tasks/03-select/control/stop-request.json`。
+
+## 结果：按用户要求提前停止（2026-10-12）
+
+用户判断单人 ASR 不是本项目看重的指标，要求停止本轮。训练在约 4540 步经停止文件正常退出（02-train attempt 001 执行记录为 completed，但未跑满 12000 步），选模 attempt 002 随后中止（interrupted），未跑结束评测。
+
+| 步数 | WenetSpeech dev（目标） | AliMeeting dev | 6–12 人合成 | KeSpeech dev |
+| --- | --- | --- | --- | --- |
+| 起点 | 4.13 | 21.08 | 28.81 | 4.18 |
+| 1000 | 5.41 | 21.41 | 33.36 | 4.45 |
+| 2000 | 5.71 | 21.23 | 25.48 | 4.34 |
+| 3000 | 6.90 | 21.15 | 34.08 | 4.34 |
+| 4000 | 6.21 | 21.47 | 34.42 | 4.43 |
+
+质量未达标：目标指标 WenetSpeech dev 反而变差，会议指标无收益。原因未核实；一个待查的怀疑是 `wenetspeech_clean@clean-v3` 恢复了语气词（`restore_disfluency`），与 dev 参考文本风格不一致。本轮无选中模型。
