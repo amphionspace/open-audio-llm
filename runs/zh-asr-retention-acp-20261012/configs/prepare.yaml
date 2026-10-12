@@ -1,0 +1,64 @@
+version: 1
+runtime:
+  python:
+    path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  cwd:
+    path: ../../..
+  pythonpath: []
+  gpus: []
+  threads:
+    omp: 1
+    openblas: 1
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script:
+    path: ../scripts/prepare.py
+  accepts_config: true
+  arguments: {}
+parameters:
+  output:
+    path: '{attempt}/artifacts'
+  # The dialogue round's frozen data configuration; every source keeps its relative weight.
+  source_data:
+    path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-dialogue-mix-acp-20261010/tasks/01-prepare/attempts/003/artifacts/train-data.yaml
+  # Registry entries (2026-10-12 copy, see shared/) for the new single-speaker sources. WenetSpeech clean
+  # replaces the frozen entry, whose legacy_asr root predates the WenetSpeech restore of 2026-10-11.
+  catalogs:
+  - {catalog: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-asr-retention-acp-20261012/shared/catalog-additions.jsonl, roots: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-asr-retention-acp-20261012/shared/catalog-additions-roots.json, replace: true}
+  # Aliases registered on 2026-10-10 resolve to the registry copies of the same files.
+  prefer_roots:
+    path: /workspace/data/registry/roots.json
+  rescale: {}
+  # Sample proportions (percent). The previous mix shrinks as a whole from 100 to 75; the freed 25 go to
+  # ordinary single-speaker Chinese ASR in the plain ASR format (benchmark-zh-20261011: single-speaker
+  # error 20-40% above the base model; the previous mix had no general-domain single-speaker speech).
+  scale_kept: true
+  kept_weight: 75
+  groups:
+    # Plain ASR task (no speaker tags): WenetSpeech has no speaker labels, and the plain request format
+    # is the one that regressed (format check on step 18000: CS-Dialogue 20.2 plain vs 6.6 speaker-attributed).
+    # Shares inside the group are set here because the clean WenetSpeech entry records hours, not records.
+    single_speaker_plain:
+      weight: 25
+      sources:
+      # Internet speech (podcasts, video, audiobooks, drama): 9,971 h passing the dual-engine clean.
+      - {dataset_id: wenetspeech_clean, version: clean-v3-20260828, splits: [train], share: 18, task: asr, require_clean_pass: true, min_duration: 0.5, max_duration: 20}
+      # Read and conversational Mandarin, dual-engine (Qwen3-ASR + MOSS) clean versions of 2026-10-08.
+      - {dataset_id: magicdata, version: clean-dual-qwen-moss-v1-20261008, splits: [train], share: 4, task: asr, require_clean_pass: true, min_duration: 0.5, max_duration: 20}
+      - {dataset_id: aidatatang, version: clean-dual-qwen-moss-v1-20261008, splits: [all], share: 1.5, task: asr, require_clean_pass: true, min_duration: 0.5, max_duration: 20}
+      - {dataset_id: primewords, version: clean-dual-qwen-moss-v1-20261008, splits: [train], share: 1, task: asr, require_clean_pass: true, min_duration: 0.5, max_duration: 20}
+      - {dataset_id: aishell3, version: clean-dual-qwen-moss-v1-20261008, splits: [train], share: 0.5, task: asr, require_clean_pass: true, min_duration: 0.5, max_duration: 20}
+  # The smallest earlier source (0.0022% x 0.75) still gets about one sample per window.
+  replay_window_samples: 64000
+  # Earlier rounds sampled with seeds 42-46.
+  seed: 47
+  noise_exclude_datasets: []
+recording:
+  attempts_dir:
+    path: ../tasks/01-prepare/attempts
+  result:
+    path: '{attempt}/artifacts/report.json'
+tracking:
+  enabled: false
