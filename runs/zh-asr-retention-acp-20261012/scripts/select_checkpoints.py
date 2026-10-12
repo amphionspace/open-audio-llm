@@ -18,7 +18,7 @@ The decision is recomputed in step order after every evaluation:
 
 ``retention`` maps names to metric specs, each with its own tolerance. A spec
 with ``source`` reads a single-speaker ASR panel (``ae open-audio-llm ts-asr``
-summary): the error rate of the source whose key starts with ``source``.
+summary): the pooled error rate of the entries whose key starts with ``source``.
 
 After the training attempt completes, the chosen checkpoint runs the final
 reporting panels. Execution completion and quality are recorded separately.
@@ -186,9 +186,10 @@ def evaluate_model(settings, model, step, gpu, port, prefix):
 
 def metric(summaries, spec):
     if 'source' in spec:
-        metrics = summaries[spec['panel']]['metrics']
-        (key,) = [k for k in metrics if k.startswith(spec['source'] + '/')]
-        return metrics[key]['error_rate']
+        # KeSpeech reports one entry per dialect: pool them (errors over reference units).
+        parts = [v for k, v in summaries[spec['panel']]['metrics'].items() if k.startswith(spec['source'] + '/')]
+        assert parts, spec['source']
+        return sum(p['errors'] for p in parts) / sum(p['reference_units'] for p in parts)
     if 'label' in spec:
         # Per-source value, e.g. cp_error_rate_without_loops: a single looping sample adds thousands
         # of errors, so the loop-inclusive rate moved 3-5 points between reruns of one checkpoint.
