@@ -21,15 +21,16 @@ parameters:
   # Start model (dialogue round step 18000); its step-0 baseline is measured on every panel by this selector.
   base_model: {path: ../../zh-dialogue-mix-acp-20261010/tasks/03-select/attempts/004/artifacts/models/checkpoint-18000}
   # 002 在 4000 步因 W&B 接口超时（service process busy）失败（2026-10-12 13:51 UTC）；003 起沿用 002 的基线与 1000-3000 步结果。
-  previous_state: {path: ../tasks/03-select/attempts/002/artifacts}
+  # 003 在 6000 步因 GPU 2 被其他用户占用、空闲显存不足 vLLM 的 0.3 预留而失败（2026-10-12 15:35 UTC）；004 起沿用 003 的结果（含 4000、5000 步）。
+  previous_state: {path: ../tasks/03-select/attempts/003/artifacts}
   training_attempts:
   - {path: ../tasks/02-train/attempts/001}
   interval: 1000
   max_steps: 12000
   poll_seconds: 60
   # One GPU per checkpoint; shared machine: pick by nvidia-smi before launching, never GPU 0.
-  # GPU 6 serves the single-speaker round's selector.
-  gpus: [2]
+  # GPU 2 was taken by another user's training at 6000 steps; GPU 7 had about 44 GB free.
+  gpus: [7]
   port_base: 8891
   server_startup_timeout: 1800
   readable_timeout: 1800
