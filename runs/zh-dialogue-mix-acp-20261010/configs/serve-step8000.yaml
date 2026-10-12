@@ -10,6 +10,8 @@ runtime:
   environment:
     VLLM_WORKER_MULTIPROC_METHOD: spawn
     HF_HUB_OFFLINE: '1'
+    # 共享存储繁忙时加载权重可超过 vLLM 默认的 600 秒（2026-10-11 选模在 6000 步因此失败）；与外层 1800 秒启动超时一致。
+    VLLM_ENGINE_READY_TIMEOUT_S: '1800'
     PYTHONUNBUFFERED: '1'
 task:
   kind: serve

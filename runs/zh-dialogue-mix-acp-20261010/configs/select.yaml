@@ -23,6 +23,8 @@ parameters:
   # 06-baseline-select attempt 001): AliMeeting dev 22.12%, NOTSOFAR dev 125.77%, 6-12 speaker 112.51%,
   # 17 loops. Copied into tracking/ so it stays with this experiment.
   baseline: {path: ../tracking/selection-baseline-step8000.json}
+  # 003 在 6000 步因 vLLM 引擎 600 秒加载超时失败（2026-10-11 04:27）；004 起沿用 003 的基线与 2000/4000 步结果，只评之后的保存点。
+  previous_state: {path: ../tasks/03-select/attempts/003/artifacts}
   training_attempts:
   - {path: ../tasks/02-train/attempts/002}
   interval: 2000

@@ -235,6 +235,11 @@ def main():
     gpus = list(settings['gpus'])
     free = {gpu: settings['port_base'] + i for i, gpu in enumerate(gpus)}
     baseline_file = state / 'baseline.json'
+    history_file = state / 'selection-history.json'
+    if settings.get('previous_state') and not history_file.exists():
+        # Continue a stopped selection: its baseline and evaluated steps stay valid; weights are fetched again.
+        for name in ('baseline.json', 'selection-history.json'):
+            shutil.copy2(Path(settings['previous_state']) / name, state / name)
     if settings.get('baseline') and not baseline_file.exists():
         # Measured with the same chain before this experiment; see the README for its execution.
         shutil.copy2(settings['baseline'], baseline_file)

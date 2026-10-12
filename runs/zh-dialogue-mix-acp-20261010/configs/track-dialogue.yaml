@@ -16,10 +16,13 @@ task:
 parameters:
   output: {path: '{attempt}/artifacts'}
   tracking_prefix: zh-dialogue-mix-acp-20261010-dialogue
-  # The selector's complete copies (03-select attempt 003); training attempt 002.
-  models: {path: ../tasks/03-select/attempts/003/artifacts/models}
+  # The selector's complete copies (03-select attempt 004, which continues 003); training attempt 002.
+  models: {path: ../tasks/03-select/attempts/004/artifacts/models}
   training_attempt: {path: ../tasks/02-train/attempts/002}
-  selection_attempt: {path: ../tasks/03-select/attempts/003}
+  selection_attempt: {path: ../tasks/03-select/attempts/004}
+  # 001 在 6000 步因 vLLM 引擎加载超时失败；002 沿用其 2000/4000 步结果并评完 6000–24000 步，
+  # 但结果路径指向逐行的 history.jsonl，记录结果时解析失败；003 沿用 002 的全部结果，只补写 results.json。
+  previous_history: {path: ../tasks/05-dialogue-track/attempts/002/artifacts/history.jsonl}
   interval: 2000
   max_steps: 24000
   poll_seconds: 120
@@ -34,7 +37,7 @@ parameters:
     cs_dialogue_test: {template: {path: eval-final-cs-dialogue-test.yaml}}
 recording:
   attempts_dir: {path: ../tasks/05-dialogue-track/attempts}
-  result: {path: '{attempt}/artifacts/history.jsonl'}
+  result: {path: '{attempt}/artifacts/results.json'}
 tracking:
   pythonpath: [{path: ../shared/code/src}]
   enabled: true
