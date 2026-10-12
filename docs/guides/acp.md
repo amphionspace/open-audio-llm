@@ -1,6 +1,6 @@
 # 在 SenseCore ACP 算力池上训练
 
-训练配置加上 `cluster` 段后，`open-audio-llm train --config <YAML>` 不在本机运行，而是用 `sco` 向算力池提交多机任务。执行记录、W&B 和对象存储同步保持原样，由任务中 rank 0 节点的启动器负责。示例见 [sft-acp.yaml](../examples/configs/train/sft-acp.yaml)。
+训练配置加上 `cluster` 段后，`open-audio-llm train --config <YAML>` 不在本机运行，而是用 `sco` 向算力池提交多机任务。执行记录、W&B 和对象存储同步保持原样，由任务中 rank 0 节点的启动器负责。示例见 [sft-acp.yaml](../../examples/configs/train/sft-acp.yaml)。
 
 ## 一次性准备
 

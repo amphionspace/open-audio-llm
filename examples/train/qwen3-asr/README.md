@@ -19,4 +19,4 @@ checkpoint 和模型对比使用 vLLM。LoRA 先按 [merge-lora.yaml](../../conf
 
 需要把训练结果交给外部评测时，在训练 YAML 的 `task.arguments` 写 `--checkpoint_handoff: {path: "{attempt}/artifacts/checkpoint-handoff.json"}`。训练结束后由 rank 0 写入交付的 checkpoint、选择方式、全局步数、基础模型和 `tuner_type`。默认 `--checkpoint_selection: final`，要求末步已保存，不按目录名猜测最新 checkpoint；选 `best` 时使用 Trainer 记录的最佳 checkpoint。
 
-训练与评测均由统一入口同步 W&B 并核验远端指标。性能字段见 [训练性能日志](../../../docs/training_performance.md)，记录规范见 [实验规范](../../../docs/experiments.md)。
+训练与评测均由统一入口同步 W&B 并核验远端指标。性能字段见 [训练性能日志](../../../docs/guides/training-performance.md)，记录规范见 [实验规范](../../../docs/guides/experiments.md)。

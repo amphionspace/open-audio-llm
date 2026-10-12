@@ -138,7 +138,7 @@ print(result["prediction"])
 
 默认在 CPU 仅加载 checkpoint 音频塔，复用训练的独立分段编码，再将音频 embedding 交给 vLLM 解码。文本生成只用 vLLM，不加载 Transformers 文本模型作回退。入口要求完整本地 safetensors checkpoint；适配现有 vLLM 0.17.0／0.18.0 接口，当前环境验证了 0.18.0 适配器导入与 `enable_mm_embeds` 参数。**尚未执行 GPU vLLM 端到端验证，也没有训练后质量结论。**
 
-评测按仓库边界属于 AmphionEval，见 [使用 AmphionEval 评测](amphion_eval.md)。已有预测用 `ae open-audio-llm rescore-target-sot --predictions <JSONL> --output <JSON>` 打分，每行含 `reference`、`prediction`、`duration`、`count`、`mode`、`language`：固定 `T1…TK` 身份，仅允许匿名 S 之间最优匹配，分别报告目标错误、目标漏词、缺席目标误触发、非目标输出、格式和句级边界指标。按语言、K、mode、注册时长分桶由调用方分组后分别打分。
+评测按仓库边界属于 AmphionEval，见 [使用 AmphionEval 评测](evaluation.md)。已有预测用 `ae open-audio-llm rescore-target-sot --predictions <JSONL> --output <JSON>` 打分，每行含 `reference`、`prediction`、`duration`、`count`、`mode`、`language`：固定 `T1…TK` 身份，仅允许匿名 S 之间最优匹配，分别报告目标错误、目标漏词、缺席目标误触发、非目标输出、格式和句级边界指标。按语言、K、mode、注册时长分桶由调用方分组后分别打分。
 
 目标 SOT 推理需要上面的注册音频前端，目前还没有供 AmphionEval 调用的服务接口（HTTP 或 JSONL worker）；接入前用 `TargetSOTVLLM` 在模型环境中生成预测，再交给 AmphionEval 打分。
 

@@ -59,4 +59,4 @@ CUDA event 只在日志区间结束时同步，不在每个微批次强制同步
 
 数据等待占比仅 0.1%–0.3%，没有通过增加 worker、缓存音频或关闭在线增强来换取吞吐。第一组与第二组所有已记录 loss 完全一致。第三组改变了动态组批边界，实际样本数稍有差异，因此同时报告按实际音频秒数归一的吞吐。
 
-[原生配方](../examples/train/qwen3-asr/README.md)采用第三组设置。通用模型的 checkpointing 和 batch 默认值不因此改变。显存较小的设备可降低 YAML 的 `batching.max_samples`、相应修改 `per_device_train_batch_size`，并按需要开启语言模型 checkpointing；冻结的音频塔保留 `vit_gradient_checkpointing=false`。
+[原生配方](../../examples/train/qwen3-asr/README.md)采用第三组设置。通用模型的 checkpointing 和 batch 默认值不因此改变。显存较小的设备可降低 YAML 的 `batching.max_samples`、相应修改 `per_device_train_batch_size`，并按需要开启语言模型 checkpointing；冻结的音频塔保留 `vit_gradient_checkpointing=false`。

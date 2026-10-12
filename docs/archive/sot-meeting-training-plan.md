@@ -1,12 +1,12 @@
 # 真实会议与长音频大规模 SOT 训练
 
-> 历史计划与当时运行记录。2026-09-22–29 的实际进展及结果见[近期实验记录](experiments/2026-09-22-to-29.md)；后续新推理和评测统一使用 vLLM。
+> 历史计划与当时运行记录。2026-09-22–29 的实际进展及结果见[近期实验记录](../experiments/2026-09-22-to-29.md)；后续新推理和评测统一使用 vLLM。
 
 更新：2026-09-21。当前恢复运行：`qwen3-asr-sot-meeting-long-recovery-20260921`；原 v2 因显存不足退出，恢复说明见文末。
 
 按用户最新要求直接训练 60,000 步，encoder、aligner、LLM 全部更新，不安排试训。目标是改善真实会议的转写、说话人分离和时间戳，增加长音频覆盖。普通 ASR 继续参与既有优化目标，其退化不作为阻断或早停条件。
 
-[W&B](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/qwen3-asr-sot-meeting-long-recovery-20260921-r2) 在训练前创建；实际状态以 [plan.json](../runs/qwen3-asr-sot-meeting-long-recovery-20260921/plan.json)、日志和远端真实 step 为准。此前 MOSS 对比与自动评分任务保持停止。
+[W&B](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/qwen3-asr-sot-meeting-long-recovery-20260921-r2) 在训练前创建；实际状态以 [plan.json](../../runs/qwen3-asr-sot-meeting-long-recovery-20260921/plan.json)、日志和远端真实 step 为准。此前 MOSS 对比与自动评分任务保持停止。
 
 ## MOSS 参考与短板
 
@@ -34,7 +34,7 @@
 | 合成时间戳 SOT | `synthetic-v2-timed-trial-v1-20260920` | 已有对齐通过的混音 | 1,644,206 |
 | 普通 ASR | 沿用上一轮固定来源、版本与排除规则 | 中文、英文回放 | 复用已有索引 |
 
-217.77 小时是源音频独立时长；39,407 个窗口是四种尺度的重复视图，不是独立会议数。筛选后各视图有效小时数不同，见 [数据审计](../runs/qwen3-asr-sot-meeting-long-20260920-v2/meeting-data-audit.json)。
+217.77 小时是源音频独立时长；39,407 个窗口是四种尺度的重复视图，不是独立会议数。筛选后各视图有效小时数不同，见 [数据审计](../../runs/qwen3-asr-sot-meeting-long-20260920-v2/meeting-data-audit.json)。
 
 切分不截断发言；不可分重叠簇允许超过目标窗口，训练硬上限 650 秒。保留原文、重叠与说话人，窗口内按首次发声编号，同一人跨轮次一致；目标为 `[S1][0.32-2.48] 原文`。时间相对窗口起点，真实会议来自人工发言边界，合成来自自动对齐。真实目标不再查询合成 alignment-index。
 
@@ -81,7 +81,7 @@
 
 正式进程启动检查权重起点、精度、可训练模块、实际 LR 和数据版本；第 5/20 步检查代表性 encoder、aligner、LLM 权重确实更新，随后继续同一运行。这些是正式训练核验，没有单独试训阶段。
 
-[运行目录](../runs/qwen3-asr-sot-meeting-long-20260920-v2/) 保存冻结代码、依赖、清单 SHA256、配置、日志和核验结果。W&B 独立 CPU 进程同步 loss、ASR/SOT CE、KL、梯度、吞吐、显存和实际长度，训练退出后同步最终状态；凭据只从本机 shell 配置加载。
+[运行目录](../../runs/qwen3-asr-sot-meeting-long-20260920-v2/) 保存冻结代码、依赖、清单 SHA256、配置、日志和核验结果。W&B 独立 CPU 进程同步 loss、ASR/SOT CE、KL、梯度、吞吐、显存和实际长度，训练退出后同步最终状态；凭据只从本机 shell 配置加载。
 
 数据准备已执行 `PYTHONPATH=../AmphionData/src:../audio-data-contract/src /ai_sds_wuzz/MODELS/miniconda3/envs/amphionft/bin/python -m pytest ../AmphionData/tests/test_meeting_sot.py -q`，结果 4 passed。覆盖完整重叠簇、长间隔后身份一致、极短时间边界及无标注区间保留。启动文件通过 Bash/Python 语法检查；实际训练核验另存运行目录，不将尚未发生的检查写成通过。
 
@@ -102,6 +102,6 @@ v2 在约第 1,574 步反向传播发生 CUDA OOM；另一 rank 等待 7,200 秒
 
 同时启用 expandable_segments 分配策略；保存间隔从 1,000 改为 500 步，保留最近 3 份；DDP 超时从 7,200 改为 300 秒，缩短单卡故障后的等待。没有以截断长音频或跳过困难样本处理 OOM。
 
-[恢复运行 W&B](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/qwen3-asr-sot-meeting-long-recovery-20260921-r2) · [恢复记录](../runs/qwen3-asr-sot-meeting-long-recovery-20260921/recovery.json) · [显存验证](../runs/qwen3-asr-sot-meeting-long-recovery-20260921/verify_loss_memory.json)
+[恢复运行 W&B](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/qwen3-asr-sot-meeting-long-recovery-20260921-r2) · [恢复记录](../../runs/qwen3-asr-sot-meeting-long-recovery-20260921/recovery.json) · [显存验证](../../runs/qwen3-asr-sot-meeting-long-recovery-20260921/verify_loss_memory.json)
 
 恢复后双卡已通过第 1,020 步核验：optimizer/scheduler 接续正常，encoder、aligner、LLM 代表权重持续更新，有效保存频率为 500 步。完整 600 秒输入继续参与训练；截至核验单卡峰值 allocated 显存约 61.3/59.8 GiB。最终恢复轨迹使用 W&B `-r2`，与保存频率修正前的启动记录分开；远端 loss 与当前本地日志逐项核对，见 `recovery-verification.json` 和 `wandb-recovery-verification.json`。

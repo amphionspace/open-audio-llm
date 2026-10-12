@@ -1,6 +1,6 @@
 # 下一轮 SOT 训练：复用现有数据，补长对话、更多说话人和中英切换
 
-> 历史计划与当时运行记录。2026-09-22–29 的实际进展及结果见[近期实验记录](experiments/2026-09-22-to-29.md)；后续新推理和评测统一使用 vLLM。
+> 历史计划与当时运行记录。2026-09-22–29 的实际进展及结果见[近期实验记录](../experiments/2026-09-22-to-29.md)；后续新推理和评测统一使用 vLLM。
 
 制定日期：2026-09-21。状态：计划已制定，数据转换和新合成尚未执行，未启动新训练或切换当前运行。
 
@@ -27,7 +27,7 @@ NOTSOFAR 同场不同设备录音不能当作独立会议累计，也不能让�
 
 AISHELL-5 的 train、noise 压缩包大小与 catalog 不符，本轮不纳入。NOTSOFAR 200 小时模拟数据虽已落盘，但完整转写链路尚未核实，也不计入本轮 SOT 配比。MISP-Meeting、ASCEND、ICSI 不在这次新增范围内。
 
-来源：[runtime catalog](../../audio-data-contract/catalog/icefall_runtime.jsonl)、[NOTSOFAR 来源](../../audio-data-contract/catalog/multilingual_multispeaker.jsonl)、[CHiME-6 入口说明](../../audio-data-contract/docs/speaker-preparation.md)、[当前训练计划](sot-meeting-training-plan.md)。
+来源：[runtime catalog](../../../audio-data-contract/catalog/icefall_runtime.jsonl)、[NOTSOFAR 来源](../../../audio-data-contract/catalog/multilingual_multispeaker.jsonl)、[CHiME-6 入口说明](../../../audio-data-contract/docs/speaker-preparation.md)、[当前训练计划](sot-meeting-training-plan.md)。
 
 ## 2. 固定训练配比
 

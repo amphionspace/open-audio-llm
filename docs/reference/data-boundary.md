@@ -21,7 +21,7 @@ bytes 直接传给模板，不写临时音频文件。验证来源显式配置�
 但本项目不负责生成它。
 
 SFT batch 按音频槽位数分组；GRPO 保留原生生成分组采样器。当前元数据驻留内存，
-不支持物理 shard 按片懒加载。具体配置和限制见 [在线训练数据](online_training_data.md)。
+不支持物理 shard 按片懒加载。具体配置和限制见 [在线训练数据](../guides/online-training-data.md)。
 
 vLLM 的命名评测注册表继续使用主分支的独立实现；历史模型的 prompt 和 checkpoint
 推理适配也继续保留，它们不参与训练数据生成。
