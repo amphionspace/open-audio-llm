@@ -1,0 +1,35 @@
+# 切出 AliMeeting Eval 单人无重叠语句的远场/近讲两份（同一时间轴、同一参考文本）。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: []
+  gpus: []
+  threads: {omp: 1, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/build_segments.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  # 与 meeting_selection_panel 的 alimeeting_dev 同一来源（icefall 版本的人工标注语句，已去标点）。
+  supervisions: {path: /workspace/data/datasets/alimeeting_sdm/versions/icefall-20260908/dev_sup_0/alimeeting_sdm_supervisions_dev.jsonl.gz}
+  far_dir: {path: /workspace/data/datasets/alimeeting/source/openslr-119-local-20260826/Eval_Ali/Eval_Ali_far/audio_dir}
+  near_dir: {path: /workspace/data/datasets/alimeeting/source/openslr-119-local-20260826/Eval_Ali/Eval_Ali_near/audio_dir}
+  sampling_rate: 16000
+  # 前后 0.2 秒内没有其他说话人的语句，片段只含一个说话人；两端各留至多 0.1 秒，遇到同一人的相邻语句即截止。
+  # 001 用 0.5 秒且同一人也计入，只剩 176 段（AliMeeting 应答词密集）；002 要求 0.1 秒留白内无任何语句，剩 398 段。
+  margin: 0.2
+  pad: 0.1
+  # 去掉过短的应答词（"嗯""对"）；30 秒上限保证单段请求在服务的 max_model_len 内。
+  min_seconds: 1.0
+  max_seconds: 30.0
+  min_chars: 2
+recording:
+  attempts_dir: {path: ../tasks/01-prepare/attempts}
+  result: {path: '{attempt}/artifacts/summary.json'}
+tracking:
+  enabled: false

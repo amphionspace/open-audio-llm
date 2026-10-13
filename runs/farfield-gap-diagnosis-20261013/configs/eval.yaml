@@ -1,0 +1,62 @@
+# 同一批单人语句的远场与近讲两份，逐个模型起 vLLM 服务后评测（run_benchmark.py 复制自 benchmark-zh-20261011）。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../../../src}]
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/run_benchmark.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  tracking_prefix: farfield-gap-diagnosis-20261013
+  # 共享机器，不用 GPU 0；2026-10-13 GPU 3 上他人约 40 GB 常驻，MOSS 服务占 0.4 显存、其余占 0.3。
+  gpu: 3
+  port: 8904
+  server_startup_timeout: 1800
+  serve_template: {path: serve.yaml}
+  delete_request_audio: true
+  models:
+    # 训练链基座：官方权重、官方推荐推理配置与转写请求（只计说话人无关 CER）。
+    qwen3-asr-1.7b:
+      weights: {path: /workspace/model/Qwen3-ASR-1.7B}
+      serve_template: {path: serve-official.yaml}
+      arguments: {--output-format: plain}
+    # 中文对话配比轮选中的 18000 步（当前起点），训练所用的说话人转写请求。
+    zh-dialogue-18000:
+      weights: {path: ../../zh-dialogue-mix-acp-20261010/tasks/03-select/attempts/004/artifacts/models/checkpoint-18000}
+    # 同一模型改用官方转写请求：区分"请求格式"与"识别能力"。
+    zh-dialogue-18000-plain:
+      weights: {path: ../../zh-dialogue-mix-acp-20261010/tasks/03-select/attempts/004/artifacts/models/checkpoint-18000}
+      arguments: {--output-format: plain}
+    # Emilia2 对话伪标签轮选中的 6000 步。
+    zh-emilia2-6000:
+      weights: {path: ../../zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/models/checkpoint-6000}
+    # 第三方对照：MOSS-Transcribe-Diarize，官方 vLLM 与 transcriptions 接口。
+    moss-transcribe-diarize:
+      weights: {path: /workspace/model/MOSS-Transcribe-Diarize}
+      serve_template: {path: serve-moss.yaml}
+      arguments: {--server-api: transcriptions, --output-format: moss_transcribe_diarize}
+  panels:
+    far: {template: {path: eval-far.yaml}}
+    near: {template: {path: eval-near.yaml}}
+recording:
+  attempts_dir: {path: ../tasks/02-eval/attempts}
+  result: {path: '{attempt}/artifacts/results.json'}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: farfield-gap-diagnosis-20261013-eval
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300

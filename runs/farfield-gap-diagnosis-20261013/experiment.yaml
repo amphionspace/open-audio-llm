@@ -1,0 +1,9 @@
+version: 1
+name: farfield-gap-diagnosis-20261013
+purpose: 区分与 MOSS 的文字差距来自远场声学还是微调损伤：AliMeeting Eval 单人无重叠语句的远场与近讲两份，同一打分器评测基座、当前模型与 MOSS
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+tasks:
+- {id: prepare, name: 切出远场与近讲单人语句, config: configs/prepare.yaml, depends_on: []}
+- {id: eval, name: 五个模型配置在两种条件上评测, config: configs/eval.yaml, depends_on: [prepare]}

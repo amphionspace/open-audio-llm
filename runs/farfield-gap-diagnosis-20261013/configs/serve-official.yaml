@@ -1,0 +1,33 @@
+# 官方 Qwen3-ASR-1.7B 的 vLLM 服务：按官方推荐用 vLLM 默认注意力与编码器窗口（不加本项目模型的整段注意力覆盖），BF16、seed 42、每批最多 64 条。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: []
+  gpus: [1]
+  threads: {omp: 4, openblas: 1}
+  environment:
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    HF_HUB_OFFLINE: '1'
+    # 共享存储繁忙时加载权重可超过 vLLM 默认的 600 秒（2026-10-11 选模在 6000 步因此失败）；与外层 1800 秒启动超时一致。
+    VLLM_ENGINE_READY_TIMEOUT_S: '1800'
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: serve
+  backend: vllm
+  model: {path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/unified-diarization-asr-20261001/tasks/merge-8000/attempts/001/artifacts/merged-model}
+  arguments:
+    --host: 127.0.0.1
+    --port: 8761
+    --served-model-name: step8000
+    --dtype: bfloat16
+    --max-model-len: 12288
+    --max-num-seqs: 64
+    --max-num-batched-tokens: 16384
+    # 本机 GPU 与其他用户共享：固定占用约 24 GB，留出余量。
+    --gpu-memory-utilization: 0.3
+    --seed: 42
+    --limit-mm-per-prompt: {audio: 1}
+  flags: []
+recording:
+  attempts_dir: {path: ../tasks/00-serve/attempts}
