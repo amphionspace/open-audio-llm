@@ -1,0 +1,8 @@
+version: 1
+name: emilia2-overlap-pilot-eval-20261013
+purpose: 核对 Emilia2 重叠远场重排数据的难度是否接近真实会议：当前最好模型与 MOSS 在试跑窗口上的 cpER / 说话人无关 CER，与 AliMeeting dev 对照
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+tasks:
+- {id: eval, name: 试跑窗口评测, config: configs/eval.yaml, depends_on: []}
