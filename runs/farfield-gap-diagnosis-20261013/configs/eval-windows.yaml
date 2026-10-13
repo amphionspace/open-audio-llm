@@ -1,0 +1,54 @@
+# 同一批 AliMeeting Eval 远场人工标注窗口切成 30 秒与 120 秒两种长度，看与 MOSS 的文字差距是否随窗口变短而缩小。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../../../src}]
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/run_benchmark.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  tracking_prefix: farfield-gap-diagnosis-20261013-windows
+  # 共享机器，不用 GPU 0；2026-10-13 GPU 3 上他人约 40 GB 常驻，MOSS 服务占 0.4 显存、其余占 0.3。
+  gpu: 3
+  port: 8904
+  server_startup_timeout: 1800
+  serve_template: {path: serve.yaml}
+  delete_request_audio: true
+  models:
+    # 训练链基座：官方转写请求（只计说话人无关 CER）。
+    qwen3-asr-1.7b:
+      weights: {path: /workspace/model/Qwen3-ASR-1.7B}
+      serve_template: {path: serve-official.yaml}
+      arguments: {--output-format: plain}
+    # 当前起点，说话人转写请求。
+    zh-dialogue-18000:
+      weights: {path: ../../zh-dialogue-mix-acp-20261010/tasks/03-select/attempts/004/artifacts/models/checkpoint-18000}
+    moss-transcribe-diarize:
+      weights: {path: /workspace/model/MOSS-Transcribe-Diarize}
+      serve_template: {path: serve-moss.yaml}
+      arguments: {--server-api: transcriptions, --output-format: moss_transcribe_diarize}
+  panels:
+    win30: {template: {path: eval-win30.yaml}}
+    win120: {template: {path: eval-win120.yaml}}
+recording:
+  attempts_dir: {path: ../tasks/04-eval-windows/attempts}
+  result: {path: '{attempt}/artifacts/results.json'}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: farfield-gap-diagnosis-20261013-eval-windows
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
