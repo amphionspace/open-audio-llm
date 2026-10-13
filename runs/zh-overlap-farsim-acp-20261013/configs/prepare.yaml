@@ -1,0 +1,57 @@
+version: 1
+runtime:
+  python:
+    path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  cwd:
+    path: ../../..
+  pythonpath: []
+  gpus: []
+  threads:
+    omp: 1
+    openblas: 1
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script:
+    path: ../scripts/prepare.py
+  accepts_config: true
+  arguments: {}
+parameters:
+  output:
+    path: '{attempt}/artifacts'
+  # The Emilia2 round's frozen data configuration (dialogue mix 80 + Emilia2 dialogue 20); every source keeps its relative weight.
+  source_data:
+    path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-emilia2-dialogue-acp-20261012/tasks/01-prepare/attempts/001/artifacts/train-data.yaml
+  # Generated catalog of the overlap resimulation (same entry as the registry, PR audio-data-contract#41).
+  catalogs:
+  - {catalog: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-overlap-farsim-acp-20261013/shared/catalog-additions.jsonl, roots: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-overlap-farsim-acp-20261013/shared/catalog-additions-roots.json}
+  prefer_roots:
+    path: /workspace/data/registry/roots.json
+  rescale: {}
+  # Sample proportions (percent). The Emilia2-round mix shrinks as a whole from 100 to 80 (dialogue 64, Emilia2 16);
+  # the freed 20 go to overlap-rich far-field windows: farfield-gap-diagnosis-20261013 put about 3.4 of the
+  # ~4-point text gap to MOSS on turns that overlap another speaker, and only AliMeeting (~100 h raw) teaches that.
+  scale_kept: true
+  kept_weight: 80
+  groups:
+    # Emilia2 2-3 speaker turns re-timed to overlap (window ratio mean 0.23), SLR28 rooms + MUSAN noise, 1,535 h.
+    overlap_farsim:
+      weight: 20
+      sources:
+      - {dataset_id: emilia2_zh_overlap_farsim, version: overlap-farsim-v1-20261013, splits: [train_120s], max_duration: 650}
+  # The smallest earlier source still gets about one sample per window.
+  replay_window_samples: 64000
+  # Earlier rounds sampled with seeds 42-48.
+  seed: 49
+  # Real recordings and the already noised resimulation get no added training noise.
+  noise_exclude_datasets:
+  - emilia2_zh_dialogue_diarize
+  - emilia2_zh_overlap_farsim
+recording:
+  attempts_dir:
+    path: ../tasks/01-prepare/attempts
+  result:
+    path: '{attempt}/artifacts/report.json'
+tracking:
+  enabled: false
