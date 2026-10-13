@@ -1,0 +1,39 @@
+cos stats: target-present mean 0.275, absent mean 0.118
+pos split              neg split              AUC  EER%   thr
+enroll-clean-pos       enroll-clean-neg      0.79  26.7  0.16
+enroll-short1-pos      enroll-short1-neg     0.36  62.7  0.12
+enroll-lead_silence-pos enroll-lead_silence-neg  0.35  62.7  0.18
+enroll-lp4k-pos        enroll-lp4k-neg       0.77  27.3  0.16
+enroll-noise10-pos     enroll-noise10-neg    0.79  28.7  0.13
+enroll-reverb-pos      enroll-reverb-neg     0.79  26.7  0.14
+enroll-contam10-pos    enroll-contam10-neg   0.79  29.3  0.17
+enroll-contam0-pos     enroll-contam0-neg    0.75  30.0  0.16
+enroll-quiet-pos       enroll-quiet-neg      0.79  27.3  0.15
+dyn-full-k1            abs-k1                0.81  25.0  0.15
+dyn-full-k4            abs-k4                0.63  42.5  0.20
+dyn-burst-k2           abs-k2                0.68  36.7  0.20
+dyn-burst-k4           abs-k4                0.51  50.0  0.18
+dyn-alternate-k2       abs-k2                0.81  26.7  0.24
+dyn-overlap-k3         abs-k2                0.54  45.8  0.17
+dyn-short-k1           abs-k1                0.73  32.5  0.12
+dyn-short-k3           abs-k2                0.55  45.8  0.16
+dyn-target-quiet       abs-k2                0.64  40.0  0.19
+dyn-full-k1            abs-hard              0.51  50.0  0.29
+dom-clean-pos          dom-clean-neg         0.81  27.5  0.19
+dom-reverb-noise-pos   dom-reverb-noise-neg  0.76  30.8  0.20
+dom-music-pos          dom-music-neg         0.81  25.0  0.24
+dom-traffic-pos        dom-traffic-neg       0.79  26.7  0.22
+dom-phone-pos          dom-phone-neg         0.81  25.8  0.20
+dom-studio-pos         dom-studio-neg        0.83  25.8  0.30
+
+threshold 0.060 (90% of clean positives pass); rate of negatives passing (false accept) under the gate alone:
+  enroll-clean-neg       FA  62.0%
+  enroll-short1-neg      FA  76.7%
+  enroll-contam10-neg    FA  59.3%
+  abs-k1                 FA  50.0%
+  abs-k2                 FA  82.5%
+  abs-k4                 FA  89.2%
+  abs-hard               FA  88.3%
+  dom-phone-neg          FA  71.7%
+  dom-studio-neg         FA  71.7%
+positives passing:  {'enroll-short1-pos': np.float64(64.0), 'enroll-contam10-pos': np.float64(90.0), 'dyn-burst-k2': np.float64(95.8), 'dyn-burst-k4': np.float64(93.3), 'dyn-short-k1': np.float64(80.0), 'dyn-target-quiet': np.float64(90.0), 'dom-phone-pos': np.float64(93.3)}
