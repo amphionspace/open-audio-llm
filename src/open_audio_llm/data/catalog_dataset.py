@@ -94,6 +94,15 @@ def load_mono(cut, sampling_rate):
     return to_mono(audio, cut.sampling_rate, sampling_rate)
 
 
+def load_rir(cut, rng, sampling_rate):
+    """One microphone of a (possibly array) RIR; a channel mean is no real microphone."""
+    audio = cut.load_audio()
+    if audio is None or audio.size == 0:
+        raise ValueError(f"cut {cut.id!r} contains no audio")
+    channel = rng.randrange(audio.shape[0])
+    return to_mono(audio[channel : channel + 1], cut.sampling_rate, sampling_rate)
+
+
 class CatalogSwiftDataset(OnlineAudioDataset):
     """Read facts from memory or a shared index; decode audio on each __getitem__."""
 
@@ -424,8 +433,9 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             if self.training:
                 augmentation = self.augmentation
                 if resolved.record.metadata.get("sot_output_format") in {TIMESTAMP_FORMAT, TARGET_FORMAT}:
-                    # Aligned times are fixed; time warping and delayed RIRs invalidate them.
-                    augmentation = replace(augmentation, speed_prob=0.0, rir_prob=0.0)
+                    # Aligned times are fixed and time warping invalidates them; RIRs start
+                    # at the direct path, so reverberation keeps them.
+                    augmentation = replace(augmentation, speed_prob=0.0)
                 if resolved.dataset_id in augmentation.noise_exclude_datasets:
                     augmentation = replace(augmentation, noise_prob=0.0)
                 audio = augment_waveform(
@@ -434,7 +444,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                     rng,
                     augmentation,
                     noise_loader=lambda r, sr: load_mono(r.choice(self.noise_cuts), sr),
-                    rir_loader=lambda r, sr: load_mono(r.choice(self.rir_cuts), sr),
+                    rir_loader=lambda r, sr: load_rir(r.choice(self.rir_cuts), r, sr),
                 )
             if self.collect_metrics:
                 self._sample_metrics["wave_augment_s"] += time.perf_counter() - started

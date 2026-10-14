@@ -167,6 +167,23 @@ augmentation:
 
 启用时必须同时配置顶层 `noise_sources` / `rir_sources`，每项同样引用 Catalog 的
 `dataset_id`、`version`、`split`。资源支持 cuts 或 recordings。
+
+RIR 从直达声开始卷积，输出时间与原音频一致，因此带时间戳的 SOT 样本也会加混响
+（仍不变速）。多通道 RIR（麦克风阵列）每次随机取一个麦克风，不做通道平均。
+模拟单声道远场时使用实测 RIR，并设 `reverb_noise: true`：本条已加混响时，噪声经同一
+RIR 50 ms 之后的晚期混响再混入，像房间里的扩散底噪，而不是贴近麦克风的干噪声：
+
+```yaml
+augmentation:
+  rir_prob: 0.5
+  noise_prob: 0.5
+  noise_snr_db: [0, 20]
+  reverb_noise: true
+rir_sources:
+- {dataset_id: real_rir_slr28, version: prepared-20260908, split: all}
+noise_sources:
+- {dataset_id: musan, version: legacy-20260804, split: noise}
+```
 训练随机性包含 seed、epoch、样本索引及重复位置，同样的采样位置可复现，不同
 reps 可以获得不同增强。索引自带 epoch，不受 persistent workers 预取跨 epoch 影响。
 

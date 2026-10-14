@@ -668,6 +668,49 @@ def test_noise_snr_and_rir_are_real_transforms():
     assert not np.array_equal(reverbed, audio)
 
 
+def test_rir_starts_at_direct_path_and_reverberates_noise():
+    import random
+    from dataclasses import replace
+
+    from open_audio_llm.data.catalog_dataset import load_rir
+
+    audio = np.zeros(4000, dtype=np.float32)
+    audio[1000] = 1
+    impulse = np.zeros(2000, dtype=np.float32)
+    impulse[300], impulse[1500] = 1, 0.5  # propagation delay, then a late reflection
+    reverbed = augment_waveform(
+        audio, 16000, random.Random(0), AugmentConfig(rir_prob=1),
+        rir_loader=lambda rng, sr: impulse,
+    )
+    assert int(np.argmax(np.abs(reverbed))) == 1000
+    assert reverbed[2200] > 0
+
+    # Late tail: aligned impulse from 50 ms (800 samples) on; the reflection sits at
+    # tail index 400. An exact-length clip makes the noise window deterministic.
+    tail = len(impulse) - 300 - 800
+    noise = np.random.default_rng(0).normal(size=4000 + tail - 1).astype(np.float32)
+    clean = np.ones(4000, dtype=np.float32)
+    config = AugmentConfig(rir_prob=1, noise_prob=1, noise_snr_db=(10, 10), reverb_noise=True)
+    mixed = augment_waveform(
+        clean, 16000, random.Random(0), config,
+        noise_loader=lambda rng, sr: noise, rir_loader=lambda rng, sr: impulse,
+    )
+    speech = augment_waveform(
+        clean, 16000, random.Random(0), replace(config, noise_prob=0),
+        noise_loader=lambda rng, sr: noise, rir_loader=lambda rng, sr: impulse,
+    )
+    added = mixed - speech
+    assert np.mean(added**2) == pytest.approx(np.mean(speech**2) / 10, rel=1e-4)
+    # Only the late reflection reaches the noise, which arrives without the direct path.
+    expected = noise[tail - 1 - 400 :][:4000]
+    expected *= np.sqrt(np.mean(speech**2) / 10 / np.mean(expected**2))
+    np.testing.assert_allclose(added, expected, atol=1e-4)
+
+    rir = np.stack([np.ones(10), 2 * np.ones(10)]).astype(np.float32)
+    cut = SimpleNamespace(id="array", sampling_rate=16000, load_audio=lambda: rir)
+    assert {float(load_rir(cut, random.Random(seed), 16000)[0]) for seed in range(20)} == {1.0, 2.0}
+
+
 def test_pipeline_encodes_only_at_access(catalog_config):
     from open_audio_llm.integrations.ms_swift.train import CatalogTrainingMixin
 
