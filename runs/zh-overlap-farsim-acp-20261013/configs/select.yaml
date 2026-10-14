@@ -25,7 +25,9 @@ parameters:
   # select 001 stopped with it after measuring the step-0 baseline, which 002 keeps.
   # Select 002 failed at step 1000: the panel catalog's worktree (audio-data-contract-panel) was deleted; the
   # templates now read the identical registry copy. 003 keeps the baseline.
-  previous_state: {path: ../tasks/03-select/attempts/002/artifacts}
+  # Select 003 measured steps 1000-6000, stopped training at 6000 (consecutive retention regression) and chose
+  # step 2000; its final CHiME-6 panel failed on the same deleted path in data/chime6-dev.yaml. 004 keeps the history.
+  previous_state: {path: ../tasks/03-select/attempts/003/artifacts}
   training_attempts:
   - {path: ../tasks/02-train/attempts/002}
   interval: 1000
@@ -72,8 +74,13 @@ parameters:
     fixed338: {template: {path: eval-step8000-fixed.yaml}}
     aishell5_dev: {template: {path: eval-final-aishell5-dev.yaml}}
     cs_dialogue_test: {template: {path: eval-final-cs-dialogue-test.yaml}}
-  # No earlier result on the start model through this selector: all final panels are measured on it at the end.
-  final_baseline: {}
+  # The start model's final panels, measured by the Emilia2 round's selector with the same templates and data.
+  final_baseline:
+    meeting180: {path: ../../zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/final/checkpoints/step-6000/meeting180/attempts/001/artifacts/evaluation/summary.json}
+    chime6: {path: ../../zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/final/checkpoints/step-6000/chime6/attempts/001/artifacts/evaluation/summary.json}
+    fixed338: {path: ../../zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/final/checkpoints/step-6000/fixed338/attempts/001/artifacts/evaluation/summary.json}
+    aishell5_dev: {path: ../../zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/final/checkpoints/step-6000/aishell5_dev/attempts/001/artifacts/evaluation/summary.json}
+    cs_dialogue_test: {path: ../../zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/final/checkpoints/step-6000/cs_dialogue_test/attempts/001/artifacts/evaluation/summary.json}
   final_tolerance: 0.01
 recording:
   attempts_dir: {path: ../tasks/03-select/attempts}
