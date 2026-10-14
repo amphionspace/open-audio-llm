@@ -1,0 +1,50 @@
+# 远场单段评测模板（复制自 benchmark-zh-20261011 的 eval-win-panel.yaml，只换数据）：AmphionEval meeting 评测器，
+# 同一打分器下"说话人无关 CER"即单人语句的字错误率；模型、服务、数据与输出由 run_benchmark.py 填入。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/amphion-eval/bin/python}
+  cwd: {path: ../../..}
+  # 与 B 层同一分支 worktree（含说话人无关 CER）。
+  pythonpath: [{path: /workspace/workspace/mingdong/repo/amphion-eval-bench/src}]
+  gpus: []
+  threads: {omp: 4, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+    AUDIO_DATA_CATALOG: /workspace/workspace/mingdong/repo/open-audio-llm/runs/farfield-gap-diagnosis-20261013/tasks/01-prepare/attempts/003/artifacts/catalog.yaml
+    AUDIO_DATA_ROOTS_FILE: /workspace/workspace/mingdong/repo/open-audio-llm/runs/farfield-gap-diagnosis-20261013/tasks/01-prepare/attempts/003/artifacts/roots.json
+task:
+  kind: eval
+  backend: vllm
+  server_url: http://127.0.0.1:8904
+  module: amphion_eval.cli
+  positional: [open-audio-llm, meeting]
+  arguments:
+    --model: {path: /workspace/model/Qwen3-ASR-1.7B}
+    --data_config: {path: data/far.yaml}
+    --split_group: evaluation
+    --samples_per_source: 0
+    --batch_size: 16
+    --max_new_tokens: 1024
+    --worker-timeout: 3600
+    --server-url: http://127.0.0.1:8904
+    --served-model: placeholder
+    --server-api: chat
+    --output-format: open_audio_llm
+    --output_dir: {path: '{attempt}/artifacts/evaluation'}
+recording:
+  attempts_dir: {path: ../tasks/02-eval/attempts}
+  result: {path: '{attempt}/artifacts/evaluation/summary.json'}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: farfield-gap-diagnosis-20261013-eval
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file: {path: '{attempt}/artifacts/evaluation/summary.json'}
+    prefix: evaluation

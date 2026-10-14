@@ -1,0 +1,26 @@
+# 把 Emilia2 轮 6000 步按比例插值回 Qwen3-ASR 原版权重（WiSE-FT 式），比例为原版所占份额。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: []
+  gpus: []
+  threads: {omp: 8, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/interpolate.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  base: {path: /workspace/model/Qwen3-ASR-1.7B}
+  fine_tuned: {path: ../../zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/models/checkpoint-6000}
+  # 原版份额：0 即 6000 步本身（同一次评测里作对照）。
+  ratios: [0.1, 0.2, 0.3, 0.5]
+recording:
+  attempts_dir: {path: ../tasks/01-merge/attempts}
+  result: {path: '{attempt}/artifacts/report.json'}
+tracking:
+  enabled: false
