@@ -19,7 +19,7 @@ from audio_data_contract import (
     resolve_split,
 )
 
-from .augment import AugmentConfig, augment_waveform
+from .augment import AugmentConfig, augment_waveform, direct_to_reverberant_db
 from .catalog_resolver import LhotseCatalogAudioResolver
 from .lance_source import SAMPLES_ROLE, lance_records, read_lance_audio
 from .online_dataset import TASK_TEMPLATES, OnlineAudioDataset
@@ -92,6 +92,16 @@ def load_mono(cut, sampling_rate):
     if audio is None or audio.size == 0:
         raise ValueError(f"cut {cut.id!r} contains no audio")
     return to_mono(audio, cut.sampling_rate, sampling_rate)
+
+
+def load_rir(cut, rng, sampling_rate, channel=None):
+    """One microphone of a (possibly array) RIR; a channel mean is no real microphone."""
+    audio = cut.load_audio()
+    if audio is None or audio.size == 0:
+        raise ValueError(f"cut {cut.id!r} contains no audio")
+    if channel is None:
+        channel = rng.randrange(audio.shape[0])
+    return to_mono(audio[channel : channel + 1], cut.sampling_rate, sampling_rate)
 
 
 class CatalogSwiftDataset(OnlineAudioDataset):
@@ -186,6 +196,18 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             raise ValueError("noise_prob requires non-empty noise_sources")
         if training and self.augmentation.rir_prob and not self.rir_cuts:
             raise ValueError("rir_prob requires non-empty rir_sources")
+        # (cut, channel) pairs; None draws a channel per use.
+        self.rir_choices = [(cut, None) for cut in self.rir_cuts]
+        if self.rir_cuts and self.augmentation.rir_drr_db is not None:
+            low, high = self.augmentation.rir_drr_db
+            self.rir_choices = [
+                (cut, channel)
+                for cut in self.rir_cuts
+                for channel, impulse in enumerate(np.atleast_2d(cut.load_audio()))
+                if low <= direct_to_reverberant_db(impulse, cut.sampling_rate) <= high
+            ]
+            if not self.rir_choices:
+                raise ValueError(f"No RIR microphone has a DRR within {low}..{high} dB")
         if grpo and self.augmentation.spec_aug_prob:
             raise ValueError(
                 "GRPO supports waveform augmentation; SpecAugment is SFT-only"
@@ -197,6 +219,10 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             seed=int(config.get("seed", 42)),
             **config.get("hotwords", {}),
         )
+
+    def _load_rir(self, rng, sampling_rate):
+        cut, channel = rng.choice(self.rir_choices)
+        return load_rir(cut, rng, sampling_rate, channel)
 
     def _resource_cuts(self, sources):
         return [
@@ -424,8 +450,9 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             if self.training:
                 augmentation = self.augmentation
                 if resolved.record.metadata.get("sot_output_format") in {TIMESTAMP_FORMAT, TARGET_FORMAT}:
-                    # Aligned times are fixed; time warping and delayed RIRs invalidate them.
-                    augmentation = replace(augmentation, speed_prob=0.0, rir_prob=0.0)
+                    # Aligned times are fixed and time warping invalidates them; RIRs start
+                    # at the direct path, so reverberation keeps them.
+                    augmentation = replace(augmentation, speed_prob=0.0)
                 if resolved.dataset_id in augmentation.noise_exclude_datasets:
                     augmentation = replace(augmentation, noise_prob=0.0)
                 audio = augment_waveform(
@@ -434,7 +461,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                     rng,
                     augmentation,
                     noise_loader=lambda r, sr: load_mono(r.choice(self.noise_cuts), sr),
-                    rir_loader=lambda r, sr: load_mono(r.choice(self.rir_cuts), sr),
+                    rir_loader=lambda r, sr: self._load_rir(r, sr),
                 )
             if self.collect_metrics:
                 self._sample_metrics["wave_augment_s"] += time.perf_counter() - started
