@@ -183,9 +183,8 @@ RIR 麦克风，训练启动时逐通道计算一次。`[-6, -1]` 是 2026-10-14
 
 噪声使用真实会议室底噪 `meeting_room_noise`：AliMeeting Train 与 AISHELL-4 train 远场
 阵列中无人说话的片段（标注空隙，再逐 4 s 用 Qwen3-ASR 剔除识别出文字的片段），
-共 2.48 h、209 条。它已带房间混响，因此 `reverb_noise: false`。该数据集尚未进入共享
-registry，训练时以附加 catalog 引入：
-`/workspace/data/datasets/meeting_room_noise/versions/v2-20261014/{catalog.jsonl,roots.json}`。
+共 2.48 h、209 条（registry `catalog/meeting_room_noise.yaml`，生产见 amphiondata
+`docs/meeting-room-noise.md`）。它已带房间混响，因此 `reverb_noise: false`。
 
 2026-10-14 用同一口径（前后无人说话的独立语句；语句前 0.5 s 为底噪）对比真实阵列远场
 （第 0 通道）与同一语句近讲按下面配置模拟的结果，p10 / p50 / p90：
