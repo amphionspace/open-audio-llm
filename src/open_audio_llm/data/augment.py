@@ -34,6 +34,9 @@ class AugmentConfig:
     # Keep only RIR microphones whose DRR (dB) lies in this range; None keeps all.
     # [-6, -1] matched AliMeeting far-field recordings by ear (2026-10-14).
     rir_drr_db: tuple[float, float] | None = None
+    # Whole-clip RMS (dBFS) drawn for reverberated clips, after noise; None keeps the
+    # input level. Real far-field arrays record far quieter than close-talk speech.
+    far_level_dbfs: tuple[float, float] | None = None
     time_mask_width: int = 30
     frequency_mask_width: int = 16
 
@@ -49,6 +52,12 @@ class AugmentConfig:
             len(self.rir_drr_db) != 2 or self.rir_drr_db[0] > self.rir_drr_db[1]
         ):
             raise ValueError("rir_drr_db must be an ordered pair")
+        if self.far_level_dbfs is not None and (
+            len(self.far_level_dbfs) != 2
+            or self.far_level_dbfs[0] > self.far_level_dbfs[1]
+            or self.far_level_dbfs[1] > 0
+        ):
+            raise ValueError("far_level_dbfs must be an ordered pair <= 0 dBFS")
         if self.time_mask_width < 0 or self.frequency_mask_width < 0:
             raise ValueError("SpecAugment mask widths must be non-negative")
 
@@ -77,7 +86,7 @@ def augment_waveform(
         factor = rng.choice(config.speed_factors)
         ratio = Fraction(1 / factor).limit_denominator(1000)
         audio = resample_poly(audio, ratio.numerator, ratio.denominator)
-    tail = None
+    tail, reverberated = None, False
     if rng.random() < config.rir_prob:
         if rir_loader is None:
             raise ValueError("rir_prob requires a Catalog RIR source")
@@ -87,6 +96,7 @@ def augment_waveform(
         energy = np.sqrt(np.sum(impulse**2))
         if energy > 0:
             audio = fftconvolve(audio, impulse / energy)[: len(audio)]
+            reverberated = True
             # Past the early reflections the field is diffuse and roughly the same
             # anywhere in the room, so it stands in for the noise source's RIR.
             tail = impulse[round(LATE_REVERB_S * sampling_rate) :]
@@ -111,6 +121,11 @@ def augment_waveform(
             audio = audio + noise * np.sqrt(
                 signal_power / (noise_power * 10 ** (snr / 10))
             )
+    if reverberated and config.far_level_dbfs is not None:
+        power = np.mean(audio**2)
+        if power > 0:
+            level = rng.uniform(*config.far_level_dbfs)
+            audio = audio * (10 ** (level / 20) / np.sqrt(power))
     return np.asarray(audio, dtype=np.float32)
 
 

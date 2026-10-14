@@ -711,6 +711,21 @@ def test_rir_starts_at_direct_path_and_reverberates_noise():
     assert {float(load_rir(cut, random.Random(seed), 16000)[0]) for seed in range(20)} == {1.0, 2.0}
 
 
+def test_far_level_applies_only_to_reverberated_clips():
+    import random
+    from dataclasses import replace
+
+    audio = np.random.default_rng(0).normal(0, 0.3, 4000).astype(np.float32)
+    impulse = np.array([1, 0, 0.5], dtype=np.float32)
+    config = AugmentConfig(rir_prob=1, far_level_dbfs=(-40, -40))
+    far = augment_waveform(audio, 16000, random.Random(0), config, rir_loader=lambda rng, sr: impulse)
+    assert 10 * np.log10(np.mean(far**2)) == pytest.approx(-40, abs=1e-3)
+    near = augment_waveform(audio, 16000, random.Random(0), replace(config, rir_prob=0))
+    np.testing.assert_array_equal(near, audio)
+    with pytest.raises(ValueError, match="far_level_dbfs"):
+        AugmentConfig(far_level_dbfs=(-30, 3))
+
+
 def test_rir_drr_range_selects_microphones(catalog_config):
     from open_audio_llm.data.augment import direct_to_reverberant_db
 

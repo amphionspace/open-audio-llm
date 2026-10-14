@@ -178,13 +178,22 @@ RIR 麦克风，训练启动时逐通道计算一次。`[-6, -1]` 是 2026-10-14
 阵列远场试听确定的范围（DRR -2 dB / SNR 10 dB 与 -5.6 dB / SNR 5 dB 均判为接近）；
 `real_rir_slr28` 中约 887 个麦克风、11 个房间落在该范围，DRR 更高的 RIR 听感接近近讲。
 
+模型输入的 log-mel 特征不做音量归一化，所以远场音量也要与真实场景一致。
+`far_level_dbfs` 只作用于已加混响的样本：混噪后把整段 RMS 设为该范围内的随机值。
+2026-10-14 在 AliMeeting Train 远场（阵列第 0 通道）上实测：30 s 窗口整段 RMS
+p10/p50/p90 为 -45.8 / -38.7 / -29.9 dBFS（AISHELL-4 train 为 -42.2 / -36.9 / -33.1）；
+独立语句的 SNR 为 2.7 / 16.8 / 28.0 dB。同一批语句的近讲按下面配置模拟后，语音电平为
+-47.2 / -38.9 / -31.7 dBFS，SNR 为 4.9 / 14.3 / 26.7 dB。仍未对齐的是噪声频谱：MUSAN 噪声
+偏低频，真实会议室底噪接近宽带（4–8 kHz 相对 0.3–1 kHz：真实 -15 dB，模拟 -26 dB）。
+
 ```yaml
 augmentation:
   rir_prob: 0.5
   noise_prob: 0.5
-  noise_snr_db: [5, 10]
+  noise_snr_db: [0, 25]
   reverb_noise: true
   rir_drr_db: [-6, -1]
+  far_level_dbfs: [-50, -30]
 rir_sources:
 - {dataset_id: real_rir_slr28, version: prepared-20260908, split: all}
 noise_sources:
