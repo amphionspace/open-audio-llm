@@ -711,6 +711,23 @@ def test_rir_starts_at_direct_path_and_reverberates_noise():
     assert {float(load_rir(cut, random.Random(seed), 16000)[0]) for seed in range(20)} == {1.0, 2.0}
 
 
+def test_rir_drr_range_selects_microphones(catalog_config):
+    from open_audio_llm.data.augment import direct_to_reverberant_db
+
+    sr = catalog_config["sampling_rate"]
+    impulse = np.zeros(sr // 10)
+    impulse[0], impulse[sr // 100] = 1, 0.5  # reflection 10 ms after the direct path
+    assert direct_to_reverberant_db(impulse, sr) == pytest.approx(10 * np.log10(4))
+    # The fixture RIR has the same shape (DRR ~6 dB).
+    catalog_config["augmentation"]["rir_drr_db"] = [0, 10]
+    dataset = CatalogSwiftDataset(catalog_config)
+    assert [channel for _, channel in dataset.rir_choices] == [0]
+    assert dataset[0]
+    catalog_config["augmentation"]["rir_drr_db"] = [-6, -1]
+    with pytest.raises(ValueError, match="DRR within"):
+        CatalogSwiftDataset(catalog_config)
+
+
 def test_pipeline_encodes_only_at_access(catalog_config):
     from open_audio_llm.integrations.ms_swift.train import CatalogTrainingMixin
 

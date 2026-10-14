@@ -173,12 +173,18 @@ RIR 从直达声开始卷积，输出时间与原音频一致，因此带时间�
 模拟单声道远场时使用实测 RIR，并设 `reverb_noise: true`：本条已加混响时，噪声经同一
 RIR 50 ms 之后的晚期混响再混入，像房间里的扩散底噪，而不是贴近麦克风的干噪声：
 
+`rir_drr_db` 只保留直达声/混响能量比（DRR，直达声取峰值后 2.5 ms）在该范围内的
+RIR 麦克风，训练启动时逐通道计算一次。`[-6, -1]` 是 2026-10-14 对照 AliMeeting 真实
+阵列远场试听确定的范围（DRR -2 dB / SNR 10 dB 与 -5.6 dB / SNR 5 dB 均判为接近）；
+`real_rir_slr28` 中约 887 个麦克风、11 个房间落在该范围，DRR 更高的 RIR 听感接近近讲。
+
 ```yaml
 augmentation:
   rir_prob: 0.5
   noise_prob: 0.5
-  noise_snr_db: [0, 20]
+  noise_snr_db: [5, 10]
   reverb_noise: true
+  rir_drr_db: [-6, -1]
 rir_sources:
 - {dataset_id: real_rir_slr28, version: prepared-20260908, split: all}
 noise_sources:

@@ -14,6 +14,8 @@ import numpy as np
 
 # Early reflections end ~50 ms after the direct path (the usual C50/D50 boundary).
 LATE_REVERB_S = 0.05
+# Direct-path window for DRR: +-2.5 ms around the peak is the common convention.
+DIRECT_PATH_S = 0.0025
 
 
 @dataclass
@@ -29,6 +31,9 @@ class AugmentConfig:
     # Far-field: when the speech was reverberated, pass the noise through the same
     # room's late reverberation so it arrives diffuse instead of dry.
     reverb_noise: bool = False
+    # Keep only RIR microphones whose DRR (dB) lies in this range; None keeps all.
+    # [-6, -1] matched AliMeeting far-field recordings by ear (2026-10-14).
+    rir_drr_db: tuple[float, float] | None = None
     time_mask_width: int = 30
     frequency_mask_width: int = 16
 
@@ -40,8 +45,23 @@ class AugmentConfig:
             raise ValueError("speed_factors must be positive")
         if len(self.noise_snr_db) != 2 or self.noise_snr_db[0] > self.noise_snr_db[1]:
             raise ValueError("noise_snr_db must be an ordered pair")
+        if self.rir_drr_db is not None and (
+            len(self.rir_drr_db) != 2 or self.rir_drr_db[0] > self.rir_drr_db[1]
+        ):
+            raise ValueError("rir_drr_db must be an ordered pair")
         if self.time_mask_width < 0 or self.frequency_mask_width < 0:
             raise ValueError("SpecAugment mask widths must be non-negative")
+
+
+def direct_to_reverberant_db(impulse, sampling_rate):
+    """Energy within DIRECT_PATH_S after the peak over the energy after it."""
+    impulse = np.asarray(impulse, dtype=np.float64)
+    impulse = impulse[int(np.argmax(np.abs(impulse))) :]
+    split = max(1, round(DIRECT_PATH_S * sampling_rate))
+    reverberant = np.sum(impulse[split:] ** 2)
+    if reverberant == 0:
+        return float("inf")
+    return float(10 * np.log10(np.sum(impulse[:split] ** 2) / reverberant))
 
 
 def augment_waveform(
