@@ -21,8 +21,11 @@ parameters:
   # Start model (Emilia2 round step 6000, selected and confirmed by the session-level benchmark); its step-0
   # baseline is measured on every panel by this selector.
   base_model: {path: ../../zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/models/checkpoint-6000}
+  # Train 001 failed in the data preflight (the frozen Emilia2 FLAC index was deleted when the version moved to m4a);
+  # select 001 stopped with it after measuring the step-0 baseline, which 002 keeps.
+  previous_state: {path: ../tasks/03-select/attempts/001/artifacts}
   training_attempts:
-  - {path: ../tasks/02-train/attempts/001}
+  - {path: ../tasks/02-train/attempts/002}
   interval: 1000
   max_steps: 12000
   poll_seconds: 60

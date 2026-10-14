@@ -23,11 +23,14 @@ runtime:
     VLLM_WORKER_MULTIPROC_METHOD: spawn
     PYTHONUNBUFFERED: '1'
     PYTORCH_ALLOC_CONF: expandable_segments:True
+    # lhotse decodes the Emilia2 dialogue m4a through ffmpeg on PATH (static 7.0.2, the build that verified the
+    # m4a index); the conda env does not ship one. YAML values are literal, so the image defaults are listed too.
+    PATH: /workspace/workspace/mingdong/.local-tools/ffmpeg-7.0.2-static/bin:/workspace/workspace/mingdong/miniconda3/envs/oal-train/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
   distributed:
     processes: 8
     port: 29787
 data:
-  config: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-overlap-farsim-acp-20261013/tasks/01-prepare/attempts/001/artifacts/train-data.yaml
+  config: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-overlap-farsim-acp-20261013/tasks/01-prepare/attempts/002/artifacts/train-data.yaml
 task:
   kind: train
   module: open_audio_llm.integrations.ms_swift.train
@@ -97,7 +100,7 @@ preflight:
 - kind: prepare
   module: open_audio_llm.data.catalog_cache
   arguments:
-    --data_config: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-overlap-farsim-acp-20261013/tasks/01-prepare/attempts/001/artifacts/train-data.yaml
+    --data_config: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-overlap-farsim-acp-20261013/tasks/01-prepare/attempts/002/artifacts/train-data.yaml
     --workers: 4
     --batch-size: 2
     --world-size: 8
