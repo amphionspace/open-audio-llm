@@ -1,0 +1,19 @@
+# checkpoint-33407 在评测集上的全量基线：部署推理栈（vLLM 服务，TS-ASR 用 SEP 服务），贪心解码。
+suite_id: asr-regression-native@1
+evaluator: ts-asr
+eval_set: open-audio-llm/ts-asr-benchmark@v3-20261013
+tsasr_server_url: http://127.0.0.1:8012
+tsasr_served_model: amphionasr-v3-tsasr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/checkpoint-33407
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: true

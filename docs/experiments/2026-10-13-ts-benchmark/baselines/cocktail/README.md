@@ -7,15 +7,11 @@
 - 官方推理方式：transformers + `trust_remote_code`，bf16，贪心；不用 vLLM（官方没有 vLLM 支持）。权重 `/workspace/model/Xiaomi-CocktailASR-1`。
 - 通过 AmphionEval 标准流程 `ae open-audio-llm after-training` 运行：`handoff.json` + `after-training-*.yaml`，推理在模型自己的环境（`vllm-serving` 环境，3 张卡分片）里以独立进程运行，评测环境不加载权重。AmphionEval 新增了第三方 worker 配置（`worker_command`）和 `publish.archive_weights: false`（第三方权重不上传，只记录路径）。
 - 输入：AmphionEval 统一的 3 秒注册 + 混合，worker 在 3 秒处拆开后调用 `model(混合, 注册)`。官方是随机截取 1–4 秒的参考，这里固定前 3 秒，所以数值与官方设置略有差别（直跑官方随机截取的对照：各组字错率差异最大约 7 个百分点，缺席误输出基本一致）。
-- 抽样：每个场景取前若干条（评测集 40、真实对话 30、噪声 60），34479 的对比用同一批样本。
+- 全量运行：五个评测集的全部样本，运行号见 [../README.md](../README.md)；下面的表是早先用抽样（每个场景 40/30/60 条）得到的，全量结果见 [../README.md](../README.md)，数字相近。
 
-| 评测集 | 样本数 | AmphionEval 运行 | W&B |
-| --- | ---: | --- | --- |
-| ts-asr-benchmark v3 | 4,400 | `run-20261013T173234Z-0cad54fa` | 1016097967-amphion/open-audio-llm 同名 run |
-| ts-asr-real v2 | 660 | `run-20261013T174911Z-def51bdc` | 同上 |
-| ts-asr-noise v1 | 1,020 | `run-20261013T175851Z-0c607e74` | 同上 |
+评测集：`ts-asr-benchmark@v3-20261013`、`ts-asr-real@v2-20261013`、`ts-asr-noise@v1-20261013`、`ts-asr-farfield@v1-20261014`、`ts-asr-nearfar@v1-20261014`，全量运行，运行号见 [../README.md](../README.md)。
 
-三个运行都已发布到 COS（`records/asr/2026-10/`）。另有一个 `run-20261013T170956Z-ccfdc14b`：发布时发现会上传 35 GB 权重，已中止，保留为本地未发布记录；中止时误传的 47 KiB 条目已从 COS 删除。
+所有运行都已发布到 COS（`records/asr/`）。另有一个 `run-20261013T170956Z-ccfdc14b`：发布时发现会上传 35 GB 权重，已中止，保留为本地未发布记录；中止时误传的 47 KiB 条目已从 COS 删除。
 
 ## 结果（34479 / Cocktail，百分比，同一批样本）
 
