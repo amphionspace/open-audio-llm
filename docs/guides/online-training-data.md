@@ -170,8 +170,8 @@ augmentation:
 
 RIR 从直达声开始卷积，输出时间与原音频一致，因此带时间戳的 SOT 样本也会加混响
 （仍不变速）。多通道 RIR（麦克风阵列）每次随机取一个麦克风，不做通道平均。
-模拟单声道远场时使用实测 RIR，并设 `reverb_noise: true`：本条已加混响时，噪声经同一
-RIR 50 ms 之后的晚期混响再混入，像房间里的扩散底噪，而不是贴近麦克风的干噪声：
+`reverb_noise: true` 时，本条已加混响则噪声经同一 RIR 50 ms 之后的晚期混响再混入，
+像房间里的扩散底噪；它只用于干噪声（如 MUSAN），已在房间里录制的噪声不要再加。
 
 `rir_drr_db` 只保留直达声/混响能量比（DRR，直达声取峰值后 2.5 ms）在该范围内的
 RIR 麦克风，训练启动时逐通道计算一次。`[-6, -1]` 是 2026-10-14 对照 AliMeeting 真实
@@ -180,25 +180,40 @@ RIR 麦克风，训练启动时逐通道计算一次。`[-6, -1]` 是 2026-10-14
 
 模型输入的 log-mel 特征不做音量归一化，所以远场音量也要与真实场景一致。
 `far_level_dbfs` 只作用于已加混响的样本：混噪后把整段 RMS 设为该范围内的随机值。
-2026-10-14 在 AliMeeting Train 远场（阵列第 0 通道）上实测：30 s 窗口整段 RMS
-p10/p50/p90 为 -45.8 / -38.7 / -29.9 dBFS（AISHELL-4 train 为 -42.2 / -36.9 / -33.1）；
-独立语句的 SNR 为 2.7 / 16.8 / 28.0 dB。同一批语句的近讲按下面配置模拟后，语音电平为
--47.2 / -38.9 / -31.7 dBFS，SNR 为 4.9 / 14.3 / 26.7 dB。仍未对齐的是噪声频谱：MUSAN 噪声
-偏低频，真实会议室底噪接近宽带（4–8 kHz 相对 0.3–1 kHz：真实 -15 dB，模拟 -26 dB）。
+
+噪声使用真实会议室底噪 `meeting_room_noise`：AliMeeting Train 与 AISHELL-4 train 远场
+阵列中无人说话的片段（标注空隙，再逐 4 s 用 Qwen3-ASR 剔除识别出文字的片段），
+共 2.48 h、209 条。它已带房间混响，因此 `reverb_noise: false`。该数据集尚未进入共享
+registry，训练时以附加 catalog 引入：
+`/workspace/data/datasets/meeting_room_noise/versions/v2-20261014/{catalog.jsonl,roots.json}`。
+
+2026-10-14 用同一口径（前后无人说话的独立语句；语句前 0.5 s 为底噪）对比真实阵列远场
+（第 0 通道）与同一语句近讲按下面配置模拟的结果，p10 / p50 / p90：
+
+| AliMeeting | 语音电平 dBFS | SNR dB | 噪声 4–8k 相对 0.3–1k dB |
+| --- | --- | --- | --- |
+| Train 真实 | -49.2 / -39.0 / -30.1 | 2.7 / 16.8 / 28.0 | -26.6 / -15.2 / -7.8 |
+| Train 模拟 | -46.7 / -38.9 / -31.7 | 6.4 / 15.6 / 25.4 | -27.7 / -20.4 / -13.2 |
+| Eval 真实（未参与调参） | -50.0 / -44.4 / -36.1 | 4.7 / 16.4 / 24.4 | -25.7 / -19.4 / -9.6 |
+| Eval 模拟 | -47.6 / -39.9 / -30.5 | 6.5 / 14.5 / 24.6 | -28.1 / -21.1 / -13.7 |
+
+同条件下 MUSAN 噪声为 -43.2 / -25.5 / -8.0 dB，明显偏低频。模拟语音的高频倾斜比真实暗
+约 5 dB，来自校准输入为贴嘴耳麦（近讲效应）；AISHELL-1 训练语音本身为 -25 dB，不需补偿。
 
 ```yaml
 augmentation:
   rir_prob: 0.5
   noise_prob: 0.5
-  noise_snr_db: [0, 25]
-  reverb_noise: true
+  noise_snr_db: [3, 28]
+  reverb_noise: false
   rir_drr_db: [-6, -1]
   far_level_dbfs: [-50, -30]
 rir_sources:
 - {dataset_id: real_rir_slr28, version: prepared-20260908, split: all}
 noise_sources:
-- {dataset_id: musan, version: legacy-20260804, split: noise}
+- {dataset_id: meeting_room_noise, version: v2-20261014, split: train}
 ```
+
 训练随机性包含 seed、epoch、样本索引及重复位置，同样的采样位置可复现，不同
 reps 可以获得不同增强。索引自带 epoch，不受 persistent workers 预取跨 epoch 影响。
 
