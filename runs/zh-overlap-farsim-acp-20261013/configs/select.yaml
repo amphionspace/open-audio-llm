@@ -23,7 +23,9 @@ parameters:
   base_model: {path: ../../zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/models/checkpoint-6000}
   # Train 001 failed in the data preflight (the frozen Emilia2 FLAC index was deleted when the version moved to m4a);
   # select 001 stopped with it after measuring the step-0 baseline, which 002 keeps.
-  previous_state: {path: ../tasks/03-select/attempts/001/artifacts}
+  # Select 002 failed at step 1000: the panel catalog's worktree (audio-data-contract-panel) was deleted; the
+  # templates now read the identical registry copy. 003 keeps the baseline.
+  previous_state: {path: ../tasks/03-select/attempts/002/artifacts}
   training_attempts:
   - {path: ../tasks/02-train/attempts/002}
   interval: 1000
