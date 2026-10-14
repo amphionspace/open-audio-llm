@@ -1,0 +1,28 @@
+# CocktailASR-1 第三方基线（全量）：官方推理方式（transformers，bf16，贪心），由 worker 在自己的环境里运行；
+# 请求音频是 3 秒注册 + 混合，worker 在 3 秒处拆开后调用 model(混合, 注册)。
+suite_id: asr-regression-native@1
+evaluator: ts-asr
+eval_set: open-audio-llm/ts-asr-real@v2-20261013
+worker_command:
+  - /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+  - /workspace/workspace/mingdong/repo/audio-data-contract-tsbench/scripts/ts_benchmark/cocktail.py
+  - worker
+  - --input
+  - "{input}"
+  - --output
+  - "{output}"
+  - --gpus
+  - "4,5,6"
+worker_tasks: [ts_asr]
+worker_timeout: 14400
+output_root: /workspace/data/ae-runs/cocktail
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  seed: 42
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: true
+  archive_weights: false  # 第三方模型只记录路径与版本，不重新托管权重
