@@ -92,6 +92,10 @@ TS-ASR 原生 PyTorch 推理与 vLLM 0.18 都在提取 Mel 前将拼接波形末
 服务配置关闭 prefix cache：BF16 下，同一请求的冷、热缓存计算路径可能改变
 `Chinese/None` 的出字判断。关闭后会失去重复前缀的计算复用；它不保证不同 batch、
 attention kernel 或 PyTorch/vLLM 之间逐 token 相同，`temperature=0` 也不提供这种保证。
+每条请求可以带自己的注册时长：请求体加 `"mm_processor_kwargs": {"enroll_seconds": <秒>}`，
+音频仍是「注册 + 混合」拼成的一段 wav，服务在该秒数处切开，两段各自提取 Mel（各自最长 30 秒）。
+注册音要先补零到 160 samples 的整数倍（最多 10 ms，不改变其 Mel），否则返回 400。
+不带该参数时按服务端 `AMPHION_TSASR_ENROLL_SEC` 切分，旧客户端行为不变（34479 上 20/20 条输出与旧请求逐字一致）。
 旧版独立交付包包含源码副本，需要更新其 TS-ASR runtime，并在启动参数中加入
 `--no-enable-prefix-caching`；仅更新本仓库不会修改已运行的服务。
 
