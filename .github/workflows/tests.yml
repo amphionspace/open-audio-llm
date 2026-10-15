@@ -24,7 +24,7 @@ jobs:
 
       - uses: astral-sh/setup-uv@v6
 
-      # uv installs the pinned CPU environment in about 12 s, so it is not cached.
+      # setup-uv keeps its download cache; a fresh venv installs in seconds.
       - run: |
           uv venv --python "${{ steps.python.outputs.python-path }}" .venv
           # CPU wheels keep the CUDA libraries (several GB) out of the runner.
