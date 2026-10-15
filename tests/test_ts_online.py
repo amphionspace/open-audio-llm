@@ -58,6 +58,16 @@ def test_each_speaker_draws_its_own_reverberation():
     assert calls == ["far", "far", "far"]  # target and both interferers
 
 
+def test_reverberation_starts_at_the_direct_path():
+    impulse = np.zeros(400, dtype=np.float32)
+    impulse[300] = 1.0  # 300 samples of pre-delay before the direct path
+    config = OnlineMixConfig(interferer_probs=(1.0,), speaker_rir_prob=1, speaker_far_rir_prob=0)
+    target = _tone(200)
+    mixture, _ = build_mixture(random.Random(5), target, config, absent=False,
+                               speech_loader=None, rir_loader=lambda r, sr, mode: impulse, sampling_rate=SR)
+    np.testing.assert_allclose(mixture / _rms(mixture), target / _rms(target), atol=1e-5)
+
+
 def test_level_hits_the_requested_rms_without_clipping():
     rng = random.Random(3)
     quiet = set_level(rng, _tone(200), (-45, -45))

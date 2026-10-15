@@ -118,6 +118,8 @@ def reverberate(rng, audio, config, rir_loader, sampling_rate):
         return audio
     mode = "far" if rng.random() < config.speaker_far_rir_prob else "ordinary"
     impulse = rir_loader(rng, sampling_rate, mode)
+    # Start at the direct path so each speaker keeps its place in the window.
+    impulse = impulse[int(np.argmax(np.abs(impulse))) :]
     energy = np.sqrt(np.sum(impulse**2))
     if energy <= 0:
         return audio
