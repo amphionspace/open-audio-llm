@@ -116,3 +116,15 @@ def test_ts_clips_keep_arrays_without_rewriting_wav():
     assert len(enroll) == 16000 and len(mix) == 32000
     np.testing.assert_array_equal(enroll, enrollment)
     np.testing.assert_array_equal(mix, mixture)
+
+
+def test_ts_clips_pad_each_clip_to_whole_mel_hops():
+    import numpy as np
+
+    from open_audio_llm.data.qwen3_asr import prepare_ts_clips
+
+    enrollment = np.full(16001, 0.25, dtype=np.float32)
+    mixture = np.full(32159, 0.5, dtype=np.float32)
+    enroll, mix = prepare_ts_clips([enrollment, mixture], 16000)
+    assert len(enroll) == 16160 and len(mix) == 32160
+    assert np.all(enroll[16001:] == 0) and np.all(mix[32159:] == 0)

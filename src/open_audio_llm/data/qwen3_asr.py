@@ -7,6 +7,8 @@ from open_audio_llm.tsasr.ts_prompt import TS_CONCAT_SYSTEM
 from .sot import TIMESTAMP_FORMAT, TIMESTAMP_SYSTEM
 from .target_sot import TARGET_FORMAT, target_prompt
 
+# Whisper Mel hop (160 samples at 16 kHz).
+MEL_HOP_SECONDS = 0.01
 SOT_SYSTEM = (
     "Transcribe every speaker in the mixture. Output one line per speaker as "
     "[S1] text, [S2] text, and so on, ordered by when each speaker first speaks. "
@@ -63,8 +65,16 @@ def prepare_ts_clips(audios, sampling_rate):
     Enrollment is not cropped or zero-padded. Arrays skip the WAV round-trip
     that the training path still uses for ms-swift's bytes loader.
     """
+    import numpy as np
+
     enrollment, enroll_array = _clip_samples(audios[0], sampling_rate)
     mixture, mix_array = _clip_samples(audios[1], sampling_rate)
+    # Serving pads each clip to whole Mel hops before extraction (vLLM pads the
+    # clip, the TS service requires a hop-aligned enrollment); without the same
+    # padding training would see one frame fewer at each partial hop.
+    hop = int(sampling_rate * MEL_HOP_SECONDS)
+    enrollment = np.pad(enrollment, (0, -len(enrollment) % hop))
+    mixture = np.pad(mixture, (0, -len(mixture) % hop))
     if enroll_array and mix_array:
         return enrollment, mixture
     return _wav_bytes(enrollment, sampling_rate), _wav_bytes(mixture, sampling_rate)
