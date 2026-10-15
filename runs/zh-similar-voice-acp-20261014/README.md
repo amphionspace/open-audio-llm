@@ -4,12 +4,11 @@
 
 ## 状态
 
-配置已写好，**未启动**。等两项上游：
+2026-10-15 amphiondata 已注册 `similar-voice-v1-20261014`（registry `catalog/similar_voice.yaml`，复制到 `shared/similar-voice-catalog.jsonl`），启动训练。
 
-1. amphiondata 注册音色相近视图 `similar-voice-v1-20261014`（选取结果：`/workspace/workspace/mingdong/data/amphiondata/similar-voice-views-20261014/`），注册后把 catalog 条目填进 `configs/prepare.yaml` 的 `catalogs`。
-2. Emilia2 子集：声纹提取在跑；amphiondata 的并人检查出排除名单后剔除，再取前 1/3。
-
-启动前再做 `shared/code` 代码快照（train.yaml、select.yaml 已指向本实验的快照路径）并选 GPU。
+- 真实会议子集：注册时已去掉原训练排除名单上的窗口。
+- Emilia2 子集：注册时已去掉 10,766 个 MOSS 并人窗口；4 人及以上窗口和 Emilia2 轮一样排除（本地 0.9B 在这类窗口上只有 51–74% 可用，MOSS Pro 重打仍在进行），入选 55,126 → 36,967 窗。保留的 Emilia2 对话源也加上并人排除：`shared/emilia2-exclude-4plus-and-speaker-merge.txt`（4 人及以上 28,834 ∪ 并人 10,766）。
+- 代码快照 `shared/code` 与重叠轮相同（该版本已在 ACP 上跑通）。
 
 ## 配比（采样占比 %）
 
@@ -24,7 +23,7 @@
 | 单人 ASR 回放 | 10.5 | 12.6 |
 | 近讲远场仿真 + 英文会议 | 6.4 | 6.4 |
 
-音色相近子集内部按原真实会议各数据源的权重分配（AISHELL-4 12.8、AliMeeting 10.24、RAMC 3.2、AISHELL-5 3.2、CS-Dialogue 2.56），沿用原数据源的排除名单（427 个入选窗口在名单上）。
+音色相近子集内部按原真实会议各数据源的权重分配（AISHELL-4 12.8、AliMeeting 10.24、RAMC 3.2、AISHELL-5 3.2、CS-Dialogue 2.56）。
 
 ## 训练
 

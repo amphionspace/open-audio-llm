@@ -24,15 +24,19 @@ parameters:
   # Emilia2 entry). Plan: docs/experiments/2026-10-14/next-round-plan.md.
   source_data:
     path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-overlap-farsim-acp-20261013/tasks/01-prepare/attempts/002/artifacts/train-data.yaml
-  # The similar-voice views (version similar-voice-v1-20261014) come from the registry once amphiondata registers them
-  # (selection: /workspace/workspace/mingdong/data/amphiondata/similar-voice-views-20261014); add their catalog
-  # entries here. prepare fails on the missing entries until then.
-  catalogs: []
+  # Similar-voice views registered by amphiondata (registry catalog/similar_voice.yaml, 2026-10-15 copy); the real
+  # meeting views already drop the base training exclusions, the Emilia2 view the speaker-merge windows.
+  catalogs:
+  - {catalog: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-similar-voice-acp-20261014/shared/similar-voice-catalog.jsonl, roots: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-similar-voice-acp-20261014/shared/similar-voice-roots.json}
   prefer_roots:
     path: /workspace/data/registry/roots.json
   # The overlap resimulation did not improve overlapped text on real meetings (zh-overlap-farsim-acp-20261013).
   drop:
   - {dataset_id: emilia2_zh_overlap_farsim}
+  # The kept Emilia2 dialogue source also leaves out the windows where MOSS merged two speakers (amphiondata
+  # speaker_merge check), on top of its 4+ speaker exclusion.
+  exclude_records:
+  - {dataset_id: emilia2_zh_dialogue_diarize, version: moss-transcribe-diarize-0.9B, path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-similar-voice-acp-20261014/shared/emilia2-exclude-4plus-and-speaker-merge.txt}
   # Sample proportions (percent).
   rescale:
     real_meetings:
@@ -73,22 +77,21 @@ parameters:
   groups:
     # Real windows whose two most similar speakers (ERes2NetV2) are in the top third of their source and window
     # length, sampled again on top of real_meetings. Sources share the group like the base real-meeting weights
-    # (AISHELL-4 and AliMeeting include their channel views there); the base exclusion lists still apply
-    # (427 selected windows are on them).
+    # (AISHELL-4 and AliMeeting include their channel views there).
     similar_real:
       weight: 12
       sources:
-      - {dataset_id: aishell4_meeting_sot, version: similar-voice-v1-20261014, splits: [train_30s, train_120s, train_300s, train_600s], share: 12.8, max_duration: 650, exclude_records: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261010/zh-v2-train-excluded-records.txt}
-      - {dataset_id: alimeeting_sdm_meeting_sot, version: similar-voice-v1-20261014, splits: [train_30s, train_120s, train_300s, train_600s], share: 10.24, max_duration: 650, exclude_records: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261010/zh-v2-train-excluded-records.txt}
-      - {dataset_id: magicdata_ramc_meeting_sot, version: similar-voice-v1-20261014, splits: [train_30s, train_120s, train_300s, train_600s], share: 3.2, max_duration: 650, exclude_records: /workspace/workspace/mingdong/data/amphiondata/real-meetings-20261010/zh-v2-train-excluded-records.txt}
-      - {dataset_id: aishell5_meeting_sot, version: similar-voice-v1-20261014, splits: [train_30s, train_120s, train_300s, train_600s], share: 3.2, max_duration: 650, exclude_records: /workspace/data/datasets/aishell5_meeting_sot/versions/far-mic-v1-20261010/train-empty-target-records.txt}
-      - {dataset_id: cs_dialogue_meeting_sot, version: similar-voice-v1-20261014, splits: [train_30s, train_120s, train_300s, train_600s], share: 2.56, max_duration: 650, exclude_records: /workspace/data/datasets/cs_dialogue_meeting_sot/versions/meeting-v1-20261010/train-empty-target-records.txt}
-    # Same selection on the Emilia2 dialogue windows not used so far, after amphiondata's speaker-merge exclusion;
-    # split name follows the registered view.
+      - {dataset_id: aishell4_meeting_sot, version: similar-voice-v1-20261014, splits: [train_30s, train_120s, train_300s, train_600s], share: 12.8, max_duration: 650}
+      - {dataset_id: alimeeting_sdm_meeting_sot, version: similar-voice-v1-20261014, splits: [train_30s, train_120s, train_300s, train_600s], share: 10.24, max_duration: 650}
+      - {dataset_id: magicdata_ramc_meeting_sot, version: similar-voice-v1-20261014, splits: [train_30s, train_120s, train_300s, train_600s], share: 3.2, max_duration: 650}
+      - {dataset_id: aishell5_meeting_sot, version: similar-voice-v1-20261014, splits: [train_30s, train_120s, train_300s, train_600s], share: 3.2, max_duration: 650}
+      - {dataset_id: cs_dialogue_meeting_sot, version: similar-voice-v1-20261014, splits: [train_30s, train_120s, train_300s, train_600s], share: 2.56, max_duration: 650}
+    # Same selection on the Emilia2 dialogue windows. 4+ speaker windows stay out as in the Emilia2 round (local 0.9B
+    # labels usable on only 51-74% of them; the MOSS Pro relabel is still building): 18,159 of 55,126 selected.
     similar_emilia2:
       weight: 10
       sources:
-      - {dataset_id: emilia2_zh_dialogue_diarize, version: similar-voice-v1-20261014, splits: [train_120s], max_duration: 650}
+      - {dataset_id: emilia2_zh_dialogue_diarize, version: similar-voice-v1-20261014, splits: [train_120s], max_duration: 650, exclude_records: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-similar-voice-acp-20261014/shared/emilia2-exclude-4plus-and-speaker-merge.txt}
   # The smallest earlier source still gets about one sample per window.
   replay_window_samples: 64000
   # Earlier rounds sampled with seeds 42-49.

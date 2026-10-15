@@ -1,7 +1,8 @@
 """Assemble this round's training data configuration without creating new audio.
 
 The previous round's frozen data configuration is kept; sources matching ``drop``
-are removed (the loader rejects zero weights); selected groups are rescaled as a whole (or every kept source scaled to
+are removed (the loader rejects zero weights), ``exclude_records`` rules replace the exclusion list of
+matching kept sources; selected groups are rescaled as a whole (or every kept source scaled to
 ``kept_weight`` with ``scale_kept``) and new groups are added; an added catalog
 with ``replace`` supersedes frozen entries of the same version. Root aliases that
 the shared registry declares are read from
@@ -72,6 +73,10 @@ def main():
     dropped = [s for s in train if matches(s, settings.get('drop', []))]
     train = [s for s in train if not matches(s, settings.get('drop', []))]
     report['dropped'] = {f"{s['dataset_id']}/{s['version']}/{s['split']}": s['weight'] for s in dropped}
+    for rule in settings.get('exclude_records', []):
+        for s in train:
+            if matches(s, [rule]):
+                s['exclude_records'] = rule['path']
     claimed = set()
     for name, rule in settings['rescale'].items():
         members = [s for s in train if matches(s, rule['match'])]
