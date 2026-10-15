@@ -131,6 +131,9 @@ class CatalogBatchSampler(Sampler):
             "shuffle": self.shuffle,
             "world_size": world_size,
         }
+        if self.shuffle and data_config.get("replay") is None:
+            # Earlier non-replay plans kept buckets in order; reject their cursors.
+            identity["bucket_order"] = "shuffled"
         if hasattr(self.dataset.records, "signature"):
             return self.dataset.records.signature(identity)
         identity["records"] = [
@@ -302,7 +305,7 @@ class CatalogBatchSampler(Sampler):
                     duration += cost
                 if batch:
                     chunk.append(batch)
-            if self.replay is not None and self.shuffle:
+            if self.shuffle:
                 # Bucketing otherwise turns short ASR and long TS into task blocks.
                 rng.shuffle(chunk)
             result.extend(chunk)
