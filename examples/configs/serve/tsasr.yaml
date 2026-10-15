@@ -30,6 +30,7 @@ task:
       thinker_config:
         audio_config:
           n_window_infer: 1000000000
-  flags: [--trust-remote-code]
+  # BF16 presence decisions can flip between cold and reused prefix paths.
+  flags: [--trust-remote-code, --no-enable-prefix-caching]
 recording:
   attempts_dir: {path: ../../../runs/tsasr-service/tasks/serve/attempts}
