@@ -21,6 +21,7 @@
 
 ## 📰 最新动态
 
+- **2026-10-15** — [AmphionASR v4 数据配方](docs/guides/amphionasr-v4-data.md)：从官方 Qwen3-ASR-1.7B 出发的一轮 SFT，列出已登记来源、时长、验证子集和在线增强。
 - **2026-10-08** — [阶段归档](docs/experiments/2026-10-08/README.md)：8×A800 续训与全参训练、数据质检、180 秒会议评测集，以及与 MOSS-Transcribe-Diarize（官方 vLLM）的同口径对比。迭代流程见 [实验规范](docs/guides/experiments.md#自我迭代流程)。
 - **2026-10-06** — [实验结果、训练轨迹与权重归档](docs/experiments/2026-10-06/README.md)：speaker-events、clean/events A/B、统一格式全参训练及 LoRA。
 - **checkpoint-34479** — Qwen3-ASR-1.7B 三阶段全参 SFT，同一权重支持普通 ASR、热词偏置和目标说话人 ASR，见 [评测结果](docs/models/ckpt34479-evaluation.md)。
@@ -130,7 +131,7 @@ open-audio-llm train --config examples/configs/train/sft.yaml
 | 类别 | 内容 |
 | --- | --- |
 | 🟢 [上手](docs/get-started/installation.md) | 安装与环境校验 |
-| 📘 [指南](docs/README.md#指南) | [训练](docs/guides/training.md) · [在线数据](docs/guides/online-training-data.md) · [ACP 多机](docs/guides/acp.md) · [评测](docs/guides/evaluation.md) · [部署](docs/guides/deployment.md) · [实验规范](docs/guides/experiments.md) |
+| 📘 [指南](docs/README.md#指南) | [训练](docs/guides/training.md) · [在线数据](docs/guides/online-training-data.md) · [v4 数据配方](docs/guides/amphionasr-v4-data.md) · [ACP 多机](docs/guides/acp.md) · [评测](docs/guides/evaluation.md) · [部署](docs/guides/deployment.md) · [实验规范](docs/guides/experiments.md) |
 | 📐 [参考](docs/README.md#参考) | [架构](docs/reference/architecture.md) · [数据边界](docs/reference/data-boundary.md) · [兼容矩阵](docs/reference/compatibility-matrix.md) · [当前限制](docs/reference/limitations.md) |
 | 🎯 [模型](docs/README.md#模型) | 已产出权重的训练配置与评测结果 |
 | 🗂️ [实验归档](docs/README.md#实验归档) | 按阶段归档的结论、指标与证据 |
