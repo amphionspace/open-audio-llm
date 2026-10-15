@@ -199,6 +199,13 @@ def install_independent_mel_fe() -> None:
         feats, masks = [], []
         first_out = None
         for wav in wavs:
+            # vLLM 0.18 pads the concat waveform before calling the HF processor.
+            # Do the same for native inference, including its final partial hop.
+            pad = -wav.size % self.hop_length
+            if pad:
+                import numpy as np
+
+                wav = np.pad(wav, (0, pad))
             enroll, mix = split_enroll_mix_wav(wav, sr=int(sr))
             e_out = orig(self, [enroll], *args, **kwargs)
             if first_out is None:

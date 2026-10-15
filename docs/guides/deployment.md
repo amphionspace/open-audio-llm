@@ -87,6 +87,14 @@ Qwen3-ASR embedding bypass 在 `serve/vllm.yaml` 中通过 `--enable-mm-embeds` 
 
 TS-ASR 使用独立服务配置 [serve/tsasr.yaml](../../examples/configs/serve/tsasr.yaml)：在注册音和混合音之间插入可学习 `[SEP]`，音频注意力使用全局窗口 `n_window_infer=1000000000`。普通 ASR 配置保持 SEP 关闭。需要分块注意力时，在 TS-ASR YAML 中设置 `COT_AUDIO_CHUNKED_ATTN: '1'` 并移除 `--hf-overrides`。实现位于 `src/open_audio_llm/tsasr/`。checkpoint-34479 的服务方式见 [评测结果](../models/ckpt34479-evaluation.md)。
 
+TS-ASR 原生 PyTorch 推理与 vLLM 0.18 都在提取 Mel 前将拼接波形末尾补零到
+`hop_length` 的整数倍（16 kHz 下为 160 samples，最多补 159 samples），再分别处理注册音与混合音。
+服务配置关闭 prefix cache：BF16 下，同一请求的冷、热缓存计算路径可能改变
+`Chinese/None` 的出字判断。关闭后会失去重复前缀的计算复用；它不保证不同 batch、
+attention kernel 或 PyTorch/vLLM 之间逐 token 相同，`temperature=0` 也不提供这种保证。
+旧版独立交付包包含源码副本，需要更新其 TS-ASR runtime，并在启动参数中加入
+`--no-enable-prefix-caching`；仅更新本仓库不会修改已运行的服务。
+
 ## Compose 部署
 
 Compose 由配置生成有效文件，默认只检查配置：
