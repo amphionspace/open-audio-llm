@@ -38,6 +38,6 @@ jobs:
           # CPU wheels keep the CUDA libraries (several GB) out of the runner.
           uv pip install --torch-backend cpu -r requirements-ci.txt
 
-      - run: .venv/bin/python -m pytest -q -rs
+      - run: .venv/bin/python -m pytest -q -rs tests
         env:
           PYTHONPATH: src
