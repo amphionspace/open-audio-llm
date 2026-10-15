@@ -24,16 +24,8 @@ jobs:
 
       - uses: astral-sh/setup-uv@v6
 
-      # The whole environment is restored on a hit; it changes only with the pins.
-      # The venv links to the toolcache interpreter, so the key carries its version.
-      - id: venv
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-py${{ steps.python.outputs.python-version }}-${{ hashFiles('requirements-ci.txt') }}
-
-      - if: steps.venv.outputs.cache-hit != 'true'
-        run: |
+      # uv installs the pinned CPU environment in about 12 s, so it is not cached.
+      - run: |
           uv venv --python "${{ steps.python.outputs.python-path }}" .venv
           # CPU wheels keep the CUDA libraries (several GB) out of the runner.
           uv pip install --torch-backend cpu -r requirements-ci.txt
