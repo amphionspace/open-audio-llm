@@ -27,6 +27,13 @@ from .records import ResolvedAudioRecord
 from .sot import TIMESTAMP_FORMAT, with_sot_timestamps
 from .sot_alignment import AlignmentIndex
 from .target_sot import EnrollmentConfig, TARGET_FORMAT, eligible_candidates
+from .ts_online import (
+    OnlineMixConfig,
+    build_mixture,
+    contaminate_enrollment,
+    crop_enrollment,
+    set_level,
+)
 
 
 def in_ts_partition(record, selection):
@@ -71,7 +78,8 @@ def read_data_config(path):
             if source.get(key):
                 selected = Path(source[key]).expanduser()
                 source[key] = str(selected if selected.is_absolute() else path.parent / selected)
-    for source in config.get("noise_sources", []) + config.get("rir_sources", []):
+    for source in (config.get("noise_sources", []) + config.get("rir_sources", [])
+                   + config.get("interference_sources", [])):
         if source.get("exclude_media"):
             selected = Path(source["exclude_media"]).expanduser()
             source["exclude_media"] = str(selected if selected.is_absolute() else path.parent / selected)
@@ -284,6 +292,10 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         if explicit and not all("weight" in s for s in sources):
             raise ValueError("Specify weight for every source")
         for source in sources:
+            if source.get("online_mix") is not None:
+                if source.get("enrollment") is not None:
+                    raise ValueError("online_mix and enrollment cannot be combined")
+                OnlineMixConfig(**source["online_mix"])
             if source.get("enrollment") is not None:
                 EnrollmentConfig(**source["enrollment"])
                 if message_format != "qwen3_asr" or grpo:
@@ -345,8 +357,18 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         self.rir_groups = (
             self._resource_groups(config.get("rir_sources", [])) if training else []
         )
+        # Other speakers for online target-speaker mixing, grouped by language.
+        self.interference = {}
+        if training:
+            for language in sorted({s["language"] for s in config.get("interference_sources", [])}):
+                sources = [s for s in config["interference_sources"] if s["language"] == language]
+                self.interference[language] = (self._resource_groups(sources), source_weights(sources))
         self.far_rir_groups = []
-        if training and self.augmentation.far_rir_prob:
+        online_far = any(
+            OnlineMixConfig(**s["online_mix"]).speaker_rir_prob * OnlineMixConfig(**s["online_mix"]).speaker_far_rir_prob
+            for s in self._online_mix_sources(config)
+        )
+        if training and (self.augmentation.far_rir_prob or online_far):
             from .far_rir import far_recordings
 
             self.far_rir_groups = [
@@ -370,6 +392,10 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             seed=int(config.get("seed", 42)),
             **config.get("hotwords", {}),
         )
+
+    @staticmethod
+    def _online_mix_sources(config):
+        return [s for s in config.get("train", []) if s.get("online_mix") is not None]
 
     def _resource_groups(self, sources):
         from .far_rir import media_path
@@ -474,6 +500,12 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             if source.get("sot_timestamps"):
                 row = replace(row, record=with_sot_timestamps(
                     row.record, self._sot_alignments[source["sot_alignment_index"]]))
+            if source.get("online_mix") is not None:
+                if row.record.task != "ts_asr" or not row.record.target.strip():
+                    raise ValueError(f"{row.record.id}: online_mix needs a present-target TS-ASR record")
+                row = replace(row, record=replace(row.record, metadata={
+                    **row.record.metadata, "online_mix": source["online_mix"],
+                }))
             if source.get("enrollment") is not None:
                 eligible_candidates(row.record, EnrollmentConfig(**source["enrollment"]))
                 row = replace(row, record=replace(row.record, metadata={
@@ -606,8 +638,11 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             if self.collect_metrics:
                 self._sample_metrics["decode_s"] += time.perf_counter() - started
             started = time.perf_counter()
+            online = self.training and resolved.record.metadata.get("online_mix")
+            if online:
+                audio, augmentation = self._online_slot(resolved.record, slot.name, audio, rng)
             if self.training:
-                augmentation = self.augmentation
+                augmentation = augmentation if online else self.augmentation
                 if resolved.record.metadata.get("sot_output_format") in {TIMESTAMP_FORMAT, TARGET_FORMAT}:
                     # Aligned times are fixed; time warping and delayed RIRs invalidate them.
                     augmentation = replace(
@@ -630,6 +665,8 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                         sr,
                     ),
                 )
+            if online:
+                audio = set_level(rng, audio, OnlineMixConfig(**online).level_dbfs)
             if self.collect_metrics:
                 self._sample_metrics["wave_augment_s"] += time.perf_counter() - started
                 self._sample_metrics["audio_seconds"] += len(audio) / self.sampling_rate
@@ -643,6 +680,44 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             else:
                 result[slot.name] = np.ascontiguousarray(audio, dtype=np.float32)
         return result
+
+    def _speech_loader(self, language):
+        if language not in self.interference:
+            raise ValueError(f"online_mix needs interference_sources for language {language!r}")
+        groups, weights = self.interference[language]
+        return lambda r, sr: load_mono(choose_from_groups(r, groups, weights), sr)
+
+    def _rir_loader(self):
+        if not self.rir_groups:
+            return None
+        return lambda r, sr, mode: load_rir_item(
+            choose_from_groups(r, self.far_rir_groups if mode == "far" and self.far_rir_groups
+                               else self.rir_groups), sr)
+
+    def _online_slot(self, record, name, audio, rng):
+        """Rebuild one slot of an online-mixed sample; return audio and the slot's augmentation."""
+        config = OnlineMixConfig(**record.metadata["online_mix"])
+        speech = self._speech_loader(record.language)
+        if name == "enrollment":
+            audio = crop_enrollment(rng, audio, config, self.sampling_rate)
+            audio = contaminate_enrollment(rng, audio, config, speech, self.sampling_rate)
+            return audio, self.augmentation
+        absent = bool(record.metadata.get("online_absent"))
+        audio, count = build_mixture(
+            rng, audio, config, absent=absent, speech_loader=speech,
+            rir_loader=self._rir_loader(), sampling_rate=self.sampling_rate,
+        )
+        # Speakers were reverberated one by one; only noise is left to add.
+        augmentation = replace(self.augmentation, speed_prob=0.0, rir_prob=0.0, far_rir_prob=0.0)
+        if absent and count == 0:
+            # Nobody talks: the window is the noise itself (digital silence never
+            # occurs in use). SNR is undefined here; set_level picks the level.
+            if not self.noise_groups:
+                raise ValueError("online_mix noise-only windows need noise_sources")
+            noise = load_mono(choose_from_groups(rng, self.noise_groups, self.noise_weights), self.sampling_rate)
+            audio = np.resize(noise, len(audio)).astype(np.float32)
+            augmentation = replace(augmentation, noise_prob=0.0)
+        return audio, augmentation
 
     def __getitem__(self, idx):
         started = time.perf_counter()

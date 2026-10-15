@@ -150,6 +150,71 @@ def test_native_ts_reads_registered_audio_index_and_budgets_concat(catalog_confi
     assert len(raw) == 6 and raw[2]["audio_slot_count"] == 1
 
 
+def _online_ts_config(catalog_config, tmp_path, online_mix):
+    import gzip
+
+    row = {"cut_id": "speech", "root_alias": "data", "relative_path": "speech.wav",
+           "sample_rate": 16000, "channels": 1, "num_frames": 16000, "duration": 1.0}
+    with gzip.open(tmp_path / "index.jsonl.gz", "wt") as stream:
+        stream.write(json.dumps(row) + "\n")
+    record = AudioRecord("ts", "ts_asr", tuple(
+        AudioSlot(name, AudioRef("ts", "1", "train", "speech", start=0.25))
+        for name in ("enrollment", "mixture")
+    ), "hello", language="en")
+    write_records([record], tmp_path / "ts.jsonl.gz")
+    spec = DatasetSpec(
+        dataset_id="ts", version="1", languages=("en",), tasks=("ts_asr",),
+        artifacts=(ArtifactRef("records", "audio-records", "data", "ts.jsonl.gz"),
+                   ArtifactRef("index", "audio-index", "data", "index.jsonl.gz")),
+        splits={"train": Split({"records": ("records",), "audio_index": ("index",)})},
+    )
+    with Path(catalog_config["catalog"]).open("a") as stream:
+        stream.write("\n" + json.dumps(spec.to_dict()))
+    catalog_config.update(
+        train=[{"dataset_id": "ts", "version": "1", "split": "train", "online_mix": online_mix}],
+        interference_sources=[{"dataset_id": "speech", "version": "1", "split": "train", "language": "en"}],
+        augmentation={"noise_prob": 0.5},
+    )
+    return catalog_config
+
+
+def test_online_mix_rebuilds_ts_samples_per_epoch(catalog_config, tmp_path):
+    config = _online_ts_config(catalog_config, tmp_path, {
+        "absent_prob": 0.0, "enrollment_seconds": [0.2, 0.3], "level_dbfs": [-30, -30],
+        "interferer_probs": [0, 1], "speaker_rir_prob": 1.0, "speaker_far_rir_prob": 0.0,
+    })
+    dataset = CatalogSwiftDataset(config, message_format="qwen3_asr")
+    first, again = dataset[0], dataset[0]
+    assert first["solution"] == "language English<asr_text>hello"
+    assert first["mix_wav"] == again["mix_wav"]  # same epoch and index, same sample
+    enroll, _ = sf.read(BytesIO(first["audios"][0]))
+    mix, _ = sf.read(BytesIO(first["mix_wav"]))
+    assert int(0.2 * 16000) <= len(enroll) <= int(0.3 * 16000)
+    assert len(mix) == int(0.75 * 16000)
+    assert 20 * np.log10(np.sqrt(np.mean(mix**2))) == pytest.approx(-30, abs=0.1)
+    dataset.set_epoch(1)
+    assert dataset[0]["mix_wav"] != first["mix_wav"]
+    # Validation reads the stored clips unchanged.
+    plain = CatalogSwiftDataset({**config, "validation": config["train"]}, training=False,
+                                message_format="qwen3_asr")[0]
+    assert len(plain["audios"][0]) == int(0.75 * 16000)
+
+
+def test_online_mix_absent_target_empties_the_transcript(catalog_config, tmp_path):
+    config = _online_ts_config(catalog_config, tmp_path, {
+        "absent_prob": 1.0, "absent_interferer_probs": [1.0], "speaker_rir_prob": 0.0,
+    })
+    sample = CatalogSwiftDataset(config, message_format="qwen3_asr")[0]
+    assert sample["solution"] == "language None<asr_text>"
+    mix, _ = sf.read(BytesIO(sample["mix_wav"]))
+    assert np.abs(mix).max() > 0  # an empty window always gets noise
+    config["interference_sources"] = []
+    config["online_mix"] = None
+    with pytest.raises(ValueError, match="interference_sources"):
+        CatalogSwiftDataset({**config, "train": [{**config["train"][0], "online_mix": {"absent_prob": 0.0, "speaker_rir_prob": 0.0}}]},
+                            message_format="qwen3_asr")[0]
+
+
 @pytest.fixture
 def catalog_config(tmp_path):
     sr = 16000
