@@ -71,6 +71,10 @@ def read_data_config(path):
             if source.get(key):
                 selected = Path(source[key]).expanduser()
                 source[key] = str(selected if selected.is_absolute() else path.parent / selected)
+    for source in config.get("noise_sources", []) + config.get("rir_sources", []):
+        if source.get("exclude_media"):
+            selected = Path(source["exclude_media"]).expanduser()
+            source["exclude_media"] = str(selected if selected.is_absolute() else path.parent / selected)
     if not config.get("train"):
         raise ValueError("data config requires at least one train source")
     return config
@@ -368,11 +372,21 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         )
 
     def _resource_groups(self, sources):
+        from .far_rir import media_path
+
         groups = []
         for source in sources:
             items = list(self.resolver.iter_recordings(
                 source["dataset_id"], source["version"], source["split"]
             ))
+            # Evaluation sets reuse some augmentation files. Match by audio path:
+            # SLR28 simulated RIR IDs repeat across room sizes.
+            if source.get("exclude_media"):
+                listed = Path(source["exclude_media"])
+                if not listed.is_file():
+                    raise ValueError("exclude_media must name an existing file of audio paths")
+                excluded = set(listed.read_text().split())
+                items = [item for item in items if media_path(item) not in excluded]
             if not items:
                 raise ValueError(f"empty augmentation source: {source['dataset_id']}")
             groups.append(items)
