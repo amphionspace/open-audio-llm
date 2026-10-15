@@ -73,3 +73,26 @@ def test_plain_asr_feature_extraction_is_unchanged(monkeypatch):
     actual = extract(extractor, [wav])
     for key in ("input_features", "attention_mask"):
         torch.testing.assert_close(actual[key], expected[key], rtol=0, atol=0)
+
+
+def test_request_enrollment_length_moves_the_split(ts_extractor, monkeypatch):
+    from open_audio_llm.tsasr.sep_token import REQUEST_ENROLL_SEC
+
+    rng = np.random.default_rng(13)
+    enroll = rng.normal(0, 0.1, 116800).astype(np.float32)  # 7.3 s
+    mix = rng.normal(0, 0.1, 160000).astype(np.float32)
+    token = REQUEST_ENROLL_SEC.set(7.3)
+    try:
+        served = extract(ts_extractor, [np.concatenate([enroll, mix])])
+    finally:
+        REQUEST_ENROLL_SEC.reset(token)
+    monkeypatch.setenv("AMPHION_TSASR_INSERT_SEP", "0")  # plain extraction of each clip
+    parts = [extract(ts_extractor, [clip]) for clip in (enroll, mix)]
+    expected = torch.cat([p["input_features"] for p in parts], dim=-1)
+    assert served["enroll_feature_lengths"].tolist() == [730]
+    torch.testing.assert_close(served["input_features"], expected, rtol=0, atol=0)
+
+
+def test_default_split_keeps_the_native_outputs(ts_extractor):
+    wav = np.random.default_rng(17).normal(0, 0.1, 64000).astype(np.float32)
+    assert "enroll_feature_lengths" not in extract(ts_extractor, [wav])
