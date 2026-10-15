@@ -8,6 +8,7 @@
 | [train/sft-acp.yaml](train/sft-acp.yaml) | 同一 SFT 提交到 SenseCore ACP 算力池（2 节点 × 8 卡），见 [ACP 训练](../../docs/guides/acp.md) |
 | [train/grpo.yaml](train/grpo.yaml) | 使用 vLLM rollout 的 GRPO |
 | [train/qwen3-asr.yaml](train/qwen3-asr.yaml) | Qwen3-ASR 热词训练 |
+| [train/amphionasr-v4.yaml](train/amphionasr-v4.yaml) | 从官方 Qwen3-ASR-1.7B 全参训练，加载时挂上 v3 的 sep_token；数据为 `data/amphionasr/catalog`，来源与增强见 [v4 数据配方](../../docs/guides/amphionasr-v4-data.md) |
 | [train/ts-replay.yaml](train/ts-replay.yaml)、[ts-full.yaml](train/ts-full.yaml)、[ts-joint.yaml](train/ts-joint.yaml) | TS 回放与联合训练 |
 | [train/sot.yaml](train/sot.yaml) | 全说话人转写 |
 | [prepare/sot.yaml](prepare/sot.yaml)、[synthesize/sot.yaml](synthesize/sot.yaml) | 训练视图准备与合成 |

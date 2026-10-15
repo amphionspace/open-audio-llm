@@ -1,0 +1,100 @@
+# 从官方 Qwen3-ASR-1.7B 全参训练。amphion_asr_1.7b 加载后会挂上 v3 的 sep_token。
+# 官方权重没有这个参数，按 N(0, 0.02) 初始化；已有 sep_token 的 checkpoint 才会读入。
+# 冻结列表、学习率、ZeRO-1 与 AmphionASR-1.7B-v3 阶段 3 相同。
+# warmup 按总步数的 0.03：warmup_steps 必须为 0，否则固定步数会盖过比例。
+# Catalog 动态组批要求 max_steps > 0。梯度累积为 1。
+# 581081 是当前配方一个 epoch 的优化器步数：54230807 条样本，8 卡，
+# 按 max_duration=480、max_samples=12 组批后全局 4648647 个 microbatch，
+# 补齐到 8 的倍数后每卡 581081 步。
+version: 1
+runtime:
+  python: python
+  cwd: {path: ../../..}
+  pythonpath:
+    - {path: ../../../src}
+    - {path: ../../../../audio-data-contract/src}
+  gpus: [0, 1, 2, 3, 4, 5, 6, 7]
+  distributed: {processes: 8, port: 29525}
+  threads: {omp: 2, openblas: 1}
+  environment:
+    TOKENIZERS_PARALLELISM: false
+data:
+  config: {path: ../data/amphionasr_v4.yaml}
+task:
+  kind: train
+  module: open_audio_llm.integrations.ms_swift.train
+  positional: [sft]
+  arguments:
+    --model: {path: /workspace/model/Qwen3-ASR-1.7B}
+    --model_type: "amphion_asr_1.7b"
+    --external_plugins: [{path: "../../../src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py"}]
+    --tuner_type: "full"
+    --lora_rank: 64
+    --lora_alpha: 128
+    --target_modules: "all-linear"
+    --freeze_vit: false
+    --freeze_aligner: false
+    --freeze_llm: false
+    --freeze_parameters:
+      - "thinker.model.embed_tokens"
+      - "thinker.audio_tower.conv2d1"
+      - "thinker.audio_tower.conv2d2"
+      - "thinker.audio_tower.conv2d3"
+      - "thinker.audio_tower.conv_out"
+    --deepspeed: "zero1"
+    --torch_dtype: "bfloat16"
+    --attn_impl: "sdpa"
+    --max_length: 2048
+    --per_device_train_batch_size: 12
+    --per_device_eval_batch_size: 4
+    --gradient_accumulation_steps: 1
+    --learning_rate: 0.00001
+    --weight_decay: 0.1
+    --num_train_epochs: 1
+    --max_steps: 581081
+    --lr_scheduler_type: "cosine_with_min_lr"
+    --lr_scheduler_kwargs: {"min_lr": 0.000001}
+    --warmup_ratio: 0.03
+    --warmup_steps: 0
+    --gradient_checkpointing: true
+    --vit_gradient_checkpointing: true
+    --ddp_find_unused_parameters: false
+    --dataloader_num_workers: 4
+    # 验证前向大约 0.2 秒。12 个进程、预取 4 批，慢的 Emilia 来源才能跟上。
+    --dataloader_eval_num_workers: 12
+    --dataloader_eval_prefetch_factor: 4
+    --performance_logging: true
+    --save_steps: 1000
+    --eval_steps: 1000
+    --eval_strategy: "steps"
+    --logging_steps: 10
+    --report_to: "none"
+    --seed: 42
+    --check_model: false
+    --output_dir: {path: "{attempt}/artifacts/training"}
+    --ddp_timeout: 180000000
+    --max_grad_norm: 1
+preflight:
+  - kind: prepare
+    module: open_audio_llm.data.catalog_cache
+    arguments:
+      --data_config: {path: ../data/amphionasr_v4.yaml}
+      --workers: 4
+      --batch-size: 12
+      --world-size: 8
+      --preflight-report: {path: "{attempt}/artifacts/data-preflight.json"}
+storage:
+  executable: {path: ~/.local/bin/ab}
+  remote: whai:open-audio-llm
+  local_root: {path: ../../..}
+recording:
+  attempts_dir: {path: ../../../runs/amphionasr-v4/tasks/run/attempts}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: python
+  credentials_file: {path: ~/.bashrc}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: amphionasr-v4
+  interval: 5

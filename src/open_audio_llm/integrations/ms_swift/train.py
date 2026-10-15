@@ -69,6 +69,10 @@ class CatalogSftArguments(CatalogArgumentsMixin, SftArguments):
     performance_logging: bool = True
     audio_encoder_parallel: bool = False
     audio_encoder_batching: bool = False
+    # None keeps the training worker count. Eval sets these explicitly because
+    # its forward is too short to hide audio loading at the training depth.
+    dataloader_eval_num_workers: int | None = None
+    dataloader_eval_prefetch_factor: int | None = None
     retention_teacher: str | None = None
     retention_eval_script: str | None = None
     retention_eval_interval: int = 2000
@@ -180,6 +184,13 @@ class CatalogTrainingMixin:
             trainer.args.continuous_training = self.args.continuous_training
             trainer.args.reset_catalog_sampler = self.args.reset_catalog_sampler
             trainer.args.catalog_sampler_migration = self.args.catalog_sampler_migration
+            # TrainerFactory drops fields that are not in TrainingArguments.
+            trainer.args.dataloader_eval_num_workers = getattr(
+                self.args, "dataloader_eval_num_workers", None
+            )
+            trainer.args.dataloader_eval_prefetch_factor = getattr(
+                self.args, "dataloader_eval_prefetch_factor", None
+            )
             if self.args._catalog_config.get("objective", {}).get("sample_mean"):
                 from .retention import install_retention_objective
 

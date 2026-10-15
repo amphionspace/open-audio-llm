@@ -93,7 +93,6 @@ no useful audio signal, and loss plateaus around 3.0 with no convergence.
 
 from __future__ import annotations
 
-from functools import partial
 from typing import Any, Dict, List, Literal, Optional
 
 import os
@@ -370,13 +369,10 @@ class Qwen3ASRTemplate(Template):
         import numpy as np
         import soundfile as sf
 
-        from open_audio_llm.tsasr.concat_audio import (
-            configured_enroll_sec,
-            enroll_n_samples,
-            load_enroll_wav,
-            load_mix_wav,
-        )
+        from open_audio_llm.tsasr.concat_audio import load_enroll_wav, load_mix_wav
 
+        if isinstance(value, np.ndarray):
+            return np.ascontiguousarray(value, dtype=np.float32).reshape(-1)
         if isinstance(value, (bytes, bytearray)):
             wav, rate = sf.read(BytesIO(value), dtype='float32', always_2d=False)
             wav = np.asarray(wav, dtype=np.float32)
@@ -386,16 +382,17 @@ class Qwen3ASRTemplate(Template):
             if int(rate) != int(self.sampling_rate):
                 raise ValueError(
                     f'TS-ASR audio rate {rate} != {self.sampling_rate}')
-            if enroll:
-                count = enroll_n_samples(configured_enroll_sec(), self.sampling_rate)
-                if wav.shape[0] >= count:
-                    wav = wav[:count]
-                else:
-                    wav = np.pad(wav, (0, count - wav.shape[0]))
             return wav
         if enroll:
-            return load_enroll_wav(str(value), sr=self.sampling_rate)
+            return load_enroll_wav(str(value), sr=self.sampling_rate, full=True)
         return load_mix_wav(str(value), sr=self.sampling_rate)
+
+    def _plain_audio(self, value):
+        import numpy as np
+
+        if isinstance(value, np.ndarray):
+            return np.ascontiguousarray(value, dtype=np.float32).reshape(-1)
+        return load_audio(value, sampling_rate=self.sampling_rate)
 
     def _cache_ts_mel(self, inputs, enroll_wav) -> None:
         if getattr(inputs, '_ts_sep_mel', None) is not None:
@@ -431,7 +428,7 @@ class Qwen3ASRTemplate(Template):
             return ['<|audio_start|>'] + ['<|audio_pad|>'] * target_tokens + ['<|audio_end|>']
         wavs = getattr(inputs, '_audio_llm_waveforms', None)
         wav = (wavs[index] if wavs is not None else
-               load_audio(inputs.audios[index], sampling_rate=self.sampling_rate))
+               self._plain_audio(inputs.audios[index]))
         # Expand <|audio_pad|> to exactly the number of tokens the audio encoder
         # will produce, so that masked_scatter in forward() can replace every
         # placeholder position with a real audio frame embedding.
@@ -479,8 +476,7 @@ class Qwen3ASRTemplate(Template):
 
             if len(inputs.audios) != 1 or not 1 <= len(enrollments) <= 3:
                 raise ValueError('Conditional SOT needs 1--3 enrollments and one mixture')
-            wavs = [load_audio(p, sampling_rate=self.sampling_rate)
-                    for p in [*enrollments, inputs.audios[0]]]
+            wavs = [self._plain_audio(p) for p in [*enrollments, inputs.audios[0]]]
             features, lengths = extract_segments(self.feature_extractor, wavs)
             inputs._target_audio_tokens = segment_tokens(lengths)
             try:
@@ -493,10 +489,7 @@ class Qwen3ASRTemplate(Template):
             encoded['enrollment_lengths'] = torch.tensor([lengths[:-1] + [0] * (4 - len(lengths))])
             return encoded
         try:
-            audios = load_batch(
-                inputs.audios,
-                load_func=partial(load_audio, sampling_rate=self.sampling_rate),
-            )
+            audios = load_batch(inputs.audios, load_func=self._plain_audio)
         except Exception as e:
             raise ValueError(
                 f'Qwen3ASRTemplate: load_audio failed for '

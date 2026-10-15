@@ -270,16 +270,10 @@ def sampling_cost(row, dataset):
     )
     total = 0.0
     for slot in row.record.audio_slots:
-        if native_ts and slot.name == "enrollment":
-            continue
         duration = slot.ref.duration
         if duration is None:
             duration = dataset.resolver.get_duration(slot.ref)
         total += duration / slowest + 1 / dataset.sampling_rate
-    if native_ts:
-        from .qwen3_asr import ENROLL_SECONDS
-
-        total += ENROLL_SECONDS
     if row.record.metadata.get("enrollment_config") is not None:
         from .target_sot import EnrollmentConfig
 

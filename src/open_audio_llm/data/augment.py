@@ -17,6 +17,8 @@ import numpy as np
 class AugmentConfig:
     speed_prob: float = 0.0
     rir_prob: float = 0.0
+    # Mutually exclusive with rir_prob: one convolution with a far-field RIR.
+    far_rir_prob: float = 0.0
     noise_prob: float = 0.0
     spec_aug_prob: float = 0.0
     speed_factors: tuple[float, ...] = (0.9, 1.0, 1.1)
@@ -27,9 +29,11 @@ class AugmentConfig:
     frequency_mask_width: int = 16
 
     def __post_init__(self):
-        for name in ("speed_prob", "rir_prob", "noise_prob", "spec_aug_prob"):
+        for name in ("speed_prob", "rir_prob", "far_rir_prob", "noise_prob", "spec_aug_prob"):
             if not 0 <= getattr(self, name) <= 1:
                 raise ValueError(f"{name} must be between 0 and 1")
+        if self.rir_prob + self.far_rir_prob > 1:
+            raise ValueError("rir_prob + far_rir_prob must be at most 1")
         if not self.speed_factors or any(f <= 0 for f in self.speed_factors):
             raise ValueError("speed_factors must be positive")
         if len(self.noise_snr_db) != 2 or self.noise_snr_db[0] > self.noise_snr_db[1]:
@@ -51,10 +55,17 @@ def augment_waveform(
         factor = rng.choice(config.speed_factors)
         ratio = Fraction(1 / factor).limit_denominator(1000)
         audio = resample_poly(audio, ratio.numerator, ratio.denominator)
-    if rng.random() < config.rir_prob:
+    roll = rng.random()
+    if roll < config.far_rir_prob:
+        rir_mode = "far"
+    elif roll < config.far_rir_prob + config.rir_prob:
+        rir_mode = "ordinary"
+    else:
+        rir_mode = None
+    if rir_mode is not None:
         if rir_loader is None:
-            raise ValueError("rir_prob requires a Catalog RIR source")
-        impulse = rir_loader(rng, sampling_rate)
+            raise ValueError("RIR convolution requires a Catalog RIR source")
+        impulse = rir_loader(rng, sampling_rate, rir_mode)
         energy = np.sqrt(np.sum(impulse**2))
         if energy > 0:
             audio = fftconvolve(audio, impulse / energy)[: len(audio)]
