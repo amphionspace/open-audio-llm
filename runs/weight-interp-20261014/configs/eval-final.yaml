@@ -23,6 +23,8 @@ parameters:
   server_startup_timeout: 1800
   serve_template: {path: serve.yaml}
   delete_request_audio: true
+  # attempt 002 的 CHiME-6 因 roots 路径错误失败，其余四个面板已完成，直接复用；003 漏了这一项，启动后即停。
+  reuse: {path: ../tasks/03-final/attempts/002/artifacts}
   models:
     base-10:
       weights: {path: ../tasks/01-merge/attempts/001/artifacts/base-10}
