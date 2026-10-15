@@ -30,3 +30,4 @@
 
 - [01-merge](tasks/01-merge/)：插值。
 - [02-eval](tasks/02-eval/)：评测，GPU 6。
+- [03-final](tasks/03-final/)：10% 插值的结束面板（与 Emilia2 6000 步同模板对照），GPU 3。
