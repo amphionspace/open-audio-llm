@@ -1,6 +1,6 @@
 # 从 Qwen3-ASR-1.7B 开始的 SFT。一个 epoch 约 10.76 万小时：
 # 普通 ASR 3.33 万小时（30.9%），热词 ASR 0.96 万小时（8.9%），目标说话人 6.47 万小时（60.2%）。
-# Emilia2 三个训练集整集进入。LibriMix、AISHELLMix 的四个 train 划分各一整遍。
+# Emilia2 三个训练集整集进入，排除 ts_asr_real 留出的源录音（含注册音与干扰人）。LibriMix、AISHELLMix 的四个 train 划分各一整遍。
 # hw_sft 只用 train_hotwords（系统提示带 Hotwords: 的 834336 条），重复 8 遍。
 # 热词抽样每次都给出列表，标注热词不丢。列表仍会补入干扰词。
 # AudioRecord 的任务写在记录上。Lhotse 来源的 task 在这里指定。
@@ -14,21 +14,27 @@ train:
   - dataset_id: emilia2_mix
     version: mix-20261013
     split: train_2spk
+    exclude_records: /workspace/data/datasets/ts_asr_real/source/v2-20261013/excluded-records-emilia2_mix-train_2spk.txt
   - dataset_id: emilia2_mix
     version: mix-20261013
     split: train_3spk
+    exclude_records: /workspace/data/datasets/ts_asr_real/source/v2-20261013/excluded-records-emilia2_mix-train_3spk.txt
   - dataset_id: emilia2_mix
     version: mix-20261013
     split: train_neg
+    exclude_records: /workspace/data/datasets/ts_asr_real/source/v2-20261013/excluded-records-emilia2_mix-train_neg.txt
   - dataset_id: emilia2_dialog
     version: dialog-turn-taking-20261013-enroll
     split: train_2spk
+    exclude_records: /workspace/data/datasets/ts_asr_real/source/v2-20261013/excluded-records-emilia2_dialog-train_2spk.txt
   - dataset_id: emilia2_dialog
     version: dialog-turn-taking-20261013-enroll
     split: train_3spk
+    exclude_records: /workspace/data/datasets/ts_asr_real/source/v2-20261013/excluded-records-emilia2_dialog-train_3spk.txt
   - dataset_id: emilia2_dialog
     version: dialog-turn-taking-20261013-enroll
     split: train_neg
+    exclude_records: /workspace/data/datasets/ts_asr_real/source/v2-20261013/excluded-records-emilia2_dialog-train_neg.txt
   - dataset_id: aishellmix
     version: pack3-current-audio-record-20260910
     split: train_1spk
@@ -115,9 +121,11 @@ train:
   - dataset_id: emilia2_short
     version: short-20261014
     split: train_zh
+    exclude_records: /workspace/data/datasets/ts_asr_real/source/v2-20261013/excluded-records-emilia2_short-train_zh.txt
   - dataset_id: emilia2_short
     version: short-20261014
     split: train_en
+    exclude_records: /workspace/data/datasets/ts_asr_real/source/v2-20261013/excluded-records-emilia2_short-train_en.txt
   - dataset_id: common_voice_en
     version: legacy-20260804
     split: train
@@ -326,16 +334,16 @@ noise_sources:
     split: train
     weight: 17.5
 
+# 目标说话人评测集（ts-asr-benchmark v3、ts-asr-farfield、ts-asr-noise）用了全部 178 条
+# real_rir_slr28 和 300 条 sim_rir_slr28，训练不再使用 real_rir_slr28，并按音频路径排除这 300 条。
 rir_sources:
-  - dataset_id: real_rir_slr28
-    version: prepared-20260908
-    split: all
   - dataset_id: sim_rir_slr26
     version: legacy-20260804
     split: all
   - dataset_id: sim_rir_slr28
     version: legacy-20260804
     split: all
+    exclude_media: /workspace/data/datasets/ts_asr_benchmark/source/v3-20261013/excluded-media-sim_rir_slr28.txt
 
 # 训练器不读 evaluation。这些是 Catalog 里已有的 test / eval 划分。
 evaluation:

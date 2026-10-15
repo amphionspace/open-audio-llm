@@ -1371,6 +1371,24 @@ def test_exclude_records_drops_listed_ids_and_keys_the_cache(catalog_config, tmp
         CatalogSwiftDataset(catalog_config)
 
 
+def test_exclude_media_drops_listed_augmentation_files(catalog_config, tmp_path):
+    from open_audio_llm.data.far_rir import media_path
+
+    full = CatalogSwiftDataset(catalog_config)
+    paths = [media_path(item) for item in full.rir_groups[0]]
+    listed = tmp_path / 'held-out-rirs.txt'
+    listed.write_text('/elsewhere/held-out.wav\n')
+    catalog_config['rir_sources'][0]['exclude_media'] = str(listed)
+    kept = CatalogSwiftDataset(catalog_config)
+    assert [media_path(item) for item in kept.rir_groups[0]] == paths
+    listed.write_text('\n'.join(paths) + '\n')
+    with pytest.raises(ValueError, match='empty augmentation source'):
+        CatalogSwiftDataset(catalog_config)
+    catalog_config['rir_sources'][0]['exclude_media'] = str(tmp_path / 'missing.txt')
+    with pytest.raises(ValueError, match='exclude_media'):
+        CatalogSwiftDataset(catalog_config)
+
+
 def test_noise_exclude_datasets_keeps_listed_audio_clean(catalog_config):
     catalog_config['augmentation'] = {'noise_prob': 1}
     noisy = sf.read(BytesIO(CatalogSwiftDataset(catalog_config)[0]['audios'][0]))[0]
