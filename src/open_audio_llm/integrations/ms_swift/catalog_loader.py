@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import functools
 import json
+import os
 import pickle
 import sys
 from pathlib import Path
@@ -12,6 +13,7 @@ from types import MethodType
 import torch
 from accelerate.data_loader import DataLoaderShard
 from torch.utils.data import DataLoader
+from swift.utils.utils import get_external_files
 from transformers import TrainerCallback
 
 from open_audio_llm.data.catalog_sampler import CatalogBatchSampler
@@ -268,6 +270,20 @@ def _worker_view(eval_dataset, collator):
     return eval_dataset, _rebind(collator, template, detached)
 
 
+def _forkserver_context():
+    """Forkserver context whose server has already imported the plugin files.
+
+    The server reads its environment when it starts, so this must run before the
+    first forkserver worker of the process.
+    """
+    from .plugin_preload import PLUGIN_FILES_ENV
+
+    os.environ[PLUGIN_FILES_ENV] = os.pathsep.join(get_external_files())
+    context = torch.multiprocessing.get_context("forkserver")
+    context.set_forkserver_preload([f"{__package__}.plugin_preload"])
+    return context
+
+
 def catalog_eval_dataloader(trainer, eval_dataset):
     args = trainer.args
     eval_dataset, collator = _worker_view(eval_dataset, trainer.data_collator)
@@ -296,6 +312,6 @@ def catalog_eval_dataloader(trainer, eval_dataset):
         params.update(
             persistent_workers=True,
             prefetch_factor=prefetch,
-            multiprocessing_context=torch.multiprocessing.get_context("forkserver"),
+            multiprocessing_context=_forkserver_context(),
         )
     return DataLoader(eval_dataset, **params)

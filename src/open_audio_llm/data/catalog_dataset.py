@@ -99,8 +99,22 @@ def to_mono(audio, source_rate, sampling_rate):
     return np.asarray(audio, dtype=np.float32)
 
 
+# 并发解码大 m4a 时 ffmpeg 偶发读超时（ACP 003 在 717 步因此退出）；同一文件重读即可成功。
+AUDIO_LOAD_ATTEMPTS = 3
+AUDIO_LOAD_RETRY_WAIT_S = 2.0
+
+
 def load_mono(cut, sampling_rate):
-    audio = cut.load_audio()
+    from lhotse.audio.utils import AudioLoadingError
+
+    for attempt in range(1, AUDIO_LOAD_ATTEMPTS + 1):
+        try:
+            audio = cut.load_audio()
+            break
+        except AudioLoadingError:
+            if attempt == AUDIO_LOAD_ATTEMPTS:
+                raise
+            time.sleep(AUDIO_LOAD_RETRY_WAIT_S * attempt)
     if audio is None or audio.size == 0:
         raise ValueError(f"cut {cut.id!r} contains no audio")
     return to_mono(audio, cut.sampling_rate, sampling_rate)
