@@ -32,6 +32,7 @@ class LhotseCatalogAudioResolver:
         roots_path: str | Path,
         index_cache: str | Path | None = None,
     ) -> None:
+        self.catalog_path, self.roots_path = catalog_path, roots_path
         self.catalog = load_catalog(catalog_path)
         self.roots = load_roots(roots_path)
         self._cuts: dict[tuple[str, str, str], dict[str, object]] = {}

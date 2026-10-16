@@ -402,12 +402,27 @@ class SourceRecordIndex:
             close(fd)
 
 
+def open_source_indexes(dataset, root):
+    """One index per source: the Lance record index when the data config asks for it and the
+    source allows it, otherwise the JSONL cache."""
+    lance = [None] * len(dataset.sources)
+    if dataset.record_index == "lance":
+        from .lance_index import LanceSourceIndex
+
+        lance = LanceSourceIndex.open_many(dataset, dataset.sources)
+    out = []
+    for source, index in zip(dataset.sources, lance):
+        if index is not None:
+            logging.getLogger(__name__).warning(
+                "Lance record index: %s:%s (%d records)", source["dataset_id"], source["split"], len(index))
+        out.append(index if index is not None else SourceRecordIndex(dataset, source, root))
+    return out
+
+
 class CatalogRecordIndex:
     def __init__(self, dataset, root):
         self.root = Path(root).expanduser().resolve()
-        self.sources = [
-            SourceRecordIndex(dataset, source, self.root) for source in dataset.sources
-        ]
+        self.sources = open_source_indexes(dataset, self.root)
         self.ends = np.cumsum([len(s) for s in self.sources]).tolist()
         self.hotword_pool = sorted({h for s in self.sources for h in s.hotwords})
         self.durations = np.concatenate([s.metadata["duration"] for s in self.sources])
@@ -449,6 +464,14 @@ class CatalogRecordIndex:
                 digest.update(b"[")
                 first = True
                 for source in self.sources:
+                    if hasattr(source, "positions"):
+                        # Lance sources have no per-record ID file: their key already covers
+                        # the pinned index, the filters and every duration and slot count.
+                        if not first:
+                            digest.update(b", ")
+                        first = False
+                        digest.update(b"[lance:" + source.key.encode() + b"]")
+                        continue
                     with (source.path / "ids.jsonl").open() as ids:
                         for line, meta in zip(ids, source.metadata):
                             if not first:

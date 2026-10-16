@@ -282,6 +282,10 @@ class CatalogSwiftDataset(OnlineAudioDataset):
     def __init__(self, config, *, training=True, encode=None, grpo=False, message_format="generic", collect_metrics=False):
         self.collect_metrics = collect_metrics
         self.metadata_cache = config.get("metadata_cache")
+        # "lance": read sources with a registered record index from it; others keep the JSONL cache.
+        self.record_index = config.get("record_index", "jsonl")
+        if self.record_index not in {"jsonl", "lance"}:
+            raise ValueError("record_index must be jsonl or lance")
         self.resolver = LhotseCatalogAudioResolver(
             config["catalog"],
             config["roots"],
