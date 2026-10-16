@@ -1,8 +1,9 @@
-"""Keep every visible GPU busy and holding memory, for ASR- holder jobs on ACP (scripts/acp_holder.py).
+"""Fill every visible GPU for ASR- holder jobs on ACP (scripts/acp_holder.py): full utilization and most of the memory.
 
-One process per GPU runs bf16 matmuls for BUSY seconds out of every BUSY + REST, so utilization stays high
-without running flat out; a worker that fails is restarted. Stop it by stopping the ACP job.
-usage: gpu_hold.py [--seconds N]   (N = 0 runs until stopped)
+One process per GPU runs back-to-back bf16 matmuls (the cluster is all A800 80G, 312 TFLOPS bf16) and keeps a
+resident tensor of --memory-fraction of the free memory; a worker that fails is restarted. Stop it by stopping
+the ACP job.
+usage: gpu_hold.py [--seconds N] [--memory-fraction F]   (N = 0 runs until stopped)
 """
 import argparse
 import multiprocessing as mp
@@ -10,30 +11,28 @@ import time
 
 import torch
 
-SIZE = 8192  # 128 MiB per bf16 matrix
-BALLAST_GIB = 8  # resident memory so the card shows as occupied
-BUSY, REST = 0.8, 0.2
+SIZE = 16384  # 512 MiB per bf16 matrix; large enough to saturate the tensor cores
+CHECK_EVERY = 64  # matmuls queued between end-time checks
 
 
-def burn(index, seconds):
+def burn(index, seconds, memory_fraction):
     torch.cuda.set_device(index)
+    free, _ = torch.cuda.mem_get_info()
+    ballast = torch.empty(int(free * memory_fraction), device="cuda", dtype=torch.uint8)  # noqa: F841
     a = torch.randn(SIZE, SIZE, device="cuda", dtype=torch.bfloat16)
     b = torch.randn(SIZE, SIZE, device="cuda", dtype=torch.bfloat16)
-    ballast = torch.empty(BALLAST_GIB * 2**30, device="cuda", dtype=torch.uint8)  # noqa: F841
     end = time.time() + seconds if seconds else float("inf")
     while time.time() < end:
-        start = time.time()
-        while time.time() - start < BUSY:
+        for _ in range(CHECK_EVERY):
             a @ b
         torch.cuda.synchronize()
-        time.sleep(REST)
 
 
-def supervised(index, seconds):
+def supervised(index, seconds, memory_fraction):
     deadline = time.time() + seconds if seconds else None
     while deadline is None or time.time() < deadline:
         try:
-            burn(index, max(1, int(deadline - time.time())) if deadline else 0)
+            burn(index, max(1, int(deadline - time.time())) if deadline else 0, memory_fraction)
             return
         except Exception as exc:  # noqa: BLE001 - keep the card held through transient CUDA errors
             print(f"gpu {index}: {type(exc).__name__}: {exc}; restarting", flush=True)
@@ -43,9 +42,10 @@ def supervised(index, seconds):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seconds", type=int, default=0)
+    parser.add_argument("--memory-fraction", type=float, default=0.85)
     args = parser.parse_args()
     mp.set_start_method("spawn")
-    workers = [mp.Process(target=supervised, args=(i, args.seconds)) for i in range(torch.cuda.device_count())]
+    workers = [mp.Process(target=supervised, args=(i, args.seconds, args.memory_fraction)) for i in range(torch.cuda.device_count())]
     for worker in workers:
         worker.start()
     print(f"holding {len(workers)} GPUs", flush=True)
