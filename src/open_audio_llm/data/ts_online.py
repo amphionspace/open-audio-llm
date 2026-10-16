@@ -253,16 +253,21 @@ def build_scene(rng, mode, targets, others, config, *, rir_loader, sampling_rate
             (target_track if speaker is None else tracks[speaker])[start : start + len(audio)] = audio
     else:
         packed = [_track(utterances, gap) for utterances in others]
-        target = _track(targets, gap)
+        target = _track(targets, gap) if targets else np.zeros(0, dtype=np.float32)
         length = max([len(target), *map(len, packed)])
         target_track = _on_timeline(target, rng.randrange(length - len(target) + 1), length)
         tracks = [_on_timeline(audio, rng.randrange(length - len(audio) + 1), length) for audio in packed]
     present = reverberate(rng, target_track, config, rir_loader, sampling_rate)
     reference = _rms(present[np.abs(present) > 0])
     mixture = present.copy()
-    for track in tracks:
+    for number, track in enumerate(tracks):
         other = reverberate(rng, track, config, rir_loader, sampling_rate)
-        mixture += _scale_to(other, reference, rng.uniform(*config.sir_db))
+        if not targets and number == 0:
+            # The target is absent: the first other speaker sets the level the rest are set against.
+            reference = _rms(other[np.abs(other) > 0])
+            mixture += other
+        else:
+            mixture += _scale_to(other, reference, rng.uniform(*config.sir_db))
     if info is not None:
         spoken = target_track != 0
         others_on = np.any([track != 0 for track in tracks], axis=0) if tracks else np.zeros(length, dtype=bool)

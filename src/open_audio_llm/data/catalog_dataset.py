@@ -386,6 +386,11 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         nonspeech_sources = config.get("nonspeech_sources", [])
         self.nonspeech_groups = self._resource_groups(nonspeech_sources) if training and nonspeech_sources else []
         self.nonspeech_weights = source_weights(nonspeech_sources) if self.nonspeech_groups else None
+        # Recorded noise floors are quiet and may hold distant talkers (WHAM), which an
+        # empty-output window must not; without floor_sources they use the nonspeech sources.
+        floor_sources = config.get("floor_sources", [])
+        self.floor_groups = self._resource_groups(floor_sources) if training and floor_sources else []
+        self.floor_weights = source_weights(floor_sources) if self.floor_groups else None
         # Other speakers for online target-speaker mixing, grouped by language.
         self.interference = {}
         if training:
@@ -542,7 +547,8 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                     **row.record.metadata, "nonspeech": source["nonspeech"],
                 }))
             if source.get("online_mix") is not None:
-                if row.record.task != "ts_asr" or not row.record.target.strip():
+                # A scene may have no target speaker (similar voices only), so its transcript can be empty.
+                if row.record.task != "ts_asr" or not (row.record.target.strip() or row.record.metadata.get("scene")):
                     raise ValueError(f"{row.record.id}: online_mix needs a present-target TS-ASR record")
                 row = replace(row, record=replace(row.record, metadata={
                     **row.record.metadata, "online_mix": source["online_mix"],
@@ -738,9 +744,12 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             choose_from_groups(r, self.far_rir_groups if mode == "far" and self.far_rir_groups
                                else self.rir_groups), sr)
 
-    def _nonspeech_loader(self):
-        groups, weights = ((self.nonspeech_groups, self.nonspeech_weights) if self.nonspeech_groups
-                           else (self.noise_groups, self.noise_weights))
+    def _nonspeech_loader(self, floor=False):
+        if floor and self.floor_groups:
+            groups, weights = self.floor_groups, self.floor_weights
+        else:
+            groups, weights = ((self.nonspeech_groups, self.nonspeech_weights) if self.nonspeech_groups
+                               else (self.noise_groups, self.noise_weights))
 
         def load(r, sr):
             if not groups:
@@ -767,11 +776,11 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         """Rebuild one slot of an online-mixed sample; return audio and the slot's augmentation."""
         config = OnlineMixConfig(**record.metadata["online_mix"])
         speech = self._speech_loader(record.language)
-        noise = self._nonspeech_loader()
+        noise, floor = self._nonspeech_loader(), self._nonspeech_loader(floor=True)
         if name == "enrollment":
             audio = crop_enrollment(rng, audio, config, self.sampling_rate)
             audio = contaminate_enrollment(rng, audio, config, speech, self.sampling_rate)
-            audio = degrade_enrollment(rng, audio, config, noise, self.sampling_rate)
+            audio = degrade_enrollment(rng, audio, config, floor, self.sampling_rate)
             return audio, self.augmentation
         absent = bool(record.metadata.get("online_absent"))
         # Speakers were reverberated one by one; only noise is left to add.
@@ -783,7 +792,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         scene = record.metadata.get("scene")
         if scene:
             audio = self._scene_mixture(record, scene, config, rng)
-            return degrade_mixture(rng, audio, config, noise, self.sampling_rate), augmentation
+            return degrade_mixture(rng, audio, config, floor, self.sampling_rate), augmentation
         audio, count = build_mixture(
             rng, audio, config, absent=absent, speech_loader=speech,
             rir_loader=self._rir_loader(), sampling_rate=self.sampling_rate,
@@ -794,7 +803,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             audio = nonspeech_window(rng, config, noise, self.sampling_rate, length=len(audio))
             augmentation = replace(augmentation, noise_prob=0.0)
         else:
-            audio = degrade_mixture(rng, audio, config, noise, self.sampling_rate)
+            audio = degrade_mixture(rng, audio, config, floor, self.sampling_rate)
         return audio, augmentation
 
     def __getitem__(self, idx):

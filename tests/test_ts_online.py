@@ -231,3 +231,10 @@ def test_short_scene_window_is_the_longest_speaker_and_gaps_come_from_the_config
     assert len(mixture) == int(2.5 * SR)
     with pytest.raises(ValueError):
         _scene("full", [target], [])
+
+
+def test_scene_without_a_target_levels_the_others_against_the_first():
+    first, second = _tone(500, 1.0, 0.4), _tone(700, 1.0, 0.4)
+    mixture = _scene("burst", [], [[first], [second]], seed=1, burst_gap_seconds=(0, 0))
+    assert len(mixture) == SR
+    assert _active(mixture, 500).any() and _active(mixture, 700).any() and not _active(mixture, 200).any()
