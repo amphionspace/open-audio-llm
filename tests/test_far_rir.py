@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 
-from open_audio_llm.data.far_rir import is_real_far, select_sim_far
+from open_audio_llm.data.far_rir import far_recordings, is_real_far, select_sim_far
 
 
 def _write(path: Path, audio: np.ndarray, sample_rate: int = 16000) -> None:
@@ -38,3 +38,17 @@ def test_sim_far_keeps_responses_closest_to_zero_drr(tmp_path):
     _write(room / "Room001-00002.wav", balanced)
     chosen = select_sim_far([type("Rec", (), {"sources": [type("S", (), {"source": str(root / "unused.wav")})()]})()])
     assert chosen == [str(room / "Room001-00002.wav")]
+
+
+def test_dns5_far_keeps_the_responses_closest_to_zero_drr(tmp_path):
+    direct = np.zeros(1600, dtype=np.float32)
+    direct[0] = 1
+    balanced = np.zeros(1600, dtype=np.float32)
+    balanced[100] = 1
+    balanced[200:] = 0.05
+    items = []
+    for name, audio in (("direct", direct), ("balanced", balanced)):
+        _write(tmp_path / f"{name}.wav", audio)
+        items.append(type("Rec", (), {"sources": [type("S", (), {"source": str(tmp_path / f"{name}.wav")})()]})())
+    chosen = far_recordings("dns5_noise_train", items)
+    assert [Path(item.sources[0].source).name for item in chosen] == ["balanced.wav"]

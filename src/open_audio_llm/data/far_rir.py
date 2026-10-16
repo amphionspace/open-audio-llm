@@ -109,8 +109,21 @@ def select_sim_far(recordings) -> list[str]:
     return chosen
 
 
+def select_drr_far(recordings, keep: float = 0.2) -> list:
+    """The ``keep`` fraction of responses whose direct-to-reverberant ratio is closest to 0 dB."""
+    scored = []
+    for item in recordings:
+        rir, sample_rate = read_channel0(media_path(item))
+        scored.append((abs(drr_db(rir, sample_rate)), item))
+    scored.sort(key=lambda pair: pair[0])
+    return [item for _gap, item in scored[: max(1, int(len(scored) * keep))]]
+
+
 def far_recordings(dataset_id: str, recordings) -> list:
-    if "real" in dataset_id:
+    if "dns5" in dataset_id:
+        # DNS5 responses are not grouped into rooms, so the DRR rule runs over the whole set.
+        chosen = select_drr_far(recordings)
+    elif "real" in dataset_id:
         chosen = select_real_far(recordings)
     elif "sim" in dataset_id:
         chosen = select_sim_far(recordings)
