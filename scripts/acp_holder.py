@@ -1,14 +1,16 @@
 """Hold ACP capacity for this project: keep NODES nodes busy with ASR- jobs (AGENTS.md "ACP Compute").
 
 Polls the pool; when the ASR- jobs hold fewer than --nodes nodes and a whole node is idle, submits one
-`sleep` holder job (display name ASR-holder-<time>) and exits. Real or debug jobs are queued first and the holder
+GPU-burning holder job (scripts/gpu_hold.py) (display name ASR-holder-<time>) and exits. Real or debug jobs are queued first and the holder
 is stopped afterwards (`sco acp jobs stop`). Cluster settings (image, spec, mounts) come from the `cluster:` section
 of any train config. Usage: acp_holder.py --config <train.yaml> [--nodes 2] [--interval 120] [--once]
 """
 import argparse
+import shutil
 import subprocess
 import sys
 import time
+from pathlib import Path
 from datetime import datetime, timezone
 
 import yaml
@@ -42,7 +44,15 @@ def idle_gpus(usage):
     raise ValueError("GPU_NUMBER row not found in cluster usage")
 
 
-def submit_holder(cluster):
+def holder_command(cluster, python):
+    # A fixed copy under /workspace: the job must not depend on which branch the working tree has checked out.
+    target = Path(cluster["sco_home"]).parent / "asr-holder/gpu_hold.py"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(Path(__file__).with_name("gpu_hold.py"), target)
+    return f"{python} {target}"
+
+
+def submit_holder(cluster, python):
     name = f"{JOB_PREFIX}holder-{datetime.now(timezone.utc):%Y%m%d-%H%M}"
     code, output = run_sco(
         cluster, "acp", "jobs", "create", f"--workspace-name={cluster['workspace']}",
@@ -50,7 +60,7 @@ def submit_holder(cluster):
         f"--container-image-url={cluster['image']}", "--training-framework=pytorch",
         f"--worker-spec={cluster['worker_spec']}", "--worker-nodes=1", "--priority=NORMAL",
         f"--quota-type={cluster.get('quota_type', 'reserved')}",
-        f"--storage-mount={','.join(cluster['mounts'])}", "--command=sleep infinity")
+        f"--storage-mount={','.join(cluster['mounts'])}", f"--command={holder_command(cluster, python)}")
     if code:
         raise RuntimeError(f"holder submission failed: {output[-500:]}")
     return name, output.strip()
@@ -63,7 +73,8 @@ def main():
     parser.add_argument("--interval", type=int, default=120)
     parser.add_argument("--once", action="store_true")
     args = parser.parse_args()
-    cluster = yaml.safe_load(open(args.config))["cluster"]
+    config = yaml.safe_load(open(args.config))
+    cluster, python = config["cluster"], config["runtime"]["python"]
     while True:
         refresh_sco(cluster)
         base = ["acp", "jobs", "list", f"--workspace-name={cluster['workspace']}", f"--aec2-name={cluster['aec2']}", "--state=RUNNING"]
@@ -71,7 +82,7 @@ def main():
         idle = idle_gpus(run_sco(cluster, "aec2", "clusters", "usage", f"--name={cluster['aec2']}")[1])
         print(f"{datetime.now(timezone.utc):%F %T}Z ASR nodes {held}/{args.nodes}, idle GPUs {idle}", flush=True)
         if held < args.nodes and idle >= GPUS_PER_NODE:
-            print(*submit_holder(cluster), flush=True)
+            print(*submit_holder(cluster, python), flush=True)
             return 0
         if args.once:
             return 1
