@@ -24,11 +24,12 @@ parameters:
   base_model: {path: ../../zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/models/checkpoint-6000}
   training_attempts:
   - {path: ../tasks/02-train/attempts/001}
+  previous_state: {path: ../tasks/03-select/attempts/001/artifacts}
   interval: 1000
   max_steps: 12000
   poll_seconds: 60
-  # One GPU per checkpoint; shared machine: pick by nvidia-smi before launching, never GPU 0 (2026-10-15: GPU 3 had 75 GB free).
-  gpus: [3]
+  # One GPU per checkpoint; shared machine: pick by nvidia-smi before launching, never GPU 0 (2026-10-15: GPU 3 had 75 GB free, then only 18 GB at step 7000 and vLLM failed; GPU 2 was empty).
+  gpus: [2]
   port_base: 8891
   server_startup_timeout: 1800
   readable_timeout: 1800
