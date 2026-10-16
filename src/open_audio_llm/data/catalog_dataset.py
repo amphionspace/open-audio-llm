@@ -21,6 +21,7 @@ from audio_data_contract import (
 
 from .augment import AugmentConfig, augment_waveform
 from .catalog_resolver import LhotseCatalogAudioResolver
+from .interference_pool import PoolClip, pool_clips
 from .lance_source import SAMPLES_ROLE, lance_records, read_lance_audio
 from .online_dataset import TASK_TEMPLATES, OnlineAudioDataset
 from .records import ResolvedAudioRecord
@@ -376,7 +377,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         if training:
             for language in sorted({s["language"] for s in config.get("interference_sources", [])}):
                 sources = [s for s in config["interference_sources"] if s["language"] == language]
-                self.interference[language] = (self._resource_groups(sources), source_weights(sources))
+                self.interference[language] = (self._resource_groups(sources, clips=True), source_weights(sources))
         self.far_rir_groups = []
         online_far = any(
             OnlineMixConfig(**s["online_mix"]).speaker_rir_prob * OnlineMixConfig(**s["online_mix"]).speaker_far_rir_prob
@@ -411,14 +412,20 @@ class CatalogSwiftDataset(OnlineAudioDataset):
     def _online_mix_sources(config):
         return [s for s in config.get("train", []) if s.get("online_mix") is not None]
 
-    def _resource_groups(self, sources):
+    def _resource_groups(self, sources, clips=False):
         from .far_rir import media_path
 
         groups = []
         for source in sources:
-            items = list(self.resolver.iter_recordings(
-                source["dataset_id"], source["version"], source["split"]
-            ))
+            spec = self.resolver.catalog.get(source["dataset_id"], source["version"])
+            artifacts = spec.splits[source["split"]].artifacts
+            if clips and "records" in artifacts and "recordings" not in artifacts:
+                # Clips are spans of source files; whole-file recordings would lose the offsets.
+                items = list(pool_clips(self.resolver, spec, source["split"]))
+            else:
+                items = list(self.resolver.iter_recordings(
+                    source["dataset_id"], source["version"], source["split"]
+                ))
             # Evaluation sets reuse some augmentation files. Match by audio path:
             # SLR28 simulated RIR IDs repeat across room sizes.
             if source.get("exclude_media"):
