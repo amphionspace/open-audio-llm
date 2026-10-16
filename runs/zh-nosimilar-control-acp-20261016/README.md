@@ -25,7 +25,11 @@
 
 ## 状态
 
-2026-10-16：数据配置完成（[01-prepare](tasks/01-prepare/attempts/001/)），训练已提交 ACP 单机 8 卡（作业 `pt-7w4xyjxv`，[W&B](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/zh-nosimilar-control-acp-20261016-001)）。选模器还没启动，需要在开发机上挑空闲 GPU 后运行 `open-audio-llm prepare --config configs/select.yaml`。
+2026-10-16：
+
+- 数据配置 [01-prepare 002](tasks/01-prepare/attempts/002/)。001 的训练（pt-7w4xyjxv）在数据预检失败：注册表 `roots.json` 当天 20:13 把 `legacy_asr` 改指 `/workspace/data`，那里没有 `LHOTSE/data_aishell`（AISHELL-1），`prepare.py` 的 `moved` 逻辑覆盖了冻结配置里可用的本地化目录。002 用 `keep_roots: [legacy_asr]` 保留原路径。
+- 训练 002 已提交 ACP 单机 8 卡（作业 `pt-iqa7526i`，[W&B](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/zh-nosimilar-control-acp-20261016-002)）；选模 002 在开发机 GPU 2 上运行（[W&B](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/zh-nosimilar-control-acp-20261016-select-002)）。选模 001 因训练 001 失败而失败。
+- 作业显示名没有 `ASR-` 前缀（提交时规则尚未定下，作业提交后无法改名）。
 
 ## 结果
 

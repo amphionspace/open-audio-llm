@@ -6,7 +6,7 @@ matching kept sources; selected groups are rescaled as a whole (or every kept so
 ``kept_weight`` with ``scale_kept``) and new groups are added; an added catalog
 with ``replace`` supersedes frozen entries of the same version. Root aliases that
 the shared registry declares are read from
-the registry copies (same files, verified by sha256 when the catalog is loaded).
+the registry copies (except ``keep_roots``) (same files, verified by sha256 when the catalog is loaded).
 
 Group weights are sample proportions. Inside a new group, sources keep their
 window views (or splits) proportional to catalog record counts, as before, unless
@@ -53,7 +53,9 @@ def main():
     catalog = list(rows(data['catalog']))
     roots = json.loads(Path(data['roots']).read_text())
     registry = json.loads(Path(settings['prefer_roots']).read_text())
-    moved = {alias: registry[alias] for alias in roots if alias in registry and roots[alias] != registry[alias]}
+    keep = set(settings.get('keep_roots', []))
+    moved = {alias: registry[alias] for alias in roots
+             if alias in registry and roots[alias] != registry[alias] and alias not in keep}
     roots.update(moved)
     for source in settings['catalogs']:
         new_roots = json.loads(Path(source['roots']).read_text())

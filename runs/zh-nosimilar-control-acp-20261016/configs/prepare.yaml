@@ -27,6 +27,9 @@ parameters:
   # No new catalog and no extra groups: the control only removes the similar-voice weighting of the previous round.
   catalogs: []
   groups: {}
+  # The registry's legacy_asr root (/workspace/data, changed 2026-10-15 20:13 UTC) has no LHOTSE/data_aishell, so AISHELL-1 fails
+  # the data preflight there; the localized copy the frozen configuration points to has it (zh-similar-voice-acp-20261014 used it).
+  keep_roots: [legacy_asr]
   prefer_roots:
     path: /workspace/data/registry/roots.json
   # The overlap resimulation did not improve overlapped text on real meetings (zh-overlap-farsim-acp-20261013).
