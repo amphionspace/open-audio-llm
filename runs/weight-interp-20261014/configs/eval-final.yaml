@@ -1,0 +1,50 @@
+# 10% 插值模型（base-10）的结束面板：meeting-180s（AISHELL-4 / AliMeeting test / 合成会议）、CHiME-6、fixed338、AISHELL-5 dev、CS-Dialogue test。
+# 对照为 Emilia2 轮 6000 步在同模板同数据上的结果（zh-emilia2-dialogue-acp-20261012 select 004 final），不重测。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../../../src}]
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/run_benchmark.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  tracking_prefix: weight-interp-20261014-final
+  # 共享机器，不用 GPU 0；2026-10-14 GPU 3 空闲。
+  gpu: 3
+  port: 8907
+  server_startup_timeout: 1800
+  serve_template: {path: serve.yaml}
+  delete_request_audio: true
+  # attempt 002 的 CHiME-6 因 roots 路径错误失败，其余四个面板已完成，直接复用；003 漏了这一项，启动后即停。
+  reuse: {path: ../tasks/03-final/attempts/002/artifacts}
+  models:
+    base-10:
+      weights: {path: ../tasks/01-merge/attempts/001/artifacts/base-10}
+  panels:
+    meeting180: {template: {path: eval-final-meeting180.yaml}}
+    chime6: {template: {path: eval-final-chime6.yaml}}
+    fixed338: {template: {path: eval-final-fixed338.yaml}}
+    aishell5_dev: {template: {path: eval-final-aishell5-dev.yaml}}
+    cs_dialogue_test: {template: {path: eval-final-cs-dialogue-test.yaml}}
+recording:
+  attempts_dir: {path: ../tasks/03-final/attempts}
+  result: {path: '{attempt}/artifacts/results.json'}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: weight-interp-20261014-final
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300

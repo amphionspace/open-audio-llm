@@ -1,0 +1,99 @@
+# C 层第二版关联：中文声纹 ERes2NetV2（3D-Speaker，约 20 万中文说话人）+ 两段式跨窗口关联。
+# 依据：沿用第一版窗口输出的离线诊断（ECAPA 在 AISHELL-4 上 AUC 0.868，ERes2NetV2 0.910；关联完美时 AISHELL-4 cpER 20.9 对实际 40.8）。
+# 参数只在开发数据上选：AliMeeting Eval + AISHELL-4 训练集前 10 场（训练集不参与任何报告；模型见过其文字，只用来调关联参数）。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../../../src}]
+  gpus: []
+  threads: {omp: 4, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/run_sessions.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  # 切好的整场音频与窗口：各模型共用，不随执行重复生成。
+  # 新增开发集，需要新的共享切分；已有各集的窗口切点算法不变，窗口与第一版一致。
+  shared: {path: ../shared/sessions-v2}
+  # 共享机器，不用 GPU 0；2026-10-14 GPU 4 空闲。
+  gpu: 4
+  port: 8905
+  server_startup_timeout: 1800
+  serve_template: {path: serve.yaml}
+  registry:
+    catalog: {path: /workspace/data/registry/catalog}
+    roots: {path: /workspace/data/registry/roots.json}
+  sets:
+    alimeeting_eval: {dataset_id: alimeeting, version: openslr-119-local-20260826, split: dev, language: zh, channel: 0}
+    alimeeting_test: {dataset_id: alimeeting, version: openslr-119-local-20260826, split: test, language: zh, channel: 0}
+    aishell4_test: {dataset_id: aishell4, version: legacy-20260804, split: test, language: zh, channel: 0}
+    ami_sdm_test: {dataset_id: ami_sdm, version: icefall-20260908, split: test, language: en, channel: 0}
+    aishell4_dev: {dataset_id: aishell4, version: legacy-20260804, split: train, language: zh, channel: 0, sessions: 10}
+  tune_sets: [alimeeting_eval, aishell4_dev]
+  # 窗口约 120 秒（与 AliMeeting 选模面板同长），在目标 ±20 秒内最安静的 100 ms 处切开。
+  window: {target: 120, search: 20}
+  request: {max_tokens: 4096, concurrency: 16}
+  embedding:
+    python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+    script: {path: ../scripts/embed_worker_3dspeaker.py}
+    model: {path: /workspace/model/modelscope/models/iic--speech_eres2netv2_sv_zh-cn_16k-common/snapshots/master}
+    gpu: 5
+    # 声纹只取窗口内无他人重叠的语音段（≥0.2 秒的片段），合计少于 0.5 秒的说话人不做声纹、不参与关联；每人最多 30 秒。
+    min_seconds: 0.5
+    shortest_piece: 0.2
+    max_seconds: 30
+  # 两段式关联：先按 high 聚出纯净簇，再把语音量不足整场 small_fraction 的小簇并进最相似、且不共享窗口的大簇（相似度需高于 join）。
+  # 离线诊断（看过 test，仅作网格范围依据）：high 0.6、small 0.03 时 AISHELL-4 27.7，AliMeeting 不变差。
+  two_stage:
+    high: [0.4, 0.5, 0.6, 0.7]
+    small_fraction: [0.02, 0.03, 0.05, 0.1]
+    join: 0.0
+  # 窗口输出不依赖声纹与关联，复用第一版 006 的（声纹换模型，重新计算）；只补开发集窗口。
+  # 001 完成五个模型；002 复用 001 的窗口输出与声纹，只评新增的插值模型。
+  reuse: {path: ../tasks/03c-sessions-v2/attempts/001/artifacts}
+  reuse_files: [outputs.jsonl, embedding-input.jsonl, embeddings.jsonl]
+  scorer:
+    python: {path: /workspace/workspace/mingdong/miniconda3/envs/amphion-eval/bin/python}
+    pythonpath: /workspace/workspace/mingdong/repo/amphion-eval-bench/src
+    script: {path: ../scripts/score_sessions.py}
+  models:
+    zh-farfield-14000:
+      weights: {path: ../../zh-farfield-mix-acp-20261010/tasks/03-select/attempts/001/artifacts/models/checkpoint-14000}
+    # 中文对话配比轮的最终最优：18000 步（选模目标 0.290，24000 步训练全部评完）。
+    zh-dialogue-18000:
+      weights: {path: ../../zh-dialogue-mix-acp-20261010/tasks/03-select/attempts/004/artifacts/models/checkpoint-18000}
+    # Emilia2 对话伪标签轮选中的 6000 步（AliMeeting dev 20.39，6–12 人合成 24.65）。
+    zh-emilia2-6000:
+      weights: {path: ../../zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/models/checkpoint-6000}
+    unified-8000:
+      weights: {path: ../../unified-diarization-asr-20261001/tasks/merge-8000/attempts/001/artifacts/merged-model}
+    # 6000 步向 Qwen3-ASR 原版插值 10%（weight-interp-20261014，不训练）。
+    zh-emilia2-6000-base10:
+      weights: {path: ../../weight-interp-20261014/tasks/01-merge/attempts/001/artifacts/base-10}
+    qwen3-asr-1.7b:
+      weights: {path: /workspace/model/Qwen3-ASR-1.7B}
+      serve_template: {path: serve-official.yaml}
+      plain: true
+recording:
+  attempts_dir: {path: ../tasks/03c-sessions-v2/attempts}
+  result: {path: '{attempt}/artifacts/results.json'}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: benchmark-zh-20261011-sessions-v2
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file: {path: '{attempt}/artifacts/metrics.jsonl'}
+    format: jsonl
+    prefix: sessions

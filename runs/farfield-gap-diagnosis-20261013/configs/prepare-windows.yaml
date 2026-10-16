@@ -1,0 +1,30 @@
+# 用同一批人工标注窗口切出 AliMeeting Eval 远场 30 秒与 120 秒两种长度（均为 8 通道均值），只差窗口长度。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: []
+  gpus: []
+  threads: {omp: 1, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/build_windows.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  # 选模面板 alimeeting_dev 即由同一 meeting-long-v1 的 dev_120s 记录切成（8 通道均值）；dev_30s 是同一流程在停顿处切的 30 秒窗口。
+  records:
+    dev_30s: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/alimeeting_sdm-dev_30s.jsonl.gz}
+    dev_120s: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/alimeeting_sdm-dev_120s.jsonl.gz}
+  audio_index: {path: /workspace/data/migration/unified-diarization-20261001-transfer/legacy_asr/Derived/meeting-sot/meeting-long-v1-20260920/alimeeting_sdm-dev-audio-index.jsonl.gz}
+  # 索引的 legacy_asr 路径（AliMeeting/Eval_Ali/...）对应本地原始音频的 Eval_Ali/...。
+  audio_root: {path: /workspace/data/datasets/alimeeting/source/openslr-119-local-20260826}
+  strip_prefix: AliMeeting/
+recording:
+  attempts_dir: {path: ../tasks/03-prepare-windows/attempts}
+  result: {path: '{attempt}/artifacts/summary.json'}
+tracking:
+  enabled: false

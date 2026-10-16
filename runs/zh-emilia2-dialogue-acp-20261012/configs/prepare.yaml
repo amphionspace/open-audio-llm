@@ -1,0 +1,58 @@
+version: 1
+runtime:
+  python:
+    path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  cwd:
+    path: ../../..
+  pythonpath: []
+  gpus: []
+  threads:
+    omp: 1
+    openblas: 1
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script:
+    path: ../scripts/prepare.py
+  accepts_config: true
+  arguments: {}
+parameters:
+  output:
+    path: '{attempt}/artifacts'
+  # The dialogue round's frozen data configuration; every source keeps its relative weight.
+  source_data:
+    path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-dialogue-mix-acp-20261010/tasks/01-prepare/attempts/003/artifacts/train-data.yaml
+  # Registry entry (2026-10-12 copy, see shared/) of the Emilia2 dialogue pseudo-labels.
+  catalogs:
+  - {catalog: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-emilia2-dialogue-acp-20261012/shared/catalog-additions.jsonl, roots: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-emilia2-dialogue-acp-20261012/shared/catalog-additions-roots.json}
+  # Aliases registered on 2026-10-10 resolve to the registry copies of the same files.
+  prefer_roots:
+    path: /workspace/data/registry/roots.json
+  rescale: {}
+  # Sample proportions (percent). The dialogue-round mix shrinks as a whole from 100 to 80; the freed 20
+  # go to Emilia2 Chinese multi-party conversation windows (real recordings, pseudo-labelled).
+  scale_kept: true
+  kept_weight: 80
+  groups:
+    # 30-120 s windows kept whole by the window text check (Qwen3-ASR, CER <= 15) and the speaker check.
+    # Windows with 4+ speakers are left out until the MOSS Pro relabel (moss-transcribe-diarize-0.9B-pro4plus):
+    # the local 0.9B labels were good on only 74% (4 speakers) and 51-60% (5+) of such windows.
+    emilia2_dialogue:
+      weight: 20
+      sources:
+      - {dataset_id: emilia2_zh_dialogue_diarize, version: moss-transcribe-diarize-0.9B, splits: [train_120s], max_duration: 650, exclude_records: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-emilia2-dialogue-acp-20261012/shared/emilia2-exclude-4plus-speakers.txt}
+  # The smallest earlier source (0.0022% x 0.8) still gets about one sample per window.
+  replay_window_samples: 64000
+  # Earlier rounds sampled with seeds 42-47.
+  seed: 48
+  # Real recordings get no added training noise, like the existing meeting sources.
+  noise_exclude_datasets:
+  - emilia2_zh_dialogue_diarize
+recording:
+  attempts_dir:
+    path: ../tasks/01-prepare/attempts
+  result:
+    path: '{attempt}/artifacts/report.json'
+tracking:
+  enabled: false

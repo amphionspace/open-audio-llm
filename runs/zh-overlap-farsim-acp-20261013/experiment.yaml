@@ -1,0 +1,14 @@
+version: 1
+name: zh-overlap-farsim-acp-20261013
+purpose: 加入 Emilia2 重叠远场重排数据（1,535 h，窗口重叠率均值 0.23）占 20%，从 Emilia2 轮 6000 步继续，单机 8 卡 12000 步，目标中文真实会议中与他人重叠语句的识别
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training_coverage: all_eligible_records
+  training_steps: 12000
+inputs:
+  init_model: ../zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/models/checkpoint-6000
+tasks:
+- {id: prepare, name: 重叠远场配比的数据配置, config: configs/prepare.yaml, depends_on: []}
+- {id: train, name: ACP 单机 8 卡全参数 12000 步, config: configs/train.yaml, depends_on: [prepare]}
+- {id: select, name: 开发机异步选模与结束评测, config: configs/select.yaml, depends_on: [prepare]}

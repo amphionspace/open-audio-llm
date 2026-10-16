@@ -1,0 +1,46 @@
+# 选模用单人 ASR 开发集模板：Qwen3-ASR 官方请求格式（空 system、单段音频），贪心解码；每个来源固定抽 1000 条（seed 42）。
+# 模型、服务地址、输出目录与执行记录由 select_checkpoints.py 填入。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/amphion-eval/bin/python}
+  cwd: {path: ../../..}
+  # AmphionEval 从分支源码运行；评测进程不 import 本项目。
+  pythonpath: [{path: /workspace/workspace/mingdong/repo/amphion-eval-meeting/src}]
+  gpus: []
+  threads: {omp: 4, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: eval
+  backend: vllm
+  server_url: http://127.0.0.1:8900
+  module: amphion_eval.cli
+  positional: [open-audio-llm, ts-asr]
+  arguments:
+    --model: {path: /workspace/model/Qwen3-ASR-1.7B}
+    --data_config: {path: data/asr-dev.yaml}
+    --split_group: evaluation
+    --samples_per_source: 1000
+    --batch_size: 64
+    --max_new_tokens: 1024
+    --worker-timeout: 3600
+    --server-url: http://127.0.0.1:8900
+    --served-model: placeholder
+    --output_dir: {path: '{attempt}/artifacts/evaluation'}
+recording:
+  attempts_dir: {path: ../tasks/03-select/asr-template/attempts}
+  result: {path: '{attempt}/artifacts/evaluation/summary.json'}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: zh-similar-voice-acp-20261014-asr-dev
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file: {path: '{attempt}/artifacts/evaluation/summary.json'}
+    prefix: evaluation

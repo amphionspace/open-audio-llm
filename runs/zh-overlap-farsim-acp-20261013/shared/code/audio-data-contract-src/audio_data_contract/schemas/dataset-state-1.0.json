@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/amphionspace/audio-data-contract/schemas/dataset-state-1.0.json",
+  "title": "DatasetState",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "dataset_id", "version", "state"],
+  "properties": {
+    "schema_version": {"const": "dataset-state/1.0"},
+    "dataset_id": {"type": "string", "minLength": 1},
+    "version": {"type": "string", "minLength": 1},
+    "state": {
+      "enum": [
+        "planned",
+        "waiting_auth",
+        "downloading",
+        "partial",
+        "downloaded",
+        "verified",
+        "extracted",
+        "prepared",
+        "failed"
+      ]
+    },
+    "artifacts": {
+      "type": "object",
+      "propertyNames": {"type": "string", "minLength": 1},
+      "additionalProperties": {"type": "object"}
+    },
+    "updated_at": {"type": "string", "format": "date-time"},
+    "error": {"type": ["string", "null"]},
+    "metadata": {"type": "object"}
+  }
+}
