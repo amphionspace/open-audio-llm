@@ -215,6 +215,85 @@ def test_online_mix_absent_target_empties_the_transcript(catalog_config, tmp_pat
                             message_format="qwen3_asr")[0]
 
 
+def test_online_mix_nonspeech_window_has_an_empty_transcript_and_its_own_level(catalog_config, tmp_path):
+    config = _online_ts_config(catalog_config, tmp_path, {
+        "absent_prob": 0.0, "nonspeech_prob": 1.0, "nonspeech_seconds": [0.4, 0.6],
+        "nonspeech_level_dbfs": [-55, -55], "level_dbfs": [-30, -30], "enrollment_seconds": [0.2, 0.3],
+        "speaker_rir_prob": 0.0,
+    })
+    sample = CatalogSwiftDataset(config, message_format="qwen3_asr")[0]
+    assert sample["solution"] == "language None<asr_text>"
+    mix, _ = sf.read(BytesIO(sample["mix_wav"]))
+    enroll, _ = sf.read(BytesIO(sample["audios"][0]))
+    assert int(0.39 * 16000) <= len(mix) <= int(0.61 * 16000)
+    assert 20 * np.log10(np.sqrt(np.mean(mix**2))) == pytest.approx(-55, abs=0.2)
+    assert 20 * np.log10(np.sqrt(np.mean(enroll**2))) == pytest.approx(-30, abs=0.2)  # enrollment keeps its range
+
+
+def test_scene_record_places_the_named_utterances_and_is_never_blanked(catalog_config, tmp_path):
+    config = _online_ts_config(catalog_config, tmp_path, {
+        "absent_prob": 1.0, "nonspeech_prob": 1.0, "enrollment_seconds": [0.2, 0.3], "speaker_rir_prob": 0.0,
+        "alternate_gap_seconds": [0.2, 0.2],
+    })
+    span = {"cut_id": "speech", "start": 0.0, "duration": 0.4}
+    base = {"dataset_id": "ts", "version": "1", "split": "train"}
+    record = AudioRecord("scene", "ts_asr", (
+        AudioSlot("enrollment", AudioRef(**base, cut_id="speech", start=0.25)),
+        AudioSlot("mixture", AudioRef(**base, cut_id="speech", start=0.0, duration=0.4))),
+        "hello world", language="en",
+        metadata={"scene": {"mode": "alternate", "targets": [{**span, "text": "hello"}, {**span, "text": "world"}],
+                            "interferers": [{"speaker": "x", "utts": [span]}]}})
+    write_records([record], tmp_path / "ts.jsonl.gz")
+    sample = CatalogSwiftDataset(config, message_format="qwen3_asr")[0]
+    assert sample["solution"] == "language English<asr_text>hello world"
+    mix, _ = sf.read(BytesIO(sample["mix_wav"]))
+    assert len(mix) == int(3 * 0.4 * 16000) + 2 * int(0.2 * 16000)  # three turns and two gaps
+
+
+def test_online_mix_target_timing_changes_the_window(catalog_config, tmp_path):
+    config = _online_ts_config(catalog_config, tmp_path, {
+        "absent_prob": 0.0, "entry_prob": 1.0, "lead_seconds": [1.0, 1.0], "trail_seconds": [0.5, 0.5],
+        "interferer_probs": [1.0], "speaker_rir_prob": 0.0,
+    })
+    dataset = CatalogSwiftDataset(config, message_format="qwen3_asr")
+    lengths = set()
+    for epoch in range(24):
+        dataset.set_epoch(epoch)
+        mix, _ = sf.read(BytesIO(dataset[0]["mix_wav"]))
+        lengths.add(round(len(mix) / 16000, 2))
+    assert lengths == {1.25, 1.75, 2.25}  # leave, enter, middle around the 0.75 s target
+
+
+def test_plain_asr_nonspeech_source_trains_on_an_empty_transcript(catalog_config, tmp_path):
+    import gzip
+
+    row = {"cut_id": "speech", "root_alias": "data", "relative_path": "speech.wav",
+           "sample_rate": 16000, "channels": 1, "num_frames": 16000, "duration": 1.0}
+    with gzip.open(tmp_path / "index_n.jsonl.gz", "wt") as stream:
+        stream.write(json.dumps(row) + "\n")
+    record = AudioRecord("n", "asr", (AudioSlot("primary", AudioRef("nonspeech", "1", "train", "speech")),),
+                         "", language="zh")
+    write_records([record], tmp_path / "n.jsonl.gz")
+    spec = DatasetSpec(
+        dataset_id="nonspeech", version="1", languages=("zh",), tasks=("asr",),
+        artifacts=(ArtifactRef("records", "audio-records", "data", "n.jsonl.gz"),
+                   ArtifactRef("index", "audio-index", "data", "index_n.jsonl.gz")),
+        splits={"train": Split({"records": ("records",), "audio_index": ("index",)})},
+    )
+    with Path(catalog_config["catalog"]).open("a") as stream:
+        stream.write("\n" + json.dumps(spec.to_dict()))
+    catalog_config["train"] = [{"dataset_id": "nonspeech", "version": "1", "split": "train",
+                                "nonspeech": {"level_dbfs": [-52, -52]}}]
+    catalog_config["augmentation"] = {}
+    sample = CatalogSwiftDataset(catalog_config, message_format="qwen3_asr")[0]
+    assert sample["solution"] == "language None<asr_text>"
+    audio, _ = sf.read(BytesIO(sample["audios"][0]))
+    assert 20 * np.log10(np.sqrt(np.mean(audio**2))) == pytest.approx(-52, abs=0.2)
+    with pytest.raises(ValueError, match="empty-transcript"):
+        CatalogSwiftDataset({**catalog_config, "train": [{**catalog_config["train"][0], "dataset_id": "speech",
+                            "split": "dev", "nonspeech": {"level_dbfs": [-50, -50]}}]}, message_format="qwen3_asr")
+
+
 @pytest.fixture
 def catalog_config(tmp_path):
     sr = 16000

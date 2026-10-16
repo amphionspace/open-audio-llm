@@ -9,6 +9,7 @@ model sees new conditions every epoch instead of a fixed offline mixture.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 import numpy as np
@@ -36,12 +37,53 @@ class OnlineMixConfig:
     enrollment_seconds: tuple[float, float] = (1.0, 20.0)
     enrollment_contam_prob: float = 0.1
     enrollment_contam_sir_db: tuple[float, float] = (5.0, 15.0)
+    # Target timing: with entry_prob the window is longer than the target, so the target
+    # enters late, leaves early or both; interferers and the noise floor fill the rest.
+    entry_prob: float = 0.0
+    lead_seconds: tuple[float, float] = (0.5, 8.0)
+    trail_seconds: tuple[float, float] = (0.5, 6.0)
+    # A speech-free window (noise, music) with an empty transcript replaces the mixture.
+    nonspeech_prob: float = 0.0
+    nonspeech_seconds: tuple[float, float] = (0.3, 26.0)
+    nonspeech_level_dbfs: tuple[float, float] = (-60.0, -20.0)
+    # Low-level noise floor under the mixture: white, pink or recorded (speech-free) noise.
+    floor_prob: float = 0.0
+    floor_dbfs: tuple[float, float] = (-65.0, -35.0)
+    floor_kinds: tuple[float, float, float] = (0.15, 0.15, 0.70)
+    # Enrollment through a narrowband channel, or recorded with a silent start.
+    enrollment_lowpass_prob: float = 0.0
+    enrollment_lowpass_hz: float = 4000.0
+    enrollment_lead_silence_prob: float = 0.0
+    enrollment_lead_silence_seconds: tuple[float, float] = (0.3, 2.0)
+    # Mixture through a telephone channel (300-3400 Hz, 8-bit mu-law) or driven into clipping.
+    telephony_prob: float = 0.0
+    clip_prob: float = 0.0
+    clip_gain_db: tuple[float, float] = (6.0, 18.0)
+    # Scene records (metadata.scene) name every utterance; these are the silences between
+    # one speaker's utterances, or between turns when the mode is alternate.
+    alternate_gap_seconds: tuple[float, float] = (0.2, 1.0)
+    burst_gap_seconds: tuple[float, float] = (0.0, 0.5)
+    short_gap_seconds: tuple[float, float] = (0.0, 0.3)
 
     def __post_init__(self):
         for name in ("interferer_probs", "absent_interferer_probs"):
             probs = getattr(self, name)
             if not probs or any(p < 0 for p in probs) or not np.isclose(sum(probs), 1.0):
                 raise ValueError(f"{name} must be non-negative and sum to 1")
+        if len(self.floor_kinds) != 3 or any(p < 0 for p in self.floor_kinds) or not np.isclose(sum(self.floor_kinds), 1.0):
+            raise ValueError("floor_kinds must be three non-negative weights that sum to 1")
+        for name in ("entry_prob", "nonspeech_prob", "floor_prob", "enrollment_lowpass_prob",
+                     "enrollment_lead_silence_prob", "telephony_prob", "clip_prob"):
+            if not 0 <= getattr(self, name) <= 1:
+                raise ValueError(f"{name} must be between 0 and 1")
+        for name in ("lead_seconds", "trail_seconds", "nonspeech_seconds", "nonspeech_level_dbfs",
+                     "floor_dbfs", "enrollment_lead_silence_seconds", "clip_gain_db",
+                     "alternate_gap_seconds", "burst_gap_seconds", "short_gap_seconds"):
+            pair = getattr(self, name)
+            if len(pair) != 2 or pair[0] > pair[1]:
+                raise ValueError(f"{name} must be an ordered pair")
+        if self.nonspeech_seconds[0] <= 0 or self.enrollment_lowpass_hz <= 0:
+            raise ValueError("nonspeech_seconds and enrollment_lowpass_hz must be positive")
         for name in ("absent_prob", "speaker_rir_prob", "speaker_far_rir_prob", "enrollment_contam_prob"):
             if not 0 <= getattr(self, name) <= 1:
                 raise ValueError(f"{name} must be between 0 and 1")
@@ -126,24 +168,202 @@ def reverberate(rng, audio, config, rir_loader, sampling_rate):
     return fftconvolve(audio, impulse / energy)[: len(audio)].astype(np.float32)
 
 
-def build_mixture(rng, target, config, *, absent, speech_loader, rir_loader, sampling_rate):
+def timing(rng, config, sampling_rate):
+    """Samples of padding before and after the target; (0, 0) keeps the target as the window."""
+    if not config.entry_prob or rng.random() >= config.entry_prob:
+        return 0, 0
+    mode = rng.choice(("enter", "leave", "middle"))
+    lead = int(rng.uniform(*config.lead_seconds) * sampling_rate) if mode != "leave" else 0
+    trail = int(rng.uniform(*config.trail_seconds) * sampling_rate) if mode != "enter" else 0
+    return lead, trail
+
+
+def build_mixture(rng, target, config, *, absent, speech_loader, rir_loader, sampling_rate, info=None):
     """Return the mixture window and the number of interferers used.
 
-    ``target`` keeps its length as the window. When the target is absent the
-    window holds only interferers, or silence for the later noise step.
+    The window is the target plus any padding drawn by ``timing``, so the target can enter
+    late or leave early. When the target is absent the window holds only interferers, or
+    silence for the later noise step. ``info`` receives the padding in seconds.
     """
     target = np.asarray(target, dtype=np.float32)
     length = len(target)
+    lead, trail = timing(rng, config, sampling_rate)
+    window = lead + length + trail
     probs = config.absent_interferer_probs if absent else config.interferer_probs
     count = _draw_count(rng, probs)
     present = reverberate(rng, target, config, rir_loader, sampling_rate)
     reference = _rms(present[np.abs(present) > 0])
-    mixture = np.zeros(length, dtype=np.float32) if absent else present.copy()
+    mixture = np.zeros(window, dtype=np.float32)
+    if not absent:
+        mixture[lead : lead + length] = present
     for _ in range(count):
         other = reverberate(rng, speech_loader(rng, sampling_rate), config, rir_loader, sampling_rate)
-        other = _place(rng, other, length)
+        other = _place(rng, other, window)
         mixture += _scale_to(other, reference, rng.uniform(*config.sir_db))
+    if info is not None:
+        info.update(lead=lead / sampling_rate, trail=trail / sampling_rate, window=window / sampling_rate)
     return mixture, count
+
+
+def _track(utterances, gap):
+    """One speaker's utterances in a row, with a random silence between them."""
+    pieces = []
+    for number, audio in enumerate(utterances):
+        if number:
+            pieces.append(np.zeros(gap(), dtype=np.float32))
+        pieces.append(np.asarray(audio, dtype=np.float32))
+    return np.concatenate(pieces)
+
+
+def _on_timeline(audio, start, length):
+    out = np.zeros(length, dtype=np.float32)
+    out[start : start + len(audio)] = audio
+    return out
+
+
+def build_scene(rng, mode, targets, others, config, *, rir_loader, sampling_rate, info=None):
+    """Mix a scene whose utterances are all given.
+
+    alternate: the target's utterances and the others' take turns, never overlapping.
+    burst / short: each other speaker talks all its utterances in a row and the target
+    speaks inside that stretch, so the target is overlapped for (nearly) all of its time.
+    Each speaker is reverberated as a whole, then the others are set against the target by SIR.
+    """
+    if mode not in ("alternate", "burst", "short"):
+        raise ValueError(f"unknown scene mode {mode!r}")
+    low, high = getattr(config, f"{mode}_gap_seconds")
+    gap = lambda: int(rng.uniform(low, high) * sampling_rate)
+    if mode == "alternate":
+        # Turns in random order; the target's utterances keep their order (the transcript's).
+        turns = [None] * len(targets) + [(j, k) for j, utterances in enumerate(others) for k in range(len(utterances))]
+        rng.shuffle(turns)
+        placed, cursor, spoken = [], 0, 0
+        for turn in turns:
+            if turn is None:
+                audio, speaker = targets[spoken], None
+                spoken += 1
+            else:
+                audio, speaker = others[turn[0]][turn[1]], turn[0]
+            placed.append((speaker, cursor, audio))
+            cursor += len(audio) + gap()
+        length = max(start + len(audio) for _, start, audio in placed)
+        target_track = np.zeros(length, dtype=np.float32)
+        tracks = [np.zeros(length, dtype=np.float32) for _ in others]
+        for speaker, start, audio in placed:
+            (target_track if speaker is None else tracks[speaker])[start : start + len(audio)] = audio
+    else:
+        packed = [_track(utterances, gap) for utterances in others]
+        target = _track(targets, gap)
+        length = max([len(target), *map(len, packed)])
+        target_track = _on_timeline(target, rng.randrange(length - len(target) + 1), length)
+        tracks = [_on_timeline(audio, rng.randrange(length - len(audio) + 1), length) for audio in packed]
+    present = reverberate(rng, target_track, config, rir_loader, sampling_rate)
+    reference = _rms(present[np.abs(present) > 0])
+    mixture = present.copy()
+    for track in tracks:
+        other = reverberate(rng, track, config, rir_loader, sampling_rate)
+        mixture += _scale_to(other, reference, rng.uniform(*config.sir_db))
+    if info is not None:
+        spoken = target_track != 0
+        others_on = np.any([track != 0 for track in tracks], axis=0) if tracks else np.zeros(length, dtype=bool)
+        info.update(lead=0.0, trail=0.0, window=length / sampling_rate,
+                    overlap=float(np.mean(others_on[spoken])) if spoken.any() else 0.0)
+    return mixture
+
+
+def _synthetic_noise(rng, kind, length):
+    generator = np.random.default_rng(rng.getrandbits(64))
+    noise = generator.standard_normal(length).astype(np.float32)
+    if kind == "pink" and length > 1:
+        spectrum = np.fft.rfft(noise)
+        frequency = np.maximum(np.arange(len(spectrum)), 1)
+        noise = np.fft.irfft(spectrum / np.sqrt(frequency), n=length).astype(np.float32)
+    return noise
+
+
+def _fit_noise(rng, clip, length):
+    """Tile a recorded clip to ``length`` and take a random window."""
+    clip = np.asarray(clip, dtype=np.float32)
+    if len(clip) < length:
+        clip = np.tile(clip, (length + len(clip) - 1) // len(clip))
+    start = rng.randrange(len(clip) - length + 1)
+    return clip[start : start + length]
+
+
+def noise_floor(rng, length, config, noise_loader, sampling_rate):
+    """A white, pink or recorded noise floor at a random level within floor_dbfs."""
+    kind = rng.choices(("white", "pink", "recorded"), weights=config.floor_kinds)[0]
+    if kind == "recorded" and noise_loader is not None:
+        noise = _fit_noise(rng, noise_loader(rng, sampling_rate), length)
+    else:
+        noise = _synthetic_noise(rng, "pink" if kind == "recorded" else kind, length)
+    rms = _rms(noise)
+    if rms < _SILENT_RMS:
+        return np.zeros(length, dtype=np.float32)
+    return (noise * (10 ** (rng.uniform(*config.floor_dbfs) / 20) / rms)).astype(np.float32)
+
+
+def nonspeech_window(rng, config, noise_loader, sampling_rate, length=None):
+    """A speech-free window: ``length`` samples, or a log-uniform duration if not given."""
+    if length is None:
+        low, high = config.nonspeech_seconds
+        length = max(1, int(math.exp(rng.uniform(math.log(low), math.log(high))) * sampling_rate))
+    return np.asarray(_fit_noise(rng, noise_loader(rng, sampling_rate), length), dtype=np.float32)
+
+
+def slot_level(config, nonspeech, name):
+    """Level range for a slot: a nonspeech mixture keeps its own, wider range."""
+    return config.nonspeech_level_dbfs if nonspeech and name == "mixture" else config.level_dbfs
+
+
+def lowpass(audio, hz, sampling_rate):
+    from scipy.signal import butter, sosfiltfilt
+
+    return sosfiltfilt(butter(8, hz, "low", fs=sampling_rate, output="sos"), audio).astype(np.float32)
+
+
+def telephone(audio, sampling_rate):
+    """300-3400 Hz band-pass and 8-bit mu-law, as in a narrowband call."""
+    from scipy.signal import butter, sosfiltfilt
+
+    band = sosfiltfilt(butter(6, (300, 3400), "bandpass", fs=sampling_rate, output="sos"), audio)
+    peak = float(np.max(np.abs(band)))
+    if peak < _SILENT_RMS:
+        return audio
+    mu = 255.0
+    x = band / peak
+    quantised = np.round(np.sign(x) * np.log1p(mu * np.abs(x)) / np.log1p(mu) * 127) / 127
+    return (np.sign(quantised) * np.expm1(np.abs(quantised) * np.log1p(mu)) / mu * peak).astype(np.float32)
+
+
+def overdrive(rng, audio, config):
+    """Scale the peak past full scale and clip, as a recorder with too much gain does."""
+    peak = float(np.max(np.abs(audio)))
+    if peak < _SILENT_RMS:
+        return audio
+    gain = 10 ** (rng.uniform(*config.clip_gain_db) / 20)
+    return np.clip(audio / peak * gain, -1.0, 1.0).astype(np.float32)
+
+
+def degrade_enrollment(rng, enrollment, config, noise_loader, sampling_rate):
+    """Band-limit the enrollment and/or give it a quiet start."""
+    if config.enrollment_lowpass_prob and rng.random() < config.enrollment_lowpass_prob:
+        enrollment = lowpass(enrollment, config.enrollment_lowpass_hz, sampling_rate)
+    if config.enrollment_lead_silence_prob and rng.random() < config.enrollment_lead_silence_prob:
+        pad = int(rng.uniform(*config.enrollment_lead_silence_seconds) * sampling_rate)
+        enrollment = np.concatenate([noise_floor(rng, pad, config, noise_loader, sampling_rate), enrollment])
+    return enrollment
+
+
+def degrade_mixture(rng, mixture, config, noise_loader, sampling_rate):
+    """Noise floor, telephone channel and clipping, in the order a recording meets them."""
+    if config.floor_prob and rng.random() < config.floor_prob:
+        mixture = mixture + noise_floor(rng, len(mixture), config, noise_loader, sampling_rate)
+    if config.telephony_prob and rng.random() < config.telephony_prob:
+        mixture = telephone(mixture, sampling_rate)
+    if config.clip_prob and rng.random() < config.clip_prob:
+        mixture = overdrive(rng, mixture, config)
+    return mixture
 
 
 def crop_enrollment(rng, enrollment, config, sampling_rate):

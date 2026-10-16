@@ -31,9 +31,14 @@ from .target_sot import EnrollmentConfig, TARGET_FORMAT, eligible_candidates
 from .ts_online import (
     OnlineMixConfig,
     build_mixture,
+    build_scene,
     contaminate_enrollment,
     crop_enrollment,
+    degrade_enrollment,
+    degrade_mixture,
+    nonspeech_window,
     set_level,
+    slot_level,
 )
 
 
@@ -376,6 +381,11 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         self.rir_groups = (
             self._resource_groups(config.get("rir_sources", [])) if training else []
         )
+        # Speech-free noise and music for empty-transcript windows and noise floors. Unlike
+        # noise_sources it must never contain talkers; without it the noise sources are used.
+        nonspeech_sources = config.get("nonspeech_sources", [])
+        self.nonspeech_groups = self._resource_groups(nonspeech_sources) if training and nonspeech_sources else []
+        self.nonspeech_weights = source_weights(nonspeech_sources) if self.nonspeech_groups else None
         # Other speakers for online target-speaker mixing, grouped by language.
         self.interference = {}
         if training:
@@ -525,6 +535,12 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             if source.get("sot_timestamps"):
                 row = replace(row, record=with_sot_timestamps(
                     row.record, self._sot_alignments[source["sot_alignment_index"]]))
+            if source.get("nonspeech") is not None:
+                if row.record.target.strip():
+                    raise ValueError(f"{row.record.id}: nonspeech needs an empty-transcript record")
+                row = replace(row, record=replace(row.record, metadata={
+                    **row.record.metadata, "nonspeech": source["nonspeech"],
+                }))
             if source.get("online_mix") is not None:
                 if row.record.task != "ts_asr" or not row.record.target.strip():
                     raise ValueError(f"{row.record.id}: online_mix needs a present-target TS-ASR record")
@@ -691,7 +707,10 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                     ),
                 )
             if online:
-                audio = set_level(rng, audio, OnlineMixConfig(**online).level_dbfs)
+                audio = set_level(rng, audio, slot_level(
+                    OnlineMixConfig(**online), resolved.record.metadata.get("online_nonspeech"), slot.name))
+            elif resolved.record.metadata.get("nonspeech"):
+                audio = set_level(rng, audio, tuple(resolved.record.metadata["nonspeech"]["level_dbfs"]))
             if self.collect_metrics:
                 self._sample_metrics["wave_augment_s"] += time.perf_counter() - started
                 self._sample_metrics["audio_seconds"] += len(audio) / self.sampling_rate
@@ -719,29 +738,63 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             choose_from_groups(r, self.far_rir_groups if mode == "far" and self.far_rir_groups
                                else self.rir_groups), sr)
 
+    def _nonspeech_loader(self):
+        groups, weights = ((self.nonspeech_groups, self.nonspeech_weights) if self.nonspeech_groups
+                           else (self.noise_groups, self.noise_weights))
+
+        def load(r, sr):
+            if not groups:
+                raise ValueError("online_mix nonspeech windows and noise floors need nonspeech_sources or noise_sources")
+            return load_mono(choose_from_groups(r, groups, weights), sr)
+
+        return load
+
+    def _scene_mixture(self, record, scene, config, rng):
+        """Place the utterances a scene record names; every one is a span of the scene pool's audio."""
+        ref = record.slot("mixture").ref
+        base = (ref.dataset_id, ref.version, ref.split)
+
+        def clip(item):
+            return load_mono(PoolClip(self.resolver, base, item["cut_id"], item.get("start"), item.get("duration")),
+                             self.sampling_rate)
+
+        return build_scene(
+            rng, scene["mode"], [clip(t) for t in scene["targets"]],
+            [[clip(u) for u in other["utts"]] for other in scene["interferers"]], config,
+            rir_loader=self._rir_loader(), sampling_rate=self.sampling_rate)
+
     def _online_slot(self, record, name, audio, rng):
         """Rebuild one slot of an online-mixed sample; return audio and the slot's augmentation."""
         config = OnlineMixConfig(**record.metadata["online_mix"])
         speech = self._speech_loader(record.language)
+        noise = self._nonspeech_loader()
         if name == "enrollment":
             audio = crop_enrollment(rng, audio, config, self.sampling_rate)
             audio = contaminate_enrollment(rng, audio, config, speech, self.sampling_rate)
+            audio = degrade_enrollment(rng, audio, config, noise, self.sampling_rate)
             return audio, self.augmentation
         absent = bool(record.metadata.get("online_absent"))
+        # Speakers were reverberated one by one; only noise is left to add.
+        augmentation = replace(self.augmentation, speed_prob=0.0, rir_prob=0.0, far_rir_prob=0.0)
+        if record.metadata.get("online_nonspeech"):
+            # Nobody talks and the transcript is empty: noise or music of its own length.
+            audio = nonspeech_window(rng, config, noise, self.sampling_rate)
+            return audio, replace(augmentation, noise_prob=0.0)
+        scene = record.metadata.get("scene")
+        if scene:
+            audio = self._scene_mixture(record, scene, config, rng)
+            return degrade_mixture(rng, audio, config, noise, self.sampling_rate), augmentation
         audio, count = build_mixture(
             rng, audio, config, absent=absent, speech_loader=speech,
             rir_loader=self._rir_loader(), sampling_rate=self.sampling_rate,
         )
-        # Speakers were reverberated one by one; only noise is left to add.
-        augmentation = replace(self.augmentation, speed_prob=0.0, rir_prob=0.0, far_rir_prob=0.0)
         if absent and count == 0:
             # Nobody talks: the window is the noise itself (digital silence never
             # occurs in use). SNR is undefined here; set_level picks the level.
-            if not self.noise_groups:
-                raise ValueError("online_mix noise-only windows need noise_sources")
-            noise = load_mono(choose_from_groups(rng, self.noise_groups, self.noise_weights), self.sampling_rate)
-            audio = np.resize(noise, len(audio)).astype(np.float32)
+            audio = nonspeech_window(rng, config, noise, self.sampling_rate, length=len(audio))
             augmentation = replace(augmentation, noise_prob=0.0)
+        else:
+            audio = degrade_mixture(rng, audio, config, noise, self.sampling_rate)
         return audio, augmentation
 
     def __getitem__(self, idx):
