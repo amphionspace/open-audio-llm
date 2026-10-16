@@ -1,0 +1,69 @@
+# 长注册 TS-ASR（AmphionASR v5 模型，open_audio_llm.longenroll）8 卡全量训练，一个 epoch。
+# 数据：amphionasr_v5.yaml（注册 1 秒～5 分钟；组批只计待识别音频，480 秒 / 14 条）。
+# 490258 是该配方在 8 卡下每卡一个 epoch 的批次数（Catalog 采样计划实测），梯度累积为 1。
+# 起点为官方 Qwen3-ASR-1.7B：conv 冻结，编码器其余层、LLM 与新增模块训练；注册编码器是原
+# 第 0–11 层的冻结副本。学习率：新增模块 1e-4，主干 1e-5（与 v3 全参 SFT 相同），前 5000 步线性
+# warmup（约占总步数 1%），之后余弦退火到 0.1 倍（新增模块 1e-5、主干 1e-6，主干与 v4 相同）。
+# weight decay 0.1（与 v3/v4 相同），bias、norm 权重与门控不加。
+# bf16 权重 + DeepSpeed ZeRO-1（fp32 主权重与 AdamW 状态按卡分片），与 AmphionASR v3/v4 相同。
+# 开发机 2 卡实测（runs/longenroll-v5-dev-20261016，02-speed）：每卡每批 14 条时每步约 0.8 秒、
+# LLM 每卡每秒约 4500 个 token（含 padding），峰值显存约 25 GiB，最坏批次 30.5 GiB。
+# W&B 记到与 amphionasr-v4（ACP）相同的 entity。
+version: 1
+runtime:
+  python: python
+  cwd: {path: ../../..}
+  pythonpath:
+    - {path: ../../../src}
+    - {path: ../../../../audio-data-contract/src}
+  gpus: [0, 1, 2, 3, 4, 5, 6, 7]
+  distributed: {processes: 8, port: 29527}
+  threads: {omp: 2, openblas: 1}
+  environment:
+    TOKENIZERS_PARALLELISM: false
+data:
+  config: {path: ../data/amphionasr_v5.yaml}
+task:
+  kind: train
+  module: open_audio_llm.longenroll.train
+  arguments:
+    --model: {path: /workspace/model/Qwen3-ASR-1.7B}
+    --ecapa_model: {path: /workspace/model/wespeaker-ecapa-tdnn512-LM}
+    --model_config: {path: ../model/longenroll_v5.yaml}
+    --deepspeed: zero1
+    --output_dir: {path: "{attempt}/artifacts/training"}
+    --max_steps: 490258
+    --learning_rate: 0.0001
+    --backbone_lr: 0.00001
+    --warmup_steps: 5000
+    --min_lr_ratio: 0.1
+    --weight_decay: 0.1
+    --max_grad_norm: 1.0
+    --logging_steps: 20
+    --eval_steps: 5000
+    --eval_on_start: true
+    --decode_samples: 64
+    --save_steps: 5000
+    --save_total_limit: 2
+    # 每条样本 worker 约 0.13 秒（5 分钟注册约 1 秒），每卡 8 个进程远高于 GPU 的消耗。
+    --dataloader_num_workers: 8
+    --dataloader_prefetch_factor: 4
+    --dataloader_eval_num_workers: 8
+    --seed: 42
+preflight:
+  - kind: prepare
+    module: open_audio_llm.data.catalog_cache
+    arguments:
+      --data_config: {path: ../data/amphionasr_v5.yaml}
+      --workers: 8
+recording:
+  attempts_dir: {path: ../../../runs/longenroll-v5/tasks/run/attempts}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: python
+  credentials_file: {path: ~/.bashrc}
+  entity: 491822510-south-china-university-of-technology
+  project: open-audio-llm
+  name: longenroll-v5
+  interval: 5

@@ -10,6 +10,8 @@ AmphionASR v4 使用 [amphionasr_v4.yaml](amphionasr_v4.yaml)。Catalog 与 root
 `data/amphionasr`，起点是官方 Qwen3-ASR-1.7B，训练入口是
 [amphionasr-v4.yaml](../train/amphionasr-v4.yaml)。各来源的登记、时长和增强见
 [v4 数据配方](../../../docs/guides/amphionasr-v4-data.md)。
+长注册目标说话人使用 [amphionasr_v5.yaml](amphionasr_v5.yaml)，只重选注册（1 秒～5 分钟），
+组批只计混合音，见 [v5 数据配方](../../../docs/guides/amphionasr-v5-data.md)。
 
 ## 基础设置
 

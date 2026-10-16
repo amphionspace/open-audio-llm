@@ -181,6 +181,8 @@ def _legacy_source_identity(dataset, source):
         # for clean-only training, even if their old source flag was true.
         **({"clean_record_filter": 1} if source.get("require_clean_pass") and
            "records" in split.artifacts else {}),
+        # Earlier indexes summed enrollment and mixture into the TS-ASR batching cost.
+        **({"ts_cost": "mixture"} if "ts_asr" in spec.tasks else {}),
         "spec": spec.to_dict(),
         # Replay quotas do not change the indexed records or their audio cost.
         "source": {k: v for k, v in source.items() if k != "weight"},
@@ -259,6 +261,11 @@ def reuse_indexes(config, previous_config, root, message_format="qwen3_asr"):
     return reused
 
 
+def is_enrollment_slot(slot):
+    return (getattr(slot, "purpose", None) == "enrollment"
+            or str(getattr(slot, "name", "")).startswith("enrollment"))
+
+
 def sampling_cost(row, dataset):
     speed = dataset.augmentation
     slowest = min(1.0, *speed.speed_factors) if speed.speed_prob else 1.0
@@ -268,8 +275,12 @@ def sampling_cost(row, dataset):
         getattr(dataset, "message_format", None) == "qwen3_asr"
         and row.record.task == "ts_asr"
     )
+    ts_asr = getattr(row.record, "task", None) == "ts_asr"
     total = 0.0
     for slot in row.record.audio_slots:
+        # TS-ASR batches are sized by the mixture alone; enrollments run up to minutes.
+        if ts_asr and is_enrollment_slot(slot):
+            continue
         duration = slot.ref.duration
         if duration is None:
             duration = dataset.resolver.get_duration(slot.ref)

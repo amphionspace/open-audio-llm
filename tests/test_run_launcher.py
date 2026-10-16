@@ -230,6 +230,27 @@ def test_missing_data_input_is_recorded_as_failed_startup(tmp_path):
     assert "FileNotFoundError" in status["error"]
 
 
+def test_frozen_data_config_keeps_source_relative_files_reachable(tmp_path):
+    path, config = recipe(tmp_path)
+    data_dir = tmp_path / "configs"
+    data_dir.mkdir()
+    (data_dir / "exclude.txt").write_text("train:a\n")
+    (data_dir / "data.yaml").write_text(yaml.safe_dump({
+        "catalog": "catalog", "roots": "roots.json",
+        "train": [{"dataset_id": "x", "version": "v", "split": "train",
+                   "exclude_records": "exclude.txt", "sot_alignment_index": "align.jsonl"}],
+    }))
+    config["data"] = {"config": {"path": "configs/data.yaml"}}
+    path.write_text(yaml.safe_dump(config))
+    assert main(["prepare", "--config", str(path)]) == 0
+    frozen = yaml.safe_load(
+        (tmp_path / "tasks/prepare/attempts/001/data-effective.yaml").read_text()
+    )
+    source = frozen["train"][0]
+    assert source["exclude_records"] == str(data_dir / "exclude.txt")
+    assert source["sot_alignment_index"] == str(data_dir / "align.jsonl")
+
+
 def test_resume_requires_explicit_failed_attempt_and_keeps_history(tmp_path):
     path, config = recipe(tmp_path, code=37)
     config["task"]["resume_supported"] = True

@@ -76,7 +76,7 @@ def test_clean_labels_outside_recording_are_removed_before_trimming(catalog_conf
 
 
 @pytest.mark.parametrize("cached", [False, True])
-def test_native_ts_reads_registered_audio_index_and_budgets_concat(catalog_config, tmp_path, cached, monkeypatch):
+def test_native_ts_reads_registered_audio_index_and_budgets_mixture(catalog_config, tmp_path, cached, monkeypatch):
     import gzip
     from dataclasses import replace
 
@@ -134,7 +134,8 @@ def test_native_ts_reads_registered_audio_index_and_budgets_concat(catalog_confi
         assert dataset.records.sources[0].path != legacy.records.sources[0].path
     sampler = CatalogBatchSampler(dataset)
     assert list(sampler.slots) == [1, 1]
-    assert sampler.durations == pytest.approx([1.5, 1.5], abs=0.001)
+    # Batching counts the 0.75 s mixture only; the enrollment does not enter the budget.
+    assert sampler.durations == pytest.approx([0.75, 0.75], abs=0.001)
     sample = dataset[0]
     assert sample["audio_slot_count"] == 1 and len(sample["audios"]) == 1
     assert sample["duration"] == pytest.approx(1.5)

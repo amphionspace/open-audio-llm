@@ -1,0 +1,38 @@
+# Long-enrollment TS-ASR model (AmphionASR v5), read by open_audio_llm.longenroll.train
+# (--model_config). Copied from amphionasr-v5 configs/v5.yaml; the data side comes from
+# the Catalog recipe, not from this file.
+model:
+  enroll_encoder:
+    # Encoder features of the enrollment (depth d = output after d layers,
+    # 0 = conv output). Key = coarse (single depth), Value = concat of several
+    # depths (TTS: RVQ1 vs all 16 RVQ layers).
+    key_layer: 12
+    value_layers: [0, 4, 8, 12]
+    # The 24 local queries first read the mixture at this depth: 12 = input of
+    # the first GCA layer, same depth as the enrollment Key (0 would be the conv
+    # output, the draft's shallow acoustics). Must be <= the first GCA layer so
+    # the encoder still runs once.
+    mix_condition_layer: 12
+    # Enrollment encoder = frozen copy of the original layers [0, max depth):
+    # the whole enrollment goes through the (frozen) conv at once, attention
+    # runs inside 30 s windows, and each window is pooled to 32 slots. A tail
+    # shorter than min_tail_sec is merged into the previous window.
+    window_sec: 30.0
+    min_tail_sec: 5.0
+    compressor_dim: 512
+    chunk_queries: 32          # per 30 s window (390 encoder frames -> 32 slots)
+    local_window_slots: 1.5    # +-1.5 slots ~ +-1.4 s around each slot center
+    global_queries: 8
+    local_queries: 24
+    num_heads: 16
+    dropout: 0.1
+  gca:
+    enabled: true
+    layers: [12, 16, 20, 22]   # 0-based, 24-layer encoder
+    num_heads: 16
+    dropout: 0.0
+    gate_init: 0.01
+  speaker:                     # ECAPA bias on every frame of the encoder input
+    enabled: true
+    ecapa_dim: 192
+    gate_init: 0.01

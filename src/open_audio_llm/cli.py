@@ -303,10 +303,10 @@ def execute(config, attempt):
                 + selected.get("validation", [])
                 + selected.get("evaluation", [])
             ):
-                if item.get("sot_alignment_index"):
-                    item["sot_alignment_index"] = absolute(
-                        item["sot_alignment_index"], source.parent
-                    )
+                # The frozen copy lives in the attempt; keep source-relative files reachable.
+                for key in ("sot_alignment_index", "exclude_records"):
+                    if item.get(key):
+                        item[key] = absolute(item[key], source.parent)
             data.update(
                 source_config=str(source), source_sha256=hashlib.sha256(raw).hexdigest()
             )

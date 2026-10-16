@@ -1,0 +1,88 @@
+# 向 cluster-whai 提交一台 8 卡任务，训练长注册 TS-ASR（AmphionASR v5 模型，open_audio_llm.longenroll）。
+# 平台分配节点。训练参数与 longenroll-v5.yaml 相同；集群、镜像、挂载与 amphionasr-v4-acp.yaml 相同。
+# 解释器、W&B 凭据和 SenseCore 密钥都用 /workspace 上的绝对路径。
+# 一个 epoch：490258 是该配方在 8 卡下每卡的批次数（Catalog 采样计划实测，480 秒 / 14 条，只计待识别音频）。
+# 学习率：新增模块 1e-4、主干 1e-5，前 5000 步线性 warmup，之后余弦退火到 0.1 倍；weight decay 0.1，
+# bias、norm 权重与门控不加。bf16 权重 + DeepSpeed ZeRO-1。
+# checkpoint 暂不同步对象存储（未配 storage；本训练入口不接受 --storage_sync），留在 /workspace：
+# DeepSpeed 布局每个约 28 GB，保留最近 2 个。每 5000 步验证一次（54000 条，单卡份额实测约 4.5 分钟），共 100 次。
+version: 1
+runtime:
+  python: /workspace/workspace/lx/miniforge3/envs/amphionft/bin/python
+  cwd: {path: ../../..}
+  pythonpath:
+    - {path: ../../../src}
+    - {path: ../../../../audio-data-contract/src}
+  gpus: [0, 1, 2, 3, 4, 5, 6, 7]
+  distributed: {processes: 8, port: 29527}
+  threads: {omp: 2, openblas: 1}
+  environment:
+    TOKENIZERS_PARALLELISM: false
+data:
+  config: {path: ../data/amphionasr_v5.yaml}
+task:
+  kind: train
+  module: open_audio_llm.longenroll.train
+  arguments:
+    --model: {path: /workspace/model/Qwen3-ASR-1.7B}
+    --ecapa_model: {path: /workspace/model/wespeaker-ecapa-tdnn512-LM}
+    --model_config: {path: ../model/longenroll_v5.yaml}
+    --deepspeed: zero1
+    --output_dir: {path: "{attempt}/artifacts/training"}
+    --max_steps: 490258
+    --learning_rate: 0.0001
+    --backbone_lr: 0.00001
+    --warmup_steps: 5000
+    --min_lr_ratio: 0.1
+    --weight_decay: 0.1
+    --max_grad_norm: 1.0
+    --logging_steps: 20
+    --eval_steps: 5000
+    --eval_on_start: true
+    --decode_samples: 64
+    --save_steps: 5000
+    --save_total_limit: 2
+    # 每条样本 worker 约 0.13 秒（5 分钟注册约 1 秒），每卡 8 个进程远高于 GPU 的消耗。
+    --dataloader_num_workers: 8
+    --dataloader_prefetch_factor: 4
+    --dataloader_eval_num_workers: 8
+    --seed: 42
+preflight:
+  # 建索引，并按 8 卡、每批 14 条建采样计划、每个来源解码最短与最长样本，GPU 训练前发现数据问题。
+  - kind: prepare
+    module: open_audio_llm.data.catalog_cache
+    arguments:
+      --data_config: {path: ../data/amphionasr_v5.yaml}
+      --workers: 8
+      --batch-size: 14
+      --world-size: 8
+      --preflight-report: {path: "{attempt}/artifacts/data-preflight.json"}
+recording:
+  attempts_dir: {path: ../../../runs/longenroll-v5-acp/tasks/run/attempts}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: /workspace/workspace/lx/miniforge3/envs/amphionft/bin/python
+  credentials_file: {path: /workspace/workspace/lx/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 491822510-south-china-university-of-technology
+  project: open-audio-llm
+  name: longenroll-v5-acp
+  interval: 5
+cluster:
+  kind: acp
+  sco_home: {path: /workspace/workspace/lx/.local-tools/sco}
+  credentials: {path: /workspace/workspace/lx/.config/open-audio-llm/sensecore.env}
+  workspace: workspace-whai
+  aec2: cluster-whai
+  image: registry.cn-sh-01.sensecore.cn/ccr-wh/amphion-base:amphion-base-20260923072955
+  worker_spec: N3lS.Ii.I60.94c944g
+  nodes: 1
+  priority: NORMAL
+  quota_type: reserved
+  wait: true
+  mounts:
+    - 01a0c847-3d8d-7b42-8c75-50cbd189bb56:/workspace
+  environment:
+    NCCL_IB_TIMEOUT: 22
+    NCCL_IB_RETRY_CNT: 13
+    NCCL_IB_AR_THRESHOLD: 0

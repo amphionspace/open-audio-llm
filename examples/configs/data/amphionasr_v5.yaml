@@ -1,0 +1,486 @@
+# 长注册目标说话人配方。混合音、普通 ASR、热词与 v4 相同，目标说话人的注册重选为 1 秒～5 分钟，
+# 规则见 docs/guides/amphionasr-v5-data.md。一个 epoch 约 10.84 万小时（只计待识别音频）：
+# 普通 ASR 3.33 万小时（30.7%），热词 ASR 0.96 万小时（8.9%），目标说话人 6.55 万小时（60.5%）。
+# 注册音另有 22.8 万小时，不计入上面的小时数，也不计入组批时长。
+# Emilia2 三个训练集整集进入。LibriMix、AISHELLMix 的四个 train 划分各一整遍；
+# LibriMix 注册不足 1 秒的 4 条由 exclude_records 排除。
+# hw_sft 只用 train_hotwords（系统提示带 Hotwords: 的 834336 条），重复 8 遍。
+# 热词提示与 v3 相同：用记录里离线配好的列表（真热词 + 干扰词，原顺序），不丢词也不再补干扰词。
+# AudioRecord 的任务写在记录上。Lhotse 来源的 task 在这里指定。
+# catalog/replay 里 GigaSpeech、LibriSpeech、Common Voice、KeSpeech、AISHELL-2、FLEURS
+# 的 manifest 通过 legacy_asr、multilingual 指到本地副本。录音路径写在 manifest 里。
+seed: 42
+sampling_rate: 16000
+
+train:
+  # 目标说话人
+  - dataset_id: emilia2_mix
+    version: mix-20261013-v5enroll
+    split: train_2spk
+  - dataset_id: emilia2_mix
+    version: mix-20261013-v5enroll
+    split: train_3spk
+  - dataset_id: emilia2_mix
+    version: mix-20261013-v5enroll
+    split: train_neg
+  - dataset_id: emilia2_dialog
+    version: dialog-turn-taking-20261013-v5enroll
+    split: train_2spk
+  - dataset_id: emilia2_dialog
+    version: dialog-turn-taking-20261013-v5enroll
+    split: train_3spk
+  - dataset_id: emilia2_dialog
+    version: dialog-turn-taking-20261013-v5enroll
+    split: train_neg
+  - dataset_id: aishellmix
+    version: pack3-current-audio-record-20260910
+    split: train_1spk
+  - dataset_id: aishellmix
+    version: pack3-current-audio-record-20260910
+    split: train_2spk
+  - dataset_id: aishellmix
+    version: pack3-current-audio-record-20260910
+    split: train_3spk
+  - dataset_id: aishellmix
+    version: pack3-current-audio-record-20260910
+    split: train_neg
+  - dataset_id: librimix
+    version: 960-current-audio-record-20260910
+    split: train_1spk
+    exclude_records: amphionasr_v5_exclude_short_enroll.txt
+  - dataset_id: librimix
+    version: 960-current-audio-record-20260910
+    split: train_2spk
+    exclude_records: amphionasr_v5_exclude_short_enroll.txt
+  - dataset_id: librimix
+    version: 960-current-audio-record-20260910
+    split: train_3spk
+    exclude_records: amphionasr_v5_exclude_short_enroll.txt
+  - dataset_id: librimix
+    version: 960-current-audio-record-20260910
+    split: train_neg
+  - dataset_id: alimeeting_sdm
+    version: turn-taking-20261014-v5enroll
+    split: train_2spk
+  - dataset_id: alimeeting_sdm
+    version: turn-taking-20261014-v5enroll
+    split: train_3spk
+  - dataset_id: alimeeting_sdm
+    version: turn-taking-20261014-v5enroll
+    split: train_neg
+  - dataset_id: aishell4
+    version: turn-taking-20261014-v5enroll
+    split: train_2spk
+  - dataset_id: aishell4
+    version: turn-taking-20261014-v5enroll
+    split: train_3spk
+  - dataset_id: aishell4
+    version: turn-taking-20261014-v5enroll
+    split: train_neg
+  - dataset_id: ami_sdm
+    version: turn-taking-20261014-v5enroll
+    split: train_2spk
+  - dataset_id: ami_sdm
+    version: turn-taking-20261014-v5enroll
+    split: train_3spk
+  - dataset_id: ami_sdm
+    version: turn-taking-20261014-v5enroll
+    split: train_neg
+  - dataset_id: magicdata_ramc
+    version: turn-taking-20261014-v5enroll
+    split: train_2spk
+  - dataset_id: magicdata_ramc
+    version: turn-taking-20261014-v5enroll
+    split: train_neg
+  - dataset_id: chime6
+    version: turn-taking-20261014-v5enroll
+    split: train_2spk
+    reps: 2
+  - dataset_id: chime6
+    version: turn-taking-20261014-v5enroll
+    split: train_3spk
+    reps: 2
+  - dataset_id: chime6
+    version: turn-taking-20261014-v5enroll
+    split: train_neg
+    reps: 2
+
+  # 普通 ASR
+  - dataset_id: gigaspeech
+    version: legacy-20260804
+    split: train
+    task: asr
+  - dataset_id: wenetspeech_youtube
+    version: l-20261014
+    split: train
+    task: asr
+  - dataset_id: wenetspeech_podcast
+    version: l-20261014
+    split: train
+    task: asr
+  - dataset_id: emilia2_short
+    version: short-20261014
+    split: train_zh
+  - dataset_id: emilia2_short
+    version: short-20261014
+    split: train_en
+  - dataset_id: common_voice_en
+    version: legacy-20260804
+    split: train
+    task: asr
+  - dataset_id: kespeech
+    version: legacy-20260804
+    split: train
+    task: asr
+  - dataset_id: police_asr_unified
+    version: v1-20261009
+    split: train
+    task: asr
+    reps: 2
+  - dataset_id: vitw
+    version: 2m-20261013
+    split: train
+    task: asr
+  - dataset_id: aishell2
+    version: legacy-20260804
+    split: train
+    task: asr
+  - dataset_id: librispeech
+    version: legacy-20260804
+    split: train
+    task: asr
+  - dataset_id: alimeeting_sdm
+    version: asr-20261014
+    split: train
+  - dataset_id: aishell4
+    version: asr-20261014
+    split: train
+  - dataset_id: ami_sdm
+    version: asr-20261014
+    split: train
+  - dataset_id: magicdata_ramc
+    version: asr-20261014
+    split: train
+  - dataset_id: common_voice_zh
+    version: legacy-20260804
+    split: train
+    task: asr
+    reps: 2
+  - dataset_id: fleurs_zh
+    version: legacy-20260804
+    split: train
+    task: asr
+    reps: 3
+  - dataset_id: fleurs_en
+    version: legacy
+    split: train
+    task: asr
+    reps: 3
+
+  # 热词。train_hotwords 不含系统提示为空的 208981 条。
+  - dataset_id: hw_sft
+    version: hw-20261014
+    split: train_hotwords
+    reps: 8
+  - dataset_id: hard_hw_sft
+    version: hard-20261014
+    split: train
+    reps: 2
+
+# 只做 loss 监视。test 不进这里。
+# 全量 357106 条。8 卡、每卡 4 条时前向大约 0.2 秒一步，一轮要约 40 分钟。
+# 按各来源条数比例抽 54000 条，种子用上面的 seed，每轮同一批。
+# 单卡 12 进程读这批数据：对话大约 0.40 秒一步，其余被 0.2 秒的前向卡住，
+# 8 卡一轮大约 7 分钟。validation_max_duration 与组批同口径：目标说话人只算混合音（≤30 秒），
+# 1 秒～5 分钟的注册都进入验证；普通 ASR 超过 120 秒的片段不进入验证。
+validation_samples: 54000
+validation_max_duration: 120
+validation:
+  - dataset_id: emilia2_dialog
+    version: dialog-turn-taking-20261013-v5enroll
+    split: eval_2spk
+  - dataset_id: emilia2_dialog
+    version: dialog-turn-taking-20261013-v5enroll
+    split: eval_3spk
+  - dataset_id: emilia2_dialog
+    version: dialog-turn-taking-20261013-v5enroll
+    split: eval_neg
+  - dataset_id: emilia2_mix
+    version: mix-20261013-v5enroll
+    split: eval_2spk
+  - dataset_id: emilia2_mix
+    version: mix-20261013-v5enroll
+    split: eval_3spk
+  - dataset_id: emilia2_mix
+    version: mix-20261013-v5enroll
+    split: eval_neg
+  - dataset_id: alimeeting_sdm
+    version: turn-taking-20261014-v5enroll
+    split: eval_2spk
+  - dataset_id: alimeeting_sdm
+    version: turn-taking-20261014-v5enroll
+    split: eval_3spk
+  - dataset_id: alimeeting_sdm
+    version: turn-taking-20261014-v5enroll
+    split: eval_neg
+  - dataset_id: ami_sdm
+    version: turn-taking-20261014-v5enroll
+    split: eval_2spk
+  - dataset_id: ami_sdm
+    version: turn-taking-20261014-v5enroll
+    split: eval_3spk
+  - dataset_id: ami_sdm
+    version: turn-taking-20261014-v5enroll
+    split: eval_neg
+  - dataset_id: magicdata_ramc
+    version: turn-taking-20261014-v5enroll
+    split: eval_2spk
+  - dataset_id: magicdata_ramc
+    version: turn-taking-20261014-v5enroll
+    split: eval_neg
+  - dataset_id: chime6
+    version: turn-taking-20261014-v5enroll
+    split: eval_2spk
+  - dataset_id: chime6
+    version: turn-taking-20261014-v5enroll
+    split: eval_3spk
+  - dataset_id: chime6
+    version: turn-taking-20261014-v5enroll
+    split: eval_neg
+  - dataset_id: alimeeting_sdm
+    version: asr-20261014
+    split: eval
+  - dataset_id: ami_sdm
+    version: asr-20261014
+    split: eval
+  - dataset_id: magicdata_ramc
+    version: asr-20261014
+    split: eval
+  - dataset_id: police_asr_unified
+    version: v1-20261009
+    split: dev
+    task: asr
+  - dataset_id: gigaspeech
+    version: legacy-20260804
+    split: dev
+    task: asr
+  - dataset_id: common_voice_en
+    version: legacy-20260804
+    split: dev
+    task: asr
+  - dataset_id: common_voice_zh
+    version: legacy-20260804
+    split: dev
+    task: asr
+  - dataset_id: kespeech
+    version: legacy-20260804
+    split: dev
+    task: asr
+  - dataset_id: librispeech
+    version: legacy-20260804
+    split: dev
+    task: asr
+  - dataset_id: fleurs_zh
+    version: legacy-20260804
+    split: dev
+    task: asr
+  - dataset_id: fleurs_en
+    version: legacy
+    split: validation
+    task: asr
+# 每次都带热词列表。列表就是 v3 离线配好的真热词 + 干扰词（约 30 个），原样使用：
+# max_hotwords: 0 表示不再从热词池补干扰词，标注词也不随机丢掉。
+hotwords:
+  max_hotwords: 0
+  hotword_prompt_prob: 1.0
+  hotword_miss_prob: 0.0
+
+# 条数和 480 秒同时生效：再加一条会超过 480 秒时，不满 14 条也封批。
+# 目标说话人只算混合音时长，注册音不计入。14 条为 bf16 + DeepSpeed 下实测：最坏批次
+# （14 条 30 秒混合音 + 5 分钟注册）峰值 30.5 GiB，见 runs/longenroll-v5-dev-20261016 的 02-speed。
+batching:
+  max_duration: 480
+  max_samples: 14
+  num_buckets: 30
+  buffer_size: 2000
+  drop_last: false
+
+# 普通混响和远场冲激响应互斥，各 25%；其余不加混响。加噪 50%，信噪比 5–20 dB。
+# 加噪时 wham 占 30%，其余四个噪声源各占 17.5%。混响源仍等概率。
+# 三份 farfield_speech_noise 已经是远场人声，混入时不再卷积。wham、musan 保持干声。
+augmentation:
+  rir_prob: 0.25
+  far_rir_prob: 0.25
+  noise_prob: 0.5
+  noise_snr_db: [5.0, 20.0]
+
+noise_sources:
+  - dataset_id: wham
+    version: tr-20261014
+    split: train
+    weight: 30
+  - dataset_id: musan
+    version: legacy-20260804
+    split: noise
+    weight: 17.5
+  - dataset_id: farfield_speech_noise_1spk
+    version: "20261014"
+    split: train
+    weight: 17.5
+  - dataset_id: farfield_speech_noise_2spk
+    version: "20261014"
+    split: train
+    weight: 17.5
+  - dataset_id: farfield_speech_noise_3spk
+    version: "20261014"
+    split: train
+    weight: 17.5
+
+rir_sources:
+  - dataset_id: real_rir_slr28
+    version: prepared-20260908
+    split: all
+  - dataset_id: sim_rir_slr26
+    version: legacy-20260804
+    split: all
+  - dataset_id: sim_rir_slr28
+    version: legacy-20260804
+    split: all
+
+# 训练器不读 evaluation。这些是 Catalog 里已有的 test / eval 划分。
+evaluation:
+  - dataset_id: emilia2_dialog
+    version: dialog-turn-taking-20261013-v5enroll
+    split: test_2spk
+  - dataset_id: emilia2_dialog
+    version: dialog-turn-taking-20261013-v5enroll
+    split: test_3spk
+  - dataset_id: emilia2_dialog
+    version: dialog-turn-taking-20261013-v5enroll
+    split: test_neg
+  - dataset_id: emilia2_mix
+    version: mix-20261013-v5enroll
+    split: test_2spk
+  - dataset_id: emilia2_mix
+    version: mix-20261013-v5enroll
+    split: test_3spk
+  - dataset_id: emilia2_mix
+    version: mix-20261013-v5enroll
+    split: test_neg
+  - dataset_id: librimix
+    version: 960-current-audio-record-20260910
+    split: test_1spk
+  - dataset_id: librimix
+    version: 960-current-audio-record-20260910
+    split: test_2mix
+  - dataset_id: librimix
+    version: 960-current-audio-record-20260910
+    split: test_3mix
+  - dataset_id: librimix
+    version: 960-current-audio-record-20260910
+    split: test_2mix_neg
+  - dataset_id: librimix
+    version: 960-current-audio-record-20260910
+    split: test_3mix_neg
+  - dataset_id: alimeeting_sdm
+    version: turn-taking-20261014-v5enroll
+    split: test_2spk
+  - dataset_id: alimeeting_sdm
+    version: turn-taking-20261014-v5enroll
+    split: test_3spk
+  - dataset_id: alimeeting_sdm
+    version: turn-taking-20261014-v5enroll
+    split: test_neg
+  - dataset_id: alimeeting_sdm
+    version: asr-20261014
+    split: test
+  - dataset_id: aishell4
+    version: turn-taking-20261014-v5enroll
+    split: test_2spk
+  - dataset_id: aishell4
+    version: turn-taking-20261014-v5enroll
+    split: test_3spk
+  - dataset_id: aishell4
+    version: turn-taking-20261014-v5enroll
+    split: test_neg
+  - dataset_id: aishell4
+    version: asr-20261014
+    split: test
+  - dataset_id: ami_sdm
+    version: turn-taking-20261014-v5enroll
+    split: test_2spk
+  - dataset_id: ami_sdm
+    version: turn-taking-20261014-v5enroll
+    split: test_3spk
+  - dataset_id: ami_sdm
+    version: turn-taking-20261014-v5enroll
+    split: test_neg
+  - dataset_id: ami_sdm
+    version: asr-20261014
+    split: test
+  - dataset_id: magicdata_ramc
+    version: turn-taking-20261014-v5enroll
+    split: test_2spk
+  - dataset_id: magicdata_ramc
+    version: turn-taking-20261014-v5enroll
+    split: test_neg
+  - dataset_id: magicdata_ramc
+    version: asr-20261014
+    split: test
+  - dataset_id: chime6
+    version: turn-taking-20261014-v5enroll
+    split: test_2spk
+  - dataset_id: chime6
+    version: turn-taking-20261014-v5enroll
+    split: test_3spk
+  - dataset_id: chime6
+    version: turn-taking-20261014-v5enroll
+    split: test_neg
+  - dataset_id: police_asr_unified
+    version: v1-20261009
+    split: test
+    task: asr
+  - dataset_id: gigaspeech
+    version: legacy-20260804
+    split: test
+    task: asr
+  - dataset_id: librispeech
+    version: legacy-20260804
+    split: test_clean
+    task: asr
+  - dataset_id: librispeech
+    version: legacy-20260804
+    split: test_other
+    task: asr
+  - dataset_id: common_voice_en
+    version: legacy-20260804
+    split: test
+    task: asr
+  - dataset_id: common_voice_zh
+    version: legacy-20260804
+    split: test
+    task: asr
+  - dataset_id: aishell2
+    version: legacy-20260804
+    split: test
+    task: asr
+  - dataset_id: kespeech
+    version: legacy-20260804
+    split: test
+    task: asr
+  - dataset_id: fleurs_zh
+    version: legacy-20260804
+    split: test
+    task: asr
+  - dataset_id: fleurs_en
+    version: legacy
+    split: test
+    task: asr
+  - dataset_id: wenetspeech_youtube
+    version: l-20261014
+    split: test
+    task: asr
+
+catalog: ../../../../data/amphionasr/catalog
+roots: ../../../../data/amphionasr/roots.json
+metadata_cache: ../../../runs/amphionasr-v5/metadata-cache

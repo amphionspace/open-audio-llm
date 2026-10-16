@@ -333,3 +333,17 @@ def test_migration_rejects_cursor_that_does_not_split():
     with pytest.raises(ValueError, match="does not split"):
         CatalogBatchSampler(ds, world_size=4).migrate_state_dict(
             old.state_dict(), world_size=2, previous_paths={})
+
+
+def test_ts_asr_cost_counts_mixture_only():
+    from open_audio_llm.data.catalog_cache import sampling_cost
+
+    def slot(name, duration):
+        return SimpleNamespace(name=name, purpose=name, ref=SimpleNamespace(duration=duration))
+
+    ds = SimpleNamespace(augmentation=AugmentConfig(), sampling_rate=16000, message_format="qwen3_asr")
+    ts = SimpleNamespace(record=SimpleNamespace(
+        task="ts_asr", metadata={}, audio_slots=[slot("enrollment", 300.0), slot("mixture", 12.0)]))
+    asr = SimpleNamespace(record=SimpleNamespace(task="asr", metadata={}, audio_slots=[slot("primary", 12.0)]))
+    assert sampling_cost(ts, ds) == pytest.approx((12.0, 1), abs=1e-3)
+    assert sampling_cost(asr, ds) == pytest.approx((12.0, 1), abs=1e-3)

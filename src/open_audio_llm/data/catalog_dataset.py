@@ -87,8 +87,74 @@ def to_mono(audio, source_rate, sampling_rate):
     return np.asarray(audio, dtype=np.float32)
 
 
+# Containers soundfile cannot seek; lhotse reads them through audioread from the file start.
+SEEK_DECODE_SUFFIXES = frozenset({".m4a", ".mp4", ".aac", ".mp3"})
+# Decoding starts this far before the cut: an AAC frame needs its predecessor's overlap.
+SEEK_PREROLL_SECONDS = 0.1
+
+
+def _seek_decode(cut):
+    """Decode only the cut span of a compressed file, after a container seek.
+
+    lhotse's audioread path decodes from the beginning of the file, so a 5-minute
+    enrollment late in an hour-long m4a took several seconds. Returns the cut's
+    channels-first samples like ``cut.load_audio()``, or None to use that path.
+    On Emilia2 m4a the two agree to >= 44 dB SNR: audioread pipes 16-bit PCM from
+    the system ffmpeg, while PyAV returns its own decoder's float output.
+    """
+    recording = getattr(cut, "recording", None)
+    if recording is None or len(recording.sources) != 1 or recording.transforms:
+        return None
+    source = recording.sources[0]
+    if source.type != "file" or Path(source.source).suffix.lower() not in SEEK_DECODE_SUFFIXES:
+        return None
+    import av
+    from lhotse.utils import compute_num_samples
+
+    rate = recording.sampling_rate
+    first = compute_num_samples(cut.start, rate)
+    last = first + cut.num_samples
+    chunks, position = [], first
+    try:
+        with av.open(source.source) as container:
+            stream = container.streams.audio[0]
+            if stream.codec_context.sample_rate != rate:
+                return None
+            if cut.start > SEEK_PREROLL_SECONDS:
+                target = cut.start - SEEK_PREROLL_SECONDS
+                container.seek(int(target / stream.time_base), stream=stream, backward=True)
+            for frame in container.decode(stream):
+                data = frame.to_ndarray()
+                if frame.format.is_packed:
+                    data = data.reshape(-1, frame.layout.nb_channels).T
+                if frame.pts is not None:
+                    position = int(round(frame.pts * stream.time_base * rate))
+                lo, hi = max(first, position), min(last, position + data.shape[1])
+                if hi > lo:
+                    chunks.append(data[:, lo - position:hi - position])
+                position += data.shape[1]
+                if position >= last:
+                    break
+    except (av.error.FFmpegError, ValueError):
+        return None
+    audio = np.concatenate(chunks, axis=1) if chunks else None
+    if audio is None or audio.shape[1] != cut.num_samples:
+        return None
+    channels = [cut.channel] if isinstance(cut.channel, int) else list(cut.channel)
+    if channels == list(source.channels):
+        # Like lhotse: keep the decoded channels even when the index declares more
+        # (Emilia2 m4a are indexed as stereo but decode as mono).
+        return np.ascontiguousarray(audio, dtype=np.float32)
+    if audio.shape[0] != len(source.channels):
+        return None
+    rows = [source.channels.index(c) for c in channels]
+    return np.ascontiguousarray(audio[rows], dtype=np.float32)
+
+
 def load_mono(cut, sampling_rate):
-    audio = cut.load_audio()
+    audio = _seek_decode(cut)
+    if audio is None:
+        audio = cut.load_audio()
     if audio is None or audio.size == 0:
         raise ValueError(f"cut {cut.id!r} contains no audio")
     return to_mono(audio, cut.sampling_rate, sampling_rate)
@@ -252,8 +318,11 @@ def choose_from_groups(rng, groups, weights=None):
 class CatalogSwiftDataset(OnlineAudioDataset):
     """Read facts from memory or a shared index; decode audio on each __getitem__."""
 
-    def __init__(self, config, *, training=True, encode=None, grpo=False, message_format="generic", collect_metrics=False):
+    def __init__(self, config, *, training=True, encode=None, grpo=False, message_format="generic", collect_metrics=False,
+                 waveforms=False):
         self.collect_metrics = collect_metrics
+        # Hand training waveforms as arrays, not WAV bytes (consumers outside ms-swift).
+        self.waveforms = waveforms
         self.metadata_cache = config.get("metadata_cache")
         self.resolver = LhotseCatalogAudioResolver(
             config["catalog"],
@@ -622,7 +691,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             # Training still hands ms-swift FLOAT WAV bytes. Validation keeps
             # the waveform: the template reads it directly, so eval does not
             # encode a WAV and decode it again inside the dataloader worker.
-            if self.training:
+            if self.training and not self.waveforms:
                 buffer = BytesIO()
                 sf.write(buffer, audio, self.sampling_rate, format="WAV", subtype="FLOAT")
                 result[slot.name] = buffer.getvalue()
