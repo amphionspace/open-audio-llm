@@ -205,18 +205,11 @@ class LanceSourceIndex:
 
     def _from_supervision(self, row):
         from audio_data_contract import AudioRecord, AudioRef, AudioSlot
-        from lhotse import AudioSource, Recording
-        from lhotse.cut import MonoCut
 
         from .records import ResolvedAudioRecord
 
-        rate, start, frames = row["sample_rate"], row["start_frame"], row["num_frames"]
-        path = self.roots[row["root_alias"]] / row["relative_path"]
-        recording = Recording(
-            id=row["cut_id"], sources=[AudioSource("file", list(range(row["channels"] or 1)), str(path))],
-            sampling_rate=rate, num_samples=start + frames, duration=(start + frames) / rate)
-        cut = MonoCut(id=row["cut_id"], start=start / rate, duration=frames / rate,
-                      channel=row["channel"] or 0, recording=recording)
+        rate = row["sample_rate"]
+        cut = supervision_cut(row, self.roots[row["root_alias"]] / row["relative_path"])
         ref = AudioRef(self.spec.dataset_id, self.spec.version, self.split, row["cut_id"],
                        duration=cut.duration, purpose="primary")
         language = row["language"] if row["language"] != "N/A" else self.spec.languages[0]
@@ -230,6 +223,24 @@ class LanceSourceIndex:
         state = self.__dict__.copy()
         state["_dataset"], state["_pid"] = None, None
         return state
+
+
+def supervision_cut(row, path):
+    """The span of a long recording that a Lhotse supervision row names.
+
+    The recording is declared one second longer than the span ends. A recording that ends
+    exactly where the span does makes Lhotse read a span that starts at 0 as the whole file,
+    and then reject the length.
+    """
+    from lhotse import AudioSource, Recording
+    from lhotse.cut import MonoCut
+
+    rate, start, frames = row["sample_rate"], row["start_frame"], row["num_frames"]
+    recording = Recording(
+        id=row["cut_id"], sources=[AudioSource("file", list(range(row["channels"] or 1)), str(path))],
+        sampling_rate=rate, num_samples=start + frames + rate, duration=(start + frames) / rate + 1.0)
+    return MonoCut(id=row["cut_id"], start=start / rate, duration=frames / rate,
+                   channel=row["channel"] or 0, recording=recording)
 
 
 class _Allowed:
