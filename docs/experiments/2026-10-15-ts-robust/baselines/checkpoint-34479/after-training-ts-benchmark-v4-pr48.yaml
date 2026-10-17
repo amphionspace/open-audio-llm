@@ -1,0 +1,21 @@
+# checkpoint-34479 的 TS 面板基线，按新模型将使用的服务重跑：open-audio-llm #48（注册/混合补零到整 hop）
+# + #51（按请求切分注册，本运行不带 enroll_seconds，即固定 3 s），vLLM 0.18.0，关闭 prefix cache，贪心解码。
+# 之前的 v4 记录（run-20261015T093556Z-57fcd013）用交付包旧 runtime，未补零且开启 prefix cache，不与新模型直接对比。
+suite_id: asr-regression-native@1
+evaluator: ts-asr
+eval_set: open-audio-llm/ts-asr-benchmark@v4-20261015
+tsasr_server_url: http://127.0.0.1:18123
+tsasr_served_model: amphionasr-v3-tsasr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/checkpoint-34479
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: true
