@@ -797,10 +797,12 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             return load_mono(PoolClip(self.resolver, base, item["cut_id"], item.get("start"), item.get("duration")),
                              self.sampling_rate)
 
+        gaps = {"target": scene["target_gap"], "others": [other["gap"] for other in scene["interferers"]]
+                } if scene["mode"] == "full" else None
         return build_scene(
             rng, scene["mode"], [clip(t) for t in scene["targets"]],
             [[clip(u) for u in other["utts"]] for other in scene["interferers"]], config,
-            rir_loader=self._rir_loader(), sampling_rate=self.sampling_rate)
+            rir_loader=self._rir_loader(), sampling_rate=self.sampling_rate, gaps=gaps)
 
     def _online_slot(self, record, name, audio, rng):
         """Rebuild one slot of an online-mixed sample; return audio and the slot's augmentation."""

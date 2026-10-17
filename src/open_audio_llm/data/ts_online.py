@@ -221,18 +221,32 @@ def _on_timeline(audio, start, length):
     return out
 
 
-def build_scene(rng, mode, targets, others, config, *, rir_loader, sampling_rate, info=None):
+SCENE_MODES = ("alternate", "burst", "short", "full")
+
+
+def build_scene(rng, mode, targets, others, config, *, rir_loader, sampling_rate, info=None, gaps=None):
     """Mix a scene whose utterances are all given.
 
     alternate: the target's utterances and the others' take turns, never overlapping.
     burst / short: each other speaker talks all its utterances in a row and the target
     speaks inside that stretch, so the target is overlapped for (nearly) all of its time.
+    full: like burst, but every speaker has its own silence between utterances (``gaps``:
+    ``{"target": (low, high), "others": [(low, high), ...]}`` in seconds), so the target can speak
+    several times with other speakers talking in between and over it.
     Each speaker is reverberated as a whole, then the others are set against the target by SIR.
     """
-    if mode not in ("alternate", "burst", "short"):
+    if mode not in SCENE_MODES:
         raise ValueError(f"unknown scene mode {mode!r}")
-    low, high = getattr(config, f"{mode}_gap_seconds")
-    gap = lambda: int(rng.uniform(low, high) * sampling_rate)
+    if mode == "full":
+        if not gaps or len(gaps.get("others", ())) != len(others):
+            raise ValueError("a full scene needs a gap range for the target and for each other speaker")
+        draw = lambda bounds: (lambda: int(rng.uniform(*bounds) * sampling_rate))
+        gap, target_gap = None, draw(gaps["target"])
+        other_gaps = [draw(bounds) for bounds in gaps["others"]]
+    else:
+        low, high = getattr(config, f"{mode}_gap_seconds")
+        gap = lambda: int(rng.uniform(low, high) * sampling_rate)
+        target_gap, other_gaps = gap, [gap] * len(others)
     if mode == "alternate":
         # Turns in random order; the target's utterances keep their order (the transcript's).
         turns = [None] * len(targets) + [(j, k) for j, utterances in enumerate(others) for k in range(len(utterances))]
@@ -252,8 +266,8 @@ def build_scene(rng, mode, targets, others, config, *, rir_loader, sampling_rate
         for speaker, start, audio in placed:
             (target_track if speaker is None else tracks[speaker])[start : start + len(audio)] = audio
     else:
-        packed = [_track(utterances, gap) for utterances in others]
-        target = _track(targets, gap) if targets else np.zeros(0, dtype=np.float32)
+        packed = [_track(utterances, other_gap) for utterances, other_gap in zip(others, other_gaps)]
+        target = _track(targets, target_gap) if targets else np.zeros(0, dtype=np.float32)
         length = max([len(target), *map(len, packed)])
         target_track = _on_timeline(target, rng.randrange(length - len(target) + 1), length)
         tracks = [_on_timeline(audio, rng.randrange(length - len(audio) + 1), length) for audio in packed]
@@ -282,12 +296,15 @@ def scene_seconds(scene, config):
     The record's mixture slot only names the first target utterance, so this is what
     the sampler must budget for instead.
     """
+    track = lambda utterances, gap: sum(u["duration"] for u in utterances) + gap * max(len(utterances) - 1, 0)
+    if scene["mode"] == "full":
+        return max([track(scene["targets"], scene["target_gap"][1]),
+                    *(track(other["utts"], other["gap"][1]) for other in scene["interferers"])])
     gap = getattr(config, f"{scene['mode']}_gap_seconds")[1]
-    track = lambda utterances: sum(u["duration"] for u in utterances) + gap * max(len(utterances) - 1, 0)
     if scene["mode"] == "alternate":
         utterances = [u for u in scene["targets"]] + [u for other in scene["interferers"] for u in other["utts"]]
-        return track(utterances)
-    return max([track(scene["targets"]), *(track(other["utts"]) for other in scene["interferers"])])
+        return track(utterances, gap)
+    return max([track(scene["targets"], gap), *(track(other["utts"], gap) for other in scene["interferers"])])
 
 
 def _synthetic_noise(rng, kind, length):
