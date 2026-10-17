@@ -25,6 +25,8 @@ class CatalogBatchSampler(Sampler):
             "drop_last",
             "batch_merge",
             "merge_window",
+            "packing",
+            "accumulation",
         }
         if unknown:
             raise ValueError(f"Unknown batching options: {sorted(unknown)}")
@@ -36,6 +38,14 @@ class CatalogBatchSampler(Sampler):
             "max_samples", None if self.max_duration else batch_size
         )
         self.num_buckets = self.options.get("num_buckets", 30)
+        # "buckets": fixed-width duration bins. "sorted": sort each window by duration, cut
+        # batches whose padded size (n x longest) fits max_duration, and give the ranks of
+        # one optimizer update batches of equal cost so none waits for a longer one.
+        self.packing = self.options.get("packing", "buckets")
+        if self.packing not in {"buckets", "sorted"}:
+            raise ValueError("batching.packing must be 'buckets' or 'sorted'")
+        # Batches per rank in one optimizer update (gradient accumulation steps).
+        self.accumulation = self.options.get("accumulation", 1)
         self.buffer_size = self.options.get("buffer_size", 10000)
         for name, value in (
             ("batch_merge", self.batch_merge),
@@ -43,6 +53,7 @@ class CatalogBatchSampler(Sampler):
             ("max_samples", self.max_samples),
             ("num_buckets", self.num_buckets),
             ("buffer_size", self.buffer_size),
+            ("accumulation", self.accumulation),
         ):
             if value is not None and (type(value) is not int or value <= 0):
                 raise ValueError(f"batching.{name} must be a positive integer")
@@ -274,6 +285,51 @@ class CatalogBatchSampler(Sampler):
                     os.replace(temporary, path)
         return np.load(path, mmap_mode="r")
 
+    def _sorted_batches(self, keys):
+        """Cut batches from a duration-sorted window; the same audio slot count per batch."""
+        by_slots = {}
+        for key in keys:
+            by_slots.setdefault(self.slots[key[1]], []).append(key)
+        batches = []
+        for group in by_slots.values():
+            group.sort(key=lambda key: self.durations[key[1]])
+            batch = []
+            for key in group:
+                # Ascending order: the new sample is the longest, so it sets the padded length.
+                cost = self.durations[key[1]]
+                if batch and (
+                    (self.max_samples and len(batch) >= self.max_samples)
+                    or (self.max_duration and cost * (len(batch) + 1) > self.max_duration)
+                ):
+                    batches.append(batch)
+                    batch = []
+                batch.append(key)
+            if batch:
+                batches.append(batch)
+        return batches
+
+    def _balanced_updates(self, batches, rng):
+        """Order batches so the world_size x accumulation batches of one update cost alike.
+
+        Rank r takes every world_size-th batch, so a group is laid out micro-batch by
+        micro-batch; odd micro-batches run backwards (heavy next to light) and each
+        rank's total over the update stays close to the others'.
+        """
+        padded = lambda batch: len(batch) * max(self.durations[key[1]] for key in batch)
+        batches = sorted(batches, key=padded)
+        size = self.world_size * self.accumulation
+        groups = []
+        for start in range(0, len(batches), size):
+            group = batches[start : start + size]
+            if len(group) == size:
+                rows = [group[i : i + self.world_size] for i in range(0, size, self.world_size)]
+                group = [batch for i, row in enumerate(rows) for batch in (row[::-1] if i % 2 else row)]
+            groups.append(group)
+        if self.shuffle:
+            # Updates are cost-homogeneous; shuffle them so durations do not come in blocks.
+            rng.shuffle(groups)
+        return [batch for group in groups for batch in group]
+
     def _batches(self):
         if self._plan is not None:
             return self._plan
@@ -291,6 +347,9 @@ class CatalogBatchSampler(Sampler):
                 )
                 buckets.setdefault(bucket, []).append(key)
             chunk = []
+            if self.packing == "sorted":
+                chunk = self._sorted_batches(buffer)
+                buckets = {}
             for keys in buckets.values():
                 batch, duration = [], 0.0
                 for key in keys:
@@ -305,7 +364,9 @@ class CatalogBatchSampler(Sampler):
                     duration += cost
                 if batch:
                     chunk.append(batch)
-            if self.shuffle:
+            if self.packing == "sorted":
+                chunk = self._balanced_updates(chunk, rng)
+            elif self.shuffle:
                 # Bucketing otherwise turns short ASR and long TS into task blocks.
                 rng.shuffle(chunk)
             result.extend(chunk)

@@ -71,6 +71,8 @@ def install_catalog_loader(trainer, resume_checkpoint=None):
         world_size=args.world_size,
         shuffle=args.train_dataloader_shuffle,
     )
+    if sampler.packing == "sorted" and sampler.accumulation != args.gradient_accumulation_steps:
+        raise ValueError("batching.accumulation must equal gradient_accumulation_steps")
     if (sampler.batch_merge * args.gradient_accumulation_steps) % sampler.merge_window:
         raise ValueError("batching.merge_window must fit complete gradient-accumulation updates")
     if resume_checkpoint and not getattr(args, "reset_catalog_sampler", False):

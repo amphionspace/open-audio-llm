@@ -344,3 +344,45 @@ def test_bucketed_batches_interleave_without_replay():
     assert len(long) == 100
     # Bucket order would emit one long run per bucket inside the buffer.
     assert sum(a != b for a, b in zip(long, long[1:])) > 20
+
+
+def _padding(batches, durations):
+    padded = sum(len(b) * max(durations[key[1]] for key in b) for b in batches)
+    return 1 - sum(durations[key[1]] for b in batches for key in b) / padded
+
+
+def test_sorted_packing_cuts_padding_and_keeps_every_sample():
+    import random
+
+    rng = random.Random(0)
+    durations = [rng.uniform(1.0, 30.0) for _ in range(1200)]
+    common = {"max_samples": 12, "max_duration": 120, "buffer_size": 1200, "num_buckets": 4}
+    buckets = list(CatalogBatchSampler(dataset([{}], [1200], durations=durations, batching=common)))
+    packed = list(CatalogBatchSampler(
+        dataset([{}], [1200], durations=durations, batching={**common, "packing": "sorted"})))
+    assert sorted(indexes(packed)) == sorted(indexes(buckets)) == list(range(1200))
+    assert _padding(packed, durations) < _padding(buckets, durations) / 2
+    assert all(len(b) * max(durations[k[1]] for k in b) <= 120 or len(b) == 1 for b in packed)
+
+
+def test_sorted_packing_gives_ranks_of_one_update_equal_cost():
+    import random
+
+    rng = random.Random(1)
+    durations = [rng.uniform(1.0, 30.0) for _ in range(1600)]
+    world, accumulation = 4, 2
+    batching = {"max_samples": 8, "buffer_size": 1600, "packing": "sorted", "accumulation": accumulation}
+    ds = dataset([{}], [1600], durations=durations, batching=batching)
+    per_rank = [list(CatalogBatchSampler(ds, world_size=world, rank=r)) for r in range(world)]
+    cost = lambda batch: len(batch) * max(durations[key[1]] for key in batch)
+    updates = len(per_rank[0]) // accumulation
+    imbalance = []
+    for u in range(updates):
+        totals = [sum(cost(b) for b in rank[u * accumulation:(u + 1) * accumulation]) for rank in per_rank]
+        imbalance.append(max(totals) / (sum(totals) / world))
+    assert sum(imbalance) / len(imbalance) < 1.15
+
+
+def test_sorted_packing_rejects_unknown_mode():
+    with pytest.raises(ValueError, match="packing"):
+        CatalogBatchSampler(dataset([{}], [4], batching={"packing": "random"}))

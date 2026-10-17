@@ -140,6 +140,15 @@ train:
 实际显存仍受文本长度和模型影响。
 
 `num_buckets` 控制时长桶数量；`buffer_size` 控制交织流的分桶窗口。
+
+默认 `packing: buckets` 用固定宽度的时长桶。`packing: sorted` 改为：每个窗口内按时长排序，
+再切批，切批条件是「条数 × 最长一条」不超过 `max_duration`（补齐后的大小，而不是时长之和）。
+同时让同一次优化更新里各 rank 的批次大小相近：按补齐后的大小排序，每 `world_size ×
+accumulation` 个批次成一组，奇数个微批倒序分给各 rank，各 rank 一次更新的总量接近，
+再打乱各组的顺序。`accumulation` 必须等于 `gradient_accumulation_steps`，否则报错。
+各 rank 更新总量差得多时，快的 rank 要在同步处等最慢的一个，GPU 利用率会随之起伏。
+`packing` 和 `accumulation` 会进入采样器签名，换了就不能接着旧的位置续训，需要
+`--reset_catalog_sampler true`。
 同一训练 batch 始终保持相同音频槽位数，collator 补齐时间轴。
 不设置时长预算时，使用固定条数上限，仍按槽位分组。
 
