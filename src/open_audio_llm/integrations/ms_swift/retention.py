@@ -53,7 +53,11 @@ def supervised_forward(model, head, inputs, labels):
     shifted = F.pad(labels[:, 1:], (0, 1), value=-100)
     mask = shifted != -100
     rows = torch.arange(labels.shape[0], device=labels.device)[:, None].expand_as(mask)[mask]
-    hook = head.register_forward_pre_hook(lambda module, args: (args[0][mask],))
+    # Resolve the positions before the forward: a boolean mask inside the hook
+    # would make the host wait for the whole forward before launching the head.
+    index = mask.flatten().nonzero().squeeze(1)
+    hook = head.register_forward_pre_hook(
+        lambda module, args: (args[0].flatten(0, 1).index_select(0, index),))
     try:
         outputs = model(**inputs, use_cache=False)
     finally:

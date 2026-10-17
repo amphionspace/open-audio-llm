@@ -69,6 +69,7 @@ class CatalogSftArguments(CatalogArgumentsMixin, SftArguments):
     performance_logging: bool = True
     audio_encoder_parallel: bool = False
     audio_encoder_batching: bool = False
+    supervised_head_loss: bool = False
     # None keeps the training worker count. Eval sets these explicitly because
     # its forward is too short to hide audio loading at the training depth.
     dataloader_eval_num_workers: int | None = None
@@ -191,10 +192,17 @@ class CatalogTrainingMixin:
             trainer.args.dataloader_eval_prefetch_factor = getattr(
                 self.args, "dataloader_eval_prefetch_factor", None
             )
-            if self.args._catalog_config.get("objective", {}).get("sample_mean"):
+            sample_mean = self.args._catalog_config.get("objective", {}).get("sample_mean")
+            if sample_mean and getattr(self.args, "supervised_head_loss", False):
+                raise ValueError("The sample-mean objective already projects only supervised positions")
+            if sample_mean:
                 from .retention import install_retention_objective
 
                 install_retention_objective(trainer, self.args)
+            elif getattr(self.args, "supervised_head_loss", False):
+                from .supervised_head import enable_supervised_head
+
+                enable_supervised_head(trainer)
             install_catalog_loader(trainer, self._get_resume_checkpoint(trainer))
             if getattr(self.args, 'retention_eval_script', None):
                 from .retention_eval import RetentionEvaluationCallback
