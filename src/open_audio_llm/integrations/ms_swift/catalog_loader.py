@@ -18,6 +18,10 @@ from transformers import TrainerCallback
 
 from open_audio_llm.data.catalog_sampler import CatalogBatchSampler
 
+# A batch normally arrives within seconds. A worker silent this long is hung; failing
+# here names the cause instead of waiting for the 30-minute NCCL timeout on the other ranks.
+DATALOADER_TIMEOUT_S = 600
+
 
 class CatalogSamplerCallback(TrainerCallback):
     def __init__(self, sampler):
@@ -177,6 +181,7 @@ def install_catalog_loader(trainer, resume_checkpoint=None):
             params.update(
                 persistent_workers=args.dataloader_persistent_workers,
                 prefetch_factor=args.dataloader_prefetch_factor,
+                timeout=DATALOADER_TIMEOUT_S,
             )
         return DataLoaderShard(
             self.train_dataset, device=self.accelerator.device, **params
@@ -315,5 +320,6 @@ def catalog_eval_dataloader(trainer, eval_dataset):
             persistent_workers=True,
             prefetch_factor=prefetch,
             multiprocessing_context=_forkserver_context(),
+            timeout=DATALOADER_TIMEOUT_S,
         )
     return DataLoader(eval_dataset, **params)

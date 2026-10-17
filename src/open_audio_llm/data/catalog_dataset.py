@@ -24,6 +24,7 @@ from .catalog_resolver import LhotseCatalogAudioResolver
 from .interference_pool import PoolClip, pool_clips
 from .lance_source import SAMPLES_ROLE, lance_records, read_lance_audio
 from .online_dataset import TASK_TEMPLATES, OnlineAudioDataset
+from .m4a_backend import install_m4a_backend
 from .records import ResolvedAudioRecord
 from .sot import TIMESTAMP_FORMAT, with_sot_timestamps
 from .sot_alignment import AlignmentIndex
@@ -841,6 +842,8 @@ class CatalogSwiftDataset(OnlineAudioDataset):
     def __getitem__(self, idx):
         started = time.perf_counter()
         cpu_started = time.process_time()
+        # Per process: forkserver eval workers do not inherit the parent's lhotse backend.
+        install_m4a_backend()
         if self.collect_metrics:
             self._sample_metrics = dict(decode_s=0.0, wave_augment_s=0.0, audio_seconds=0.0)
         sample = super().__getitem__(idx)
