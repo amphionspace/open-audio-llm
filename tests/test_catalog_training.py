@@ -250,6 +250,27 @@ def test_scene_record_places_the_named_utterances_and_is_never_blanked(catalog_c
     assert len(mix) == int(3 * 0.4 * 16000) + 2 * int(0.2 * 16000)  # three turns and two gaps
 
 
+def test_full_scene_record_uses_the_gap_ranges_the_record_names(catalog_config, tmp_path):
+    config = _online_ts_config(catalog_config, tmp_path, {
+        "absent_prob": 1.0, "nonspeech_prob": 1.0, "enrollment_seconds": [0.2, 0.3], "speaker_rir_prob": 0.0,
+    })
+    span = {"cut_id": "speech", "start": 0.0, "duration": 0.4}
+    base = {"dataset_id": "ts", "version": "1", "split": "train"}
+    record = AudioRecord("scene", "ts_asr", (
+        AudioSlot("enrollment", AudioRef(**base, cut_id="speech", start=0.25)),
+        AudioSlot("mixture", AudioRef(**base, cut_id="speech", start=0.0, duration=0.4))),
+        "hello world", language="en",
+        metadata={"scene": {"mode": "full", "target_gap": [1.0, 1.0],
+                            "targets": [{**span, "text": "hello"}, {**span, "text": "world"}],
+                            "interferers": [{"speaker": "x", "gap": [0.1, 0.1], "utts": [span, span, span]}]}})
+    write_records([record], tmp_path / "ts.jsonl.gz")
+    sample = CatalogSwiftDataset(config, message_format="qwen3_asr")[0]
+    assert sample["solution"] == "language English<asr_text>hello world"
+    mix, _ = sf.read(BytesIO(sample["mix_wav"]))
+    # the target track is 0.4 + 1.0 + 0.4 s and the other speaker's is 3 x 0.4 + 2 x 0.1 s: the longer one is the window
+    assert len(mix) == int(1.8 * 16000)
+
+
 def test_online_mix_target_timing_changes_the_window(catalog_config, tmp_path):
     config = _online_ts_config(catalog_config, tmp_path, {
         "absent_prob": 0.0, "entry_prob": 1.0, "lead_seconds": [1.0, 1.0], "trail_seconds": [0.5, 0.5],

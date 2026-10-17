@@ -230,7 +230,7 @@ def test_short_scene_window_is_the_longest_speaker_and_gaps_come_from_the_config
     mixture = _scene("short", [target], [[_tone(500, 1.0), _tone(500, 1.0)]], short_gap_seconds=(0.5, 0.5))
     assert len(mixture) == int(2.5 * SR)
     with pytest.raises(ValueError):
-        _scene("full", [target], [])
+        _scene("bogus", [target], [])
 
 
 def test_scene_without_a_target_levels_the_others_against_the_first():
@@ -238,6 +238,49 @@ def test_scene_without_a_target_levels_the_others_against_the_first():
     mixture = _scene("burst", [], [[first], [second]], seed=1, burst_gap_seconds=(0, 0))
     assert len(mixture) == SR
     assert _active(mixture, 500).any() and _active(mixture, 700).any() and not _active(mixture, 200).any()
+
+
+def _full(targets, others, gaps, seed=0):
+    return build_scene(random.Random(seed), "full", targets, others, OnlineMixConfig(speaker_rir_prob=0, sir_db=(0, 0)),
+                       rir_loader=None, sampling_rate=SR, gaps=gaps)
+
+
+def test_full_scene_gives_each_speaker_its_own_silence_and_lets_the_target_speak_repeatedly():
+    targets = [_tone(200, 1.0), _tone(300, 1.0), _tone(400, 1.0)]
+    others = [[_tone(500, 1.0)] * 6, [_tone(700, 1.0)] * 2]
+    gaps = {"target": (2.0, 2.0), "others": [(0.5, 0.5), (3.0, 3.0)]}
+    for seed in range(10):
+        mixture = _full(targets, others, gaps, seed)
+        # the longest track (6 x 1 s + 5 x 0.5 s) sets the window
+        assert len(mixture) == int(8.5 * SR)
+        on = [np.flatnonzero(_active(mixture, f)) for f in (200, 300, 400)]
+        assert all(len(frames) for frames in on)  # the target speaks all three times
+        # target utterances keep their order, each separated by the 2 s silence (frames are 0.05 s)
+        assert on[0].max() < on[1].min() < on[1].max() < on[2].min()
+        assert on[1].min() - on[0].max() >= 2.0 * SR / 800 - 2
+
+
+def test_full_scene_needs_a_gap_range_for_every_speaker():
+    with pytest.raises(ValueError):
+        _full([_tone(200, 1.0)], [[_tone(500, 1.0)]], None)
+    with pytest.raises(ValueError):
+        _full([_tone(200, 1.0)], [[_tone(500, 1.0)]], {"target": (0, 1), "others": []})
+
+
+def test_full_scene_seconds_uses_the_gaps_the_record_names():
+    from open_audio_llm.data.ts_online import scene_seconds
+
+    config = OnlineMixConfig(speaker_rir_prob=0, sir_db=(0, 0))
+    targets = [_tone(200, 1.0), _tone(300, 1.5)]
+    others = [[_tone(500, 1.0)] * 3, [_tone(700, 1.0), _tone(900, 2.0)]]
+    gaps = {"target": (0.2, 4.0), "others": [(0.0, 0.5), (1.0, 6.0)]}
+    scene = {"mode": "full", "target_gap": gaps["target"],
+             "targets": [{"duration": len(t) / SR} for t in targets],
+             "interferers": [{"gap": g, "utts": [{"duration": len(u) / SR} for u in o]} for g, o in zip(gaps["others"], others)]}
+    bound = scene_seconds(scene, config)
+    lengths = [len(_full(targets, others, gaps, seed)) / SR for seed in range(40)]
+    assert max(lengths) <= bound + 1e-3
+    assert max(lengths) > bound - 1.0
 
 
 @pytest.mark.parametrize("mode", ["alternate", "burst", "short"])
