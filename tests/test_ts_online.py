@@ -238,3 +238,20 @@ def test_scene_without_a_target_levels_the_others_against_the_first():
     mixture = _scene("burst", [], [[first], [second]], seed=1, burst_gap_seconds=(0, 0))
     assert len(mixture) == SR
     assert _active(mixture, 500).any() and _active(mixture, 700).any() and not _active(mixture, 200).any()
+
+
+@pytest.mark.parametrize("mode", ["alternate", "burst", "short"])
+def test_scene_seconds_bounds_the_mixture_the_scene_builds(mode):
+    from open_audio_llm.data.ts_online import scene_seconds
+
+    config = OnlineMixConfig(speaker_rir_prob=0, sir_db=(0, 0))
+    targets = [_tone(200, 1.0), _tone(300, 1.5)]
+    others = [[_tone(500, 1.0)], [_tone(700, 1.0), _tone(900, 2.0)]]
+    scene = {"mode": mode,
+             "targets": [{"duration": len(t) / SR} for t in targets],
+             "interferers": [{"utts": [{"duration": len(u) / SR} for u in o]} for o in others]}
+    bound = scene_seconds(scene, config)
+    lengths = [len(build_scene(random.Random(seed), mode, targets, others, config, rir_loader=None, sampling_rate=SR)) / SR
+               for seed in range(30)]
+    assert max(lengths) <= bound + 1e-3
+    assert max(lengths) > bound - 1.0  # a bound, not a loose multiple

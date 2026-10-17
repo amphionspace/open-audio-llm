@@ -274,6 +274,13 @@ def sampling_cost(row, dataset):
         if duration is None:
             duration = dataset.resolver.get_duration(slot.ref)
         total += duration / slowest + 1 / dataset.sampling_rate
+    scene = row.record.metadata.get("scene")
+    if scene is not None:
+        from .ts_online import OnlineMixConfig, scene_seconds
+
+        # The mixture slot is only the first target; the scene is longer (see scene_seconds).
+        config = OnlineMixConfig(**(row.record.metadata.get("online_mix") or {}))
+        total = scene["enrollment"]["duration"] + scene_seconds(scene, config) + 2 / dataset.sampling_rate
     if row.record.metadata.get("enrollment_config") is not None:
         from .target_sot import EnrollmentConfig
 
