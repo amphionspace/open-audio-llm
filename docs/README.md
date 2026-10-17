@@ -14,6 +14,7 @@
 | --- | --- |
 | [训练入口与复现](guides/training.md) | SFT / GRPO / rollout 的配置化启动、冻结范围与恢复 |
 | [在线训练数据](guides/online-training-data.md) | Catalog 在线取样、clean 过滤、增强和断点恢复 |
+| [AmphionASR v4 数据配方](guides/amphionasr-v4-data.md) | v4 一轮的登记来源、时长、验证子集和增强 |
 | [ACP 多机训练](guides/acp.md) | 通过 `cluster` 段向 SenseCore ACP 算力池提交任务 |
 | [多目标说话人 SOT](guides/multi-target-sot.md) | 0～3 段注册音频的日志转写训练与评测 |
 | [使用 AmphionEval 评测](guides/evaluation.md) | 训练与评测的边界协议、环境和评测步骤 |

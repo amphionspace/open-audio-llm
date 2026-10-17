@@ -50,15 +50,14 @@ token 数或梯度占比**，长 TS 仍可能贡献更多监督，当前 TS 目�
 
 ## 输入与训练参数
 
-普通 ASR 的 system 为空；TS system 与 AmphionASR v3 相同。注册音取前 3 秒，
-不足补零，混合音保持独立，中间不加静音。用户轮只有一个 `<audio>`，mixture
+普通 ASR 的 system 为空；TS system 与 AmphionASR v3 相同。注册音用传入的原时长，
+不截断、不补零，混合音保持独立，中间不加静音。用户轮只有一个 `<audio>`，mixture
 走 `mix_wav`。编码器对两段分别提 Mel、分别卷积，在进 audio transformer 前插入
 可学习 SEP。中文答案为 `language Chinese<asr_text>文本`，英文使用 `English`，
 目标说话人不存在时为 `language None<asr_text>`。
 
-波形增强作用在各段上，参考段始终占 3 秒。变速概率 25%，SpecAugment
-概率 15%，不加噪或混响。主音频最多 20 秒、最慢速度 0.9，TS 最长
-`20 / 0.9 + 3 ≈ 25.23` 秒；组批预算这 3 秒注册前缀。训练不要设置
+波形增强作用在各段上，注册音时长随记录变化。变速概率 25%，SpecAugment
+概率 15%，不加噪或混响。主音频最多 20 秒、最慢速度 0.9；组批按注册音和混合音的实际时长合计。训练不要设置
 `AMPHION_TSASR_INSERT_SEP`。评测 concat 波形（注册 3 秒紧接混合音）使用
 [独立服务配置](../../configs/serve/tsasr.yaml)，由启动器按 YAML 生成 SEP 与注意力设置。
 

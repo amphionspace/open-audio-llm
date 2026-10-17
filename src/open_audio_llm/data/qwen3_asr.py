@@ -7,8 +7,8 @@ from open_audio_llm.tsasr.ts_prompt import TS_CONCAT_SYSTEM
 from .sot import TIMESTAMP_FORMAT, TIMESTAMP_SYSTEM
 from .target_sot import TARGET_FORMAT, target_prompt
 
-# v3: enroll is 3s; mixture stays a separate clip. No waveform silence.
-ENROLL_SECONDS = 3
+# Whisper Mel hop (160 samples at 16 kHz).
+MEL_HOP_SECONDS = 0.01
 SOT_SYSTEM = (
     "Transcribe every speaker in the mixture. Output one line per speaker as "
     "[S1] text, [S2] text, and so on, ordered by when each speaker first speaks. "
@@ -39,24 +39,44 @@ def _wav_bytes(waveform, sampling_rate):
     return buffer.getvalue()
 
 
-def prepare_ts_clips(audios, sampling_rate):
-    """Crop enrollment to 3s and keep mixture as its own clip.
+def _clip_samples(value, sampling_rate):
+    """Return one mono waveform. Arrays are already at the training rate."""
+    import numpy as np
 
-    The template extracts Mel and runs conv on each clip, then inserts SEP.
-    """
+    if isinstance(value, np.ndarray):
+        return np.ascontiguousarray(value, dtype=np.float32).reshape(-1), True
     from io import BytesIO
 
-    import numpy as np
     import soundfile as sf
 
-    enrollment, rate = sf.read(BytesIO(audios[0]), dtype="float32")
-    mixture, mix_rate = sf.read(BytesIO(audios[1]), dtype="float32")
-    if rate != sampling_rate or mix_rate != sampling_rate:
+    audio, rate = sf.read(BytesIO(value), dtype="float32", always_2d=False)
+    if int(rate) != int(sampling_rate):
         raise ValueError("TS-ASR audio must be resampled before the encoder")
-    count = ENROLL_SECONDS * sampling_rate
-    enrollment = np.asarray(enrollment, dtype=np.float32).reshape(-1)
-    mixture = np.asarray(mixture, dtype=np.float32).reshape(-1)
-    enrollment = np.pad(enrollment[:count], (0, max(0, count - len(enrollment))))
+    audio = np.asarray(audio, dtype=np.float32)
+    if audio.ndim > 1:
+        audio = audio.mean(axis=-1)
+    return np.ascontiguousarray(audio.reshape(-1)), False
+
+
+def prepare_ts_clips(audios, sampling_rate):
+    """Keep enrollment and mixture as separate clips at the lengths passed in.
+
+    The template extracts Mel and runs conv on each clip, then inserts SEP.
+    Enrollment is not cropped or zero-padded. Arrays skip the WAV round-trip
+    that the training path still uses for ms-swift's bytes loader.
+    """
+    import numpy as np
+
+    enrollment, enroll_array = _clip_samples(audios[0], sampling_rate)
+    mixture, mix_array = _clip_samples(audios[1], sampling_rate)
+    # Serving pads each clip to whole Mel hops before extraction (vLLM pads the
+    # clip, the TS service requires a hop-aligned enrollment); without the same
+    # padding training would see one frame fewer at each partial hop.
+    hop = int(sampling_rate * MEL_HOP_SECONDS)
+    enrollment = np.pad(enrollment, (0, -len(enrollment) % hop))
+    mixture = np.pad(mixture, (0, -len(mixture) % hop))
+    if enroll_array and mix_array:
+        return enrollment, mixture
     return _wav_bytes(enrollment, sampling_rate), _wav_bytes(mixture, sampling_rate)
 
 

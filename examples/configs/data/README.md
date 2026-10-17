@@ -6,6 +6,11 @@ YAML 保留配方意图和关键约束，具体参数在这里查询；重复来
 原生 Qwen3-ASR 热词训练使用 [qwen3_asr_hotwords.yaml](qwen3_asr_hotwords.yaml)，
 启动与评估方法见 [原生模型配方](../../train/qwen3-asr/README.md)。
 
+AmphionASR v4 使用 [amphionasr_v4.yaml](amphionasr_v4.yaml)。Catalog 与 roots 指向
+`data/amphionasr`，起点是官方 Qwen3-ASR-1.7B，训练入口是
+[amphionasr-v4.yaml](../train/amphionasr-v4.yaml)。各来源的登记、时长和增强见
+[v4 数据配方](../../../docs/guides/amphionasr-v4-data.md)。
+
 ## 基础设置
 
 | 参数 | 含义 |
@@ -96,10 +101,11 @@ replay 模式使用 window_samples 作为分桶窗口，覆盖 batching.buffer_s
 | `frequency_mask_width` | 频率遮挡宽度上限，单位 mel 通道。 |
 | `noise_prob` | 加噪概率；启用前必须填写 noise_sources。 |
 | `noise_snr_db` | 均匀采样的信噪比范围，单位 dB；越低噪声越强。 |
-| `rir_prob` | 混响概率；启用前必须填写 rir_sources。 |
+| `rir_prob` | 普通混响概率；从每个混响源等概率抽一条，卷积一次。与 `far_rir_prob` 互斥，两者之和不能超过 1。 |
+| `far_rir_prob` | 远场冲激响应概率；换成远场响应后再卷积一次，不再叠加普通混响。启用前同样填写 rir_sources。 |
 
 顶层 `noise_sources` 和 `rir_sources` 分别提供噪声、RIR 来源，关闭对应增强时可为空。
-每项使用前述 dataset_id、version、split 引用 Catalog 的 recordings 或 cuts，例如：
+每个来源先按 `weight` 抽中，未写权重时等概率；再在该来源内部均匀抽一条。来源可以是 Lhotse recordings、cuts，或带 audio-index 的 audio-record。例如：
 
 ```yaml
 noise_sources:

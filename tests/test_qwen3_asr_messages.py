@@ -82,7 +82,7 @@ def test_ts_prompt_and_negative_keep_native_task_boundary():
 
 
 @pytest.mark.parametrize("enroll_seconds", [1, 4])
-def test_ts_clips_crop_enrollment_and_keep_mixture_separate(enroll_seconds):
+def test_ts_clips_keep_enrollment_length_and_mixture_separate(enroll_seconds):
     from io import BytesIO
 
     import numpy as np
@@ -99,8 +99,32 @@ def test_ts_clips_crop_enrollment_and_keep_mixture_separate(enroll_seconds):
     enroll_wav, enroll_rate = sf.read(BytesIO(enroll))
     mix_wav, mix_rate = sf.read(BytesIO(mix))
     assert enroll_rate == mix_rate == 16000
-    assert len(enroll_wav) == 3 * 16000 and len(mix_wav) == 2 * 16000
-    assert np.all(enroll_wav[:min(enroll_seconds, 3) * 16000] == 0.25)
-    if enroll_seconds < 3:
-        assert np.all(enroll_wav[enroll_seconds * 16000:] == 0)
+    assert len(enroll_wav) == enroll_seconds * 16000 and len(mix_wav) == 2 * 16000
+    assert np.all(enroll_wav == 0.25)
     assert np.all(mix_wav == 0.5)
+
+
+def test_ts_clips_keep_arrays_without_rewriting_wav():
+    import numpy as np
+
+    from open_audio_llm.data.qwen3_asr import prepare_ts_clips
+
+    enrollment = np.full(16000, 0.25, dtype=np.float32)
+    mixture = np.full(32000, 0.5, dtype=np.float32)
+    enroll, mix = prepare_ts_clips([enrollment, mixture], 16000)
+    assert isinstance(enroll, np.ndarray) and isinstance(mix, np.ndarray)
+    assert len(enroll) == 16000 and len(mix) == 32000
+    np.testing.assert_array_equal(enroll, enrollment)
+    np.testing.assert_array_equal(mix, mixture)
+
+
+def test_ts_clips_pad_each_clip_to_whole_mel_hops():
+    import numpy as np
+
+    from open_audio_llm.data.qwen3_asr import prepare_ts_clips
+
+    enrollment = np.full(16001, 0.25, dtype=np.float32)
+    mixture = np.full(32159, 0.5, dtype=np.float32)
+    enroll, mix = prepare_ts_clips([enrollment, mixture], 16000)
+    assert len(enroll) == 16160 and len(mix) == 32160
+    assert np.all(enroll[16001:] == 0) and np.all(mix[32159:] == 0)

@@ -2,6 +2,15 @@
 
 原生 Qwen3-ASR 权重与 Catalog 数据在取样时解码、采样候选热词并增强。`amphion_asr_1.7b` 是插件注册名。TS 回放见 [TS_ASR.md](TS_ASR.md)，全说话人转写见 [SOT.md](SOT.md)。
 
+从官方 Qwen3-ASR-1.7B 出发、用 v3 的 sep_token 路径，并改用 `data/amphionasr/catalog` 时，用
+[amphionasr-v4.yaml](../../configs/train/amphionasr-v4.yaml)：
+
+登记来源、时长和增强见 [v4 数据配方](../../../docs/guides/amphionasr-v4-data.md)。
+
+```bash
+open-audio-llm train --config examples/configs/train/amphionasr-v4.yaml --dry-run
+```
+
 已验证训练环境为 Python 3.11、torch 2.10.0+cu128、Transformers 4.57.6、ms-swift 4.1.0、qwen-asr 0.0.6、PEFT 0.18.1。安装 `data`、`swift`、`qwen3-asr` 可选依赖；原生卷积 hook 和并行编码依赖 qwen-asr 0.0.6 的内部接口，其他版本未作等价验证。
 
 填写 [训练配置](../../configs/train/qwen3-asr.yaml) 的模型、Python 和设备，以及 [数据配置](../../configs/data/qwen3_asr_hotwords.yaml) 的 Catalog/roots：

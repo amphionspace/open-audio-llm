@@ -101,7 +101,15 @@ def load_enroll_wav(
     enroll_sec: Optional[float] = None,
     sr: int = SAMPLE_RATE,
     enroll_start_sec: float = 0.0,
+    full: bool = False,
 ) -> np.ndarray:
+    """Read an enrollment file.
+
+    ``full`` keeps every sample from ``enroll_start_sec`` onward. The 3s crop
+    and zero pad remain for concat transport, which still splits at a fixed prefix.
+    """
+    if full:
+        return _read_mono(enroll_path, sr=sr, start_sec=enroll_start_sec)
     if enroll_sec is None:
         enroll_sec = configured_enroll_sec()
     wav = _read_mono(

@@ -206,6 +206,21 @@ class OnlineAudioDataset(Dataset):
             record = sample_enrollment(record, EnrollmentConfig(**record.metadata["enrollment_config"]),
                                        seed, fixed=fixed)
             resolved = replace(resolved, record=record)
+        if self.training and record.metadata.get("online_mix") is not None:
+            from .ts_online import OnlineMixConfig
+
+            # Decide absence before rendering: it changes the transcript to empty.
+            config = OnlineMixConfig(**record.metadata["online_mix"])
+            nonspeech = bool(config.nonspeech_prob) and random.Random(
+                f"{seed}:online-nonspeech").random() < config.nonspeech_prob
+            # A scene names its utterances and transcript, so it is never blanked.
+            scene = bool(record.metadata.get("scene"))
+            if not scene and (nonspeech or random.Random(f"{seed}:online-absent").random() < config.absent_prob):
+                record = replace(record, target="",
+                                 labels={**record.labels, "target_present": False},
+                                 metadata={**record.metadata, "online_absent": True,
+                                           **({"online_nonspeech": True} if nonspeech else {})})
+                resolved = replace(resolved, record=record)
         if record.metadata.get("enrollment_view"):
             from .qwen3_asr import native_messages
 

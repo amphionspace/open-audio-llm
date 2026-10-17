@@ -32,6 +32,7 @@ class LhotseCatalogAudioResolver:
         roots_path: str | Path,
         index_cache: str | Path | None = None,
     ) -> None:
+        self.catalog_path, self.roots_path = catalog_path, roots_path
         self.catalog = load_catalog(catalog_path)
         self.roots = load_roots(roots_path)
         self._cuts: dict[tuple[str, str, str], dict[str, object]] = {}
@@ -88,6 +89,55 @@ class LhotseCatalogAudioResolver:
         raise ValueError(
             f"{spec.key}:{split_name} has no supported Lhotse artifact mapping"
         )
+
+    def iter_recordings(self, dataset_id: str, version: str, split_name: str):
+        """Yield recordings for augmentation. Audio-index rows are included."""
+        spec = self.catalog.get(dataset_id, version)
+
+        def paths(role):
+            return resolve_split(
+                self.catalog, spec.dataset_id, spec.version, split_name, role, self.roots
+            )
+
+        recording_paths = paths("recordings")
+        if recording_paths:
+            for path in recording_paths:
+                yield from load_manifest_lazy(path)
+            return
+        index_paths = paths("audio_index")
+        if index_paths:
+            yield from self._index_recordings(index_paths)
+            return
+        cut_paths = paths("cuts")
+        if cut_paths:
+            yield from CutSet.from_cuts(
+                cut for path in cut_paths for cut in load_manifest_lazy(path)
+            )
+            return
+        raise ValueError(
+            f"{spec.key}:{split_name} has no recordings, audio index, or cuts"
+        )
+
+    def _index_recordings(self, paths):
+        for path in paths:
+            opener = gzip.open if path.suffix == ".gz" else open
+            with opener(path, "rt", encoding="utf-8") as stream:
+                for line in stream:
+                    if not line.strip():
+                        continue
+                    row = json.loads(line)
+                    root = Path(self.roots[row["root_alias"]])
+                    audio = (root / row["relative_path"]).resolve()
+                    if not audio.is_relative_to(root):
+                        raise ValueError(f"audio index path escapes root: {row['cut_id']}")
+                    channels = int(row.get("channels") or 1)
+                    yield Recording(
+                        id=row["cut_id"],
+                        sources=[AudioSource("file", list(range(channels)), str(audio))],
+                        sampling_rate=int(row["sample_rate"]),
+                        num_samples=int(row["num_frames"]),
+                        duration=float(row["duration"]),
+                    )
 
     def get_cut(self, ref: AudioRef):
         spec = self.catalog.get(ref.dataset_id, ref.version)

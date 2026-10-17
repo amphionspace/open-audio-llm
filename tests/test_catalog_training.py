@@ -1,4 +1,5 @@
 import json
+import random
 from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
@@ -30,7 +31,12 @@ from open_audio_llm.data.augment import (
     augment_features,
     augment_waveform,
 )
-from open_audio_llm.data.catalog_dataset import CatalogSwiftDataset, read_data_config
+from open_audio_llm.data.catalog_dataset import (
+    CatalogSwiftDataset,
+    choose_from_groups,
+    read_data_config,
+    source_weights,
+)
 
 
 @pytest.mark.parametrize("cached", [False, True])
@@ -128,20 +134,164 @@ def test_native_ts_reads_registered_audio_index_and_budgets_concat(catalog_confi
         assert dataset.records.sources[0].path != legacy.records.sources[0].path
     sampler = CatalogBatchSampler(dataset)
     assert list(sampler.slots) == [1, 1]
-    assert sampler.durations == pytest.approx([3.75, 3.75], abs=0.001)
+    assert sampler.durations == pytest.approx([1.5, 1.5], abs=0.001)
     sample = dataset[0]
     assert sample["audio_slot_count"] == 1 and len(sample["audios"]) == 1
-    assert sample["duration"] == 3.75
-    assert sample["_performance"]["audio_seconds"] == 3.75
+    assert sample["duration"] == pytest.approx(1.5)
+    assert sample["_performance"]["audio_seconds"] == pytest.approx(1.5)
     enroll, _ = sf.read(BytesIO(sample["audios"][0]))
     mix, _ = sf.read(BytesIO(sample["mix_wav"]))
-    assert len(enroll) == 3 * 16000 and len(mix) == int(0.75 * 16000)
+    assert len(enroll) == int(0.75 * 16000) and len(mix) == int(0.75 * 16000)
     assert dataset[1]["solution"] == "language None<asr_text>"
     assert len(dataset.resolver._audio_indexes) == 1
     # A source without an applicable clean version remains usable, including TS.
     raw_config = {**catalog_config, "train": [{**catalog_config["train"][0], "require_clean_pass": False}]}
     raw = CatalogSwiftDataset(raw_config, message_format="qwen3_asr")
     assert len(raw) == 6 and raw[2]["audio_slot_count"] == 1
+
+
+def _online_ts_config(catalog_config, tmp_path, online_mix):
+    import gzip
+
+    row = {"cut_id": "speech", "root_alias": "data", "relative_path": "speech.wav",
+           "sample_rate": 16000, "channels": 1, "num_frames": 16000, "duration": 1.0}
+    with gzip.open(tmp_path / "index.jsonl.gz", "wt") as stream:
+        stream.write(json.dumps(row) + "\n")
+    record = AudioRecord("ts", "ts_asr", tuple(
+        AudioSlot(name, AudioRef("ts", "1", "train", "speech", start=0.25))
+        for name in ("enrollment", "mixture")
+    ), "hello", language="en")
+    write_records([record], tmp_path / "ts.jsonl.gz")
+    spec = DatasetSpec(
+        dataset_id="ts", version="1", languages=("en",), tasks=("ts_asr",),
+        artifacts=(ArtifactRef("records", "audio-records", "data", "ts.jsonl.gz"),
+                   ArtifactRef("index", "audio-index", "data", "index.jsonl.gz")),
+        splits={"train": Split({"records": ("records",), "audio_index": ("index",)})},
+    )
+    with Path(catalog_config["catalog"]).open("a") as stream:
+        stream.write("\n" + json.dumps(spec.to_dict()))
+    catalog_config.update(
+        train=[{"dataset_id": "ts", "version": "1", "split": "train", "online_mix": online_mix}],
+        interference_sources=[{"dataset_id": "speech", "version": "1", "split": "train", "language": "en"}],
+        augmentation={"noise_prob": 0.5},
+    )
+    return catalog_config
+
+
+def test_online_mix_rebuilds_ts_samples_per_epoch(catalog_config, tmp_path):
+    config = _online_ts_config(catalog_config, tmp_path, {
+        "absent_prob": 0.0, "enrollment_seconds": [0.2, 0.3], "level_dbfs": [-30, -30],
+        "interferer_probs": [0, 1], "speaker_rir_prob": 1.0, "speaker_far_rir_prob": 0.0,
+    })
+    dataset = CatalogSwiftDataset(config, message_format="qwen3_asr")
+    first, again = dataset[0], dataset[0]
+    assert first["solution"] == "language English<asr_text>hello"
+    assert first["mix_wav"] == again["mix_wav"]  # same epoch and index, same sample
+    enroll, _ = sf.read(BytesIO(first["audios"][0]))
+    mix, _ = sf.read(BytesIO(first["mix_wav"]))
+    assert int(0.2 * 16000) <= len(enroll) <= int(0.3 * 16000)
+    assert len(mix) == int(0.75 * 16000)
+    assert 20 * np.log10(np.sqrt(np.mean(mix**2))) == pytest.approx(-30, abs=0.1)
+    dataset.set_epoch(1)
+    assert dataset[0]["mix_wav"] != first["mix_wav"]
+    # Validation reads the stored clips unchanged.
+    plain = CatalogSwiftDataset({**config, "validation": config["train"]}, training=False,
+                                message_format="qwen3_asr")[0]
+    assert len(plain["audios"][0]) == int(0.75 * 16000)
+
+
+def test_online_mix_absent_target_empties_the_transcript(catalog_config, tmp_path):
+    config = _online_ts_config(catalog_config, tmp_path, {
+        "absent_prob": 1.0, "absent_interferer_probs": [1.0], "speaker_rir_prob": 0.0,
+    })
+    sample = CatalogSwiftDataset(config, message_format="qwen3_asr")[0]
+    assert sample["solution"] == "language None<asr_text>"
+    mix, _ = sf.read(BytesIO(sample["mix_wav"]))
+    assert np.abs(mix).max() > 0  # an empty window always gets noise
+    config["interference_sources"] = []
+    config["online_mix"] = None
+    with pytest.raises(ValueError, match="interference_sources"):
+        CatalogSwiftDataset({**config, "train": [{**config["train"][0], "online_mix": {"absent_prob": 0.0, "speaker_rir_prob": 0.0}}]},
+                            message_format="qwen3_asr")[0]
+
+
+def test_online_mix_nonspeech_window_has_an_empty_transcript_and_its_own_level(catalog_config, tmp_path):
+    config = _online_ts_config(catalog_config, tmp_path, {
+        "absent_prob": 0.0, "nonspeech_prob": 1.0, "nonspeech_seconds": [0.4, 0.6],
+        "nonspeech_level_dbfs": [-55, -55], "level_dbfs": [-30, -30], "enrollment_seconds": [0.2, 0.3],
+        "speaker_rir_prob": 0.0,
+    })
+    sample = CatalogSwiftDataset(config, message_format="qwen3_asr")[0]
+    assert sample["solution"] == "language None<asr_text>"
+    mix, _ = sf.read(BytesIO(sample["mix_wav"]))
+    enroll, _ = sf.read(BytesIO(sample["audios"][0]))
+    assert int(0.39 * 16000) <= len(mix) <= int(0.61 * 16000)
+    assert 20 * np.log10(np.sqrt(np.mean(mix**2))) == pytest.approx(-55, abs=0.2)
+    assert 20 * np.log10(np.sqrt(np.mean(enroll**2))) == pytest.approx(-30, abs=0.2)  # enrollment keeps its range
+
+
+def test_scene_record_places_the_named_utterances_and_is_never_blanked(catalog_config, tmp_path):
+    config = _online_ts_config(catalog_config, tmp_path, {
+        "absent_prob": 1.0, "nonspeech_prob": 1.0, "enrollment_seconds": [0.2, 0.3], "speaker_rir_prob": 0.0,
+        "alternate_gap_seconds": [0.2, 0.2],
+    })
+    span = {"cut_id": "speech", "start": 0.0, "duration": 0.4}
+    base = {"dataset_id": "ts", "version": "1", "split": "train"}
+    record = AudioRecord("scene", "ts_asr", (
+        AudioSlot("enrollment", AudioRef(**base, cut_id="speech", start=0.25)),
+        AudioSlot("mixture", AudioRef(**base, cut_id="speech", start=0.0, duration=0.4))),
+        "hello world", language="en",
+        metadata={"scene": {"mode": "alternate", "targets": [{**span, "text": "hello"}, {**span, "text": "world"}],
+                            "interferers": [{"speaker": "x", "utts": [span]}]}})
+    write_records([record], tmp_path / "ts.jsonl.gz")
+    sample = CatalogSwiftDataset(config, message_format="qwen3_asr")[0]
+    assert sample["solution"] == "language English<asr_text>hello world"
+    mix, _ = sf.read(BytesIO(sample["mix_wav"]))
+    assert len(mix) == int(3 * 0.4 * 16000) + 2 * int(0.2 * 16000)  # three turns and two gaps
+
+
+def test_online_mix_target_timing_changes_the_window(catalog_config, tmp_path):
+    config = _online_ts_config(catalog_config, tmp_path, {
+        "absent_prob": 0.0, "entry_prob": 1.0, "lead_seconds": [1.0, 1.0], "trail_seconds": [0.5, 0.5],
+        "interferer_probs": [1.0], "speaker_rir_prob": 0.0,
+    })
+    dataset = CatalogSwiftDataset(config, message_format="qwen3_asr")
+    lengths = set()
+    for epoch in range(24):
+        dataset.set_epoch(epoch)
+        mix, _ = sf.read(BytesIO(dataset[0]["mix_wav"]))
+        lengths.add(round(len(mix) / 16000, 2))
+    assert lengths == {1.25, 1.75, 2.25}  # leave, enter, middle around the 0.75 s target
+
+
+def test_plain_asr_nonspeech_source_trains_on_an_empty_transcript(catalog_config, tmp_path):
+    import gzip
+
+    row = {"cut_id": "speech", "root_alias": "data", "relative_path": "speech.wav",
+           "sample_rate": 16000, "channels": 1, "num_frames": 16000, "duration": 1.0}
+    with gzip.open(tmp_path / "index_n.jsonl.gz", "wt") as stream:
+        stream.write(json.dumps(row) + "\n")
+    record = AudioRecord("n", "asr", (AudioSlot("primary", AudioRef("nonspeech", "1", "train", "speech")),),
+                         "", language="zh")
+    write_records([record], tmp_path / "n.jsonl.gz")
+    spec = DatasetSpec(
+        dataset_id="nonspeech", version="1", languages=("zh",), tasks=("asr",),
+        artifacts=(ArtifactRef("records", "audio-records", "data", "n.jsonl.gz"),
+                   ArtifactRef("index", "audio-index", "data", "index_n.jsonl.gz")),
+        splits={"train": Split({"records": ("records",), "audio_index": ("index",)})},
+    )
+    with Path(catalog_config["catalog"]).open("a") as stream:
+        stream.write("\n" + json.dumps(spec.to_dict()))
+    catalog_config["train"] = [{"dataset_id": "nonspeech", "version": "1", "split": "train",
+                                "nonspeech": {"level_dbfs": [-52, -52]}}]
+    catalog_config["augmentation"] = {}
+    sample = CatalogSwiftDataset(catalog_config, message_format="qwen3_asr")[0]
+    assert sample["solution"] == "language None<asr_text>"
+    audio, _ = sf.read(BytesIO(sample["audios"][0]))
+    assert 20 * np.log10(np.sqrt(np.mean(audio**2))) == pytest.approx(-52, abs=0.2)
+    with pytest.raises(ValueError, match="empty-transcript"):
+        CatalogSwiftDataset({**catalog_config, "train": [{**catalog_config["train"][0], "dataset_id": "speech",
+                            "split": "dev", "nonspeech": {"level_dbfs": [-50, -50]}}]}, message_format="qwen3_asr")
 
 
 @pytest.fixture
@@ -555,8 +705,9 @@ def test_epoch_changes_training_but_not_validation(catalog_config):
     validation = CatalogSwiftDataset(catalog_config, training=False)
     fixed = validation[1]
     validation.set_epoch(9)
-    assert fixed == validation[1]
-    reference, _ = sf.read(BytesIO(fixed["audios"][0]))
+    # Validation keeps the waveform instead of encoding a WAV, so compare the arrays.
+    np.testing.assert_array_equal(fixed["audios"][0], validation[1]["audios"][0])
+    reference = fixed["audios"][0]
     assert len(reference) == 4000
     original, _ = sf.read(str(Path(catalog_config["roots"]).parent / "speech.wav"))
     np.testing.assert_allclose(reference, original[4800:8800], atol=1e-6)
@@ -644,6 +795,44 @@ def test_spec_augment_preserves_lengths_and_padding():
     assert torch.all(features == 1)
 
 
+def test_noise_source_weight_selects_wham_thirty_percent():
+    sources = [{"dataset_id": name, "weight": weight} for name, weight in (
+        ("wham", 30), ("musan", 17.5), ("1spk", 17.5), ("2spk", 17.5), ("3spk", 17.5),
+    )]
+    weights = source_weights(sources)
+    assert weights[0] / sum(weights) == pytest.approx(0.3)
+    groups = [[name] for name in ("wham", "musan", "1spk", "2spk", "3spk")]
+    counts = {}
+    for seed in range(4000):
+        chosen = choose_from_groups(random.Random(seed), groups, weights)
+        counts[chosen] = counts.get(chosen, 0) + 1
+    assert counts["wham"] / 4000 == pytest.approx(0.3, abs=0.02)
+    with pytest.raises(ValueError, match="every augmentation source"):
+        source_weights([{"weight": 1}, {}])
+
+
+def test_far_rir_is_exclusive_with_ordinary_reverb():
+    audio = np.ones(8, dtype=np.float32)
+    calls = []
+
+    def loader(rng, sr, mode):
+        calls.append(mode)
+        impulse = [1.0, 0.5] if mode == "ordinary" else [1.0, 0.0, 0.5]
+        return np.array(impulse, dtype=np.float32)
+
+    far = augment_waveform(
+        audio, 16000, random.Random(0), AugmentConfig(far_rir_prob=1), rir_loader=loader,
+    )
+    ordinary = augment_waveform(
+        audio, 16000, random.Random(0), AugmentConfig(rir_prob=1), rir_loader=loader,
+    )
+    assert calls == ["far", "ordinary"]
+    assert far.shape == audio.shape and ordinary.shape == audio.shape
+    assert not np.array_equal(far, ordinary)
+    with pytest.raises(ValueError, match="at most 1"):
+        AugmentConfig(rir_prob=0.6, far_rir_prob=0.6)
+
+
 def test_noise_snr_and_rir_are_real_transforms():
     audio = np.ones(1000, dtype=np.float32)
     noise = np.tile(np.array([-1, 1], dtype=np.float32), 500)
@@ -662,7 +851,7 @@ def test_noise_snr_and_rir_are_real_transforms():
         16000,
         random.Random(0),
         AugmentConfig(rir_prob=1),
-        rir_loader=lambda rng, sr: np.array([1, 0.5], dtype=np.float32),
+        rir_loader=lambda rng, sr, mode: np.array([1, 0.5], dtype=np.float32),
     )
     assert reverbed.shape == audio.shape
     assert not np.array_equal(reverbed, audio)
@@ -680,7 +869,7 @@ def test_rir_starts_at_direct_path_and_reverberates_noise():
     impulse[300], impulse[1500] = 1, 0.5  # propagation delay, then a late reflection
     reverbed = augment_waveform(
         audio, 16000, random.Random(0), AugmentConfig(rir_prob=1),
-        rir_loader=lambda rng, sr: impulse,
+        rir_loader=lambda rng, sr, mode: impulse,
     )
     assert int(np.argmax(np.abs(reverbed))) == 1000
     assert reverbed[2200] > 0
@@ -693,11 +882,11 @@ def test_rir_starts_at_direct_path_and_reverberates_noise():
     config = AugmentConfig(rir_prob=1, noise_prob=1, noise_snr_db=(10, 10), reverb_noise=True)
     mixed = augment_waveform(
         clean, 16000, random.Random(0), config,
-        noise_loader=lambda rng, sr: noise, rir_loader=lambda rng, sr: impulse,
+        noise_loader=lambda rng, sr: noise, rir_loader=lambda rng, sr, mode: impulse,
     )
     speech = augment_waveform(
         clean, 16000, random.Random(0), replace(config, noise_prob=0),
-        noise_loader=lambda rng, sr: noise, rir_loader=lambda rng, sr: impulse,
+        noise_loader=lambda rng, sr: noise, rir_loader=lambda rng, sr, mode: impulse,
     )
     added = mixed - speech
     assert np.mean(added**2) == pytest.approx(np.mean(speech**2) / 10, rel=1e-4)
@@ -718,7 +907,7 @@ def test_far_level_applies_only_to_reverberated_clips():
     audio = np.random.default_rng(0).normal(0, 0.3, 4000).astype(np.float32)
     impulse = np.array([1, 0, 0.5], dtype=np.float32)
     config = AugmentConfig(rir_prob=1, far_level_dbfs=(-40, -40))
-    far = augment_waveform(audio, 16000, random.Random(0), config, rir_loader=lambda rng, sr: impulse)
+    far = augment_waveform(audio, 16000, random.Random(0), config, rir_loader=lambda rng, sr, mode: impulse)
     assert 10 * np.log10(np.mean(far**2)) == pytest.approx(-40, abs=1e-3)
     near = augment_waveform(audio, 16000, random.Random(0), replace(config, rir_prob=0))
     np.testing.assert_array_equal(near, audio)
@@ -824,6 +1013,117 @@ def test_mux_worker_prefetch_resume_preserves_audio(catalog_config):
     finally:
         if loader._iterator is not None:
             loader._iterator._shutdown_workers()
+
+
+class _EvalTemplate:
+    def __init__(self):
+        self.model = None
+        self.dummy_model = None
+        self._handles = []
+        self._deepspeed_initialize = None
+
+    def encode(self, sample):
+        return {"text": sample["text"]}
+
+    def data_collator(self, batch, padding_to=None):
+        return {"text": [row["text"] for row in batch], "padding_to": padding_to}
+
+
+class _EngineWithLocalHook:
+    """Same shape as DeepSpeedEngine's unpicklable forward hook."""
+
+    def __init__(self):
+        def _module_forward_post_hook():
+            return None
+
+        self.hook = _module_forward_post_hook
+
+
+class _EncodedRows(torch.utils.data.Dataset):
+    def __init__(self, encode):
+        self.encode = encode
+        self.rows = [{"text": "a"}, {"text": "b"}]
+
+    def __len__(self):
+        return len(self.rows)
+
+    def __getitem__(self, index):
+        return self.encode(self.rows[index])
+
+
+def test_eval_workers_do_not_pickle_deepspeed_engine():
+    from functools import partial
+
+    from open_audio_llm.integrations.ms_swift.catalog_loader import catalog_eval_dataloader
+
+    template = _EvalTemplate()
+    engine = _EngineWithLocalHook()
+    template.model = engine
+    template._handles = [(engine, engine.hook)]
+    trainer = SimpleNamespace(
+        args=SimpleNamespace(
+            dataloader_num_workers=1,
+            dataloader_pin_memory=False,
+            dataloader_prefetch_factor=None,
+            dataloader_drop_last=False,
+            eval_batch_size=2,
+        ),
+        data_collator=partial(template.data_collator, padding_to=8),
+        _get_eval_sampler=lambda eval_dataset: None,
+        _get_collator_with_removed_columns=lambda collator, description: collator,
+    )
+    loader = catalog_eval_dataloader(trainer, _EncodedRows(template.encode))
+    try:
+        batch = next(iter(loader))
+    finally:
+        if loader._iterator is not None:
+            loader._iterator._shutdown_workers()
+    assert batch["text"] == ["a", "b"]
+    assert batch["padding_to"] == 8
+    assert template.model is engine
+    assert template._handles[0][0] is engine
+
+
+def test_eval_dataloader_keeps_workers_without_forking_cuda_process(catalog_config):
+    from open_audio_llm.integrations.ms_swift.catalog_loader import (
+        install_catalog_loader,
+    )
+
+    dataset = CatalogSwiftDataset(catalog_config, training=False)
+    trainer = SimpleNamespace(
+        args=SimpleNamespace(
+            max_steps=10,
+            deepspeed=None,
+            process_index=0,
+            world_size=1,
+            train_dataloader_shuffle=True,
+            gradient_accumulation_steps=1,
+            dataloader_num_workers=2,
+            dataloader_persistent_workers=False,
+            dataloader_pin_memory=False,
+            dataloader_prefetch_factor=None,
+            dataloader_drop_last=False,
+            eval_batch_size=1,
+        ),
+        template=SimpleNamespace(sequence_parallel_size=1),
+        train_dataset=CatalogSwiftDataset(catalog_config),
+        eval_dataset=dataset,
+        _train_batch_size=1,
+        data_collator=list,
+        accelerator=SimpleNamespace(
+            device=torch.device("cpu"), prepare=lambda loader: loader
+        ),
+        add_callback=lambda callback: None,
+        set_initial_training_values=lambda *args: (1, 2, 2, 2, False, 2, 10),
+        _get_eval_sampler=lambda eval_dataset: None,
+        _get_collator_with_removed_columns=lambda collator, description: collator,
+    )
+    install_catalog_loader(trainer)
+    loader = trainer.get_eval_dataloader()
+    assert loader is trainer.get_eval_dataloader()
+    assert loader.num_workers == 2
+    assert loader.persistent_workers
+    assert loader.multiprocessing_context.get_start_method() == "forkserver"
 
 
 def test_catalog_loader_does_not_advance_model_rng(catalog_config):
@@ -1291,12 +1591,31 @@ def test_exclude_records_drops_listed_ids_and_keys_the_cache(catalog_config, tmp
         CatalogSwiftDataset(catalog_config)
 
 
+def test_exclude_media_drops_listed_augmentation_files(catalog_config, tmp_path):
+    from open_audio_llm.data.far_rir import media_path
+
+    full = CatalogSwiftDataset(catalog_config)
+    paths = [media_path(item) for item in full.rir_groups[0]]
+    listed = tmp_path / 'held-out-rirs.txt'
+    listed.write_text('/elsewhere/held-out.wav\n')
+    catalog_config['rir_sources'][0]['exclude_media'] = str(listed)
+    kept = CatalogSwiftDataset(catalog_config)
+    assert [media_path(item) for item in kept.rir_groups[0]] == paths
+    listed.write_text('\n'.join(paths) + '\n')
+    with pytest.raises(ValueError, match='empty augmentation source'):
+        CatalogSwiftDataset(catalog_config)
+    catalog_config['rir_sources'][0]['exclude_media'] = str(tmp_path / 'missing.txt')
+    with pytest.raises(ValueError, match='exclude_media'):
+        CatalogSwiftDataset(catalog_config)
+
+
 def test_noise_exclude_datasets_keeps_listed_audio_clean(catalog_config):
     catalog_config['augmentation'] = {'noise_prob': 1}
     noisy = sf.read(BytesIO(CatalogSwiftDataset(catalog_config)[0]['audios'][0]))[0]
     catalog_config['augmentation']['noise_exclude_datasets'] = ['speech']
     clean = sf.read(BytesIO(CatalogSwiftDataset(catalog_config)[0]['audios'][0]))[0]
-    reference = sf.read(BytesIO(CatalogSwiftDataset(catalog_config, training=False)[0]['audios'][0]))[0]
+    reference_audio = CatalogSwiftDataset(catalog_config, training=False)[0]['audios'][0]
+    reference = reference_audio if isinstance(reference_audio, np.ndarray) else sf.read(BytesIO(reference_audio))[0]
     assert not np.allclose(noisy, reference, atol=1e-4)
     np.testing.assert_allclose(clean, reference, atol=1e-4)
 
@@ -1312,3 +1631,50 @@ def test_cache_identity_ignores_declared_roles_the_loader_never_reads(catalog_co
     dataset = CatalogSwiftDataset(catalog_config)
     identity = source_identity(dataset, dict(dataset.sources[0]))
     assert not any('missing-punc' in path for path, *_ in identity['files'])
+
+
+def test_validation_subset_keeps_source_share_and_drops_long_audio():
+    from open_audio_llm.data.catalog_dataset import _subset_counts, limit_validation_records
+
+    assert _subset_counts([3, 2], 4) == [2, 2]
+    assert _subset_counts([10, 0], 3) == [3, 0]
+
+    class Rows:
+        def __init__(self):
+            self.durations = np.array([1.0, 1.0, 1.0, 400.0, 2.0, 2.0])
+            self.slots = np.ones(6, dtype=np.uint16)
+            self.hotword_pool = ["a"]
+            self.items = [f"row{i}" for i in range(6)]
+
+        def __getitem__(self, index):
+            return self.items[index]
+
+        def __len__(self):
+            return 6
+
+    limited, ranges = limit_validation_records(
+        Rows(),
+        [range(0, 4), range(4, 6)],
+        {"validation_samples": 4, "validation_max_duration": 150, "seed": 42},
+    )
+    assert len(limited) == 4
+    assert len(ranges[0]) == 2 and len(ranges[1]) == 2
+    assert "row3" not in [limited[i] for i in range(len(limited))]
+    assert limited.hotword_pool == ["a"]
+    with pytest.raises(ValueError, match="validation_max_duration"):
+        limit_validation_records(
+            Rows(),
+            [range(0, 4), range(4, 6)],
+            {"validation_samples": 1, "validation_max_duration": 0.1, "seed": 42},
+        )
+
+
+def test_validation_audio_stays_a_waveform(catalog_config):
+    catalog_config["validation"] = [dict(catalog_config["train"][0])]
+    catalog_config["validation_samples"] = 1
+    dataset = CatalogSwiftDataset(catalog_config, training=False, message_format="qwen3_asr")
+    assert len(dataset) == 1
+    sample = dataset[0]
+    assert isinstance(sample["audios"][0], np.ndarray)
+    if sample.get("mix_wav") is not None:
+        assert isinstance(sample["mix_wav"], np.ndarray)

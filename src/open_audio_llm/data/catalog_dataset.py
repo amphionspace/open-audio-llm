@@ -21,12 +21,25 @@ from audio_data_contract import (
 
 from .augment import AugmentConfig, augment_waveform, direct_to_reverberant_db
 from .catalog_resolver import LhotseCatalogAudioResolver
+from .interference_pool import PoolClip, pool_clips
 from .lance_source import SAMPLES_ROLE, lance_records, read_lance_audio
 from .online_dataset import TASK_TEMPLATES, OnlineAudioDataset
 from .records import ResolvedAudioRecord
 from .sot import TIMESTAMP_FORMAT, with_sot_timestamps
 from .sot_alignment import AlignmentIndex
 from .target_sot import EnrollmentConfig, TARGET_FORMAT, eligible_candidates
+from .ts_online import (
+    OnlineMixConfig,
+    build_mixture,
+    build_scene,
+    contaminate_enrollment,
+    crop_enrollment,
+    degrade_enrollment,
+    degrade_mixture,
+    nonspeech_window,
+    set_level,
+    slot_level,
+)
 
 
 def in_ts_partition(record, selection):
@@ -71,6 +84,11 @@ def read_data_config(path):
             if source.get(key):
                 selected = Path(source[key]).expanduser()
                 source[key] = str(selected if selected.is_absolute() else path.parent / selected)
+    for source in (config.get("noise_sources", []) + config.get("rir_sources", [])
+                   + config.get("interference_sources", [])):
+        if source.get("exclude_media"):
+            selected = Path(source["exclude_media"]).expanduser()
+            source["exclude_media"] = str(selected if selected.is_absolute() else path.parent / selected)
     if not config.get("train"):
         raise ValueError("data config requires at least one train source")
     return config
@@ -87,11 +105,180 @@ def to_mono(audio, source_rate, sampling_rate):
     return np.asarray(audio, dtype=np.float32)
 
 
+# 并发解码大 m4a 时 ffmpeg 偶发读超时（ACP 003 在 717 步因此退出）；同一文件重读即可成功。
+AUDIO_LOAD_ATTEMPTS = 3
+AUDIO_LOAD_RETRY_WAIT_S = 2.0
+
+
 def load_mono(cut, sampling_rate):
-    audio = cut.load_audio()
+    from lhotse.audio.utils import AudioLoadingError
+
+    for attempt in range(1, AUDIO_LOAD_ATTEMPTS + 1):
+        try:
+            audio = cut.load_audio()
+            break
+        except AudioLoadingError:
+            if attempt == AUDIO_LOAD_ATTEMPTS:
+                raise
+            time.sleep(AUDIO_LOAD_RETRY_WAIT_S * attempt)
     if audio is None or audio.size == 0:
         raise ValueError(f"cut {cut.id!r} contains no audio")
     return to_mono(audio, cut.sampling_rate, sampling_rate)
+
+
+def _audio_seconds(value, sampling_rate):
+    if isinstance(value, np.ndarray):
+        return float(value.reshape(-1).shape[0]) / sampling_rate
+    import soundfile as sf
+
+    return float(sf.info(BytesIO(value)).duration)
+
+
+class _IndexedRecords:
+    """View of a catalog index restricted to a stable subset of rows."""
+
+    def __init__(self, records, indices):
+        self.records = records
+        self.indices = np.asarray(indices, dtype=np.int64)
+        durations = (
+            np.asarray(records.durations, dtype=np.float64)
+            if hasattr(records, "durations")
+            else np.asarray([row.duration for row in records], dtype=np.float64)
+        )
+        self.durations = durations[self.indices]
+        if hasattr(records, "slots"):
+            self.slots = np.asarray(records.slots)[self.indices]
+        if hasattr(records, "hotword_pool"):
+            self.hotword_pool = records.hotword_pool
+
+    def __len__(self):
+        return int(self.indices.shape[0])
+
+    def __getitem__(self, index):
+        return self.records[int(self.indices[index])]
+
+
+def _subset_counts(lengths, limit):
+    total = sum(lengths)
+    if limit >= total:
+        return list(lengths)
+    raw = [limit * length / total for length in lengths]
+    counts = [int(value) for value in raw]
+    leftover = limit - sum(counts)
+    order = sorted(
+        range(len(lengths)),
+        key=lambda i: (raw[i] - counts[i], lengths[i]),
+        reverse=True,
+    )
+    for index in order:
+        if leftover <= 0:
+            break
+        room = lengths[index] - counts[index]
+        take = min(room, leftover)
+        counts[index] += take
+        leftover -= take
+    if leftover:
+        raise RuntimeError("validation subset could not be allocated")
+    return counts
+
+
+def limit_validation_records(records, ranges, config):
+    """Keep each validation source's share, and drop clips that cannot fit max_length.
+
+    The full catalog eval is several times larger than a training step can score
+    in a few minutes. ``validation_samples`` draws a fixed, seeded subset in
+    index order inside each source so later epochs see the same rows.
+    """
+    limit = config.get("validation_samples")
+    if limit is None:
+        return records, ranges
+    if type(limit) is not int or limit <= 0:
+        raise ValueError("validation_samples must be a positive integer")
+    max_duration = config.get("validation_max_duration", 150)
+    if not isinstance(max_duration, (int, float)) or max_duration <= 0:
+        raise ValueError("validation_max_duration must be a positive number")
+    durations = (
+        np.asarray(records.durations, dtype=np.float64)
+        if hasattr(records, "durations")
+        else np.asarray([row.duration for row in records], dtype=np.float64)
+    )
+    eligible = []
+    for span in ranges:
+        chosen = [
+            index for index in span
+            if durations[index] <= max_duration
+        ]
+        eligible.append(np.asarray(chosen, dtype=np.int64))
+    lengths = [int(group.shape[0]) for group in eligible]
+    if sum(lengths) == 0:
+        raise ValueError("validation_max_duration removes every validation sample")
+    counts = _subset_counts(lengths, limit)
+    rng = np.random.default_rng(int(config.get("seed", 42)))
+    parts = []
+    new_ranges = []
+    cursor = 0
+    for group, count in zip(eligible, counts):
+        if count <= 0:
+            new_ranges.append(range(cursor, cursor))
+            continue
+        if count < group.shape[0]:
+            group = np.sort(rng.choice(group, size=count, replace=False))
+        parts.append(group)
+        new_ranges.append(range(cursor, cursor + int(group.shape[0])))
+        cursor += int(group.shape[0])
+    if cursor == 0:
+        raise ValueError("validation_samples produced an empty validation set")
+    return _IndexedRecords(records, np.concatenate(parts)), new_ranges
+
+
+def load_rir_item(item, sampling_rate):
+    """Load one reverberation response, keeping the first channel only."""
+    if isinstance(item, (str, Path)):
+        import soundfile as sf
+
+        audio, source_rate = sf.read(str(item), always_2d=True, dtype="float32")
+        if audio.size == 0:
+            raise ValueError(f"RIR {item} contains no audio")
+        return to_mono(np.ascontiguousarray(audio[:, :1].T), source_rate, sampling_rate)
+    audio = np.asarray(item.load_audio(), dtype=np.float32)
+    if audio.size == 0:
+        raise ValueError(f"RIR {getattr(item, 'id', item)!r} contains no audio")
+    if audio.ndim == 1:
+        audio = audio[None, :]
+    return to_mono(audio[:1], item.sampling_rate, sampling_rate)
+
+
+def source_weights(sources):
+    """Positive source weights, or None when every source is equally likely."""
+    import math
+
+    if not sources or not any("weight" in source for source in sources):
+        return None
+    if not all("weight" in source for source in sources):
+        raise ValueError("Specify weight for every augmentation source")
+    weights = []
+    for source in sources:
+        weight = source["weight"]
+        if isinstance(weight, bool) or not isinstance(weight, (int, float)) or not math.isfinite(weight) or weight <= 0:
+            raise ValueError("augmentation source weight must be positive and finite")
+        weights.append(float(weight))
+    return weights
+
+
+def choose_from_groups(rng, groups, weights=None):
+    """Pick a source by weight, then a clip uniformly inside that source."""
+    if not weights:
+        index = rng.randrange(len(groups))
+    else:
+        mark = rng.random() * sum(weights)
+        index = len(groups) - 1
+        for candidate, weight in enumerate(weights):
+            mark -= weight
+            if mark <= 0:
+                index = candidate
+                break
+    group = groups[index]
+    return group[rng.randrange(len(group))]
 
 
 def load_rir(cut, rng, sampling_rate, channel=None):
@@ -110,6 +297,10 @@ class CatalogSwiftDataset(OnlineAudioDataset):
     def __init__(self, config, *, training=True, encode=None, grpo=False, message_format="generic", collect_metrics=False):
         self.collect_metrics = collect_metrics
         self.metadata_cache = config.get("metadata_cache")
+        # "lance": read sources with a registered record index from it; others keep the JSONL cache.
+        self.record_index = config.get("record_index", "jsonl")
+        if self.record_index not in {"jsonl", "lance"}:
+            raise ValueError("record_index must be jsonl or lance")
         self.resolver = LhotseCatalogAudioResolver(
             config["catalog"],
             config["roots"],
@@ -135,6 +326,10 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         if explicit and not all("weight" in s for s in sources):
             raise ValueError("Specify weight for every source")
         for source in sources:
+            if source.get("online_mix") is not None:
+                if source.get("enrollment") is not None:
+                    raise ValueError("online_mix and enrollment cannot be combined")
+                OnlineMixConfig(**source["online_mix"])
             if source.get("enrollment") is not None:
                 EnrollmentConfig(**source["enrollment"])
                 if message_format != "qwen3_asr" or grpo:
@@ -186,28 +381,68 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             raise ValueError(
                 "Catalog selection contains no training/validation samples"
             )
-        self.noise_cuts = (
-            self._resource_cuts(config.get("noise_sources", [])) if training else []
+        if not training:
+            records, self.source_ranges = limit_validation_records(
+                records, self.source_ranges, config
+            )
+        noise_sources = config.get("noise_sources", [])
+        self.noise_groups = self._resource_groups(noise_sources) if training else []
+        self.noise_weights = source_weights(noise_sources) if training else None
+        self.rir_groups = (
+            self._resource_groups(config.get("rir_sources", [])) if training else []
         )
-        self.rir_cuts = (
-            self._resource_cuts(config.get("rir_sources", [])) if training else []
+        # Speech-free noise and music for empty-transcript windows and noise floors. Unlike
+        # noise_sources it must never contain talkers; without it the noise sources are used.
+        nonspeech_sources = config.get("nonspeech_sources", [])
+        self.nonspeech_groups = self._resource_groups(nonspeech_sources) if training and nonspeech_sources else []
+        self.nonspeech_weights = source_weights(nonspeech_sources) if self.nonspeech_groups else None
+        # Recorded noise floors are quiet and may hold distant talkers (WHAM), which an
+        # empty-output window must not; without floor_sources they use the nonspeech sources.
+        floor_sources = config.get("floor_sources", [])
+        self.floor_groups = self._resource_groups(floor_sources) if training and floor_sources else []
+        self.floor_weights = source_weights(floor_sources) if self.floor_groups else None
+        # Other speakers for online target-speaker mixing, grouped by language.
+        self.interference = {}
+        if training:
+            for language in sorted({s["language"] for s in config.get("interference_sources", [])}):
+                sources = [s for s in config["interference_sources"] if s["language"] == language]
+                self.interference[language] = (self._resource_groups(sources, clips=True), source_weights(sources))
+        self.far_rir_groups = []
+        online_far = any(
+            OnlineMixConfig(**s["online_mix"]).speaker_rir_prob * OnlineMixConfig(**s["online_mix"]).speaker_far_rir_prob
+            for s in self._online_mix_sources(config)
         )
-        if training and self.augmentation.noise_prob and not self.noise_cuts:
-            raise ValueError("noise_prob requires non-empty noise_sources")
-        if training and self.augmentation.rir_prob and not self.rir_cuts:
-            raise ValueError("rir_prob requires non-empty rir_sources")
-        # (cut, channel) pairs; None draws a channel per use.
-        self.rir_choices = [(cut, None) for cut in self.rir_cuts]
-        if self.rir_cuts and self.augmentation.rir_drr_db is not None:
-            low, high = self.augmentation.rir_drr_db
-            self.rir_choices = [
-                (cut, channel)
-                for cut in self.rir_cuts
-                for channel, impulse in enumerate(np.atleast_2d(cut.load_audio()))
-                if low <= direct_to_reverberant_db(impulse, cut.sampling_rate) <= high
+        if training and (self.augmentation.far_rir_prob or online_far):
+            from .far_rir import far_recordings
+
+            self.far_rir_groups = [
+                far_recordings(source["dataset_id"], group)
+                for source, group in zip(config.get("rir_sources", []), self.rir_groups)
             ]
-            if not self.rir_choices:
+        if training and self.augmentation.noise_prob and not self.noise_groups:
+            raise ValueError("noise_prob requires non-empty noise_sources")
+        if training and self.augmentation.rir_prob and not self.rir_groups:
+            raise ValueError("rir_prob requires non-empty rir_sources")
+        if training and self.augmentation.far_rir_prob and not self.far_rir_groups:
+            raise ValueError("far_rir_prob requires non-empty rir_sources")
+        # (recording, channel) pairs; None draws a channel per use.
+        rir_pairs = [[(item, None) for item in group] for group in self.rir_groups]
+        if self.augmentation.rir_drr_db is not None and self.rir_groups:
+            low, high = self.augmentation.rir_drr_db
+            rir_pairs = [
+                [
+                    (item, channel)
+                    for item in group
+                    for channel, impulse in enumerate(np.atleast_2d(item.load_audio()))
+                    if low <= direct_to_reverberant_db(impulse, item.sampling_rate) <= high
+                ]
+                for group in self.rir_groups
+            ]
+            rir_pairs = [group for group in rir_pairs if group]
+            if not rir_pairs:
                 raise ValueError(f"No RIR microphone has a DRR within {low}..{high} dB")
+        self.rir_pair_groups = rir_pairs
+        self.rir_choices = [choice for group in rir_pairs for choice in group]
         if grpo and self.augmentation.spec_aug_prob:
             raise ValueError(
                 "GRPO supports waveform augmentation; SpecAugment is SFT-only"
@@ -220,18 +455,36 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             **config.get("hotwords", {}),
         )
 
-    def _load_rir(self, rng, sampling_rate):
-        cut, channel = rng.choice(self.rir_choices)
-        return load_rir(cut, rng, sampling_rate, channel)
+    @staticmethod
+    def _online_mix_sources(config):
+        return [s for s in config.get("train", []) if s.get("online_mix") is not None]
 
-    def _resource_cuts(self, sources):
-        return [
-            cut
-            for source in sources
-            for cut in self.resolver.iter_cuts(
-                source["dataset_id"], source["version"], source["split"]
-            )
-        ]
+    def _resource_groups(self, sources, clips=False):
+        from .far_rir import media_path
+
+        groups = []
+        for source in sources:
+            spec = self.resolver.catalog.get(source["dataset_id"], source["version"])
+            artifacts = spec.splits[source["split"]].artifacts
+            if clips and "records" in artifacts and "recordings" not in artifacts:
+                # Clips are spans of source files; whole-file recordings would lose the offsets.
+                items = list(pool_clips(self.resolver, spec, source["split"]))
+            else:
+                items = list(self.resolver.iter_recordings(
+                    source["dataset_id"], source["version"], source["split"]
+                ))
+            # Evaluation sets reuse some augmentation files. Match by audio path:
+            # SLR28 simulated RIR IDs repeat across room sizes.
+            if source.get("exclude_media"):
+                listed = Path(source["exclude_media"])
+                if not listed.is_file():
+                    raise ValueError("exclude_media must name an existing file of audio paths")
+                excluded = set(listed.read_text().split())
+                items = [item for item in items if media_path(item) not in excluded]
+            if not items:
+                raise ValueError(f"empty augmentation source: {source['dataset_id']}")
+            groups.append(items)
+        return groups
 
     def _lance_release(self, dataset_id, version, split_name):
         """Open the pinned release once per process; None for non-Lance splits."""
@@ -315,6 +568,19 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             if source.get("sot_timestamps"):
                 row = replace(row, record=with_sot_timestamps(
                     row.record, self._sot_alignments[source["sot_alignment_index"]]))
+            if source.get("nonspeech") is not None:
+                if row.record.target.strip():
+                    raise ValueError(f"{row.record.id}: nonspeech needs an empty-transcript record")
+                row = replace(row, record=replace(row.record, metadata={
+                    **row.record.metadata, "nonspeech": source["nonspeech"],
+                }))
+            if source.get("online_mix") is not None:
+                # A scene may have no target speaker (similar voices only), so its transcript can be empty.
+                if row.record.task != "ts_asr" or not (row.record.target.strip() or row.record.metadata.get("scene")):
+                    raise ValueError(f"{row.record.id}: online_mix needs a present-target TS-ASR record")
+                row = replace(row, record=replace(row.record, metadata={
+                    **row.record.metadata, "online_mix": source["online_mix"],
+                }))
             if source.get("enrollment") is not None:
                 eligible_candidates(row.record, EnrollmentConfig(**source["enrollment"]))
                 row = replace(row, record=replace(row.record, metadata={
@@ -447,8 +713,11 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             if self.collect_metrics:
                 self._sample_metrics["decode_s"] += time.perf_counter() - started
             started = time.perf_counter()
+            online = self.training and resolved.record.metadata.get("online_mix")
+            if online:
+                audio, augmentation = self._online_slot(resolved.record, slot.name, audio, rng)
             if self.training:
-                augmentation = self.augmentation
+                augmentation = augmentation if online else self.augmentation
                 if resolved.record.metadata.get("sot_output_format") in {TIMESTAMP_FORMAT, TARGET_FORMAT}:
                     # Aligned times are fixed and time warping invalidates them; RIRs start
                     # at the direct path, so reverberation keeps them.
@@ -460,33 +729,123 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                     self.sampling_rate,
                     rng,
                     augmentation,
-                    noise_loader=lambda r, sr: load_mono(r.choice(self.noise_cuts), sr),
-                    rir_loader=lambda r, sr: self._load_rir(r, sr),
+                    noise_loader=lambda r, sr: load_mono(
+                        choose_from_groups(r, self.noise_groups, self.noise_weights), sr
+                    ),
+                    rir_loader=self._rir_loader(),
                 )
+            if online:
+                audio = set_level(rng, audio, slot_level(
+                    OnlineMixConfig(**online), resolved.record.metadata.get("online_nonspeech"), slot.name))
+            elif resolved.record.metadata.get("nonspeech"):
+                audio = set_level(rng, audio, tuple(resolved.record.metadata["nonspeech"]["level_dbfs"]))
             if self.collect_metrics:
                 self._sample_metrics["wave_augment_s"] += time.perf_counter() - started
                 self._sample_metrics["audio_seconds"] += len(audio) / self.sampling_rate
-            # ms-swift accepts WAV bytes on both training and rollout paths.
-            # FLOAT preserves augmentation values without PCM clipping/quantization.
-            buffer = BytesIO()
-            sf.write(buffer, audio, self.sampling_rate, format="WAV", subtype="FLOAT")
-            result[slot.name] = buffer.getvalue()
+            # Training still hands ms-swift FLOAT WAV bytes. Validation keeps
+            # the waveform: the template reads it directly, so eval does not
+            # encode a WAV and decode it again inside the dataloader worker.
+            if self.training:
+                buffer = BytesIO()
+                sf.write(buffer, audio, self.sampling_rate, format="WAV", subtype="FLOAT")
+                result[slot.name] = buffer.getvalue()
+            else:
+                result[slot.name] = np.ascontiguousarray(audio, dtype=np.float32)
         return result
 
-    def __getitem__(self, idx):
-        import soundfile as sf
+    def _speech_loader(self, language):
+        if language not in self.interference:
+            raise ValueError(f"online_mix needs interference_sources for language {language!r}")
+        groups, weights = self.interference[language]
+        return lambda r, sr: load_mono(choose_from_groups(r, groups, weights), sr)
 
+    def _rir_loader(self):
+        if not self.rir_groups:
+            return None
+
+        def load(r, sr, mode):
+            if mode == "far" and self.far_rir_groups:
+                return load_rir_item(choose_from_groups(r, self.far_rir_groups), sr)
+            item, channel = choose_from_groups(r, self.rir_pair_groups)
+            return load_rir(item, r, sr, channel)
+
+        return load
+
+    def _nonspeech_loader(self, floor=False):
+        if floor and self.floor_groups:
+            groups, weights = self.floor_groups, self.floor_weights
+        else:
+            groups, weights = ((self.nonspeech_groups, self.nonspeech_weights) if self.nonspeech_groups
+                               else (self.noise_groups, self.noise_weights))
+
+        def load(r, sr):
+            if not groups:
+                raise ValueError("online_mix nonspeech windows and noise floors need nonspeech_sources or noise_sources")
+            return load_mono(choose_from_groups(r, groups, weights), sr)
+
+        return load
+
+    def _scene_mixture(self, record, scene, config, rng):
+        """Place the utterances a scene record names; every one is a span of the scene pool's audio."""
+        ref = record.slot("mixture").ref
+        base = (ref.dataset_id, ref.version, ref.split)
+
+        def clip(item):
+            return load_mono(PoolClip(self.resolver, base, item["cut_id"], item.get("start"), item.get("duration")),
+                             self.sampling_rate)
+
+        return build_scene(
+            rng, scene["mode"], [clip(t) for t in scene["targets"]],
+            [[clip(u) for u in other["utts"]] for other in scene["interferers"]], config,
+            rir_loader=self._rir_loader(), sampling_rate=self.sampling_rate)
+
+    def _online_slot(self, record, name, audio, rng):
+        """Rebuild one slot of an online-mixed sample; return audio and the slot's augmentation."""
+        config = OnlineMixConfig(**record.metadata["online_mix"])
+        speech = self._speech_loader(record.language)
+        noise, floor = self._nonspeech_loader(), self._nonspeech_loader(floor=True)
+        if name == "enrollment":
+            audio = crop_enrollment(rng, audio, config, self.sampling_rate)
+            audio = contaminate_enrollment(rng, audio, config, speech, self.sampling_rate)
+            audio = degrade_enrollment(rng, audio, config, floor, self.sampling_rate)
+            return audio, self.augmentation
+        absent = bool(record.metadata.get("online_absent"))
+        # Speakers were reverberated one by one; only noise is left to add.
+        augmentation = replace(self.augmentation, speed_prob=0.0, rir_prob=0.0, far_rir_prob=0.0)
+        if record.metadata.get("online_nonspeech"):
+            # Nobody talks and the transcript is empty: noise or music of its own length.
+            audio = nonspeech_window(rng, config, noise, self.sampling_rate)
+            return audio, replace(augmentation, noise_prob=0.0)
+        scene = record.metadata.get("scene")
+        if scene:
+            audio = self._scene_mixture(record, scene, config, rng)
+            return degrade_mixture(rng, audio, config, floor, self.sampling_rate), augmentation
+        audio, count = build_mixture(
+            rng, audio, config, absent=absent, speech_loader=speech,
+            rir_loader=self._rir_loader(), sampling_rate=self.sampling_rate,
+        )
+        if absent and count == 0:
+            # Nobody talks: the window is the noise itself (digital silence never
+            # occurs in use). SNR is undefined here; set_level picks the level.
+            audio = nonspeech_window(rng, config, noise, self.sampling_rate, length=len(audio))
+            augmentation = replace(augmentation, noise_prob=0.0)
+        else:
+            audio = degrade_mixture(rng, audio, config, floor, self.sampling_rate)
+        return audio, augmentation
+
+    def __getitem__(self, idx):
         started = time.perf_counter()
         cpu_started = time.process_time()
         if self.collect_metrics:
             self._sample_metrics = dict(decode_s=0.0, wave_augment_s=0.0, audio_seconds=0.0)
         sample = super().__getitem__(idx)
         if sample.get("mix_wav") is not None:
-            from .qwen3_asr import ENROLL_SECONDS
-
-            sample["duration"] = ENROLL_SECONDS + sf.info(BytesIO(sample["mix_wav"])).duration
+            sample["duration"] = (
+                _audio_seconds(sample["audios"][0], self.sampling_rate)
+                + _audio_seconds(sample["mix_wav"], self.sampling_rate)
+            )
         else:
-            sample["duration"] = sf.info(BytesIO(sample["audios"][-1])).duration
+            sample["duration"] = _audio_seconds(sample["audios"][-1], self.sampling_rate)
         if self.collect_metrics and self.message_format == "qwen3_asr" and sample["task"] == "ts_asr":
             self._sample_metrics["audio_seconds"] = sample["duration"]
         if self.grpo:

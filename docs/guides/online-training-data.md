@@ -155,18 +155,21 @@ SFT 必须显式设置正数 `MAX_STEPS`，因为每轮 batch 数可以随时长
 
 ## 在线增强
 
-所有增强默认关闭。波形依次进行变速、RIR 卷积和按 SNR 混噪；SpecAugment 在
-提取 mel 特征后执行，不改变有效长度。开启噪声、混响的配置例如：
+所有增强默认关闭。波形依次进行变速、一次 RIR 卷积和按 SNR 混噪；SpecAugment 在
+提取 mel 特征后执行，不改变有效长度。`rir_prob` 抽普通混响，`far_rir_prob` 改抽远场冲激响应，两条概率互斥，每条语音只卷积一次。开启噪声、混响的配置例如：
 
 ```yaml
 augmentation:
-  noise_prob: 0.3
+  noise_prob: 0.5
   noise_snr_db: [5, 20]
-  rir_prob: 0.2
+  rir_prob: 0.25
+  far_rir_prob: 0.25
 ```
 
 启用时必须同时配置顶层 `noise_sources` / `rir_sources`，每项同样引用 Catalog 的
-`dataset_id`、`version`、`split`。资源支持 cuts 或 recordings。
+`dataset_id`、`version`、`split`。资源支持 cuts、recordings，或带 audio-index 的
+audio-record。多个来源默认等概率；写出正数 `weight` 时按权重抽取，且每个来源都要写。远场支使用各混响源里的远场子集；噪声仍在卷积之后相加，环境噪声保持干声。
+
 
 RIR 从直达声开始卷积，输出时间与原音频一致，因此带时间戳的 SOT 样本也会加混响
 （仍不变速）。多通道 RIR（麦克风阵列）每次随机取一个麦克风，不做通道平均。

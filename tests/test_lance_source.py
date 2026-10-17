@@ -103,3 +103,15 @@ def test_lance_filter_is_rejected_for_other_sources(lance_config):
     lance_config["train"][0]["lance_filter"] = ""
     with pytest.raises(ValueError, match="lance_filter"):
         CatalogSwiftDataset(lance_config)
+
+
+def test_supervision_span_at_the_start_of_a_long_file_loads_only_the_span(tmp_path):
+    import numpy as np
+    import soundfile as sf
+
+    from open_audio_llm.data.lance_index import supervision_cut
+
+    sf.write(tmp_path / "long.wav", np.zeros(160000, dtype="float32"), 16000)
+    for start in (0, 16000):
+        row = {"cut_id": "c", "sample_rate": 16000, "start_frame": start, "num_frames": 48000, "channels": 1, "channel": None}
+        assert supervision_cut(row, tmp_path / "long.wav").load_audio().shape == (1, 48000)
