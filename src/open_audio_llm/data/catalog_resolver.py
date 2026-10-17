@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import functools
 import gzip
 import json
+import os
 from pathlib import Path
 
 from audio_data_contract import (
@@ -21,6 +23,34 @@ from lhotse import (
     SupervisionSet,
     load_manifest_lazy,
 )
+
+
+# Distinct audio directories kept per process; Emilia2 alone spreads over ~10^5.
+_RESOLVED_DIRECTORIES = 1 << 16
+
+
+@functools.lru_cache(maxsize=_RESOLVED_DIRECTORIES)
+def _resolved_directory(directory):
+    """The directory's real path and the names of the symlinks it holds, from one listing."""
+    try:
+        with os.scandir(directory) as entries:
+            links = frozenset(entry.name for entry in entries if entry.is_symlink())
+    except FileNotFoundError:
+        links = frozenset()
+    return Path(directory).resolve(), links
+
+
+def _resolve(path):
+    """``Path.resolve()`` without a metadata round trip per audio file.
+
+    On the network file system each file's lstat takes about a millisecond; resolving
+    every file took most of loading a 10,000-file augmentation source. A directory is
+    listed once, and only files that are themselves symlinks are resolved one by one.
+    """
+    directory, links = _resolved_directory(str(path.parent))
+    if path.name in links:
+        return path.resolve()
+    return directory / path.name
 
 
 class LhotseCatalogAudioResolver:
@@ -127,7 +157,7 @@ class LhotseCatalogAudioResolver:
                         continue
                     row = json.loads(line)
                     root = Path(self.roots[row["root_alias"]])
-                    audio = (root / row["relative_path"]).resolve()
+                    audio = _resolve(root / row["relative_path"])
                     if not audio.is_relative_to(root):
                         raise ValueError(f"audio index path escapes root: {row['cut_id']}")
                     channels = int(row.get("channels") or 1)
@@ -146,7 +176,7 @@ class LhotseCatalogAudioResolver:
         if index_name:
             row = self._index_row(ref, index_name)
             root = self.roots[row["root_alias"]]
-            path = (root / row["relative_path"]).resolve()
+            path = _resolve(root / row["relative_path"])
             if not path.is_relative_to(root):
                 raise ValueError(f"audio index path escapes root: {ref.cut_id}")
             cut = Recording(

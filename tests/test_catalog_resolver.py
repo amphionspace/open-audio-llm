@@ -58,3 +58,16 @@ def test_catalog_resolver_reads_exact_cut_without_writing(tmp_path):
         segment.load_audio(), resolved.load_audio()[:, 1600:4800]
     )
     assert set(tmp_path.rglob("*")) == before
+
+
+def test_resolve_matches_path_resolve_through_file_and_directory_symlinks(tmp_path):
+    from open_audio_llm.data.catalog_resolver import _resolve
+
+    real = tmp_path / "real"
+    (real / "sub").mkdir(parents=True)
+    (real / "sub" / "a.wav").write_bytes(b"x")
+    (tmp_path / "linked").symlink_to(real)
+    (real / "sub" / "alias.wav").symlink_to(tmp_path / "elsewhere.wav")
+    for path in (real / "sub" / "a.wav", tmp_path / "linked" / "sub" / "a.wav",
+                 tmp_path / "linked" / "sub" / "alias.wav", tmp_path / "linked" / "sub" / "missing.wav"):
+        assert _resolve(path) == path.resolve()
