@@ -294,7 +294,7 @@ def load_rir(cut, rng, sampling_rate, channel=None):
 class CatalogSwiftDataset(OnlineAudioDataset):
     """Read facts from memory or a shared index; decode audio on each __getitem__."""
 
-    def __init__(self, config, *, training=True, encode=None, grpo=False, message_format="generic", collect_metrics=False):
+    def __init__(self, config, *, training=True, encode=None, grpo=False, message_format="generic", collect_metrics=False, resources=True):
         self.collect_metrics = collect_metrics
         self.metadata_cache = config.get("metadata_cache")
         # "lance": read sources with a registered record index from it; others keep the JSONL cache.
@@ -385,25 +385,28 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             records, self.source_ranges = limit_validation_records(
                 records, self.source_ranges, config
             )
+        # Building the index needs no augmentation files; scanning them for each of the
+        # ~80 sources took most of a preflight, so index preparation passes resources=False.
+        augmenting = training and resources
         noise_sources = config.get("noise_sources", [])
-        self.noise_groups = self._resource_groups(noise_sources) if training else []
-        self.noise_weights = source_weights(noise_sources) if training else None
+        self.noise_groups = self._resource_groups(noise_sources) if augmenting else []
+        self.noise_weights = source_weights(noise_sources) if augmenting else None
         self.rir_groups = (
-            self._resource_groups(config.get("rir_sources", [])) if training else []
+            self._resource_groups(config.get("rir_sources", [])) if augmenting else []
         )
         # Speech-free noise and music for empty-transcript windows and noise floors. Unlike
         # noise_sources it must never contain talkers; without it the noise sources are used.
         nonspeech_sources = config.get("nonspeech_sources", [])
-        self.nonspeech_groups = self._resource_groups(nonspeech_sources) if training and nonspeech_sources else []
+        self.nonspeech_groups = self._resource_groups(nonspeech_sources) if augmenting and nonspeech_sources else []
         self.nonspeech_weights = source_weights(nonspeech_sources) if self.nonspeech_groups else None
         # Recorded noise floors are quiet and may hold distant talkers (WHAM), which an
         # empty-output window must not; without floor_sources they use the nonspeech sources.
         floor_sources = config.get("floor_sources", [])
-        self.floor_groups = self._resource_groups(floor_sources) if training and floor_sources else []
+        self.floor_groups = self._resource_groups(floor_sources) if augmenting and floor_sources else []
         self.floor_weights = source_weights(floor_sources) if self.floor_groups else None
         # Other speakers for online target-speaker mixing, grouped by language.
         self.interference = {}
-        if training:
+        if augmenting:
             for language in sorted({s["language"] for s in config.get("interference_sources", [])}):
                 sources = [s for s in config["interference_sources"] if s["language"] == language]
                 self.interference[language] = (self._resource_groups(sources, clips=True), source_weights(sources))
@@ -412,18 +415,18 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             OnlineMixConfig(**s["online_mix"]).speaker_rir_prob * OnlineMixConfig(**s["online_mix"]).speaker_far_rir_prob
             for s in self._online_mix_sources(config)
         )
-        if training and (self.augmentation.far_rir_prob or online_far):
+        if augmenting and (self.augmentation.far_rir_prob or online_far):
             from .far_rir import far_recordings
 
             self.far_rir_groups = [
                 far_recordings(source["dataset_id"], group)
                 for source, group in zip(config.get("rir_sources", []), self.rir_groups)
             ]
-        if training and self.augmentation.noise_prob and not self.noise_groups:
+        if augmenting and self.augmentation.noise_prob and not self.noise_groups:
             raise ValueError("noise_prob requires non-empty noise_sources")
-        if training and self.augmentation.rir_prob and not self.rir_groups:
+        if augmenting and self.augmentation.rir_prob and not self.rir_groups:
             raise ValueError("rir_prob requires non-empty rir_sources")
-        if training and self.augmentation.far_rir_prob and not self.far_rir_groups:
+        if augmenting and self.augmentation.far_rir_prob and not self.far_rir_groups:
             raise ValueError("far_rir_prob requires non-empty rir_sources")
         # (recording, channel) pairs; None draws a channel per use.
         rir_pairs = [[(item, None) for item in group] for group in self.rir_groups]

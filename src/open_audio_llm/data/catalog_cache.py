@@ -497,7 +497,7 @@ def _prepare_source(config, source, message_format, training=True):
     from .catalog_dataset import CatalogSwiftDataset
 
     selected = {**config, "train" if training else "validation": [source]}
-    dataset = CatalogSwiftDataset(selected, training=training, message_format=message_format)
+    dataset = CatalogSwiftDataset(selected, training=training, message_format=message_format, resources=False)
     return source["dataset_id"], source["split"], len(dataset)
 
 

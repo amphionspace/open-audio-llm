@@ -632,6 +632,14 @@ def test_cache_preparation_preserves_unfiltered_validation(catalog_config):
     assert _prepare_source(catalog_config, source, "qwen3_asr", training=True) == ("speech", "dev", 2)
 
 
+def test_index_preparation_skips_augmentation_resources(catalog_config):
+    full = CatalogSwiftDataset(catalog_config)
+    index_only = CatalogSwiftDataset(catalog_config, resources=False)
+    assert full.rir_groups and full.noise_groups
+    assert not index_only.rir_groups and not index_only.noise_groups
+    assert len(index_only) == len(full)
+
+
 @pytest.mark.parametrize('cached', [False, True])
 def test_speaker_holdout_is_removed_from_replay_and_invalidates_old_cache(catalog_config, tmp_path, cached):
     for index in range(2):
