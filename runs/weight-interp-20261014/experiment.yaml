@@ -1,0 +1,10 @@
+version: 1
+name: weight-interp-20261014
+purpose: 不训练，把 Emilia2 轮 6000 步按 10/20/30/50% 插值回 Qwen3-ASR 原版权重，看能否找回单人识别能力而不损失多人转写
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+tasks:
+- {id: merge, name: 权重插值, config: configs/merge.yaml, depends_on: []}
+- {id: eval, name: 同组面板评测, config: configs/eval.yaml, depends_on: [merge]}
+- {id: final, name: 10% 插值结束面板, config: configs/eval-final.yaml, depends_on: [merge]}

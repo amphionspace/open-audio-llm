@@ -1,0 +1,102 @@
+# 开发机异步选模与结束评测（沿用 zh-asr-retention-acp-20261012 的面板；目标改为中文真实会议，单人 ASR 只作保持门槛）。
+# 每个保存点复制权重到本执行（缺失时从对象存储拉回），用 open-audio-llm serve（vLLM HTTP）起服务，
+# 由 AmphionEval（ae open-audio-llm meeting，未发布前从 ../amphion-eval-meeting/src 运行）评测选模面板。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../shared/code/src}]
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/select_checkpoints.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  tracking_prefix: zh-similar-voice-acp-20261014-select
+  # Start model (Emilia2 round step 6000): the 10% weight interpolation lost on the final panels
+  # (weight-interp-20261014 03-final: synthetic zh 10.2 -> 18.1, AISHELL-5 dev 27.8 -> 30.4). Its step-0 baseline is
+  # measured again on every panel so the new turn diagnostics have a baseline.
+  base_model: {path: ../../zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/models/checkpoint-6000}
+  training_attempts:
+  - {path: ../tasks/02-train/attempts/001}
+  previous_state: {path: ../tasks/03-select/attempts/001/artifacts}
+  interval: 1000
+  max_steps: 12000
+  poll_seconds: 60
+  # One GPU per checkpoint; shared machine: pick by nvidia-smi before launching, never GPU 0 (2026-10-15: GPU 3 had 75 GB free, then only 18 GB at step 7000 and vLLM failed; GPU 2 was empty).
+  gpus: [2]
+  port_base: 8891
+  server_startup_timeout: 1800
+  readable_timeout: 1800
+  serve_template: {path: serve-step8000.yaml}
+  delete_request_audio: true
+  stop_request: {path: ../tasks/03-select/control/stop-request.json}
+  storage:
+    executable: /workspace/workspace/mingdong/.local/share/amphion-bucket/cluster-venv/bin/ab
+    remote: whai:open-audio-llm
+    local_root: /workspace/workspace/mingdong/repo/open-audio-llm
+  panels:
+    selection: {template: {path: eval-step8000-panel.yaml}}
+    many_speaker: {template: {path: eval-step8000-many70.yaml}}
+    # Single-speaker ASR dev sets in the plain request format (1000 fixed samples per source).
+    asr: {template: {path: eval-asr-dev.yaml}}
+  # Real Chinese meetings are what this data should move (AliMeeting dev, loop-excluded cpER; it moved
+  # <0.5 point between reruns of one checkpoint).
+  target: {panel: selection, label: alimeeting_dev, field: cp_error_rate_without_loops}
+  # Reported, not gated: error rate of reference turns overlapping another speaker, windows whose output repeats
+  # lines across speakers (not caught by the loop rule), the text / speaker-attribution split after speaker
+  # alignment, attribution on the most similar-voice third of windows (the gap this data targets) and the share of
+  # turns starting more than 1 s off.
+  turn_diagnostics:
+    selection: [alimeeting_dev]
+  # Per window: cosine similarity of the two most similar reference speakers (ERes2NetV2), 135 of 138 windows
+  # (/workspace/workspace/mingdong/data/model-compare-review-20261014/speaker-similarity.json).
+  voice_similarity:
+    alimeeting_dev: {path: ../shared/alimeeting-dev-voice-similarity.json}
+  # Guards against the start model: the 6-12 speaker cpER moved 3-11 points between neighbouring
+  # checkpoints of the dialogue round (0.29-0.40), hence 5; single-speaker ASR is a floor only
+  # (user, 2026-10-12: not a target), 1 point each on the plain-format dev sets.
+  retention:
+    many_speaker: {panel: many_speaker, group: many_speaker, tolerance: 0.05}
+    wenetspeech_dev: {panel: asr, source: 'wenetspeech@icefall-20260908:dev', tolerance: 0.01}
+    kespeech_dev: {panel: asr, source: 'kespeech@icefall-20260908:dev', tolerance: 0.01}
+  # decode-loop-study-20261009: three default reruns gave loop counts with SD 2.5-3.1.
+  loops: {max_increase: 6, stop: false}
+  # Checkpoints are 1000 steps apart this round (2000 before): three in a row cover the same span.
+  patience: 3
+  final_panels:
+    meeting180: {template: {path: eval-step8000-meeting180.yaml}}
+    chime6: {template: {path: eval-step8000-chime6.yaml}}
+    fixed338: {template: {path: eval-step8000-fixed.yaml}}
+    aishell5_dev: {template: {path: eval-final-aishell5-dev.yaml}}
+    cs_dialogue_test: {template: {path: eval-final-cs-dialogue-test.yaml}}
+  # The start model's final panels, measured by the Emilia2 round's selector with the same templates and data.
+  final_baseline:
+    meeting180: {path: ../../zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/final/checkpoints/step-6000/meeting180/attempts/001/artifacts/evaluation/summary.json}
+    chime6: {path: ../../zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/final/checkpoints/step-6000/chime6/attempts/001/artifacts/evaluation/summary.json}
+    fixed338: {path: ../../zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/final/checkpoints/step-6000/fixed338/attempts/001/artifacts/evaluation/summary.json}
+    aishell5_dev: {path: ../../zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/final/checkpoints/step-6000/aishell5_dev/attempts/001/artifacts/evaluation/summary.json}
+    cs_dialogue_test: {path: ../../zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/final/checkpoints/step-6000/cs_dialogue_test/attempts/001/artifacts/evaluation/summary.json}
+  final_tolerance: 0.01
+recording:
+  attempts_dir: {path: ../tasks/03-select/attempts}
+  result: {path: '{attempt}/artifacts/final-results.json'}
+tracking:
+  pythonpath: [{path: ../shared/code/src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: zh-similar-voice-acp-20261014-select
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file: {path: '{attempt}/artifacts/selection-decision.json'}
+    prefix: selection

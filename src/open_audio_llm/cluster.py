@@ -10,6 +10,7 @@ import shlex
 import subprocess
 import sys
 import time
+import urllib.request
 from pathlib import Path
 
 import yaml
@@ -23,6 +24,9 @@ SCO_CREDENTIALS = {
 }
 REQUIRED = ("sco_home", "credentials", "workspace", "aec2", "image", "worker_spec",
             "nodes", "mounts")
+# The registry serves only its latest release; sco installed from an older one fails every acp call.
+SCO_REGISTRY = "https://sco.sensecore.cn/registry"
+JOB_PREFIX = "ASR-"
 # Statuses after which the main launcher will never start torchrun for this attempt.
 FINISHED = {"failed", "completed", "interrupted"}
 # Written by rank 0 after recording, W&B verification and storage sync have ended.
@@ -71,7 +75,9 @@ def check(config, attempt=None):
 
 
 def job_name(config, attempt):
-    return f"{config.get('tracking', {}).get('name', 'open-audio-llm')}-{attempt.name}"
+    # Every ACP job of this project starts with ASR- so the pool listing can be filtered by prefix (AGENTS.md).
+    name = f"{config.get('tracking', {}).get('name', 'open-audio-llm')}-{attempt.name}"
+    return name if name.startswith(JOB_PREFIX) else f"{JOB_PREFIX}{name}"
 
 
 def container_command(config, attempt):
@@ -127,6 +133,37 @@ def sco_environment(cluster):
     return env
 
 
+def fetch_text(url, timeout=60):
+    with urllib.request.urlopen(url, timeout=timeout) as response:
+        return response.read().decode()
+
+
+def refresh_sco(cluster):
+    """Reinstall sco when the registry has moved on from the installed release.
+
+    The registry keeps only its latest version, so after a rotation every `sco acp` call fails with
+    "Failed to prepare runtime for the selected region: 404 page not found" (2026-10-16, 20260830 -> 20260930).
+    The official installer is transactional and keeps the profile. Returns whether it ran.
+    """
+    home = Path(cluster["sco_home"])
+    try:
+        latest = str(yaml.safe_load(fetch_text(f"{SCO_REGISTRY}/versions.yaml"))["versions"][0]["version"])
+    except (OSError, KeyError, IndexError, TypeError, yaml.YAMLError):
+        return False  # registry unreachable: sco reports its own error
+    try:
+        installed = str(yaml.safe_load((home / ".data/product.yaml").read_text())["registry_version"])
+    except (OSError, KeyError, TypeError, yaml.YAMLError):
+        return False  # nothing installed here: leave the missing-sco error to the caller
+    if installed == latest:
+        return False
+    env = dict(os.environ, SCO_HOME=str(home), SCO_DATA_HOME=f"{home}/.data")
+    process = subprocess.run(["sh", "-s"], input=fetch_text(f"{SCO_REGISTRY}/install.sh"), env=env,
+                             capture_output=True, text=True, timeout=600, check=False)
+    if process.returncode:
+        raise RuntimeError(f"sco {installed} -> {latest} reinstall failed: {(process.stdout + process.stderr)[-500:]}")
+    return True
+
+
 def submit(config, attempt):
     """Create the ACP job; the job's rank 0 launcher records the execution."""
     from .cli import now, read_status, update_readme, write_json
@@ -149,6 +186,7 @@ def submit(config, attempt):
     write_json(attempt / "status.json", status)
     try:
         check(config, attempt)
+        refresh_sco(cluster)
         process = subprocess.run(submit_command(config, attempt),
                                  env=sco_environment(cluster), capture_output=True,
                                  text=True, timeout=300, check=False)

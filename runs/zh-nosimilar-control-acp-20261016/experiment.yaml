@@ -1,0 +1,14 @@
+version: 1
+name: zh-nosimilar-control-acp-20261016
+purpose: 对照轮：与 zh-similar-voice-acp-20261014 相同的起点、步数和其余配比，只去掉音色相近窗口的加权（并回原来的真实会议与 Emilia2 对话），判断归错变多是音色相近数据造成的，还是这种续训本身造成的
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training_coverage: all_eligible_records
+  training_steps: 12000
+inputs:
+  init_model: ../zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/models/checkpoint-6000
+tasks:
+- {id: prepare, name: 对照配比的数据配置, config: configs/prepare.yaml, depends_on: []}
+- {id: train, name: ACP 单机 8 卡全参数 12000 步, config: configs/train.yaml, depends_on: [prepare]}
+- {id: select, name: 开发机异步选模与结束评测, config: configs/select.yaml, depends_on: [prepare]}

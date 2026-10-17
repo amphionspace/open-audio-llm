@@ -1,0 +1,72 @@
+version: 1
+runtime:
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  cwd: /workspace/workspace/mingdong/repo/open-audio-llm
+  pythonpath: []
+  gpus: []
+  threads:
+    omp: 1
+    openblas: 1
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-nosimilar-control-acp-20261016/scripts/prepare.py
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-nosimilar-control-acp-20261016/tasks/01-prepare/attempts/001/artifacts
+  source_data: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-overlap-farsim-acp-20261013/tasks/01-prepare/attempts/002/artifacts/train-data.yaml
+  catalogs: []
+  groups: {}
+  prefer_roots: /workspace/data/registry/roots.json
+  drop:
+  - dataset_id: emilia2_zh_overlap_farsim
+  exclude_records:
+  - dataset_id: emilia2_zh_dialogue_diarize
+    version: moss-transcribe-diarize-0.9B
+    path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-nosimilar-control-acp-20261016/shared/emilia2-exclude-4plus-and-speaker-merge.txt
+  rescale:
+    real_meetings:
+      previous_weight: 32.0
+      weight: 49
+      match:
+      - dataset_id: aishell4_meeting_sot
+      - dataset_id: alimeeting_sdm_meeting_sot
+      - dataset_id: magicdata_ramc_meeting_sot
+      - dataset_id: aishell5_meeting_sot
+      - dataset_id: cs_dialogue_meeting_sot
+    emilia2_dialogue:
+      previous_weight: 16.0
+      weight: 20
+      match:
+      - dataset_id: emilia2_zh_dialogue_diarize
+    synthetic_multispeaker:
+      previous_weight: 15.096179277429382
+      weight: 12
+      match:
+      - dataset_id: sot_many_speaker_word_zh_en
+      - dataset_id: sot_multispeaker_zh_en
+    single_speaker_asr:
+      previous_weight: 10.5024
+      weight: 12.6
+      match:
+      - dataset_id: commonvoice_en_clean
+      - dataset_id: kespeech
+      - dataset_id: vitw_zh_far_asr
+      - dataset_id: realman_zh_far_asr
+      - dataset_id: threed_speaker_zh_far_asr
+      - dataset_id: librispeech
+      - dataset_id: aishell
+  scale_kept: true
+  kept_weight: 6.4
+  replay_window_samples: 64000
+  seed: 50
+  noise_exclude_datasets:
+  - emilia2_zh_dialogue_diarize
+recording:
+  attempts_dir: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-nosimilar-control-acp-20261016/tasks/01-prepare/attempts
+  result: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-nosimilar-control-acp-20261016/tasks/01-prepare/attempts/001/artifacts/report.json
+tracking:
+  enabled: false
+config_file: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-nosimilar-control-acp-20261016/configs/prepare.yaml

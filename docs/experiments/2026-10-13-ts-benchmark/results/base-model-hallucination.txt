@@ -1,0 +1,10 @@
+底座 Qwen3-ASR-1.7B（官方 vLLM 服务，普通 ASR，只送混合音频、没有注册音频）与 34479（带注册）在 v1 评测集上的对照，每个场景前 120 条。
+命令：probes/probe_base.py（服务：vllm.entrypoints.openai.api_server --model /workspace/model/Qwen3-ASR-1.7B，bf16，seed 42）
+
+nonspeech-noise    底座输出文字   0.0%   微调(34479) 输出文字  53.3%  (n=120)
+nonspeech-music    底座输出文字  20.8%   微调(34479) 输出文字  50.0%  (n=120)
+nonspeech-traffic  底座输出文字  21.7%   微调(34479) 输出文字  55.0%  (n=120)
+nonspeech-quiet    底座输出文字   0.0%   微调(34479) 输出文字  75.0%  (n=120)
+nonspeech-short    底座输出文字   0.0%   微调(34479) 输出文字  60.8%  (n=120)
+nonspeech-long     底座输出文字   0.0%   微调(34479) 输出文字  66.7%  (n=120)
+dyn-solo           底座 CER   3.8%   微调(34479, 带注册) CER   6.0%  (n=120)

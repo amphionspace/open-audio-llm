@@ -64,7 +64,9 @@ def test_samples_reps_and_rotation_cover_source():
 
 def test_weight_controls_prefix_but_mux_exhausts_all_sources():
     ds = dataset(
-        [{"weight": 1000}, {"weight": 1}], [100, 100], batching={"num_buckets": 1}
+        [{"weight": 1000}, {"weight": 1}], [100, 100],
+        # Batches are shuffled inside a buffer, so the prefix holds per buffer.
+        batching={"num_buckets": 1, "buffer_size": 10},
     )
     ids = indexes(CatalogBatchSampler(ds))
     assert sum(i < 100 for i in ids[:50]) >= 48
@@ -333,3 +335,12 @@ def test_migration_rejects_cursor_that_does_not_split():
     with pytest.raises(ValueError, match="does not split"):
         CatalogBatchSampler(ds, world_size=4).migrate_state_dict(
             old.state_dict(), world_size=2, previous_paths={})
+
+
+def test_bucketed_batches_interleave_without_replay():
+    ds = dataset([{}, {}], [200, 200], durations=[1.0] * 200 + [10.0] * 200,
+                 batching={"max_samples": 4, "num_buckets": 2, "buffer_size": 400})
+    long = [all(key[1] >= 200 for key in batch) for batch in CatalogBatchSampler(ds)]
+    assert len(long) == 100
+    # Bucket order would emit one long run per bucket inside the buffer.
+    assert sum(a != b for a, b in zip(long, long[1:])) > 20

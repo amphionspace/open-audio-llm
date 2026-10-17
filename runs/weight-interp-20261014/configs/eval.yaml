@@ -1,0 +1,55 @@
+# 插值模型与 6000 步本身在同一组面板上评测（run_benchmark.py 复制自 benchmark-zh-20261011）：
+# 选模面板（AliMeeting / NOTSOFAR dev）、单人 ASR dev（WenetSpeech / KeSpeech 各 1000 条，官方请求）、AliMeeting Eval 单人语句远场与近讲。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../../../src}]
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/run_benchmark.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  tracking_prefix: weight-interp-20261014
+  # 共享机器，不用 GPU 0；2026-10-14 GPU 6 空闲。
+  gpu: 6
+  port: 8906
+  server_startup_timeout: 1800
+  serve_template: {path: serve.yaml}
+  delete_request_audio: true
+  models:
+    base-00:
+      weights: {path: ../../zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/models/checkpoint-6000}
+    base-10:
+      weights: {path: ../tasks/01-merge/attempts/001/artifacts/base-10}
+    base-20:
+      weights: {path: ../tasks/01-merge/attempts/001/artifacts/base-20}
+    base-30:
+      weights: {path: ../tasks/01-merge/attempts/001/artifacts/base-30}
+    base-50:
+      weights: {path: ../tasks/01-merge/attempts/001/artifacts/base-50}
+  panels:
+    selection: {template: {path: eval-panel.yaml}}
+    asr: {template: {path: eval-asr-dev.yaml}}
+    far: {template: {path: eval-far.yaml}}
+    near: {template: {path: eval-near.yaml}}
+recording:
+  attempts_dir: {path: ../tasks/02-eval/attempts}
+  result: {path: '{attempt}/artifacts/results.json'}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: weight-interp-20261014-eval
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300

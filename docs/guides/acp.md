@@ -12,6 +12,8 @@
    curl -sSf https://sco.sensecore.cn/registry/install.sh | SCO_DATA_HOME=$SCO_HOME/.data sh
    ```
 
+   registry 只保留最新版本，装好的旧版会让所有 `sco acp` 调用报 `Failed to prepare runtime for the selected region: 404 page not found`（2026-10-16 发生过一次，20260830 → 20260930）。启动器提交前会自动检查并用上面的安装脚本重装；直接用 `sco` 命令查询时遇到这个报错，重新执行上面的安装命令即可，profile 和密钥不受影响。
+
    然后写入只含区域信息的 profile，不放密钥。启动器提交时把 AmphionKeys 的 key 通过 `SCO_ACCESS_KEY_ID/SECRET` 环境变量传给 `sco`：
 
    ```bash

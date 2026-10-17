@@ -19,7 +19,7 @@ from audio_data_contract import (
     resolve_split,
 )
 
-from .augment import AugmentConfig, augment_waveform
+from .augment import AugmentConfig, augment_waveform, direct_to_reverberant_db
 from .catalog_resolver import LhotseCatalogAudioResolver
 from .interference_pool import PoolClip, pool_clips
 from .lance_source import SAMPLES_ROLE, lance_records, read_lance_audio
@@ -281,6 +281,16 @@ def choose_from_groups(rng, groups, weights=None):
     return group[rng.randrange(len(group))]
 
 
+def load_rir(cut, rng, sampling_rate, channel=None):
+    """One microphone of a (possibly array) RIR; a channel mean is no real microphone."""
+    audio = cut.load_audio()
+    if audio is None or audio.size == 0:
+        raise ValueError(f"cut {cut.id!r} contains no audio")
+    if channel is None:
+        channel = rng.randrange(audio.shape[0])
+    return to_mono(audio[channel : channel + 1], cut.sampling_rate, sampling_rate)
+
+
 class CatalogSwiftDataset(OnlineAudioDataset):
     """Read facts from memory or a shared index; decode audio on each __getitem__."""
 
@@ -415,6 +425,24 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             raise ValueError("rir_prob requires non-empty rir_sources")
         if training and self.augmentation.far_rir_prob and not self.far_rir_groups:
             raise ValueError("far_rir_prob requires non-empty rir_sources")
+        # (recording, channel) pairs; None draws a channel per use.
+        rir_pairs = [[(item, None) for item in group] for group in self.rir_groups]
+        if self.augmentation.rir_drr_db is not None and self.rir_groups:
+            low, high = self.augmentation.rir_drr_db
+            rir_pairs = [
+                [
+                    (item, channel)
+                    for item in group
+                    for channel, impulse in enumerate(np.atleast_2d(item.load_audio()))
+                    if low <= direct_to_reverberant_db(impulse, item.sampling_rate) <= high
+                ]
+                for group in self.rir_groups
+            ]
+            rir_pairs = [group for group in rir_pairs if group]
+            if not rir_pairs:
+                raise ValueError(f"No RIR microphone has a DRR within {low}..{high} dB")
+        self.rir_pair_groups = rir_pairs
+        self.rir_choices = [choice for group in rir_pairs for choice in group]
         if grpo and self.augmentation.spec_aug_prob:
             raise ValueError(
                 "GRPO supports waveform augmentation; SpecAugment is SFT-only"
@@ -691,10 +719,9 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             if self.training:
                 augmentation = augmentation if online else self.augmentation
                 if resolved.record.metadata.get("sot_output_format") in {TIMESTAMP_FORMAT, TARGET_FORMAT}:
-                    # Aligned times are fixed; time warping and delayed RIRs invalidate them.
-                    augmentation = replace(
-                        augmentation, speed_prob=0.0, rir_prob=0.0, far_rir_prob=0.0
-                    )
+                    # Aligned times are fixed and time warping invalidates them; RIRs start
+                    # at the direct path, so reverberation keeps them.
+                    augmentation = replace(augmentation, speed_prob=0.0)
                 if resolved.dataset_id in augmentation.noise_exclude_datasets:
                     augmentation = replace(augmentation, noise_prob=0.0)
                 audio = augment_waveform(
@@ -705,12 +732,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                     noise_loader=lambda r, sr: load_mono(
                         choose_from_groups(r, self.noise_groups, self.noise_weights), sr
                     ),
-                    rir_loader=lambda r, sr, mode: load_rir_item(
-                        choose_from_groups(
-                            r, self.far_rir_groups if mode == "far" else self.rir_groups
-                        ),
-                        sr,
-                    ),
+                    rir_loader=self._rir_loader(),
                 )
             if online:
                 audio = set_level(rng, audio, slot_level(
@@ -740,9 +762,14 @@ class CatalogSwiftDataset(OnlineAudioDataset):
     def _rir_loader(self):
         if not self.rir_groups:
             return None
-        return lambda r, sr, mode: load_rir_item(
-            choose_from_groups(r, self.far_rir_groups if mode == "far" and self.far_rir_groups
-                               else self.rir_groups), sr)
+
+        def load(r, sr, mode):
+            if mode == "far" and self.far_rir_groups:
+                return load_rir_item(choose_from_groups(r, self.far_rir_groups), sr)
+            item, channel = choose_from_groups(r, self.rir_pair_groups)
+            return load_rir(item, r, sr, channel)
+
+        return load
 
     def _nonspeech_loader(self, floor=False):
         if floor and self.floor_groups:
