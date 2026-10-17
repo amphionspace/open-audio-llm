@@ -56,7 +56,7 @@ def _scan(catalog, roots, args):
     import pyarrow.compute as pc
     from audio_data_contract.record_index import open_index
 
-    (dataset_id, version, artifact, split, min_duration, max_duration, allowed) = args
+    (dataset_id, version, artifact, split, min_duration, max_duration, allowed, online_mix) = args
     index = open_index(catalog, dataset_id, version, artifact, roots)
     dataset = index.dataset
     expression = _expression(split, min_duration, max_duration)
@@ -75,6 +75,7 @@ def _scan(catalog, roots, args):
     begin = np.cumsum(counts) - counts
     sums = np.add.reduceat(durations, begin) if len(counts) else durations
     is_ts = pc.equal(table["task"], "ts_asr").to_numpy(zero_copy_only=False)
+    sums = _scene_sums(dataset, expression, table, sums, online_mix)
     keep = np.ones(len(positions), dtype=bool)
     if allowed is not None:
         ids = table["id"].to_pylist()
@@ -100,6 +101,28 @@ def _scan(catalog, roots, args):
     }
 
 
+def _scene_sums(dataset, expression, table, sums, online_mix):
+    """Replace the slot-duration sum of scene records with what the loader really builds.
+
+    A scene's mixture slot names only the first target utterance; the mixture holds every
+    utterance of the scene. The enrollment plus the scene's longest extent is the audio the
+    batch must fit.
+    """
+    from .ts_online import OnlineMixConfig, scene_seconds
+
+    scenes = dataset.to_table(columns=["id", "record_json"],
+                              filter=expression + " AND record_json LIKE '%\"scene\": {%'")
+    if not scenes.num_rows:
+        return sums
+    config = OnlineMixConfig(**(online_mix or {}))
+    row_of = {ident: i for i, ident in enumerate(table["id"].to_pylist())}
+    sums = np.array(sums, dtype=np.float64)
+    for ident, text in zip(scenes["id"].to_pylist(), scenes["record_json"].to_pylist()):
+        scene = json.loads(text)["metadata"]["scene"]
+        sums[row_of[ident]] = scene["enrollment"]["duration"] + scene_seconds(scene, config)
+    return sums
+
+
 def spec_sha(catalog, dataset_id, version, artifact):
     return catalog.get(dataset_id, version).artifact(artifact).sha256
 
@@ -121,7 +144,8 @@ class LanceSourceIndex:
                     # Lhotse rows are listed with their prefixed ID, like the JSONL path names them.
                     allowed = _Allowed(set(Path(excluded_path).read_text().split()), f"{spec.key}:{source['split']}:")
                 request = (spec.dataset_id, spec.version, names[0], source["split"],
-                           source.get("min_duration", 0), source.get("max_duration"), allowed)
+                           source.get("min_duration", 0), source.get("max_duration"), allowed,
+                           source.get("online_mix"))
                 pending.append((number, source, spec, request))
         found = [None] * len(sources)
         if pending:

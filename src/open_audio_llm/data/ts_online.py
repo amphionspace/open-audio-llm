@@ -276,6 +276,20 @@ def build_scene(rng, mode, targets, others, config, *, rir_loader, sampling_rate
     return mixture
 
 
+def scene_seconds(scene, config):
+    """Longest the scene's mixture can run: build_scene with every gap at its upper bound.
+
+    The record's mixture slot only names the first target utterance, so this is what
+    the sampler must budget for instead.
+    """
+    gap = getattr(config, f"{scene['mode']}_gap_seconds")[1]
+    track = lambda utterances: sum(u["duration"] for u in utterances) + gap * max(len(utterances) - 1, 0)
+    if scene["mode"] == "alternate":
+        utterances = [u for u in scene["targets"]] + [u for other in scene["interferers"] for u in other["utts"]]
+        return track(utterances)
+    return max([track(scene["targets"]), *(track(other["utts"]) for other in scene["interferers"])])
+
+
 def _synthetic_noise(rng, kind, length):
     generator = np.random.default_rng(rng.getrandbits(64))
     noise = generator.standard_normal(length).astype(np.float32)
