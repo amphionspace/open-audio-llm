@@ -111,9 +111,45 @@ AUDIO_LOAD_ATTEMPTS = 3
 AUDIO_LOAD_RETRY_WAIT_S = 2.0
 
 
+def transcoded_flac(cut, sampling_rate):
+    """Read the 16 kHz mono FLAC transcoded next to a cut's m4a, or None to decode the m4a.
+
+    emilia2-flac16k-v1 (amphiondata ``emilia2-extracted-flac16k-20261012``) writes
+    ``<stem>.flac`` beside dialogue and long m4a: the whole file decoded, soxr-resampled
+    to 16 kHz and downmixed, in time with the m4a path. It needs no ffmpeg process. About
+    1% of files were scaled down to fit PCM16 (gain >= 0.64). Missing, half-written or
+    short files, channel views and transformed recordings keep the m4a.
+    """
+    recording = getattr(cut, "recording", None)
+    if recording is None or recording.transforms or len(recording.sources) != 1:
+        return None
+    source = recording.sources[0]
+    if source.type != "file" or not str(source.source).endswith(".m4a"):
+        return None
+    channels = cut.channel if isinstance(cut.channel, list) else [cut.channel]
+    if sorted(channels) != sorted(recording.channel_ids):
+        return None
+    import soundfile as sf
+
+    start = round(cut.start * sampling_rate)
+    frames = round(cut.duration * sampling_rate)
+    try:
+        with sf.SoundFile(str(source.source)[:-4] + ".flac") as flac:
+            if flac.samplerate != sampling_rate or flac.channels != 1 or start + frames > flac.frames:
+                return None
+            flac.seek(start)
+            audio = flac.read(frames, dtype="float32")
+    except (OSError, RuntimeError):
+        return None
+    return audio if len(audio) == frames else None
+
+
 def load_mono(cut, sampling_rate):
     from lhotse.audio.utils import AudioLoadingError
 
+    audio = transcoded_flac(cut, sampling_rate)
+    if audio is not None:
+        return audio
     for attempt in range(1, AUDIO_LOAD_ATTEMPTS + 1):
         try:
             audio = cut.load_audio()

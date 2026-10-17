@@ -47,3 +47,29 @@ def test_lhotse_reads_m4a_through_the_seeking_backend(tmp_path):
     expected = 0.125 * np.sin(2 * np.pi * 440 * (2.5 + np.arange(audio.shape[1]) / 44100))
     # AAC is lossy and needs a few frames after the seek; compare the settled part.
     np.testing.assert_allclose(audio[0, 4096:], expected[4096:], atol=0.02)
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg with an AAC encoder")
+def test_load_mono_prefers_the_transcoded_flac_and_falls_back_to_the_m4a(tmp_path):
+    import soundfile as sf
+
+    from open_audio_llm.data.catalog_dataset import load_mono
+
+    path = tmp_path / "dialog.m4a"
+    subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=6",
+                    "-f", "lavfi", "-i", "sine=frequency=440:duration=6", "-filter_complex", "amerge=inputs=2",
+                    "-ar", "44100", "-c:a", "aac", str(path)], check=True)
+    # A different tone in the FLAC shows which file was read.
+    flac = 0.25 * np.sin(2 * np.pi * 1000 * np.arange(6 * 16000) / 16000).astype(np.float32)
+    sf.write(tmp_path / "dialog.flac", flac, 16000, subtype="PCM_16")
+    install_m4a_backend()
+    cut = _recording(path, 44100, 6, 2).to_cut().truncate(offset=2.0, duration=1.5)
+
+    np.testing.assert_allclose(load_mono(cut, 16000), flac[32000:56000], atol=1e-4)
+    # A channel view needs the original microphone, not the downmix.
+    m4a = load_mono(cut.with_channels(0), 16000)
+    assert np.abs(m4a - flac[32000:56000][:len(m4a)]).max() > 0.1
+    # A FLAC shorter than the cut (still being written) is not trusted.
+    sf.write(tmp_path / "dialog.flac", flac[:40000], 16000, subtype="PCM_16")
+    fallback = load_mono(cut, 16000)
+    assert np.abs(fallback - flac[32000:56000][:len(fallback)]).max() > 0.1
