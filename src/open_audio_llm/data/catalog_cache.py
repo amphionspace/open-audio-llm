@@ -517,7 +517,8 @@ def main():
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data_config", required=True)
-    parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--workers", type=int, default=None,
+                        help="Index builders to run at once; default is one per CPU core, at most one per source")
     parser.add_argument("--message_format", default="qwen3_asr")
     parser.add_argument("--reuse-config", help="Previous recipe whose completed indexes may be reused")
     parser.add_argument("--preflight-report", type=Path,
@@ -528,7 +529,7 @@ def main():
     config = read_data_config(args.data_config)
     if not config.get("metadata_cache"):
         parser.error("Set metadata_cache in data config")
-    if args.workers <= 0:
+    if args.workers is not None and args.workers <= 0:
         parser.error("workers must be positive")
     if args.batch_size <= 0 or args.world_size <= 0:
         parser.error("batch-size and world-size must be positive")
@@ -540,8 +541,9 @@ def main():
         print("Verified reusable Catalog indexes:", len(reused), flush=True)
     sources = [(source, True) for source in config["train"]]
     sources += [(source, False) for source in config.get("validation", [])]
+    workers = args.workers or min(os.cpu_count() or 1, len(sources))
     with ProcessPoolExecutor(
-        max_workers=args.workers, mp_context=multiprocessing.get_context("spawn")
+        max_workers=workers, mp_context=multiprocessing.get_context("spawn")
     ) as pool:
         futures = [
             pool.submit(_prepare_source, config, source, args.message_format, training)
