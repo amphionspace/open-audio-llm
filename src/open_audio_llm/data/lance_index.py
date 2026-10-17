@@ -14,8 +14,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import multiprocessing
 import os
+import pickle
+import socket
 from dataclasses import replace
 from pathlib import Path
 
@@ -42,13 +45,26 @@ def _expression(split, min_duration, max_duration):
     return " AND ".join(parts)
 
 
-def _scan_many(catalog_path, roots_path, requests):
-    """Scan every requested split in one spawn process: imports and the catalog load once."""
+_SCAN_CATALOG = None
+
+
+def _open_scan_catalog(catalog_path, roots_path):
+    """Load the catalog once per spawn scan process."""
+    global _SCAN_CATALOG
     from audio_data_contract import load_catalog
     from audio_data_contract.roots import load_roots
 
-    catalog, roots = load_catalog(catalog_path), load_roots(roots_path)
-    return [_scan(catalog, roots, request) for request in requests]
+    _SCAN_CATALOG = load_catalog(catalog_path), load_roots(roots_path)
+
+
+def _scan_one(request):
+    return _scan(*_SCAN_CATALOG, request)
+
+
+def _scan_processes(requests):
+    """Splits scanned at once. torchrun ranks open their datasets together, so they share the cores."""
+    cores = len(os.sched_getaffinity(0)) // int(os.environ.get("LOCAL_WORLD_SIZE", "1"))
+    return max(1, min(len(requests), cores))
 
 
 def _scan(catalog, roots, args):
@@ -127,6 +143,45 @@ def spec_sha(catalog, dataset_id, version, artifact):
     return catalog.get(dataset_id, version).artifact(artifact).sha256
 
 
+# Bump when _scan returns different arrays for the same index and request.
+SCAN_CACHE_VERSION = 1
+
+
+def _scan_cache_path(dataset, spec, request, excluded):
+    """Where one split's scan is kept; the key pins the index content and every filter."""
+    if not dataset.metadata_cache:
+        return None
+    dataset_id, version, artifact, split, min_duration, max_duration, _, online_mix = request
+    key = hashlib.sha256(json.dumps([
+        SCAN_CACHE_VERSION, dataset_id, version, artifact, spec.artifact(artifact).sha256, split,
+        min_duration, max_duration, online_mix,
+        None if excluded is None else hashlib.sha256(excluded.encode()).hexdigest(),
+    ], sort_keys=True).encode()).hexdigest()
+    return Path(dataset.metadata_cache).expanduser().resolve() / f"lance-scan-{key}.pkl"
+
+
+def _read_scan(path):
+    if path is None or not path.exists():
+        return None
+    with path.open("rb") as stream:
+        return pickle.load(stream)
+
+
+def _write_scan(path, scan):
+    """Publish a scan for the other ranks and later runs; a read-only cache only costs a rescan."""
+    if path is None:
+        return
+    # flock does not exclude other hosts on quarkfs; each writer uses its own temporary,
+    # and the scan is deterministic, so any replace leaves identical content.
+    temporary = path.with_name(f"{path.stem}.{socket.gethostname()}.{os.getpid()}.tmp")
+    try:
+        with temporary.open("wb") as stream:
+            pickle.dump(scan, stream, protocol=pickle.HIGHEST_PROTOCOL)
+        os.replace(temporary, path)
+    except OSError as error:
+        logging.getLogger(__name__).warning("Lance scan not cached at %s: %s", path, error)
+
+
 class LanceSourceIndex:
     """Same surface as SourceRecordIndex: len, row access, metadata arrays, hotwords."""
 
@@ -134,27 +189,35 @@ class LanceSourceIndex:
     def open_many(cls, dataset, sources):
         """One index per source (None where the JSONL cache must be used), scanned together."""
         pending = []
+        found = [None] * len(sources)
         for number, source in enumerate(sources):
             spec = dataset.resolver.catalog.get(source["dataset_id"], source["version"])
             names = spec.splits[source["split"]].artifacts.get(ROLE)
             if names and not set(source) - SUPPORTED_KEYS and not dataset.augmentation.speed_prob:
                 excluded_path = source.get("exclude_records")
-                allowed = None
+                allowed, excluded = None, None
                 if excluded_path:
+                    excluded = Path(excluded_path).read_text()
                     # Lhotse rows are listed with their prefixed ID, like the JSONL path names them.
-                    allowed = _Allowed(set(Path(excluded_path).read_text().split()), f"{spec.key}:{source['split']}:")
+                    allowed = _Allowed(set(excluded.split()), f"{spec.key}:{source['split']}:")
                 request = (spec.dataset_id, spec.version, names[0], source["split"],
                            source.get("min_duration", 0), source.get("max_duration"), allowed,
                            source.get("online_mix"))
-                pending.append((number, source, spec, request))
-        found = [None] * len(sources)
+                cached = _scan_cache_path(dataset, spec, request, excluded)
+                scan = _read_scan(cached)
+                if scan is not None:
+                    found[number] = cls(dataset, source, spec, scan)
+                else:
+                    pending.append((number, source, spec, request, cached))
         if pending:
+            requests = [request for _, _, _, request, _ in pending]
             context = multiprocessing.get_context("spawn")
-            with context.Pool(1) as pool:
-                scans = pool.apply(_scan_many, (
-                    str(dataset.resolver.catalog_path), str(dataset.resolver.roots_path),
-                    [request for *_, request in pending]))
-            for (number, source, spec, _), scan in zip(pending, scans):
+            # Splits are independent; one process per split instead of one for all of them.
+            with context.Pool(_scan_processes(requests), initializer=_open_scan_catalog, initargs=(
+                    str(dataset.resolver.catalog_path), str(dataset.resolver.roots_path))) as pool:
+                scans = pool.map(_scan_one, requests, chunksize=1)
+            for (number, source, spec, _, cached), scan in zip(pending, scans):
+                _write_scan(cached, scan)
                 found[number] = cls(dataset, source, spec, scan)
         return found
 
