@@ -705,8 +705,9 @@ def test_epoch_changes_training_but_not_validation(catalog_config):
     validation = CatalogSwiftDataset(catalog_config, training=False)
     fixed = validation[1]
     validation.set_epoch(9)
-    assert fixed == validation[1]
-    reference, _ = sf.read(BytesIO(fixed["audios"][0]))
+    # Validation keeps the waveform instead of encoding a WAV, so compare the arrays.
+    np.testing.assert_array_equal(fixed["audios"][0], validation[1]["audios"][0])
+    reference = fixed["audios"][0]
     assert len(reference) == 4000
     original, _ = sf.read(str(Path(catalog_config["roots"]).parent / "speech.wav"))
     np.testing.assert_allclose(reference, original[4800:8800], atol=1e-6)
