@@ -221,6 +221,17 @@ padding，支持 encoder 反向传播。它限定 `qwen-asr==0.0.6`、SDPA、100
 批处理会改变 BF16 浮点归约结果，不能保证与逐条编码逐位相同；评估时可显式
 添加 `--audio_encoder_batching` 对照识别效果，默认评估仍使用原生路径。
 
+普通 token 平均 SFT 可加 `--supervised_head_loss true`：只把有监督位置送入 lm_head
+计算 loss，数值与 transformers 的 token 平均一致，ms-swift 按更新步 token 数缩放
+不变；`token_acc` 留在 GPU 上，到下一次日志时再汇总。Qwen3-ASR 原生前向会把音频
+占位符和提示词也投影到 151,936 维词表，TS 训练中有监督位置约占 6%。评估和不传
+labels 的调用仍返回完整 logits。`objective.sample_mean` 已只投影有监督位置，两者
+不能同时开启。
+
+ZeRO-1 + bf16 时，DeepSpeed 默认每次更新前逐个梯度张量检查 inf/NaN，发现则跳过
+该步。`examples/configs/train/zero1-bf16-no-overflow-check.json` 关闭这一检查，
+省去这部分主机开销；代价是出现非有限梯度时不再自动跳过。
+
 联合入口默认 `--save_only_model true`，不保存优化器状态。
 已有 checkpoint 可通过 `--model` 初始化新运行，但这会重新建立优化器，不能声称
 精确恢复完整训练状态。加载本项目 FP32 checkpoint 时添加 `--torch_dtype float32`，
