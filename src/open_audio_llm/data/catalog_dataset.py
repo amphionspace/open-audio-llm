@@ -22,7 +22,7 @@ from audio_data_contract import (
 from .augment import AugmentConfig, augment_waveform, direct_to_reverberant_db, for_slot
 from .catalog_resolver import LhotseCatalogAudioResolver
 from .interference_pool import PoolClip, pool_clips
-from .lance_source import SAMPLES_ROLE, lance_records, read_lance_audio
+from .lance_source import SAMPLES_ROLE, lance_records, open_lance_release, read_lance_audio
 from .online_dataset import TASK_TEMPLATES, OnlineAudioDataset
 from .m4a_backend import install_m4a_backend
 from .records import ResolvedAudioRecord
@@ -350,7 +350,6 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         self.training = training
         self.message_format = message_format
         self._audio_cuts = {}
-        self._lance_releases = {}
         self._sot_alignments = {}
         self.config = config
         self.source_ranges = []
@@ -527,19 +526,14 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         return groups
 
     def _lance_release(self, dataset_id, version, split_name):
-        """Open the pinned release once per process; None for non-Lance splits."""
+        """The pinned release (opened once per process); None for non-Lance splits."""
         spec = self.resolver.catalog.get(dataset_id, version)
         names = spec.splits[split_name].artifacts.get(SAMPLES_ROLE)
         if not names:
             return None
-        key = (spec.dataset_id, spec.version, names[0])
-        if key not in self._lance_releases:
-            from audio_data_contract.tts_lance import open_release
-
-            self._lance_releases[key] = open_release(
-                self.resolver.catalog, *key, self.resolver.roots
-            )
-        return self._lance_releases[key]
+        return open_lance_release(
+            self.resolver.catalog, self.resolver.roots, spec.dataset_id, spec.version, names[0]
+        )
 
     def _source_records(self, source):
         spec = self.resolver.catalog.get(source["dataset_id"], source["version"])
