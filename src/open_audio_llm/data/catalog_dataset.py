@@ -19,7 +19,7 @@ from audio_data_contract import (
     resolve_split,
 )
 
-from .augment import AugmentConfig, augment_waveform, direct_to_reverberant_db
+from .augment import AugmentConfig, augment_waveform, direct_to_reverberant_db, for_slot
 from .catalog_resolver import LhotseCatalogAudioResolver
 from .interference_pool import PoolClip, pool_clips
 from .lance_source import SAMPLES_ROLE, lance_records, read_lance_audio
@@ -762,6 +762,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                     # Aligned times are fixed and time warping invalidates them; RIRs start
                     # at the direct path, so reverberation keeps them.
                     augmentation = replace(augmentation, speed_prob=0.0)
+                augmentation = for_slot(augmentation, slot.name)
                 if resolved.dataset_id in augmentation.noise_exclude_datasets:
                     augmentation = replace(augmentation, noise_prob=0.0)
                 audio = augment_waveform(
