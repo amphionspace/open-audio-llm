@@ -115,3 +115,40 @@ def test_supervision_span_at_the_start_of_a_long_file_loads_only_the_span(tmp_pa
     for start in (0, 16000):
         row = {"cut_id": "c", "sample_rate": 16000, "start_frame": start, "num_frames": 48000, "channels": 1, "channel": None}
         assert supervision_cut(row, tmp_path / "long.wav").load_audio().shape == (1, 48000)
+
+
+def _pool(lance_config, tmp_path, ref):
+    from open_audio_llm.data.interference_pool import pool_clips
+
+    records = tmp_path / "pool-zh.jsonl"
+    records.write_text(json.dumps({
+        "schema_version": "audio-record/1.0", "id": f"pool:{ref['cut_id']}", "task": "ts_asr_interference",
+        "audio_slots": [{"name": "primary", "ref": ref}], "target": "", "language": "zh",
+        "labels": {}, "hotwords": [], "metadata": {}}) + "\n")
+    pool = DatasetSpec(
+        dataset_id="pool", version="v3", languages=("zh",), tasks=("ts_asr_interference",),
+        artifacts=(ArtifactRef.from_dict({
+            "name": "zh-records", "kind": "audio-records", "root_alias": "tts",
+            "relative_path": records.name, "sha256": hashlib.sha256(records.read_bytes()).hexdigest(),
+        }),),
+        splits={"zh": Split({"records": ("zh-records",)}), "en": Split({"records": ("zh-records",)})},
+    )
+    with open(lance_config["catalog"], "a") as catalog:
+        catalog.write(json.dumps(pool.to_dict()) + "\n")
+    dataset = CatalogSwiftDataset(lance_config)
+    return list(pool_clips(dataset.resolver, dataset.resolver.catalog.get("pool", "v3"), "zh"))
+
+
+def test_a_pool_clip_naming_a_lance_sample_is_read_from_the_release(lance_config, tmp_path):
+    from open_audio_llm.data.catalog_dataset import load_mono
+    from open_audio_llm.data.interference_pool import LanceClip
+
+    (clip,) = _pool(lance_config, tmp_path, {
+        "dataset_id": "demo", "version": "tts-unified-v0.1", "split": "train", "cut_id": "b"})
+    assert isinstance(clip, LanceClip) and clip.id == "b"
+    assert load_mono(clip, 16000).shape == (2 * 16000,)
+
+
+def test_a_pool_clip_naming_another_non_lance_split_is_rejected(lance_config, tmp_path):
+    with pytest.raises(ValueError, match="neither the pool nor a Lance release"):
+        _pool(lance_config, tmp_path, {"dataset_id": "pool", "version": "v3", "split": "en", "cut_id": "x"})
