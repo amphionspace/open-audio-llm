@@ -8,7 +8,7 @@ schema.
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 
@@ -28,6 +28,9 @@ class AugmentConfig:
     spec_aug_prob: float = 0.0
     speed_factors: tuple[float, ...] = (0.9, 1.0, 1.1)
     noise_snr_db: tuple[float, float] = (5.0, 20.0)
+    # Noise level of the enrollment slot only; None uses noise_snr_db. An enrollment buried in noise
+    # or babble no longer names a speaker, so keep it at or above the benchmark's worst one (10 dB).
+    enrollment_noise_snr_db: tuple[float, float] | None = None
     # Datasets already recorded in the target noise condition (e.g. far-field meetings).
     noise_exclude_datasets: tuple[str, ...] = ()
     # Far-field: when the speech was reverberated, pass the noise through the same
@@ -52,6 +55,10 @@ class AugmentConfig:
             raise ValueError("speed_factors must be positive")
         if len(self.noise_snr_db) != 2 or self.noise_snr_db[0] > self.noise_snr_db[1]:
             raise ValueError("noise_snr_db must be an ordered pair")
+        if self.enrollment_noise_snr_db is not None and (
+            len(self.enrollment_noise_snr_db) != 2 or self.enrollment_noise_snr_db[0] > self.enrollment_noise_snr_db[1]
+        ):
+            raise ValueError("enrollment_noise_snr_db must be an ordered pair")
         if self.rir_drr_db is not None and (
             len(self.rir_drr_db) != 2 or self.rir_drr_db[0] > self.rir_drr_db[1]
         ):
@@ -64,6 +71,13 @@ class AugmentConfig:
             raise ValueError("far_level_dbfs must be an ordered pair <= 0 dBFS")
         if self.time_mask_width < 0 or self.frequency_mask_width < 0:
             raise ValueError("SpecAugment mask widths must be non-negative")
+
+
+def for_slot(config, slot_name):
+    """The augmentation one slot gets: the enrollment may have its own noise level."""
+    if slot_name == "enrollment" and config.enrollment_noise_snr_db is not None:
+        return replace(config, noise_snr_db=tuple(config.enrollment_noise_snr_db))
+    return config
 
 
 def direct_to_reverberant_db(impulse, sampling_rate):

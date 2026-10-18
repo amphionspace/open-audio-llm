@@ -840,6 +840,24 @@ def test_noise_source_weight_selects_wham_thirty_percent():
         source_weights([{"weight": 1}, {}])
 
 
+def test_enrollment_noise_level_is_separate_from_the_mixture_s():
+    from dataclasses import replace
+
+    from open_audio_llm.data.augment import for_slot
+
+    config = AugmentConfig(noise_prob=1, noise_snr_db=(0, 20), enrollment_noise_snr_db=(10, 20))
+    assert for_slot(config, "enrollment").noise_snr_db == (10, 20)
+    assert for_slot(config, "mixture").noise_snr_db == (0, 20)
+    assert for_slot(AugmentConfig(noise_snr_db=(0, 20)), "enrollment").noise_snr_db == (0, 20)
+    with pytest.raises(ValueError, match="enrollment_noise_snr_db"):
+        AugmentConfig(enrollment_noise_snr_db=(20, 10))
+    audio = np.ones(1000, dtype=np.float32)
+    noise = np.tile(np.array([-1, 1], dtype=np.float32), 500)
+    mixed = augment_waveform(audio, 16000, random.Random(0), for_slot(replace(config, enrollment_noise_snr_db=(10, 10)), "enrollment"),
+                             noise_loader=lambda rng, sr: noise)
+    assert np.mean((mixed - audio) ** 2) == pytest.approx(0.1, rel=1e-5)
+
+
 def test_far_rir_is_exclusive_with_ordinary_reverb():
     audio = np.ones(8, dtype=np.float32)
     calls = []
