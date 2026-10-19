@@ -3,28 +3,15 @@
 from __future__ import annotations
 
 import re
-import sys
-from pathlib import Path
 
-try:
-    from .base import (
-        char_error_rate,
-        hotword_f1,
-        hotword_match_accuracy,
-        parse_hotwords_from_instruction,
-        parse_structured_answer,
-    )
-except ImportError:  # pragma: no cover - ms-swift file plugin import mode
-    ms_swift_dir = str(Path(__file__).resolve().parents[1])
-    if ms_swift_dir not in sys.path:
-        sys.path.insert(0, ms_swift_dir)
-    from rewards.base import (
-        char_error_rate,
-        hotword_f1,
-        hotword_match_accuracy,
-        parse_hotwords_from_instruction,
-        parse_structured_answer,
-    )
+# Absolute: ms-swift also loads this file by path, outside its package.
+from open_audio_llm.integrations.ms_swift.rewards.base import (
+    char_error_rate,
+    hotword_f1,
+    hotword_match_accuracy,
+    parse_hotwords_from_instruction,
+    parse_structured_answer,
+)
 
 try:
     from swift.rewards import ORM, orms
