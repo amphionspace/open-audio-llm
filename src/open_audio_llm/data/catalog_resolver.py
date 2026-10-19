@@ -53,6 +53,23 @@ def _resolve(path):
     return directory / path.name
 
 
+@functools.lru_cache(maxsize=_RESOLVED_DIRECTORIES)
+def _resolved_parent(directory):
+    return Path(directory).resolve()
+
+
+def _resolve_one(path):
+    """``Path.resolve()`` for one file read at random, with a single lstat.
+
+    Training reads one file from directories of up to ~10^6 files (Common Voice clips):
+    listing such a directory took 40 s in every data worker, which stalled the first
+    ~1000 updates of a run. Listing pays off only when the whole directory is resolved.
+    """
+    if path.is_symlink():
+        return path.resolve()
+    return _resolved_parent(str(path.parent)) / path.name
+
+
 class LhotseCatalogAudioResolver:
     """Resolve exact Lhotse cuts; optionally share indexed metadata on disk."""
 
@@ -176,7 +193,7 @@ class LhotseCatalogAudioResolver:
         if index_name:
             row = self._index_row(ref, index_name)
             root = self.roots[row["root_alias"]]
-            path = _resolve(root / row["relative_path"])
+            path = _resolve_one(root / row["relative_path"])
             if not path.is_relative_to(root):
                 raise ValueError(f"audio index path escapes root: {ref.cut_id}")
             cut = Recording(
