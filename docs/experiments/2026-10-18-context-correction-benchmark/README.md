@@ -15,6 +15,10 @@
 | `mined_real` | asr | 127 | 0.6 h | WenetSpeech 播客真实录音里说话人自己讲写法的片段，平均 17 s |
 | `quarantine` | asr | 425 | 3.1 h | 音频没过质检的条目，保留原因，不打分 |
 
+对象存储：
+- **数据**：本机目录 `/workspace/data/datasets/context_correction_zh/`（版本记录、音频、生成和挖掘的中间产物、LLM 调用存档，3,225 个文件、2.1 GiB）原样镜像在 `whai:audio-data/datasets/context_correction_zh/`；
+- **评测集定义**：已发布到 COS，`anfeiweng-audiollm-resource-1373259071:amphion-eval/eval-sets/open-audio-llm/context-correction-zh@v1-20261018/`。
+
 题目按子类型成对出：
 
 | 子类型 | 对数 | 例子 |
