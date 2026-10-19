@@ -31,7 +31,8 @@ def sample_hotwords(
     if rng.random() >= prompt_prob:
         return "N/A"
     real = [h for h in real_hotwords if rng.random() >= miss_prob]
-    distractor_pool = [h for h in hotword_pool if h not in set(real_hotwords)]
+    excluded = set(real_hotwords)
+    distractor_pool = [h for h in hotword_pool if h not in excluded]
     n_distractors = max(0, min(max_hotwords - len(real), len(distractor_pool)))
     if n_distractors:
         real.extend(rng.sample(distractor_pool, rng.randint(0, n_distractors)))
