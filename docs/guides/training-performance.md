@@ -60,3 +60,55 @@ CUDA event 只在日志区间结束时同步，不在每个微批次强制同步
 数据等待占比仅 0.1%–0.3%，没有通过增加 worker、缓存音频或关闭在线增强来换取吞吐。第一组与第二组所有已记录 loss 完全一致。第三组改变了动态组批边界，实际样本数稍有差异，因此同时报告按实际音频秒数归一的吞吐。
 
 [原生配方](../../examples/train/qwen3-asr/README.md)采用第三组设置。通用模型的 checkpointing 和 batch 默认值不因此改变。显存较小的设备可降低 YAML 的 `batching.max_samples`、相应修改 `per_device_train_batch_size`，并按需要开启语言模型 checkpointing；冻结的音频塔保留 `vit_gradient_checkpointing=false`。
+
+## 定位瓶颈
+
+先分清每步的时间是花在 GPU 计算、等数据，还是 GPU 空等上，再决定优化什么。只看某一侧会误判：
+
+- **不要把 rank 主进程 CPU 接近 100% 当成 CPU 瓶颈。** CUDA 同步是在 CPU 上原地空转等待，同样会把 CPU 占满。`forward_backward_host_s` 也包含这些等待。
+- **每一步开头有一次跨卡对齐。** transformers 每步会 `gather` 一次监督 token 数，DeepSpeed 吞吐计时器又会在 forward 开头同步，所以最慢 rank 取数据的耗时会落到所有 rank 头上。要看的是每个日志区间里**最慢 rank** 的 `batch_fetch_s`，不是平均值。
+- **按训练阶段分开比较。** 数据 worker 的缓存要经过一段时间才能热起来，开头几百步和稳态的耗时差别很大。对照时分开比较第 1–100 步、热身阶段和稳态，不要只看前几百步。
+- **单卡计时不能推算整步提速。** GPU 计算省下的时间，可能被等数据、通信或空泡吃掉。
+
+| 现象 | 说明 | 手段 |
+| --- | --- | --- |
+| 每步耗时明显大于 `forward_backward_cuda_span_s`，最慢 rank 的 `batch_fetch_s` 大 | 等数据 | 用 py-spy `record --idle` 同时采样所有 rank 和数据 worker |
+| 每步耗时约等于 `forward_backward_cuda_span_s` | GPU 侧（计算、通信或空泡） | `--torch_profile_steps` 采时间线 |
+
+`--torch_profile_steps 第一步 最后一步` 会在这几次参数更新期间，为每个 rank 写一份只含 CUDA 活动的时间线（训练输出目录下的 `torch-profile-rankN.json.gz`）。不记录 CPU 算子，避免拖慢主机、放大 kernel 间隙。用下面的命令汇总：
+
+```bash
+python scripts/analyze_cuda_trace.py <输出目录>/torch-profile-rank0.json.gz --updates <采样的更新次数>
+```
+
+它会给出：每步 GPU 忙碌时间（所有 stream 的并集）、NCCL 时间及其中没有与计算重叠的部分、各类 kernel 的耗时，以及最长的空闲间隙和它们前后的 kernel。NCCL kernel 的耗时包含等待其他 rank 到齐的时间。看各 rank 中 NCCL 时间最少的那个，才更接近纯通信时间。
+
+## Qwen3-ASR 推荐的提速设置（2026-10）
+
+ACP 单节点 8×A800，ts-robust v7set4c 配方，每卡 batch 12、梯度累积 2，与 029 使用同一批次序列：
+
+| 项 | 029（原设置） | 新设置 |
+| --- | ---: | ---: |
+| 第 1–100 步 | 11.7 分钟 | 1.7 分钟 |
+| 第 1–1000 步合计 | 31.3 分钟 | 12.5 分钟 |
+| 第 1001–1500 步每步 | 1.176 s | 0.746 s（1.56×） |
+| 显存峰值 | 41.9 GB | 29.9 GB |
+
+第 1–500 步 loss 与 029 的平均相对差为 0.014%，最大 0.69%。
+
+新设置（在已有的 `--audio_encoder_batching true`、`--supervised_head_loss true`、关闭 gradient checkpointing 基础上）：
+
+- `--use_liger_kernel true`：文本解码器换成 Liger 的 RMSNorm、SwiGLU、RoPE kernel（#69）。
+- `--packed_text true`：每个 microbatch 拼成一行，不再填充，文本解码器走 FlashAttention-2 varlen（#69）。需要 flash-attn 2.8.3。
+- `--dataloader_num_workers 20`：稳态下每条样本准备约 0.1 s，主要在等 I/O，20 个 worker 留有余量。worker 数不改变训练数据。
+- 代码层面已默认生效：按样本读音频时不再列整个目录（#70），音频编码器和监督头不再强制 CPU 等 GPU（#72）。
+
+`--use_liger_kernel` 和 `--packed_text` 会改变 BF16 数值舍入。新实验只和同样开着这两项的实验比较，在开始一个新系列时一起打开。
+
+剩余可优化空间（第 1201–1203 步的 CUDA 时间线）：
+
+- 每步 GPU 空闲约 19%。
+- 梯度 AllReduce 与计算完全串行，纯通信约 56 ms/步，另有 35–60 ms 是等其他 rank 到齐。
+- 小 microbatch 的文本解码器前向受 CPU 下发速度限制，约 44 ms/步。
+
+证据和后续对照记录在 `runs/train-speed-20261019`（08、10）。
