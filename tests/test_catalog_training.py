@@ -1725,3 +1725,17 @@ def test_validation_audio_stays_a_waveform(catalog_config):
     assert isinstance(sample["audios"][0], np.ndarray)
     if sample.get("mix_wav") is not None:
         assert isinstance(sample["mix_wav"], np.ndarray)
+
+
+def test_train_end_stops_persistent_loader_workers():
+    from torch.utils.data import DataLoader
+    from open_audio_llm.integrations.ms_swift.catalog_loader import StopLoaderWorkersCallback
+
+    loader = DataLoader(range(8), batch_size=2, num_workers=2, persistent_workers=True)
+    list(loader)
+    workers = loader._iterator._workers
+    callback = StopLoaderWorkersCallback()
+    callback.loader = loader
+    # Without this, torch's per-worker atexit join waits 5 s for each worker.
+    callback.on_train_end(None, None, None)
+    assert workers and not any(worker.is_alive() for worker in workers)
