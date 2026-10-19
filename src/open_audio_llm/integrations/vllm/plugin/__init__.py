@@ -24,6 +24,12 @@ def register():
         "1", "true", "yes", "on",
     }
     enable_target_sot = os.environ.get("OPEN_AUDIO_LLM_TARGET_SOT_VLLM") == "1"
+    if enable_qwen3_asr_embeds and enable_ts_sep:
+        # Both register Qwen3ASRForConditionalGeneration; the later one would win silently.
+        raise ValueError(
+            "OPEN_AUDIO_LLM_ENABLE_QWEN3_ASR_EMBEDS and AMPHION_TSASR_INSERT_SEP select "
+            "different Qwen3-ASR vLLM classes; enable one"
+        )
     if not (
         enable_audio_llm
         or enable_qwen3_asr_embeds
