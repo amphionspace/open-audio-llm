@@ -151,5 +151,6 @@ ae open-audio-llm after-training --handoff baselines/<model>/handoff.json \
 
 - 运行目录在 `/workspace/data/ae-runs/<model>/runs/<run>/`。
 - W&B 远端两个 run 都是 finished，各 1,123 个指标，与本地 `summary.json` 逐项相等。
-- 评测日志在 [baselines/logs](baselines/logs/)。
+- 推理和评测日志（`inference.log`、`worker.log`）在各运行目录里。
+- 四个 run（v2 两个、v1 对照两个）已用 `ae publish` 发布到 COS `amphion-eval`，评测集 `open-audio-llm/hotword-bench@v2-20261019` 也已发布。
 - 现网列表来自 audiollm-go `docs/archive/evaluations/amphion-20260913/rag-recall`（commit 75ea79e5）。
