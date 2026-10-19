@@ -156,6 +156,13 @@ ae open-audio-llm after-training --handoff baselines/<model>/handoff.json \
   --config baselines/<model>/after-training-context-correction.yaml
 ```
 
+介绍网页（评测集、指标、两个基线的结果和带音频的样例）由 `scripts/build_report.py` 生成，需要装有本分支 AmphionEval 的环境：
+
+```bash
+python scripts/build_report.py --out <site dir>
+python -m http.server <port> --bind 0.0.0.0 --directory <site dir>
+```
+
 服务启动命令：
 
 ```bash
