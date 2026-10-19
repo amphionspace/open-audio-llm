@@ -160,6 +160,10 @@ def install_catalog_loader(trainer, resume_checkpoint=None):
     trainer.catalog_sampler = sampler
     trainer.add_callback(CatalogSamplerCallback(sampler))
     collator = trainer.data_collator
+    if getattr(args, "packed_text", False):
+        from .packed_text import PackedTextCollator
+
+        collator = PackedTextCollator(collator)
     if getattr(trainer.train_dataset, "collect_metrics", False):
         from .performance import PerformanceCollator, install_performance_logging
 

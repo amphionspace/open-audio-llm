@@ -70,6 +70,8 @@ class CatalogSftArguments(CatalogArgumentsMixin, SftArguments):
     audio_encoder_parallel: bool = False
     audio_encoder_batching: bool = False
     supervised_head_loss: bool = False
+    # One unpadded row per microbatch for the Qwen3-ASR text decoder (FlashAttention-2 varlen).
+    packed_text: bool = False
     # None keeps the training worker count. Eval sets these explicitly because
     # its forward is too short to hide audio loading at the training depth.
     dataloader_eval_num_workers: int | None = None
@@ -198,6 +200,10 @@ class CatalogTrainingMixin:
             sample_mean = self.args._catalog_config.get("objective", {}).get("sample_mean")
             if sample_mean and getattr(self.args, "supervised_head_loss", False):
                 raise ValueError("The sample-mean objective already projects only supervised positions")
+            trainer.args.packed_text = getattr(self.args, "packed_text", False)
+            if trainer.args.packed_text and (self.args.model_type != "amphion_asr_1.7b" or sample_mean):
+                # The sample-mean objective groups positions by batch row; a packed row holds every sample.
+                raise ValueError("packed_text supports Qwen3-ASR without the sample-mean objective")
             if sample_mean:
                 from .retention import install_retention_objective
 
@@ -251,6 +257,12 @@ class CatalogTrainingMixin:
 
             patched, restore_liger = enable_liger_kernels(trainer.model)
             logging.getLogger(__name__).warning("Liger kernels on the Qwen3-ASR text decoder: %s", patched)
+        restore_text = None
+        if getattr(trainer.args, "packed_text", False):
+            from .packed_text import enable_packed_text
+
+            restore_text = enable_packed_text(trainer.model)
+            logging.getLogger(__name__).warning("Packed text batches: FlashAttention-2 varlen text decoder")
         try:
             return super().train(trainer)
         finally:
@@ -260,6 +272,8 @@ class CatalogTrainingMixin:
                 restore_audio()
             if restore_liger is not None:
                 restore_liger()
+            if restore_text is not None:
+                restore_text()
             performance = getattr(trainer, "catalog_performance", None)
             if performance is not None:
                 performance.close()

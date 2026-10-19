@@ -43,6 +43,10 @@ class PerformanceCollator:
                 totals[name] = int(mask.sum())
                 totals[name + "_capacity"] = mask.numel()
                 totals[name + "_max_length"] = mask.shape[-1]
+        if "cu_seq_lens_q" in batch:
+            # A packed row holds no padding.
+            totals["tokens"] = totals["tokens_capacity"] = batch["input_ids"].numel()
+            totals["tokens_max_length"] = batch["max_length_q"]
         if batch.get("labels") is not None:
             totals["supervised_tokens"] = int((batch["labels"] != -100).sum())
         totals["collate_s"] = time.perf_counter() - started
