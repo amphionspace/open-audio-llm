@@ -154,6 +154,42 @@ class PerformanceCallback(TrainerCallback):
             self.gpu_file = None
 
 
+class TorchProfileCallback(TrainerCallback):
+    """Record the CUDA timeline of updates ``start`` through ``stop`` on every rank.
+
+    Only CUDA activity is traced: CPU op recording slows the host enough to widen
+    the very gaps between kernels this trace exists to measure.
+    """
+
+    def __init__(self, start, stop):
+        if not 0 < start <= stop:
+            raise ValueError("torch_profile_steps takes a first and last update step, 1 <= first <= last")
+        self.start, self.stop = start, stop
+        self.profiler = None
+
+    def on_step_begin(self, args, state, control, **kwargs):
+        # global_step counts finished updates, so update ``start`` begins at start - 1.
+        if state.global_step == self.start - 1 and self.profiler is None:
+            self.profiler = torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CUDA])
+            self.profiler.start()
+
+    def on_step_end(self, args, state, control, **kwargs):
+        if self.profiler is not None and state.global_step >= self.stop:
+            self._export(args)
+
+    def on_train_end(self, args, state, control, **kwargs):
+        if self.profiler is not None:
+            self._export(args)
+
+    def _export(self, args):
+        self.profiler.stop()
+        path = Path(args.output_dir) / f"torch-profile-rank{args.process_index}.json.gz"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        self.profiler.export_chrome_trace(str(path))
+        LOG.warning("CUDA timeline of updates %d-%d: %s", self.start, self.stop, path)
+        self.profiler = None
+
+
 def install_performance_logging(trainer):
     callback = PerformanceCallback(trainer)
     trainer.add_callback(callback)
