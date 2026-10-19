@@ -58,8 +58,8 @@ flowchart LR
 
 | 维度 | 默认支持 | 可选 / legacy |
 | --- | --- | --- |
-| 音频编码器 | Qwen3-ASR、Qwen3-Omni | Whisper、WavLM（扩展点）；Zipformer（仅 legacy 转换） |
-| Connector | `mlp_downsample`、`qformer`、`mean_pool` | — |
+| 音频编码器 | Qwen3-ASR、Qwen3-Omni | 其他编码器需实现 `AudioTower` 接口；Zipformer（仅 legacy 转换） |
+| Connector | `mlp_downsample`、`mean_pool` | `qformer`（目前与 `mlp_downsample` 相同，占位） |
 | LLM | `AutoModelForCausalLM`（需支持 `inputs_embeds`） | 其他 LM 需 adapter |
 | 训练 | ms-swift SFT / GRPO，全参 / LoRA，DeepSpeed | — |
 | 推理 | vLLM 0.17（评测）/ 0.18（serving） | HF `generate` |
