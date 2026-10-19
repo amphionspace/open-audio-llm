@@ -61,3 +61,30 @@ def test_native_audio_gradient_hook_uses_real_convolution():
     replacement = torch.nn.Conv2d(1, 3, 3)
     tower.set_input_embeddings(replacement)
     assert tower.get_input_embeddings() is replacement
+
+
+def test_torch_profile_window_covers_exactly_the_requested_updates(monkeypatch, tmp_path):
+    from open_audio_llm.integrations.ms_swift.performance import TorchProfileCallback
+
+    log = []
+
+    class Profiler:
+        def __init__(self, activities):
+            assert activities == [torch.profiler.ProfilerActivity.CUDA]
+        def start(self):
+            log.append(('start', state.global_step + 1))
+        def stop(self):
+            log.append(('stop', state.global_step))
+        def export_chrome_trace(self, path):
+            log.append(('export', path))
+
+    monkeypatch.setattr(torch.profiler, 'profile', Profiler)
+    args = SimpleNamespace(output_dir=str(tmp_path), process_index=3)
+    state = SimpleNamespace(global_step=0)
+    callback = TorchProfileCallback(3, 4)
+    for _ in range(6):
+        callback.on_step_begin(args, state, None)
+        state.global_step += 1
+        callback.on_step_end(args, state, None)
+    callback.on_train_end(args, state, None)
+    assert log == [('start', 3), ('stop', 4), ('export', str(tmp_path / 'torch-profile-rank3.json.gz'))]

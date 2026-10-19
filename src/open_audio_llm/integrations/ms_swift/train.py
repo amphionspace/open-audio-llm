@@ -8,7 +8,7 @@ import sys
 import time
 import logging
 import torch
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from swift.arguments import RLHFArguments, SftArguments
@@ -67,6 +67,8 @@ class CatalogSftArguments(CatalogArgumentsMixin, SftArguments):
     # a checkpoint saved at another world size or data location.
     catalog_sampler_migration: str | None = None
     performance_logging: bool = True
+    # First and last update step whose CUDA timeline is written per rank; empty records none.
+    torch_profile_steps: list[int] = field(default_factory=list)
     audio_encoder_parallel: bool = False
     audio_encoder_batching: bool = False
     supervised_head_loss: bool = False
@@ -219,6 +221,12 @@ class CatalogTrainingMixin:
                 trainer.add_callback(RetentionEvaluationCallback(
                     self.args.retention_eval_script, self.args.retention_eval_interval,
                 ))
+        if profile_steps := getattr(self.args, "torch_profile_steps", None):
+            if len(profile_steps) != 2:
+                raise ValueError("torch_profile_steps takes a first and last update step")
+            from .performance import TorchProfileCallback
+
+            trainer.add_callback(TorchProfileCallback(*profile_steps))
         if "SENSECORE_PYTORCH_NODE_RANK" in os.environ:
             # Registered before uploads, which may remove the local checkpoint.
             trainer.add_callback(ReadableCheckpointCallback())
