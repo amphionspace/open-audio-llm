@@ -89,7 +89,7 @@ AmphionEval `integrations/open_audio_llm/context_correction.py`，确定性打�
 
 ## 基线结果
 
-都用 `ae open-audio-llm after-training` 跑，贪心解码，`max_new_tokens=512`，没有截断。
+都用 `ae open-audio-llm after-training` 跑，贪心解码，`max_new_tokens=512`，没有截断。配置里 `publish.enabled: false`，经用户同意后用 `ae publish` 补发布到 COS（`anfeiweng-audiollm-resource-1373259071:amphion-eval`，记录在 `records/asr/2026-10/`）。
 
 | 模型 | 推理 | AmphionEval 运行 / W&B |
 | --- | --- | --- |
@@ -174,4 +174,3 @@ VLLM_PLUGINS="" vllm serve /workspace/model/Qwen3-ASR-1.7B --port 18121 --served
 - 合成题的"常用写法"由出题 LLM 判断，不一定是被测模型的先验，所以确认题失败里有一部分是第三种写法（见上）。
 - 音频质检用 SenseVoiceSmall 和拼音库，个别多音字会误判；没有人工听审。
 - 合成说话人只有朗读和手机录音两种风格，没有远场和噪声。
-- 评测结果尚未发布到 COS（配置里 `publish.enabled: false`）。
