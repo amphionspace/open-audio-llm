@@ -30,6 +30,21 @@ def _enroll_list(enroll_n_frames, n_utt):
     return values
 
 
+def _padded_rows(lengths, width, device):
+    """Mask and row-major positions of the first ``lengths[i]`` steps of each padded row.
+
+    Built from host integers and copied through pinned memory, so neither the copy
+    nor the selection makes the host wait for queued GPU work, as a boolean index or
+    a pageable ``torch.tensor(..., device="cuda")`` would.
+    """
+    valid = torch.arange(width)[None, :] < torch.tensor(lengths)[:, None]
+    positions = valid.flatten().nonzero().squeeze(1)
+    pinned = device.type == "cuda"
+    if pinned:
+        valid, positions = valid.pin_memory(), positions.pin_memory()
+    return valid.to(device, non_blocking=pinned), positions.to(device, non_blocking=pinned)
+
+
 def _conv_clips(encoder, clips):
     """Conv each clip independently, using the native 100-frame chunk width.
 
@@ -61,10 +76,9 @@ def _conv_clips(encoder, clips):
             embedded.permute(0, 3, 1, 2).contiguous().view(batch, time, channels * frequency)
         )
         embedded = embedded + encoder.positional_embedding.positional_embedding[:time].to(embedded.dtype)
-        valid = torch.arange(time, device=device)[None, :] < torch.tensor(
-            [(length + 7) // 8 for length in chunk_lengths], device=device,
-        )[:, None]
-        for index, hidden in zip(indexes, embedded[valid].split(output_lengths)):
+        _, positions = _padded_rows([(length + 7) // 8 for length in chunk_lengths], time, device)
+        selected = embedded.flatten(0, 1).index_select(0, positions)
+        for index, hidden in zip(indexes, selected.split(output_lengths)):
             audio_hidden[index] = hidden
     return audio_hidden
 
@@ -111,9 +125,7 @@ def _encode_batch(encoder, features, lengths, enroll_n_frames=None):
             groups.append((1, False))
     audio_hidden = _stitch_sep(encoder, _conv_clips(encoder, clips), groups)
     hidden = pad_sequence(audio_hidden, batch_first=True)
-    valid = torch.arange(hidden.shape[1], device=features.device)[None, :] < torch.tensor(
-        [len(row) for row in audio_hidden], device=features.device,
-    )[:, None]
+    valid, positions = _padded_rows([len(row) for row in audio_hidden], hidden.shape[1], features.device)
     # Frozen convs leave a plain-ASR hidden state without grad. Checkpointed
     # encoder layers would then skip backward and drop out of the allreduce.
     if encoder.training and torch.is_grad_enabled() and not hidden.requires_grad:
@@ -122,7 +134,7 @@ def _encode_batch(encoder, features, lengths, enroll_n_frames=None):
     # and mask padding, retaining full attention within each enrollment+mixture.
     for layer in encoder.layers:
         hidden = layer(hidden, None, valid[:, None, None, :])[0]
-    hidden = encoder.ln_post(hidden[valid])
+    hidden = encoder.ln_post(hidden.flatten(0, 1).index_select(0, positions))
     return BaseModelOutput(last_hidden_state=encoder.proj2(encoder.act(encoder.proj1(hidden))))
 
 

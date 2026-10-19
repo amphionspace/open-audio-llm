@@ -52,17 +52,17 @@ def supervised_forward(model, head, inputs, labels):
     """Project only supervised positions; Qwen-ASR 0.0.6 otherwise projects audio too."""
     shifted = F.pad(labels[:, 1:], (0, 1), value=-100)
     mask = shifted != -100
-    rows = torch.arange(labels.shape[0], device=labels.device)[:, None].expand_as(mask)[mask]
-    # Resolve the positions before the forward: a boolean mask inside the hook
-    # would make the host wait for the whole forward before launching the head.
+    # The one host sync, before the forward: every later selection reuses these
+    # row-major positions, so the host never waits for the forward to finish.
     index = mask.flatten().nonzero().squeeze(1)
+    rows = index.div(labels.shape[1], rounding_mode="floor")
     hook = head.register_forward_pre_hook(
         lambda module, args: (args[0].flatten(0, 1).index_select(0, index),))
     try:
         outputs = model(**inputs, use_cache=False)
     finally:
         hook.remove()
-    return outputs, shifted[mask], rows, mask.sum(-1)
+    return outputs, shifted.flatten().index_select(0, index), rows, mask.sum(-1)
 
 
 def average_answer_parts(values, rows, counts, prefix=None):

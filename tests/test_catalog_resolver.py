@@ -61,7 +61,7 @@ def test_catalog_resolver_reads_exact_cut_without_writing(tmp_path):
 
 
 def test_resolve_matches_path_resolve_through_file_and_directory_symlinks(tmp_path):
-    from open_audio_llm.data.catalog_resolver import _resolve
+    from open_audio_llm.data.catalog_resolver import _resolve, _resolve_one
 
     real = tmp_path / "real"
     (real / "sub").mkdir(parents=True)
@@ -71,3 +71,4 @@ def test_resolve_matches_path_resolve_through_file_and_directory_symlinks(tmp_pa
     for path in (real / "sub" / "a.wav", tmp_path / "linked" / "sub" / "a.wav",
                  tmp_path / "linked" / "sub" / "alias.wav", tmp_path / "linked" / "sub" / "missing.wav"):
         assert _resolve(path) == path.resolve()
+        assert _resolve_one(path) == path.resolve()

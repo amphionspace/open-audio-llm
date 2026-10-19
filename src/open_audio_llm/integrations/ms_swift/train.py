@@ -8,7 +8,7 @@ import sys
 import time
 import logging
 import torch
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from swift.arguments import RLHFArguments, SftArguments
@@ -67,9 +67,13 @@ class CatalogSftArguments(CatalogArgumentsMixin, SftArguments):
     # a checkpoint saved at another world size or data location.
     catalog_sampler_migration: str | None = None
     performance_logging: bool = True
+    # First and last update step whose CUDA timeline is written per rank; empty records none.
+    torch_profile_steps: list[int] = field(default_factory=list)
     audio_encoder_parallel: bool = False
     audio_encoder_batching: bool = False
     supervised_head_loss: bool = False
+    # One unpadded row per microbatch for the Qwen3-ASR text decoder (FlashAttention-2 varlen).
+    packed_text: bool = False
     # None keeps the training worker count. Eval sets these explicitly because
     # its forward is too short to hide audio loading at the training depth.
     dataloader_eval_num_workers: int | None = None
@@ -151,6 +155,9 @@ class CatalogTrainingMixin:
             raise ValueError('Conditional SOT requires audio_encoder_parallel=false')
         if getattr(self.args, 'audio_encoder_batching', False) and getattr(self.args, 'audio_encoder_parallel', False):
             raise ValueError('Choose either audio_encoder_batching or audio_encoder_parallel')
+        liger = getattr(self.args, "use_liger_kernel", False) and self.args.model_type == "amphion_asr_1.7b"
+        if liger and getattr(self.args, "retention_teacher", None):
+            raise ValueError("Liger RoPE is module-wide and would change the frozen retention teacher")
         original_create_optimizer = None
         if getattr(self.args, "rlhf_type", None) == "grpo":
             config = self.args._catalog_config
@@ -195,6 +202,10 @@ class CatalogTrainingMixin:
             sample_mean = self.args._catalog_config.get("objective", {}).get("sample_mean")
             if sample_mean and getattr(self.args, "supervised_head_loss", False):
                 raise ValueError("The sample-mean objective already projects only supervised positions")
+            trainer.args.packed_text = getattr(self.args, "packed_text", False)
+            if trainer.args.packed_text and (self.args.model_type != "amphion_asr_1.7b" or sample_mean):
+                # The sample-mean objective groups positions by batch row; a packed row holds every sample.
+                raise ValueError("packed_text supports Qwen3-ASR without the sample-mean objective")
             if sample_mean:
                 from .retention import install_retention_objective
 
@@ -210,6 +221,12 @@ class CatalogTrainingMixin:
                 trainer.add_callback(RetentionEvaluationCallback(
                     self.args.retention_eval_script, self.args.retention_eval_interval,
                 ))
+        if profile_steps := getattr(self.args, "torch_profile_steps", None):
+            if len(profile_steps) != 2:
+                raise ValueError("torch_profile_steps takes a first and last update step")
+            from .performance import TorchProfileCallback
+
+            trainer.add_callback(TorchProfileCallback(*profile_steps))
         if "SENSECORE_PYTORCH_NODE_RANK" in os.environ:
             # Registered before uploads, which may remove the local checkpoint.
             trainer.add_callback(ReadableCheckpointCallback())
@@ -242,6 +259,18 @@ class CatalogTrainingMixin:
             from .audio_batching import enable_parallel_audio
 
             restore_audio = enable_parallel_audio(trainer.model)
+        restore_liger = None
+        if liger:
+            from .liger import enable_liger_kernels
+
+            patched, restore_liger = enable_liger_kernels(trainer.model)
+            logging.getLogger(__name__).warning("Liger kernels on the Qwen3-ASR text decoder: %s", patched)
+        restore_text = None
+        if getattr(trainer.args, "packed_text", False):
+            from .packed_text import enable_packed_text
+
+            restore_text = enable_packed_text(trainer.model)
+            logging.getLogger(__name__).warning("Packed text batches: FlashAttention-2 varlen text decoder")
         try:
             return super().train(trainer)
         finally:
@@ -249,6 +278,10 @@ class CatalogTrainingMixin:
                 trainer.create_optimizer = original_create_optimizer
             if restore_audio is not None:
                 restore_audio()
+            if restore_liger is not None:
+                restore_liger()
+            if restore_text is not None:
+                restore_text()
             performance = getattr(trainer, "catalog_performance", None)
             if performance is not None:
                 performance.close()

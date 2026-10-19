@@ -17,7 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 hf = ["safetensors", "soundfile", "librosa", "torchaudio"]
-swift = ["ms-swift>=4.0", "deepspeed", "ujson", "pypinyin"]
+swift = ["ms-swift>=4.0", "deepspeed", "ujson", "pypinyin", "liger-kernel==0.8.4"]
 vllm = ["vllm==0.17.0", "soundfile", "tritonclient[http]"]
 vllm-serving = [
   "vllm[audio]==0.18.0",
@@ -27,6 +27,9 @@ vllm-serving = [
 lance = ["audio-data-contract[lance]>=0.2.1,<0.3"]
 data = ["audio-data-contract>=0.2.1,<0.3", "PyYAML>=6", "lhotse", "soundfile", "torchaudio", "scipy"]
 qwen3-asr = ["qwen-asr==0.0.6", "rapidfuzz"]
+# --packed_text. No wheel exists for torch 2.10: build with --no-build-isolation
+# (FLASH_ATTN_CUDA_ARCHS=80 for A800).
+packed-text = ["flash-attn==2.8.3"]
 tracking = ["wandb==0.30.0", "PyYAML>=6"]
 dev = ["pytest", "ruff"]
 legacy-zipformer = []

@@ -239,3 +239,30 @@ def test_parallel_encoder_preserves_native_precision_and_caller_context():
     finally:
         restore()
     assert thinker.get_audio_features.__func__ is native
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason='needs CUDA')
+def test_batched_encoder_never_waits_for_the_gpu():
+    pytest.importorskip('qwen_asr')
+    from qwen_asr.core.transformers_backend.configuration_qwen3_asr import Qwen3ASRAudioEncoderConfig
+    from qwen_asr.core.transformers_backend.modeling_qwen3_asr import Qwen3ASRAudioEncoder
+    from open_audio_llm.integrations.ms_swift.audio_batching import _encode_batch, enable_batched_audio
+
+    config = Qwen3ASRAudioEncoderConfig(
+        d_model=32, encoder_layers=2, encoder_attention_heads=4,
+        encoder_ffn_dim=64, output_dim=16, downsample_hidden_size=8, n_window=50,
+        conv_chunksize=3,
+    )
+    config._attn_implementation = 'sdpa'
+    encoder = Qwen3ASRAudioEncoder(config).cuda().train()
+    encoder.sep_token = torch.nn.Embedding(1, 32).cuda()
+    enable_batched_audio(SimpleNamespace(thinker=SimpleNamespace(audio_tower=encoder, get_audio_features=None)))
+    features = torch.randn(5, 128, 300, device='cuda')
+    torch.cuda.synchronize()
+    torch.cuda.set_sync_debug_mode('error')
+    try:
+        # Lengths as host values: in training the encoder entry still reads them back
+        # from the GPU, but only once and before any heavy kernel is queued.
+        _encode_batch(encoder, features, [37, 250, 101, 300, 8], [0, 60, 0, 120, 0])
+    finally:
+        torch.cuda.set_sync_debug_mode('default')

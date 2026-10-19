@@ -15,7 +15,6 @@ src/open_audio_llm/integrations/hf/
   convert_amphion_to_hf.py       # 训练 checkpoint -> HF 模型目录的转换脚本
   verify_model.py                # 模型 save/load round-trip 冒烟测试
   test_hf_inference.py           # HF 推理端到端测试（单条 + Lhotse 批量）
-  test_encoder_wrapper.py        # AudioEncoderWrapper 单元验证
 ```
 
 ## 架构
@@ -147,10 +146,10 @@ python -m open_audio_llm.integrations.hf.verify_model
 
 ### AudioEncoderWrapper 验证
 
-验证编码器抽象层的正确性（输出长度公式、state_dict 迁移、Zipformer SwooshR 数值一致性）：
+编码器抽象层的检查（输出长度公式、state_dict 迁移、Zipformer SwooshR 数值一致性）在 CI 中运行：
 
 ```bash
-python -m open_audio_llm.integrations.hf.test_encoder_wrapper
+pytest tests/test_hf_encoder_wrapper.py
 ```
 
 ## 特殊 Token

@@ -23,6 +23,24 @@ from open_audio_llm.data.catalog_sampler import CatalogBatchSampler
 DATALOADER_TIMEOUT_S = 600
 
 
+class StopLoaderWorkersCallback(TrainerCallback):
+    """Stop the training loader's persistent workers when training ends.
+
+    With persistent workers and pinned memory, torch registers one atexit join per
+    worker (5 s timeout) that runs before the iterator's own shutdown sends the stop
+    signal, so each worker times out in turn: 20 workers per rank kept all 8 GPUs of a
+    finished job idle for about 100 s.
+    """
+
+    def __init__(self):
+        self.loader = None
+
+    def on_train_end(self, args, state, control, **kwargs):
+        iterator = getattr(self.loader, "_iterator", None)
+        if iterator is not None:
+            iterator._shutdown_workers()
+
+
 class CatalogSamplerCallback(TrainerCallback):
     def __init__(self, sampler):
         self.sampler = sampler
@@ -160,11 +178,18 @@ def install_catalog_loader(trainer, resume_checkpoint=None):
     trainer.catalog_sampler = sampler
     trainer.add_callback(CatalogSamplerCallback(sampler))
     collator = trainer.data_collator
+    if getattr(args, "packed_text", False):
+        from .packed_text import PackedTextCollator
+
+        collator = PackedTextCollator(collator)
     if getattr(trainer.train_dataset, "collect_metrics", False):
         from .performance import PerformanceCollator, install_performance_logging
 
         collator = PerformanceCollator(collator)
         trainer.catalog_performance = install_performance_logging(trainer)
+
+    stop_workers = StopLoaderWorkersCallback()
+    trainer.add_callback(stop_workers)
 
     def get_train_dataloader(self, skip_batches=0):
         if skip_batches:
@@ -183,9 +208,10 @@ def install_catalog_loader(trainer, resume_checkpoint=None):
                 prefetch_factor=args.dataloader_prefetch_factor,
                 timeout=DATALOADER_TIMEOUT_S,
             )
-        return DataLoaderShard(
+        stop_workers.loader = DataLoaderShard(
             self.train_dataset, device=self.accelerator.device, **params
         )
+        return stop_workers.loader
 
     initial_values = trainer.set_initial_training_values
 
