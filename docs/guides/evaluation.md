@@ -134,16 +134,17 @@ evaluation:
 
 ### 6. 热词评测
 
-热词能力用 `open-audio-llm/hotword-bench@v1-20261018` 评测（数据 `hotword_bench@v1-20261018`），评测器 `hotwords`，`samples_per_source: 0`。调研、构建过程和基线结果见 [热词评测集实验记录](../experiments/2026-10-18-hotword-benchmark/README.md)。
+热词能力用 `open-audio-llm/hotword-bench@v2-20261019` 评测（数据 `hotword_bench@v2-20261019`），评测器 `hotwords`，`samples_per_source: 0`。调研和 v1 构建过程见 [热词评测集实验记录](../experiments/2026-10-18-hotword-benchmark/README.md)，v2 的热词池与基线见 [热词评测集 v2](../experiments/2026-10-19-hotword-bench-v2/README.md)。
 
 - **数据**：
   - 中文：AISHELL1-NE（SeACo）、ContextASR-Bench Speech-ZH、真实口语（SpeechIO、WenetSpeech test）、Common Voice 中文、AISHELL-2/3、KeSpeech；
   - 英文：GigaSpeech（按 SALMONN-2 协议重建）、LibriSpeech（Le et al. 官方列表）、Common Voice 英文。
 - **列表条件**：每条记录在 `metadata.bias_lists` 里存好固定列表，评测时不再采样；不给列表的 `none` 由评测器另跑。
   - `gold`：只给本句的正确词。
-  - `k50`：正确词，加易混词和随机词，共 50 个，与部署 RAG Top-50 一致。
-  - `k50_no_gold`：同一批干扰词，去掉正确词。
+  - `pool50`（中文）：正确词，加从热词池检索出的干扰词，共 50 个，长度与部署 RAG Top-50 一致。每个租户（约 200 句）一个池，由现网中文万词库加租户句子的正确词和易混词组成，约 1 万词。
+  - `pool50_no_gold`（中文）：检索出的前 50 个干扰词，不含正确词。
+  - `k50` / `k50_no_gold`（cv-en）：正确词加随机词，以及去掉正确词。
   - `official` / `n100` / `n1000` / `l20` / `l50` / `l100`：论文列表，用于和公开数字对照。
-- **主指标**：`k50` 的 B-CER 和 F1；`k50_no_gold` 的误触发率和 CER 变化（`error_rate_delta`）。CER/WER、U-CER 作守门。
+- **主指标**：`pool50` 的 B-CER 和 F1；`pool50_no_gold` 的误触发率和 CER 变化（`error_rate_delta`）。CER/WER、U-CER 作守门。
 - **请求格式**：与第 3 节相同，system 写 `Hotwords: w1,w2,...`（顺序按列表存的顺序）。
-- **旧集**：`open-audio-llm/qwen3-asr-hotwords@20261001` 每条只有 10 个随机干扰词，34479 在上面已经饱和，只用于历史对照。
+- **旧集**：`hotword-bench@v1-20261018` 的中文 `k50` 用随机词补满，两个基线模型上难度与 v2 接近，但数字不能和 v2 混比，只用于历史对照；`open-audio-llm/qwen3-asr-hotwords@20261001` 每条只有 10 个随机干扰词，34479 在上面已经饱和。
