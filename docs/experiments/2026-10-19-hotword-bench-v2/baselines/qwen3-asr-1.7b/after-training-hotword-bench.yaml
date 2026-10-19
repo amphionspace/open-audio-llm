@@ -1,0 +1,18 @@
+# Qwen3-ASR-1.7B 官方权重热词基线：vLLM 0.18.0 原生 Qwen3-ASR 实现，贪心解码；与 34479 同一请求格式与打分口径。
+suite_id: asr-regression-native@1
+evaluator: hotwords
+eval_set: open-audio-llm/hotword-bench@v2-20261019
+server_url: http://127.0.0.1:18121
+served_model: Qwen/Qwen3-ASR-1.7B
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/qwen3-asr-1.7b
+parameters:
+  samples_per_source: 0
+  batch_size: 64
+  max_new_tokens: 512
+  seed: 42
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false
