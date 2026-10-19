@@ -61,3 +61,50 @@ def test_seek_decode_leaves_wav_to_lhotse(tmp_path):
     recording = Recording(id="x", sources=[AudioSource("file", [0], str(tmp_path / "x.wav"))],
                           sampling_rate=16000, num_samples=16000, duration=1.0)
     assert _seek_decode(recording.to_cut().truncate(offset=0.2, duration=0.5)) is None
+
+
+def test_load_mono_prefers_the_transcoded_flac_and_falls_back_to_the_m4a(tmp_path):
+    import soundfile as sf
+
+    from open_audio_llm.data.catalog_dataset import load_mono
+
+    path = tmp_path / "dialog.m4a"
+    samples = write_m4a(path, 2, 6)
+    recording = Recording(id="dialog", sources=[AudioSource("file", [0, 1], str(path))],
+                          sampling_rate=RATE, num_samples=samples, duration=samples / RATE)
+    # A different tone in the FLAC shows which file was read.
+    flac = 0.25 * np.sin(2 * np.pi * 1000 * np.arange(6 * 16000) / 16000).astype(np.float32)
+    sf.write(tmp_path / "dialog.flac", flac, 16000, subtype="PCM_16")
+    cut = recording.to_cut().truncate(offset=2.0, duration=1.5)
+
+    np.testing.assert_allclose(load_mono(cut, 16000), flac[32000:56000], atol=1e-4)
+    # A channel view needs the original microphone, not the downmix.
+    m4a = load_mono(cut.with_channels(0), 16000)
+    assert np.abs(m4a - flac[32000:56000][:len(m4a)]).max() > 0.1
+    # A FLAC shorter than the cut (still being written) is not trusted.
+    sf.write(tmp_path / "dialog.flac", flac[:40000], 16000, subtype="PCM_16")
+    fallback = load_mono(cut, 16000)
+    assert np.abs(fallback - flac[32000:56000][:len(fallback)]).max() > 0.1
+
+
+def test_a_cut_ending_just_past_the_flac_is_padded_without_the_m4a(tmp_path):
+    import soundfile as sf
+    from lhotse.audio.utils import get_audio_duration_mismatch_tolerance
+
+    from open_audio_llm.data.catalog_dataset import transcoded_flac
+
+    # The m4a is gone; the index declares 6 s, the FLAC decoded to 12 frames less.
+    flac = 0.25 * np.sin(2 * np.pi * 1000 * np.arange(6 * 16000 - 12) / 16000).astype(np.float32)
+    sf.write(tmp_path / "dialog.flac", flac, 16000, subtype="PCM_16")
+    recording = Recording(id="dialog", sources=[AudioSource("file", [0, 1], str(tmp_path / "dialog.m4a"))],
+                          sampling_rate=RATE, num_samples=6 * RATE, duration=6.0)
+    cut = recording.to_cut().truncate(offset=4.0, duration=2.0)
+
+    audio = transcoded_flac(cut, 16000)
+    assert audio.shape == (32000,)
+    np.testing.assert_allclose(audio[:-12], flac[64000:], atol=1e-4)
+    np.testing.assert_allclose(audio[-12:], flac[-2:-14:-1], atol=1e-4)
+    # Beyond lhotse's mismatch tolerance the FLAC is not trusted.
+    short = 6 * 16000 - int(get_audio_duration_mismatch_tolerance() * 16000) - 1
+    sf.write(tmp_path / "dialog.flac", flac[:short], 16000, subtype="PCM_16")
+    assert transcoded_flac(cut, 16000) is None

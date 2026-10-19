@@ -151,7 +151,54 @@ def _seek_decode(cut):
     return np.ascontiguousarray(audio[rows], dtype=np.float32)
 
 
+def transcoded_flac(cut, sampling_rate):
+    """Read the 16 kHz mono FLAC transcoded next to a cut's m4a, or None to decode the m4a.
+
+    emilia2-flac16k-v1 (amphiondata ``emilia2-extracted-flac16k-20261012``) writes
+    ``<stem>.flac`` beside dialogue and long m4a: the whole file decoded, soxr-resampled
+    to 16 kHz and downmixed, in time with the m4a path. It needs no ffmpeg process. About
+    1% of files were scaled down to fit PCM16 (gain >= 0.64). Audio indexes round
+    durations to 10 ms, so a cut may end a few frames past the decoded audio; a shortfall
+    within lhotse's duration mismatch tolerance is reflect-padded, as lhotse pads the m4a
+    (the dialogue and long m4a are deleted). Missing or half-written files, larger
+    shortfalls, channel views and transformed recordings keep the m4a.
+    Same as upstream open-audio-llm 7cc94c9 + d809393.
+    """
+    recording = getattr(cut, "recording", None)
+    if recording is None or recording.transforms or len(recording.sources) != 1:
+        return None
+    source = recording.sources[0]
+    if source.type != "file" or not str(source.source).endswith(".m4a"):
+        return None
+    channels = cut.channel if isinstance(cut.channel, list) else [cut.channel]
+    if sorted(channels) != sorted(recording.channel_ids):
+        return None
+    import math
+
+    import soundfile as sf
+    from lhotse.audio.utils import get_audio_duration_mismatch_tolerance
+
+    start = round(cut.start * sampling_rate)
+    frames = round(cut.duration * sampling_rate)
+    allowed = math.ceil(get_audio_duration_mismatch_tolerance() * sampling_rate)
+    try:
+        with sf.SoundFile(str(source.source)[:-4] + ".flac") as flac:
+            available = flac.frames - start
+            if flac.samplerate != sampling_rate or flac.channels != 1 or available <= 0 or frames - available > allowed:
+                return None
+            flac.seek(start)
+            audio = flac.read(frames, dtype="float32")
+    except (OSError, RuntimeError):
+        return None
+    if len(audio) != min(frames, available):
+        return None
+    return np.pad(audio, (0, frames - len(audio)), mode="reflect")
+
+
 def load_mono(cut, sampling_rate):
+    audio = transcoded_flac(cut, sampling_rate)
+    if audio is not None:
+        return audio
     audio = _seek_decode(cut)
     if audio is None:
         audio = cut.load_audio()
