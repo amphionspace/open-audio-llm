@@ -87,7 +87,8 @@ def build_conditioning(module: nn.Module, tower: nn.Module, mcfg) -> None:
     if module.mix_condition_layer > module.shared_depth:
         raise ValueError("mix_condition_layer must be <= first GCA layer (single encoder pass)")
     module.gca = nn.ModuleDict({
-        str(i): EncoderGCA(hidden, int(mcfg.gca.num_heads), float(mcfg.gca.dropout))
+        str(i): EncoderGCA(hidden, int(mcfg.gca.num_heads), float(mcfg.gca.dropout),
+                           bool(mcfg.gca.get("output_norm", False)))
         for i in module.injection_layers
     })
     module.gca_gates = nn.ParameterDict({
@@ -111,8 +112,14 @@ class LongEnrollTSASR(nn.Module):
             module.requires_grad_(True)
         for module in (self.tower.conv2d1, self.tower.conv2d2, self.tower.conv2d3, self.tower.conv_out):
             module.requires_grad_(False)
+        if bool(mcfg.get("freeze_embeddings", False)):
+            # As in AmphionASR v3/v4; Qwen3-ASR ties the LM head to this matrix, so it is frozen too.
+            self.thinker.model.embed_tokens.requires_grad_(False)
         self.audio_token_id = int(self.thinker.config.audio_token_id)
         build_conditioning(self, self.tower, mcfg)
+        # Share of TS samples trained without the ECAPA bias, so the long-enrollment path has to
+        # carry the speaker identity itself (validation and inference always use ECAPA).
+        self.speaker_dropout = float(mcfg.speaker.get("train_dropout", 0.0))
 
         tcfg = cfg.get("train") or {}
         if bool(tcfg.get("gradient_checkpointing", True)):
@@ -221,10 +228,13 @@ class LongEnrollTSASR(nn.Module):
         return EnrollmentState(memory, global_tokens, ecapa)
 
     def encode_mix(self, mix_mels: Sequence[Tensor], enroll: EnrollmentState, modes: Tensor,
-                   token_mask: Optional[Tensor] = None) -> Tensor:
-        """Conditioned encoder pass. Returns packed audio embeddings [sum(lengths), 2048]."""
+                   token_mask: Optional[Tensor] = None, speaker_keep: Optional[Tensor] = None) -> Tensor:
+        """Conditioned encoder pass. Returns packed audio embeddings [sum(lengths), 2048].
+        ``speaker_keep`` [B] (1 keeps, 0 drops) switches the ECAPA bias off per sample."""
         long_active = modes.eq(BOTH).float() * float(self.use_long)
         spk_active = modes.eq(BOTH).float() * float(self.use_speaker)
+        if speaker_keep is not None:
+            spk_active = spk_active * speaker_keep.to(spk_active)
         hidden, lengths = conv_frontend(self.tower, mix_mels)
         mask = length_mask(lengths, hidden.size(1))
         cond = hidden  # depth 0: conv output, before the ECAPA bias
@@ -286,7 +296,10 @@ class LongEnrollTSASR(nn.Module):
         # outer autocast, and the fp32 norms / softmax below rely on it to meet bf16 weights.
         with torch.autocast(device_type=device.type, dtype=torch.bfloat16):
             enroll = self.encode_enrollment(batch["enroll_mels"], batch["ecapa_fbank"])
-            audio = self.encode_mix(batch["mix_mels"], enroll, modes)
+            keep = None
+            if self.training and self.speaker_dropout > 0:
+                keep = torch.rand(modes.size(0), device=device).ge(self.speaker_dropout).float()
+            audio = self.encode_mix(batch["mix_mels"], enroll, modes, speaker_keep=keep)
             ce_sum, n_tok = self.llm_ce(batch["input_ids"].to(device), batch["attention_mask"].to(device),
                                         batch["labels"].to(device), audio)
         out = {"loss": ce_sum.sum() / n_tok.sum().clamp_min(1), "n_tokens": n_tok.sum().detach().float(),

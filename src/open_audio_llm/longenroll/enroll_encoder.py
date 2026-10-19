@@ -107,6 +107,15 @@ class LongEnrollmentEncoder(nn.Module):
         self.depth_norms = nn.ModuleDict({
             str(d): nn.RMSNorm(H) for d in sorted(set(self.value_layers) | {self.key_layer})
         })
+        # The frozen features share a speaker-independent component holding ~90% of their energy
+        # (time-pooled cosine 0.89-0.93 between different enrollments), which RMSNorm keeps; the
+        # compressed memory then barely differs between speakers. Standardizing every dimension with
+        # training-set statistics (feature_stats.py) leaves the speaker-dependent part. The buffers
+        # travel with checkpoints and exports; train.py fills them from ``feature_stats``.
+        self.feature_standardize = bool(cfg.get("feature_standardize", False))
+        if self.feature_standardize:
+            self.register_buffer("feature_mean", torch.zeros(len(self.feature_depths), H))
+            self.register_buffer("feature_std", torch.ones(len(self.feature_depths), H))
         self.chunk_query = nn.Parameter(torch.randn(self.chunk_queries, self.compressor_dim) * 0.02)
         self.chunk_query_norm = nn.RMSNorm(self.compressor_dim)
         self.raw_key_projection = nn.Linear(H, self.compressor_dim, bias=False)
@@ -124,6 +133,21 @@ class LongEnrollmentEncoder(nn.Module):
     @property
     def feature_depths(self) -> list[int]:
         return sorted(set(self.value_layers) | {self.key_layer})
+
+    def load_feature_stats(self, path) -> None:
+        stats = torch.load(path, map_location="cpu", weights_only=True)
+        if [int(d) for d in stats["depths"]] != self.feature_depths:
+            raise ValueError(f"{path} has depths {stats['depths']}, the encoder reads {self.feature_depths}")
+        with torch.no_grad():
+            self.feature_mean.copy_(stats["mean"])
+            self.feature_std.copy_(stats["std"])
+
+    def depth_features(self, depth_states: dict[int, Tensor], depth: int) -> Tensor:
+        x = depth_states[depth].float()
+        if self.feature_standardize:
+            index = self.feature_depths.index(depth)
+            x = (x - self.feature_mean[index].float()) / self.feature_std[index].float()
+        return self.depth_norms[str(depth)](x)
 
     # ---------------------------------------------------------- stage 1
     def _local_mask(self, lengths: Tensor, max_frames: int) -> Tensor:
@@ -145,17 +169,14 @@ class LongEnrollmentEncoder(nn.Module):
     def compress_chunks(self, depth_states: dict[int, Tensor], lengths: Tensor,
                         return_attention: bool = False):
         """depth_states[d]: [N, T, H] encoder states of N chunks. -> keys, values [N, 32, H]."""
-        coarse = self.depth_norms[str(self.key_layer)](depth_states[self.key_layer].float())
+        coarse = self.depth_features(depth_states, self.key_layer)
         raw_keys = self.raw_key_norm(self.raw_key_projection(coarse))
         queries = self.chunk_query_norm(self.chunk_query)[None].expand(coarse.size(0), -1, -1)
         logits = torch.matmul(queries, raw_keys.transpose(1, 2)) / math.sqrt(self.compressor_dim)
         mask = self._local_mask(lengths, coarse.size(1))
         attention = torch.softmax(logits.float().masked_fill(~mask, float("-inf")), dim=-1)
         pooled_key = torch.matmul(attention, coarse)
-        pooled_values = [
-            torch.matmul(attention, self.depth_norms[str(d)](depth_states[d].float()))
-            for d in self.value_layers
-        ]
+        pooled_values = [torch.matmul(attention, self.depth_features(depth_states, d)) for d in self.value_layers]
         keys = self.memory_key_projection(pooled_key)
         values = self.memory_value_projection(torch.cat(pooled_values, dim=-1))
         return (keys, values, attention) if return_attention else (keys, values)

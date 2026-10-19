@@ -1,7 +1,13 @@
 # Long-enrollment TS-ASR model (AmphionASR v5), read by open_audio_llm.longenroll.train
 # (--model_config). Copied from amphionasr-v5 configs/v5.yaml; the data side comes from
 # the Catalog recipe, not from this file.
+# Fixes after the first 8-GPU run (runs/longenroll-v5-acp attempt 001; verified in
+# runs/longenroll-v5-dev-20261016 tasks 05-07, docs/guides/longenroll-v5.md): frozen embeddings,
+# standardized frozen enrollment features, normalized GCA output, ECAPA dropout on TS samples.
 model:
+  # As in AmphionASR v3/v4: the tied embedding / LM head stays frozen (trained, it drifted to half
+  # its norm and ASR CE rose steadily).
+  freeze_embeddings: true
   enroll_encoder:
     # Encoder features of the enrollment (depth d = output after d layers,
     # 0 = conv output). Key = coarse (single depth), Value = concat of several
@@ -26,13 +32,24 @@ model:
     local_queries: 24
     num_heads: 16
     dropout: 0.1
+    # The frozen features share a speaker-independent component (~90% of their energy after time
+    # pooling); standardize every dimension with training-set statistics before compressing.
+    # Statistics: runs/longenroll-v5-dev-20261016 task 06-feature-stats (974 training TS enrollments).
+    feature_standardize: true
+    feature_stats: longenroll_v5_feature_stats.pt
   gca:
     enabled: true
     layers: [12, 16, 20, 22]   # 0-based, 24-layer encoder
     num_heads: 16
     dropout: 0.0
     gate_init: 0.01
+    # Unit-RMS GCA output before the gate, so the gate alone sets the injected scale (without it the
+    # gain moved into a few directions of the projections while the gates shrank to ~1e-3).
+    output_norm: true
   speaker:                     # ECAPA bias on every frame of the encoder input
     enabled: true
     ecapa_dim: 192
     gate_init: 0.01
+    # Half of the TS samples train without the ECAPA bias, so the long-enrollment path carries the
+    # speaker identity too (validation and inference always use ECAPA).
+    train_dropout: 0.5

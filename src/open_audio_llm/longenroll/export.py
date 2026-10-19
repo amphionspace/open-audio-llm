@@ -68,6 +68,9 @@ def export(args) -> dict:
     cfg = Config({"model": model_section, "train": {"gradient_checkpointing": False}})
     asr, _ = load_qwen3_asr(args.model, dtype=torch.float32, device="cpu")
     model = LongEnrollTSASR(asr, load_ecapa(args.ecapa_model), cfg)
+    stats = model_section.get("enroll_encoder", {}).get("feature_stats")
+    if stats:  # model.pt holds trainable parameters only; DeepSpeed states overwrite these buffers
+        model.enroll_encoder.load_feature_stats(Path(args.model_config).parent / stats)
     layout = load_training_checkpoint(model, checkpoint)
 
     tmp = out.with_name(out.name + ".partial")

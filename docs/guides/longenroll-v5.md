@@ -21,6 +21,20 @@ open-audio-llm train --config examples/configs/train/longenroll-v5-acp.yaml --dr
 | 混合音 | conv（冻结）+ ECAPA 偏置，第 0–23 层全局注意力，第 12/16/20/22 层后接门控交叉注意力（GCA） | 第 0–23 层、LLM、GCA、ECAPA 投影训练 |
 | ECAPA | wespeaker ECAPA-TDNN（16 kHz）。注册 ≤10 秒整段输入；更长的取开头，训练随机 5～10 秒、验证 10 秒 | 冻结 |
 
+第一次 8 卡训练（`runs/longenroll-v5-acp` attempt 001）后加的 4 项修复，正式配置
+[longenroll_v5.yaml](../../examples/configs/model/longenroll_v5.yaml) 全部打开（代码里默认关闭，旧配置与 checkpoint 不受影响），
+诊断与验证记录在 `runs/longenroll-v5-dev-20261016` 的 05–07 任务：
+
+| 配置 | 做法 | 原因 |
+|---|---|---|
+| `freeze_embeddings: true` | 冻结 `embed_tokens`（LM head 与之绑定，一起冻结），与 v3/v4 相同 | 训练它时范数 9 万步降到 49%、低频行方向偏移，ASR 训练 CE 在平稳数据上持续上升 |
+| `enroll_encoder.feature_standardize` + `feature_stats` | 压缩前用训练集统计量（`longenroll/feature_stats.py`，974 条 TS 注册）按维度标准化冻结特征；统计量存为模型 buffer，随 checkpoint 与导出目录走 | 冻结特征按时间平均后说话人无关的公共分量占约 90% 能量，压缩后各说话人的注册记忆几乎相同（余弦 0.99），GCA 没有可用的说话人信息 |
+| `gca.output_norm: true` | GCA 输出逐帧归一到单位 RMS（无可学习缩放）后再乘门 | 不归一化时增益转进投影矩阵的少数方向（最大奇异值 0.7 → 120–230），门缩到约 1e-3 抵消 |
+| `speaker.train_dropout: 0.5` | 训练时一半 TS 样本关掉 ECAPA（验证与推理照常使用） | 让长注册路径自己承担说话人身份，不只依赖 ECAPA |
+
+开发机 2 卡 8000 步（07-gca-fix2）：GCA 门从第 4000 步起上升（0.01 → 0.023–0.042），把 GCA 的注册换成他人的比关掉 GCA 更差
+（TS CE +0.054 对 +0.032），不同注册的记忆平均余弦 0.087。
+
 普通 ASR 和热词 ASR 关掉注册路径（mode NONE）：注册路径照常在混合音开头 3 秒上计算再乘 0，
 保证每一步所有可训练参数都有梯度，DDP 不需要 `find_unused_parameters`。注册不进入 LLM 上下文，
 所以组批只按待识别音频计时长。
@@ -63,7 +77,10 @@ Qwen3-ASR 答案文本都沿用框架，只把输出换成 v5 输入：
   中文按字、英文按词算错误率，TS 负样本统计非空输出比例；
 - checkpoint：DeepSpeed 模式为 DeepSpeed 布局（bf16 模型 + 各卡 fp32 主权重 / AdamW 分片，约 28 GB）；`none` 模式为
   `model.pt`（可训练参数，fp32）与 `optimizer.rank{r}.pt`。两种都最后写 `trainer_state.pt`（调度器、步数、卡数、Catalog
-  采样游标）。`--memory_probe N` 用最坏批次（30 秒混合音、5 分钟注册、长答案、配方条数上限）跑 N 步报告峰值显存后退出。`--resume_from_checkpoint` 续训要求卡数相同；随机数状态不保存，续训与不中断不是逐位一致。
+  采样游标）。正式配置每 2000 步保存、保留 3 个（ACP 任务运行满 24 小时会被挂起，最多损失约半小时）。
+  `--memory_probe N` 用最坏批次（30 秒混合音、5 分钟注册、长答案、配方条数上限）跑 N 步报告峰值显存后退出。
+  `--resume_from_checkpoint` 续训要求卡数相同；随机数状态不保存，续训与不中断不是逐位一致。`--init_from_checkpoint` 只载入权重
+  （任意卡数，两种布局都行），优化器、调度与数据位置重新开始。
 
 ## 推理（vLLM）
 

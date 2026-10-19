@@ -55,6 +55,9 @@ def parse_args(argv=None):
     p.add_argument("--model_config", required=True, help="YAML with the long-enrollment `model:` section")
     p.add_argument("--output_dir", required=True)
     p.add_argument("--resume_from_checkpoint")
+    p.add_argument("--init_from_checkpoint",
+                   help="start from a checkpoint's weights only (any world size); optimizer, schedule and "
+                        "data position start fresh. Exclusive with --resume_from_checkpoint")
     p.add_argument("--max_steps", type=int, required=True)
     p.add_argument("--learning_rate", type=float, default=1e-4, help="new modules")
     p.add_argument("--backbone_lr", type=float, default=1e-5, help="Qwen3-ASR encoder layers and LLM")
@@ -349,6 +352,18 @@ def main(argv=None):
     asr, processor = load_qwen3_asr(args.model, dtype=torch.float32, device=device)
     ecapa = load_ecapa(args.ecapa_model).to(device)
     model = LongEnrollTSASR(asr, ecapa, cfg).to(device)
+    stats = model_cfg.model.enroll_encoder.get("feature_stats")
+    if stats:  # a resumed run reads the same values back from its checkpoint
+        model.enroll_encoder.load_feature_stats(Path(args.model_config).parent / stats)
+    if args.init_from_checkpoint:
+        if args.resume_from_checkpoint:
+            raise ValueError("--init_from_checkpoint and --resume_from_checkpoint are exclusive")
+        from .export import load_training_checkpoint
+
+        layout = load_training_checkpoint(model, Path(args.init_from_checkpoint))
+        if rank == 0:
+            print(json.dumps({"event": "init_from_checkpoint", "checkpoint": args.init_from_checkpoint,
+                              "layout": layout}), flush=True)
     groups = model.optimizer_groups(args.learning_rate, args.backbone_lr, args.gate_lr_mult, args.weight_decay)
     adam = {"betas": (args.adam_beta1, args.adam_beta2), "fused": args.adam_fused}
     schedule = partial(lr_lambda, warmup=args.warmup_steps, total=args.max_steps, min_ratio=args.min_lr_ratio)

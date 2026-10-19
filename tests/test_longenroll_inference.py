@@ -205,3 +205,43 @@ def test_optimizer_groups_skip_decay_on_biases_norms_and_gates():
         "backbone": (["asr.0.weight"], 1e-5, 0.1),
     }
     assert groups[-1]["name"] == "backbone"  # train.py logs the last group's rate as backbone_lr
+
+
+def test_gca_output_norm_fixes_the_injected_scale_without_new_parameters():
+    from open_audio_llm.longenroll.gca import EncoderGCA
+
+    torch.manual_seed(0)
+    plain, normed = EncoderGCA(64, 4, 0.0), EncoderGCA(64, 4, 0.0, output_norm=True)
+    assert plain.state_dict().keys() == normed.state_dict().keys()  # old checkpoints still load
+    normed.load_state_dict(plain.state_dict())
+    hidden, memory = torch.randn(2, 5, 64), torch.randn(2, 32, 64)
+    with torch.no_grad():
+        normed.out_proj.weight.mul_(100.0)  # a gain grown inside the projections
+        out = normed(hidden, memory)
+    assert torch.allclose(out.pow(2).mean(-1).sqrt(), torch.ones(2, 5), atol=1e-3)
+
+
+def test_feature_standardization_matches_standardized_inputs(tmp_path):
+    from open_audio_llm.longenroll.config import Config
+    from open_audio_llm.longenroll.enroll_encoder import LongEnrollmentEncoder
+
+    cfg = dict(compressor_dim=16, chunk_queries=32, local_window_slots=1.5, global_queries=8, local_queries=24,
+               key_layer=2, value_layers=[0, 2], num_heads=2, dropout=0.0)
+    torch.manual_seed(0)
+    plain = LongEnrollmentEncoder(8, Config(cfg)).eval()
+    standard = LongEnrollmentEncoder(8, Config({**cfg, "feature_standardize": True})).eval()
+    standard.load_state_dict(plain.state_dict(), strict=False)
+    assert set(standard.state_dict()) - set(plain.state_dict()) == {"feature_mean", "feature_std"}
+    mean, std = torch.randn(2, 8), torch.rand(2, 8) + 0.5
+    torch.save({"depths": [0, 2], "mean": mean, "std": std}, tmp_path / "stats.pt")
+    standard.load_feature_stats(tmp_path / "stats.pt")
+    states = {0: torch.randn(3, 40, 8) * 3 + 5, 2: torch.randn(3, 40, 8)}
+    lengths = torch.tensor([40, 31, 12])
+    with torch.no_grad():
+        got = standard.compress_chunks(states, lengths)
+        want = plain.compress_chunks({d: (x - mean[i]) / std[i] for i, (d, x) in enumerate(states.items())}, lengths)
+    for a, b in zip(got, want):
+        assert torch.allclose(a, b, atol=1e-5)
+    torch.save({"depths": [0, 4], "mean": mean, "std": std}, tmp_path / "wrong.pt")
+    with pytest.raises(ValueError):
+        standard.load_feature_stats(tmp_path / "wrong.pt")

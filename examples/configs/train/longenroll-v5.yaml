@@ -43,8 +43,10 @@ task:
     --eval_steps: 5000
     --eval_on_start: true
     --decode_samples: 64
-    --save_steps: 5000
-    --save_total_limit: 2
+    # ACP 任务运行满 24 小时会被挂起：每 2000 步（约 30 分钟）保存一次，中断最多损失约半小时；
+    # DeepSpeed 布局每个约 28 GB，保留最近 3 个。
+    --save_steps: 2000
+    --save_total_limit: 3
     # 每条样本 worker 约 0.13 秒（5 分钟注册约 1 秒），每卡 8 个进程远高于 GPU 的消耗。
     --dataloader_num_workers: 8
     --dataloader_prefetch_factor: 4

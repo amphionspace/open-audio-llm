@@ -5,7 +5,8 @@
 # 学习率：新增模块 1e-4、主干 1e-5，前 5000 步线性 warmup，之后余弦退火到 0.1 倍；weight decay 0.1，
 # bias、norm 权重与门控不加。bf16 权重 + DeepSpeed ZeRO-1。
 # checkpoint 暂不同步对象存储（未配 storage；本训练入口不接受 --storage_sync），留在 /workspace：
-# DeepSpeed 布局每个约 28 GB，保留最近 2 个。每 5000 步验证一次（54000 条，单卡份额实测约 4.5 分钟），共 100 次。
+# DeepSpeed 布局每个约 28 GB，每 2000 步保存、保留最近 3 个。每 5000 步验证一次（54000 条，约 4.5 分钟），共 100 次。
+# 模型含 4 项修复（longenroll_v5.yaml：冻结嵌入、冻结特征标准化、GCA 输出归一化、TS 样本 ECAPA dropout）。
 version: 1
 runtime:
   python: /workspace/workspace/lx/miniforge3/envs/amphionft/bin/python
@@ -40,8 +41,10 @@ task:
     --eval_steps: 5000
     --eval_on_start: true
     --decode_samples: 64
-    --save_steps: 5000
-    --save_total_limit: 2
+    # ACP 任务运行满 24 小时会被挂起：每 2000 步（约 30 分钟）保存一次，中断最多损失约半小时；
+    # DeepSpeed 布局每个约 28 GB，保留最近 3 个。
+    --save_steps: 2000
+    --save_total_limit: 3
     # 每条样本 worker 约 0.13 秒（5 分钟注册约 1 秒），每卡 8 个进程远高于 GPU 的消耗。
     --dataloader_num_workers: 8
     --dataloader_prefetch_factor: 4
