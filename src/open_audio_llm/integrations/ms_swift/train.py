@@ -151,6 +151,9 @@ class CatalogTrainingMixin:
             raise ValueError('Conditional SOT requires audio_encoder_parallel=false')
         if getattr(self.args, 'audio_encoder_batching', False) and getattr(self.args, 'audio_encoder_parallel', False):
             raise ValueError('Choose either audio_encoder_batching or audio_encoder_parallel')
+        liger = getattr(self.args, "use_liger_kernel", False) and self.args.model_type == "amphion_asr_1.7b"
+        if liger and getattr(self.args, "retention_teacher", None):
+            raise ValueError("Liger RoPE is module-wide and would change the frozen retention teacher")
         original_create_optimizer = None
         if getattr(self.args, "rlhf_type", None) == "grpo":
             config = self.args._catalog_config
@@ -242,6 +245,12 @@ class CatalogTrainingMixin:
             from .audio_batching import enable_parallel_audio
 
             restore_audio = enable_parallel_audio(trainer.model)
+        restore_liger = None
+        if liger:
+            from .liger import enable_liger_kernels
+
+            patched, restore_liger = enable_liger_kernels(trainer.model)
+            logging.getLogger(__name__).warning("Liger kernels on the Qwen3-ASR text decoder: %s", patched)
         try:
             return super().train(trainer)
         finally:
@@ -249,6 +258,8 @@ class CatalogTrainingMixin:
                 trainer.create_optimizer = original_create_optimizer
             if restore_audio is not None:
                 restore_audio()
+            if restore_liger is not None:
+                restore_liger()
             performance = getattr(trainer, "catalog_performance", None)
             if performance is not None:
                 performance.close()
