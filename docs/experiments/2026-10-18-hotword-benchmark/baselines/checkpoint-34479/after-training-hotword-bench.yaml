@@ -1,0 +1,19 @@
+# checkpoint-34479 热词基线：交付包 serve.sh asr（vLLM 0.18.0，不插 SEP），贪心解码。
+# 每条记录跑 none + metadata.bias_lists 里的每个条件，system 为 "Hotwords: w1,w2,..."。
+suite_id: asr-regression-native@1
+evaluator: hotwords
+eval_set: open-audio-llm/hotword-bench@v1-20261018
+server_url: http://127.0.0.1:18120
+served_model: amphionasr-v3-asr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/checkpoint-34479
+parameters:
+  samples_per_source: 0
+  batch_size: 64
+  max_new_tokens: 512
+  seed: 42
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false
