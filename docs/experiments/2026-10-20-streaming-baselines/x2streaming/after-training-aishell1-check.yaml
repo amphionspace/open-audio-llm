@@ -1,0 +1,31 @@
+# X2Streaming-ASR-4B-1009 第三方基线：官方 infer.py 流式模式（transformers，configs/infer.yaml，语言 zh），
+# 由 worker.py 在 x2streaming 环境按 GPU 分片运行；评测环境不加载权重。
+suite_id: asr-regression-native@1
+evaluator: ts-asr
+data_config: /workspace/workspace/mingdong/repo/open-audio-llm-streaming/docs/experiments/2026-10-20-streaming-baselines/x2streaming/aishell1-check.yaml
+worker_command:
+  - /workspace/workspace/mingdong/miniconda3/envs/x2streaming/bin/python
+  - /workspace/workspace/mingdong/repo/open-audio-llm-streaming/docs/experiments/2026-10-20-streaming-baselines/x2streaming/worker.py
+  - --input
+  - "{input}"
+  - --output
+  - "{output}"
+  - --gpus
+  - "6,7"
+  - --repo
+  - /workspace/workspace/mingdong/repo/X2Streaming-ASR
+  - --model
+  - /workspace/model/X2Streaming-ASR-4B-1009
+worker_tasks: [asr]
+worker_timeout: 172800
+output_root: /workspace/data/ae-runs/x2streaming-asr-4b-1009
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  seed: 42
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false
+  archive_weights: false  # 第三方模型只记录路径与版本，不重新托管权重

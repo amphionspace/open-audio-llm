@@ -1,0 +1,20 @@
+# S0：Qwen3-ASR-1.7B 官方权重的音频编码器注意力限制在 1 s（n_window_infer=100）。其余与基线
+# run-20261015T164311Z-19553ee4（官方默认 8 s 窗口）相同：原生 vLLM 0.18.0，贪心解码。
+suite_id: asr-regression-native@1
+evaluator: ts-asr
+data_config: /workspace/workspace/mingdong/repo/open-audio-llm-streaming/docs/experiments/2026-10-15-ts-robust/baselines/asr-benchmark-20261012-no-robust-monitor.yaml
+server_url: http://127.0.0.1:18131
+served_model: Qwen/Qwen3-ASR-1.7B
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/streaming-s0-qwen3-asr-win1s
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false  # 诊断探针，不发布
