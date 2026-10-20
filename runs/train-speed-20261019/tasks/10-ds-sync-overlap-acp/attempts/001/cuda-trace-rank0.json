@@ -1,0 +1,55 @@
+{
+  "window_s_per_update": 0.6842093076171875,
+  "gpu_busy_s_per_update": 0.5074757407226562,
+  "gpu_idle_fraction": 0.258303365544704,
+  "compute_busy_s_per_update": 0.4316701564941406,
+  "nccl_s_per_update": 0.17943855061848957,
+  "nccl_not_overlapped_s_per_update": 0.07580558422851562,
+  "family_s_per_update": {
+    "gemm": 0.2903905953776042,
+    "nccl": 0.17943855061848957,
+    "elementwise": 0.034046632975260414,
+    "liger_triton": 0.03268072452799479,
+    "index/copy/cat": 0.021942329752604166,
+    "mem_efficient_attn(audio)": 0.015009008870442708,
+    "flash_attn_varlen(text)": 0.014785612304687501,
+    "reduce": 0.01185951554361979,
+    "conv": 0.00391991357421875,
+    "optimizer": 0.003907527099609375,
+    "other": 0.0024990013020833334,
+    "softmax/ce": 0.0011211551106770834
+  },
+  "idle_gaps_over_1ms_per_update": 0.035063160888671875,
+  "largest_gaps": [
+    {
+      "ms": 7.57,
+      "before": "Memcpy DtoD (Device -> Device)",
+      "after": "ampere_bf16_s16816gemm_bf16_128x128_ldg8_f2f_stages_32x5_nt"
+    },
+    {
+      "ms": 6.64,
+      "before": "void at::native::vectorized_elementwise_kernel<4, at::native::bfloat16_copy_kernel_cuda(at",
+      "after": "ampere_bf16_s16816gemm_bf16_256x128_ldg8_f2f_stages_64x3_nt"
+    },
+    {
+      "ms": 6.61,
+      "before": "void at::native::vectorized_elementwise_kernel<4, at::native::bfloat16_copy_kernel_cuda(at",
+      "after": "ampere_bf16_s16816gemm_bf16_128x128_ldg8_f2f_stages_32x5_nt"
+    },
+    {
+      "ms": 5.25,
+      "before": "Memcpy DtoD (Device -> Device)",
+      "after": "ampere_bf16_s16816gemm_bf16_256x128_ldg8_f2f_stages_64x3_nt"
+    },
+    {
+      "ms": 5.02,
+      "before": "Memcpy DtoD (Device -> Device)",
+      "after": "ampere_bf16_s16816gemm_bf16_256x128_ldg8_f2f_stages_64x3_nt"
+    },
+    {
+      "ms": 5.0,
+      "before": "void at::native::vectorized_elementwise_kernel<4, at::native::CUDAFunctor_add<float>, std:",
+      "after": "void at::native::vectorized_elementwise_kernel<4, at::native::bfloat16_copy_kernel_cuda(at"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+version: 1
+name: train-speed-20261019
+purpose: 评估并落实 ts-robust 训练提速（排序窗口、Liger kernel、打包文本批次、数据加载、DeepSpeed 通信），先确认收益与正确性，再决定是否用于下一次 ACP 训练
+policy:
+  evaluation_backend: not-applicable
+  human_review_required: false
+inputs:
+  data_config: /workspace/workspace/mingdong/repo/open-audio-llm-ts-robust/runs/ts-robust-acp-20261015/configs/train-data-v7set6.yaml
+  init_model: /workspace/data/ae-runs/ts-robust-026-ckpt25000/checkpoint-25000
+tasks:
+- {id: sort-window, name: 排序窗口离线对比（不读音频、不用 GPU）, depends_on: []}
+- {id: liger-check, name: Liger 文本解码器配对计时与梯度对齐（单卡，不训练）, depends_on: []}
+- {id: liger-acp, name: Liger 端到端核对（ACP 1 节点 300 步，与 030 同批次）, config: configs/liger-acp-300.yaml, depends_on: []}
+- {id: length-key, name: 排序键接近实际 token 长度的离线评估（CPU）, depends_on: []}
+- {id: padding-free, name: 打包文本批次计时与数值核对（单卡，不训练）, depends_on: [length-key]}
+- {id: packed-acp, name: Liger + 打包端到端核对（ACP 1 节点 300 步，待放行）, config: configs/packed-acp-300.yaml, depends_on: []}
+- {id: batch24-acp, name: 每卡 24 × 累积 1 + Liger + 打包（ACP 1 节点 1500 步）, config: configs/batch24-acp-1500.yaml, depends_on: [packed-acp]}
+- {id: data-fix-acp, name: 修数据冷启动 + 每卡 20 个 worker + CUDA 时间线（ACP 1 节点 1500 步）, config: configs/datafix-profile-acp-1500.yaml, depends_on: [batch24-acp]}
+- {id: optimization-scan, name: 剩余提速空间扫描（只读，不训练）, depends_on: [batch24-acp]}
+- {id: ds-sync-overlap-acp, name: 关 DeepSpeed 计时同步 + overlap_comm（ACP 1 节点 1500 步）, config: configs/ds-overlap-notimer-acp-1500.yaml, depends_on: [data-fix-acp]}

@@ -1,0 +1,11 @@
+Some weights of the model checkpoint at /workspace/data/ae-runs/ts-robust-026-ckpt25000/checkpoint-25000 were not used when initializing Qwen3ASRForConditionalGeneration: ['thinker.audio_tower.sep_token.weight']
+- This IS expected if you are initializing Qwen3ASRForConditionalGeneration from the checkpoint of a model trained on another task or with another architecture (e.g. initializing a BertForSequenceClassification model from a BertForPreTraining model).
+- This IS NOT expected if you are initializing Qwen3ASRForConditionalGeneration from the checkpoint of a model that you expect to be exactly identical (initializing a BertForSequenceClassification model from a BertForSequenceClassification model).
+Traceback (most recent call last):
+  File "/workspace/workspace/mingdong/repo/open-audio-llm-train-speed/runs/train-speed-20261019/scripts/liger_microbench.py", line 99, in <module>
+    main()
+  File "/workspace/workspace/mingdong/repo/open-audio-llm-train-speed/runs/train-speed-20261019/scripts/liger_microbench.py", line 82, in main
+    relative = [abs(grads["liger"][n] - g) / max(g, 1e-12) for n, g in grads["native"].items()]
+                    ~~~~~~~~~~~~~~^^^
+KeyError: 'embed_tokens.weight'
+exit 1

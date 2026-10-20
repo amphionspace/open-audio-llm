@@ -1,0 +1,41 @@
+Some weights of the model checkpoint at /workspace/data/ae-runs/ts-robust-026-ckpt25000/checkpoint-25000 were not used when initializing Qwen3ASRForConditionalGeneration: ['thinker.audio_tower.sep_token.weight']
+- This IS expected if you are initializing Qwen3ASRForConditionalGeneration from the checkpoint of a model trained on another task or with another architecture (e.g. initializing a BertForSequenceClassification model from a BertForPreTraining model).
+- This IS NOT expected if you are initializing Qwen3ASRForConditionalGeneration from the checkpoint of a model that you expect to be exactly identical (initializing a BertForSequenceClassification model from a BertForSequenceClassification model).
+{
+  "lengths": [
+    71,
+    70,
+    64,
+    69,
+    76,
+    74,
+    73,
+    79,
+    69,
+    77,
+    77,
+    84
+  ],
+  "padding": 0.12400793650793651,
+  "loss": {
+    "fp32_sdpa_padded": 14.520689964294434,
+    "sdpa_padded_bf16": 14.526272773742676,
+    "flash_packed_bf16": 14.521828651428223
+  },
+  "arms": {
+    "sdpa_padded_bf16": {
+      "hidden_rel_error": 0.009341609664261341,
+      "grad_rel_error_median": 0.046956677255637,
+      "grad_rel_error_max": 2.511164131760853
+    },
+    "flash_packed_bf16": {
+      "hidden_rel_error": 0.009028567001223564,
+      "grad_rel_error_median": 0.043719500272102044,
+      "grad_rel_error_max": 3.0973370528778346
+    }
+  },
+  "packed_over_sdpa_error_ratio": {
+    "median": 0.9453473174477636,
+    "max": 1.9021686621729703
+  }
+}
