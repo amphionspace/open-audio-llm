@@ -1,0 +1,41 @@
+# 0923 版（33407） 的 TS-ASR 服务：vLLM 0.18.0（vllm-serving 环境）、插入 SEP、关闭 prefix cache、贪心，
+# 口径同 v7 全量评测；本机 GPU 与其他人共用，显存占比 0.22。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python}
+  cwd: {path: ../../../../..}
+  pythonpath: [{path: ../../../../../src}]
+  gpus: [0]
+  threads: {omp: 4, openblas: 1}
+  environment:
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    HF_HUB_OFFLINE: '1'
+    VLLM_ENGINE_READY_TIMEOUT_S: '1800'
+    PYTHONUNBUFFERED: '1'
+    AMPHION_TSASR_INSERT_SEP: '1'
+    AMPHION_TSASR_ENROLL_SEC: '3'
+    AMPHION_TSASR_ENROLL_NOPAD: '0'
+    COT_TSASR_ENROLL_RANDOM: '0'
+    COT_AUDIO_CHUNKED_ATTN: '0'
+task:
+  kind: serve
+  backend: vllm
+  model: {path: /workspace/model/AmphionASR-1.7B-v3-ckpt33407/model}
+  arguments:
+    --host: 127.0.0.1
+    --port: 18244
+    --served-model-name: v9-33407-tsasr
+    --dtype: bfloat16
+    --tensor-parallel-size: 1
+    --limit-mm-per-prompt: {audio: 1}
+    --gpu-memory-utilization: 0.22
+    --max-model-len: 8192
+    # Matches GLOBAL_N_WINDOW_INFER in tsasr/global_audio_attn.py.
+    --hf-overrides:
+      thinker_config:
+        audio_config:
+          n_window_infer: 1000000000
+  # BF16 presence decisions can flip between cold and reused prefix paths.
+  flags: [--trust-remote-code, --no-enable-prefix-caching]
+recording:
+  attempts_dir: {path: /workspace/data/ae-runs/checkpoint-33407/serve-attempts/ts-asr-benchmark-v9}
