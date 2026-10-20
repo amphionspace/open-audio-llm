@@ -46,7 +46,7 @@ v2 只报每个切片的总召回和总误触发率。近一年的热词与上�
 | `other` | 其他专名：事件、会议、赛事、节日、朝代、奖项、口号、流行语 |
 | `common` | 普通词：不是专名也不是术语的日常词或低频普通词 |
 
-**ContextASR 领域大类**（`labels.domain_group`）：ContextASR 自带的 `labels.domain` 是生成文本时 LLM 写的自由文本，有 3,957 种，没法直接分项。v3 把它们归到 13 个大类：`medical`、`science_tech`、`business_finance`、`law_politics`、`military`、`sports`、`entertainment`、`culture_history`、`education`、`nature_environment`、`travel_life`、`industry_energy`、`other`。
+**ContextASR 领域大类**（`labels.domain_group`）：ContextASR 自带的 `labels.domain` 是生成文本时 LLM 写的自由文本，有 3,957 种，没法直接分项。v3 把它们归到 13 个大类：`medical`、`science_tech`、`business_finance`、`law_politics`、`military`、`sports`、`entertainment`、`culture_history`、`education`、`nature_environment`、`travel_life`、`industry_energy`、`other`。自由文本领域本身移到 `metadata.domain`：评测器按每个字符串标签分项，3,957 种取值会让一次评测的 summary 有 9.6 万个指标、12 MB，超过 W&B 单行 10 MB 的上限；移走后约 5 千个指标、0.5 MB。
 
 **标注方式**：
 
@@ -54,7 +54,7 @@ v2 只报每个切片的总召回和总误触发率。近一年的热词与上�
 - doubao-seed-2-0-lite 标注，deepseek-v4-pro 看着标注再判一次，以复核结果为准。
 - 140,901 个（句子, 正确词）中，复核没改动的占 98.5%，改了 2,140 个，多是 `common` 改成 `term` / `product` / `other`。复核模型拒答、沿用标注的 66 个；两个模型都拒答、没有类型的 5 个，评测器只对有类型的词分项。
 - 3,957 个领域名，复核改了 29 个。
-- 全量核查：64,413 条记录去掉新标签、换回版本号后与 v2 逐字段相同，音频索引和热词池文件逐字节相同。
+- 全量核查：64,413 条记录去掉新标签、换回版本号和 ContextASR 领域字段的位置后，与 v2 逐字段相同；音频索引和热词池文件逐字节相同。
 
 **各切片的类型构成**（正确词占比 %）：
 
@@ -183,8 +183,13 @@ ContextASR 每句正确词多，34479 各类都在 98–99%，Qwen 在 62–82%�
 
 **v3 正式运行**：
 
-- 34479 `run-20261020T073811Z-94b994c3`：进行中（[W&B](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/run-20261020T073811Z-94b994c3)）。GPU1 与其他进程共用，速度约为 v2 时的 1/3。跑完后与 v2 总指标对照，结果补在这里。
-- Qwen3-ASR-1.7B `run-20261020T073811Z-96b829b3`：中断。同机另一个会话按用户要求停掉了本机的 Qwen3-ASR-1.7B 服务，已完成的请求之后全部连不上，run 记为 failed，没有重跑。Qwen 的分项数字全部来自上面的 v2 预测重算。
+- **34479** `run-20261020T073811Z-94b994c3`：264,681 个请求全部完成（[W&B](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/run-20261020T073811Z-94b994c3)）。
+  - **中途失败与续跑**：第一次跑完时有 3,368 个请求返回 404"模型不存在"，都在第 188,242–194,847 个请求之间，这一段约一半失败，而我们服务的日志里没有一条 404。说明这段时间另有一个服务也监听着 18130 端口（vLLM 打开了端口复用），分走了约一半请求，那个进程是谁没有查到。之后用 `--resume` 续跑同一个 run，只重试失败的请求，0 失败。
+  - **与 v2 run 对照**：49 个（切片, 条件）组合里，召回差 ≤ 0.24 个点，误触发率差 ≤ 0.25，B-CER 差 ≤ 0.18，F1 差 ≤ 0.54。错误率最大差 1.17 个点，在 GigaSpeech `l20`；这个切片在非语音片段上会胡写，结果本来就不稳定。分类型召回与上面重算的数字相比差 ≤ 0.8 个点（只看 ≥ 500 词的格子），结论不变。
+  - **W&B**：评测程序上传的指标因超过 10 MB 被 W&B 丢弃，远端只剩 coverage。已用该 run 的 `summary.json` 补录（`scripts/backfill_wandb.py`）：去掉 ContextASR 自由文本领域分项后 5,216 个指标，远端逐项核对一致。
+  - **用的数据**：这个 run 用的是 v3 第一次构建。之后为解决 W&B 上限问题，把 ContextASR 的自由文本领域移到 `metadata.domain` 重新构建，只有 ContextASR 记录里这个字段的位置变了，请求不变。第一次构建留在 `source/v3-20261020/first-build/`。
+  - **服务**：两个 v3 run 都结束后，已按 PID 停掉 18130 上的服务。
+- **Qwen3-ASR-1.7B** `run-20261020T073811Z-96b829b3`：中断。同机另一个会话按用户要求停掉了本机的 Qwen3-ASR-1.7B 服务，之后的请求全部连不上，run 记为 failed，没有重跑。Qwen 的分项数字全部来自上面的 v2 预测重算。
 
 ## 评测器怎么分项
 
@@ -239,5 +244,6 @@ ae open-audio-llm after-training --handoff handoff.json --config after-training-
   - `mined/` 下是标注和复核结果；`llm-log/` 下是每次 LLM 调用的 prompt 和原始回复。
   - `annotate.log`、`build.log` 是运行日志。
   - `rescored/` 下是两个模型的重算 summary、表格和丢词统计。
+  - `first-build/` 是 v3 第一次构建（ContextASR 自由文本领域还在 `labels.domain`），34479 v3 正式运行用的是它。
 - v2 基线 run（已发布到 COS）：34479 `run-20261019T135422Z-b7b138a2`，Qwen3-ASR-1.7B `run-20261019T135642Z-8e74fa0a`。
 - 数据登记：audio-data-contract `catalog/hotword_bench.yaml` 的 `v3-20261020`。各切片的 `statistics.hotword_types`、ContextASR 的 `statistics.domain_groups` 记了类型和领域计数。
