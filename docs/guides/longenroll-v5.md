@@ -90,7 +90,7 @@ Qwen3-ASR 答案文本都沿用框架，只把输出换成 v5 输入：
 |---|---|---|
 | 导出 | `python -m open_audio_llm.longenroll.export --checkpoint <checkpoint-N> --model <Qwen3-ASR-1.7B> --ecapa_model <ECAPA> --model_config <longenroll_v5.yaml> --output_dir <新目录>` | 训练环境，CPU 约 80 秒 |
 | 推理 | JSONL worker `python -m open_audio_llm.longenroll.infer --model_dir <导出目录> --input requests.jsonl --output predictions.jsonl --summary worker.json`；Python 接口为 `integrations/vllm/longenroll.py` 的 `LongEnrollVLLM` | vLLM 环境（vllm 0.18.0、qwen-asr 0.0.6），`PYTHONPATH` 指向本仓库 `src` |
-| 评测与一致性核对 | `python -m open_audio_llm.longenroll.evaluate --data_config ... --split validation\|evaluation --samples N --model_dir ... --output_dir ... --worker_python <vLLM 环境 python> --backends vllm torch` | 训练环境（读 Catalog、打分，不加载权重）；worker 在 `--worker_python` 的独立进程里 |
+| 评测与一致性核对 | `python -m open_audio_llm.longenroll.evaluate --data_config ... --split validation\|evaluation --samples N --model_dir ... --output_dir ... --worker_python <vLLM 环境 python> --backends vllm torch` | 训练环境（读 Catalog、打分，不加载权重）；worker 在 `--worker_python` 的独立进程里，可见多张卡时每张卡一个 worker、交错分到请求；`--prepared <之前的输出目录>` 复用已准备好的请求与音频 |
 
 - 导出：两种 checkpoint 布局都能读（`model.pt`；DeepSpeed 的 `mp_rank_00_model_states.pt`，冻结部分也取训练时的值）。
   导出目录顶层是 bf16 的 Qwen3-ASR checkpoint，`config.json`、`generation_config.json` 与 tokenizer / processor 文件原样复制自基座；
@@ -130,6 +130,7 @@ vLLM 自身两次执行之间也只有 94% 相同。
 ## 限制
 
 - vLLM 推理目前是 JSONL worker 与 Python 接口，还没有 HTTP 服务，也没有接入 AmphionEval（本机未安装 AmphionEval，
-  未核对它的 TS-ASR 请求能否单独传注册音频）。`evaluate.py` 在 Catalog 的验证 / 测试划分上评测，打分与训练内验证相同。
+  未核对它的 TS-ASR 请求能否单独传注册音频）。`evaluate.py` 在 Catalog 的验证 / 测试划分上评测，打分与训练内验证相同，另报漏识率（目标在场、输出为空）；
+  整体与按来源（数据配置里的 `label`，没有时为 dataset@version:split）各出一份。
 - v5 验证集没有热词任务，vLLM 一致性核对只覆盖 TS 与普通 ASR；热词请求与普通 ASR 只差系统提示，其构造由单元测试覆盖。
 - LLM 默认开梯度检查点；显存充足时关掉可省反向里的一次重算。
