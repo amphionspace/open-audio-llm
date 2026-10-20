@@ -1,0 +1,62 @@
+Some weights of the model checkpoint at /workspace/data/ae-runs/ts-robust-026-ckpt25000/checkpoint-25000 were not used when initializing Qwen3ASRForConditionalGeneration: ['thinker.audio_tower.sep_token.weight']
+- This IS expected if you are initializing Qwen3ASRForConditionalGeneration from the checkpoint of a model trained on another task or with another architecture (e.g. initializing a BertForSequenceClassification model from a BertForPreTraining model).
+- This IS NOT expected if you are initializing Qwen3ASRForConditionalGeneration from the checkpoint of a model that you expect to be exactly identical (initializing a BertForSequenceClassification model from a BertForSequenceClassification model).
+Traceback (most recent call last):
+  File "/workspace/workspace/mingdong/repo/open-audio-llm-train-speed/runs/train-speed-20261019/scripts/padding_free_bench.py", line 148, in <module>
+    main()
+  File "/workspace/workspace/mingdong/repo/open-audio-llm-train-speed/runs/train-speed-20261019/scripts/padding_free_bench.py", line 117, in main
+    loss, hidden = step(text, head, batch_inputs, positions, inputs["targets"])
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/repo/open-audio-llm-train-speed/runs/train-speed-20261019/scripts/padding_free_bench.py", line 56, in step
+    hidden = text(**inputs).last_hidden_state
+             ^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1776, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1787, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/transformers/utils/generic.py", line 1072, in wrapper
+    outputs = func(self, *args, **kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/qwen_asr/core/transformers_backend/modeling_qwen3_asr.py", line 1043, in forward
+    layer_outputs = decoder_layer(
+                    ^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/transformers/modeling_layers.py", line 94, in __call__
+    return super().__call__(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1776, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1787, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/qwen_asr/core/transformers_backend/modeling_qwen3_asr.py", line 277, in forward
+    hidden_states = self.mlp(hidden_states)
+                    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1776, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1787, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/qwen_asr/core/transformers_backend/modeling_qwen3_asr.py", line 232, in forward
+    down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1776, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1787, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/transformers/activations.py", line 99, in forward
+    return nn.functional.silu(input)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/torch/nn/functional.py", line 2395, in silu
+    return torch._C._nn.silu(input)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 40.00 MiB. GPU 0 has a total capacity of 79.25 GiB of which 4.75 MiB is free. Process 1426578 has 44.80 GiB memory in use. Process 1935603 has 28.65 GiB memory in use. Including non-PyTorch memory, this process has 5.78 GiB memory in use. Of the allocated memory 5.19 GiB is allocated by PyTorch, and 93.03 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+exit 1

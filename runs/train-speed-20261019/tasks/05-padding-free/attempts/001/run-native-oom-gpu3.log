@@ -1,0 +1,31 @@
+Traceback (most recent call last):
+  File "/workspace/workspace/mingdong/repo/open-audio-llm-train-speed/runs/train-speed-20261019/scripts/padding_free_bench.py", line 148, in <module>
+    main()
+  File "/workspace/workspace/mingdong/repo/open-audio-llm-train-speed/runs/train-speed-20261019/scripts/padding_free_bench.py", line 76, in main
+    full = Qwen3ASRModel.from_pretrained(args.model, dtype=torch.bfloat16, device_map="cuda:0",
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/qwen_asr/inference/qwen3_asr.py", line 206, in from_pretrained
+    model = AutoModel.from_pretrained(pretrained_model_name_or_path, **kwargs)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/transformers/models/auto/auto_factory.py", line 604, in from_pretrained
+    return model_class.from_pretrained(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/transformers/modeling_utils.py", line 277, in _wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/transformers/modeling_utils.py", line 5048, in from_pretrained
+    ) = cls._load_pretrained_model(
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/transformers/modeling_utils.py", line 5468, in _load_pretrained_model
+    _error_msgs, disk_offload_index = load_shard_file(args)
+                                      ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/transformers/modeling_utils.py", line 843, in load_shard_file
+    disk_offload_index = _load_state_dict_into_meta_model(
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/transformers/modeling_utils.py", line 748, in _load_state_dict_into_meta_model
+    param = param[...]
+            ~~~~~^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 24.00 MiB. GPU 0 has a total capacity of 79.25 GiB of which 9.12 MiB is free. Process 2052209 has 30.19 GiB memory in use. Process 2072640 has 26.33 GiB memory in use. Process 2122105 has 19.36 GiB memory in use. Including non-PyTorch memory, this process has 3.34 GiB memory in use. Of the allocated memory 2.92 GiB is allocated by PyTorch, and 9.35 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
