@@ -185,8 +185,24 @@ def test_degradations_change_the_signal_as_documented():
     assert np.array_equal(untouched, low)
 
 
+def test_quiet_enrollment_is_turned_down_over_an_unchanged_floor():
+    from open_audio_llm.data.ts_online import degrade_enrollment
+
+    speech = _tone(1000, 1.0, 0.2)
+    config = OnlineMixConfig(enrollment_quiet_prob=1.0, enrollment_quiet_db=(-20, -20),
+                             floor_dbfs=(-50, -50), floor_kinds=(1.0, 0.0, 0.0))
+    floor = degrade_enrollment(random.Random(0), speech, config, None, SR) - 0.1 * speech
+    # The floor keeps its absolute level, so the speech-to-floor ratio drops by the full 20 dB.
+    assert _rms(floor) == pytest.approx(10 ** (-50 / 20), rel=0.05)
+    assert abs(np.corrcoef(floor, speech)[0, 1]) < 0.05
+    rng = random.Random(0)
+    assert np.array_equal(degrade_enrollment(rng, speech, OnlineMixConfig(), None, SR), speech)
+    assert rng.random() == random.Random(0).random()  # off by default: the random stream is unchanged
+
+
 @pytest.mark.parametrize("bad", [{"entry_prob": 1.5}, {"lead_seconds": (3, 1)}, {"floor_kinds": (0.5, 0.5, 0.5)},
-                                 {"nonspeech_seconds": (0, 5)}, {"clip_prob": -0.1}])
+                                 {"nonspeech_seconds": (0, 5)}, {"clip_prob": -0.1},
+                                 {"enrollment_quiet_prob": 1.5}, {"enrollment_quiet_db": (-5, -20)}])
 def test_new_config_values_are_validated(bad):
     with pytest.raises(ValueError):
         OnlineMixConfig(**bad)

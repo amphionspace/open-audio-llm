@@ -55,6 +55,11 @@ class OnlineMixConfig:
     enrollment_lowpass_hz: float = 4000.0
     enrollment_lead_silence_prob: float = 0.0
     enrollment_lead_silence_seconds: tuple[float, float] = (0.3, 2.0)
+    # Enrollment spoken quietly in an unchanged room: the speech is turned down by
+    # enrollment_quiet_db and a noise floor (floor_dbfs, floor_kinds) is laid under it. A gain
+    # alone would be undone by the slot's level_dbfs normalisation; the floor keeps the drop.
+    enrollment_quiet_prob: float = 0.0
+    enrollment_quiet_db: tuple[float, float] = (-30.0, -10.0)
     # Mixture through a telephone channel (300-3400 Hz, 8-bit mu-law) or driven into clipping.
     telephony_prob: float = 0.0
     clip_prob: float = 0.0
@@ -73,11 +78,11 @@ class OnlineMixConfig:
         if len(self.floor_kinds) != 3 or any(p < 0 for p in self.floor_kinds) or not np.isclose(sum(self.floor_kinds), 1.0):
             raise ValueError("floor_kinds must be three non-negative weights that sum to 1")
         for name in ("entry_prob", "nonspeech_prob", "floor_prob", "enrollment_lowpass_prob",
-                     "enrollment_lead_silence_prob", "telephony_prob", "clip_prob"):
+                     "enrollment_lead_silence_prob", "enrollment_quiet_prob", "telephony_prob", "clip_prob"):
             if not 0 <= getattr(self, name) <= 1:
                 raise ValueError(f"{name} must be between 0 and 1")
         for name in ("lead_seconds", "trail_seconds", "nonspeech_seconds", "nonspeech_level_dbfs",
-                     "floor_dbfs", "enrollment_lead_silence_seconds", "clip_gain_db",
+                     "floor_dbfs", "enrollment_lead_silence_seconds", "enrollment_quiet_db", "clip_gain_db",
                      "alternate_gap_seconds", "burst_gap_seconds", "short_gap_seconds"):
             pair = getattr(self, name)
             if len(pair) != 2 or pair[0] > pair[1]:
@@ -382,7 +387,10 @@ def overdrive(rng, audio, config):
 
 
 def degrade_enrollment(rng, enrollment, config, noise_loader, sampling_rate):
-    """Band-limit the enrollment and/or give it a quiet start."""
+    """Turn the enrollment down over a noise floor, band-limit it and/or give it a quiet start."""
+    if config.enrollment_quiet_prob and rng.random() < config.enrollment_quiet_prob:
+        gain = 10 ** (rng.uniform(*config.enrollment_quiet_db) / 20)
+        enrollment = enrollment * gain + noise_floor(rng, len(enrollment), config, noise_loader, sampling_rate)
     if config.enrollment_lowpass_prob and rng.random() < config.enrollment_lowpass_prob:
         enrollment = lowpass(enrollment, config.enrollment_lowpass_hz, sampling_rate)
     if config.enrollment_lead_silence_prob and rng.random() < config.enrollment_lead_silence_prob:
