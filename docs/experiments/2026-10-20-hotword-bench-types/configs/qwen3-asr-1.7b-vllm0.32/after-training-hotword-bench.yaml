@@ -1,0 +1,20 @@
+# Qwen3-ASR-1.7B 官方权重的 v3 正式运行，改用同机 8001 端口上的现成服务（用户指定）：
+# vLLM 0.32.0 原生 Qwen3-ASR 实现，max-model-len 65536；v2 基线是 vLLM 0.18.0，所以另开 run，
+# 逐条和 v2 预测比对一致性。贪心解码，请求格式与打分口径同 34479。
+suite_id: asr-regression-native@1
+evaluator: hotwords
+eval_set: open-audio-llm/hotword-bench@v3-20261020
+server_url: http://127.0.0.1:8001
+served_model: Qwen/Qwen3-ASR-1.7B
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/qwen3-asr-1.7b
+parameters:
+  samples_per_source: 0
+  batch_size: 64
+  max_new_tokens: 512
+  seed: 42
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false
