@@ -10,8 +10,9 @@ import logging
 import os
 import shutil
 import socket
-import struct
 import sqlite3
+import struct
+import tempfile
 import time
 from bisect import bisect_right
 from contextlib import contextmanager
@@ -65,6 +66,61 @@ def exclusive_lock(path):
         yield
 
 
+def _publish_audio_index(source, destination):
+    """Build an audio SQLite index locally, then publish it on the cache filesystem.
+
+    GPFS handles the 4 KB random writes from SQLite very slowly. Readers only
+    open the finished file, so the rows and the lookup schema stay the same.
+    A crash before publication leaves no readable index.
+    """
+    local = Path(tempfile.gettempdir()) / (
+        f"{destination.stem}.{socket.gethostname()}.{os.getpid()}.sqlite"
+    )
+    staging = destination.with_name(
+        f"{destination.stem}.{socket.gethostname()}.{os.getpid()}.publishing"
+    )
+    local.unlink(missing_ok=True)
+    staging.unlink(missing_ok=True)
+    try:
+        db = sqlite3.connect(local)
+        try:
+            # page_size applies only before the table exists.
+            db.execute("PRAGMA page_size=65536")
+            db.execute("PRAGMA journal_mode=OFF")
+            db.execute("PRAGMA synchronous=OFF")
+            db.execute("PRAGMA temp_store=MEMORY")
+            db.execute(
+                "CREATE TABLE audio (id TEXT PRIMARY KEY, duration REAL, payload TEXT)"
+            )
+            opener = gzip.open if source.suffix == ".gz" else open
+            with opener(source, "rt", encoding="utf-8") as stream:
+                batch = []
+                for line in stream:
+                    if not line.strip():
+                        continue
+                    row = json.loads(line)
+                    batch.append((row["cut_id"], row["duration"], line))
+                    if len(batch) == 10000:
+                        db.executemany(
+                            "INSERT OR REPLACE INTO audio VALUES (?, ?, ?)",
+                            batch,
+                        )
+                        batch.clear()
+                db.executemany(
+                    "INSERT OR REPLACE INTO audio VALUES (?, ?, ?)", batch
+                )
+            db.commit()
+        finally:
+            db.close()
+        with local.open("rb") as src, staging.open("wb") as dst:
+            shutil.copyfileobj(src, dst, length=8 * 1024 * 1024)
+            dst.flush()
+            os.fsync(dst.fileno())
+        os.replace(staging, destination)
+    finally:
+        local.unlink(missing_ok=True)
+        staging.unlink(missing_ok=True)
+
 
 class AudioIndex:
     """Keep large shared audio indexes outside Python's cyclic object graph."""
@@ -82,38 +138,7 @@ class AudioIndex:
         if not self.path.exists():
             with exclusive_lock(self.path.with_suffix(".lock")):
                 if not self.path.exists():
-                    # flock does not exclude other hosts on quarkfs; a per-process
-                    # temporary keeps concurrent builders from sharing one file.
-                    temporary = self.path.with_name(
-                        f"{self.path.stem}.{socket.gethostname()}.{os.getpid()}.tmp"
-                    )
-                    temporary.unlink(missing_ok=True)
-                    db = sqlite3.connect(temporary)
-                    try:
-                        db.execute(
-                            "CREATE TABLE audio (id TEXT PRIMARY KEY, duration REAL, payload TEXT)"
-                        )
-                        opener = gzip.open if source.suffix == ".gz" else open
-                        with opener(source, "rt", encoding="utf-8") as stream:
-                            batch = []
-                            for line in stream:
-                                if not line.strip():
-                                    continue
-                                row = json.loads(line)
-                                batch.append((row["cut_id"], row["duration"], line))
-                                if len(batch) == 10000:
-                                    db.executemany(
-                                        "INSERT OR REPLACE INTO audio VALUES (?, ?, ?)",
-                                        batch,
-                                    )
-                                    batch.clear()
-                            db.executemany(
-                                "INSERT OR REPLACE INTO audio VALUES (?, ?, ?)", batch
-                            )
-                        db.commit()
-                    finally:
-                        db.close()
-                    os.replace(temporary, self.path)
+                    _publish_audio_index(source, self.path)
         self._connection, self._pid = None, None
 
     def _db(self):
