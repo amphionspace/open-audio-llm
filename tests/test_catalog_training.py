@@ -334,6 +334,23 @@ def test_real_window_activity_labels_come_from_its_annotation(catalog_config, tm
         CatalogSwiftDataset._set_activity(holder, replace(record, target=""), 12000, [(0, 4800)], [])
 
 
+def test_offline_window_activity_labels_come_from_its_annotation(catalog_config, tmp_path):
+    config = _online_ts_config(catalog_config, tmp_path, None)
+    base = {"dataset_id": "ts", "version": "1", "split": "train"}
+    record = AudioRecord("window", "ts_asr", (
+        AudioSlot("enrollment", AudioRef(**base, cut_id="speech", start=0.0, duration=0.3)),
+        AudioSlot("mixture", AudioRef(**base, cut_id="speech", start=0.25))), "hello", language="en",
+        metadata={"target_speaker": "a", "window_utts": [
+            {"speaker": "b", "start": 0.0, "duration": 0.2}, {"speaker": "a", "start": 0.1, "duration": 0.5}]})
+    write_records([record], tmp_path / "ts.jsonl.gz")
+    labelled = {**config, "objective": {"ts_activity_weight": 0.1}}
+    sample = CatalogSwiftDataset(labelled, message_format="qwen3_asr")[0]
+    # 0.75 s window: the other speaker in frames 0-19, the target in 10-59, overlap in 10-19
+    assert sample["ts_activity"].tolist() == [2] * 10 + [3] * 10 + [1] * 40 + [0] * 15
+    with pytest.raises(ValueError, match="speed_prob"):
+        CatalogSwiftDataset({**labelled, "augmentation": {"speed_prob": 0.5}}, message_format="qwen3_asr")
+
+
 def test_plain_asr_nonspeech_source_trains_on_an_empty_transcript(catalog_config, tmp_path):
     import gzip
 
