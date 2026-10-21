@@ -856,9 +856,12 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             [[clip(u) for u in other["utts"]] for other in scene["interferers"]], config,
             rir_loader=self._rir_loader(), sampling_rate=self.sampling_rate, info=info, gaps=gaps)
 
-    def _set_activity(self, length, target_spans, other_spans):
-        if self.activity_labels:
-            self._activity = activity_codes(length, target_spans, other_spans, self.sampling_rate)
+    def _set_activity(self, record, length, target_spans, other_spans):
+        if not self.activity_labels:
+            return
+        if not record.target.strip() and target_spans:
+            raise ValueError(f"{record.id}: a target-absent mixture cannot have target speech")
+        self._activity = activity_codes(length, target_spans, other_spans, self.sampling_rate)
 
     def _online_slot(self, record, name, audio, rng):
         """Rebuild one slot of an online-mixed sample; return audio and the slot's augmentation."""
@@ -876,13 +879,13 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         if record.metadata.get("online_nonspeech"):
             # Nobody talks and the transcript is empty: noise or music of its own length.
             audio = nonspeech_window(rng, config, noise, self.sampling_rate)
-            self._set_activity(len(audio), [], [])
+            self._set_activity(record, len(audio), [], [])
             return audio, replace(augmentation, noise_prob=0.0)
         info = {}
         scene = record.metadata.get("scene")
         if scene:
             audio = self._scene_mixture(record, scene, config, rng, info)
-            self._set_activity(len(audio), info["target_spans"], info["other_spans"])
+            self._set_activity(record, len(audio), info["target_spans"], info["other_spans"])
             return degrade_mixture(rng, audio, config, floor, self.sampling_rate), augmentation
         audio, count = build_mixture(
             rng, audio, config, absent=absent, speech_loader=speech,
@@ -893,18 +896,20 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             # occurs in use). SNR is undefined here; set_level picks the level.
             audio = nonspeech_window(rng, config, noise, self.sampling_rate, length=len(audio))
             augmentation = replace(augmentation, noise_prob=0.0)
-            self._set_activity(len(audio), [], [])
+            self._set_activity(record, len(audio), [], [])
         else:
             utterances = record.metadata.get("window_utts")
-            if utterances is None or absent:
-                self._set_activity(len(audio), info["target_spans"], info["other_spans"])
-            elif "target_speaker" in record.metadata:
-                # A real recording window stands in for the target: its annotation says who speaks when.
+            if absent or "target_speaker" not in record.metadata:
+                # One clean target utterance (the online_mix contract), or only the drawn interferers.
+                self._set_activity(record, len(audio), info["target_spans"], info["other_spans"])
+            elif utterances is not None:
+                # A recorded window stands in for the target: only its annotation says who speaks when.
                 lead, rate = round(info["lead"] * self.sampling_rate), self.sampling_rate
                 spans = [(u["speaker"] == record.metadata["target_speaker"], lead + round(u["start"] * rate),
                           lead + round((u["start"] + u["duration"]) * rate)) for u in utterances]
-                self._set_activity(len(audio), [(b, e) for own, b, e in spans if own],
+                self._set_activity(record, len(audio), [(b, e) for own, b, e in spans if own],
                                    info["other_spans"] + [(b, e) for own, b, e in spans if not own])
+            # A recorded window without per-utterance times gets no labels.
             audio = degrade_mixture(rng, audio, config, floor, self.sampling_rate)
         return audio, augmentation
 

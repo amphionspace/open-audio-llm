@@ -307,6 +307,8 @@ def test_online_mix_activity_labels_follow_the_target_timing(catalog_config, tmp
 
 
 def test_real_window_activity_labels_come_from_its_annotation(catalog_config, tmp_path):
+    from dataclasses import replace
+
     config = _online_ts_config(catalog_config, tmp_path, {
         "absent_prob": 0.0, "interferer_probs": [1.0], "speaker_rir_prob": 0.0,
     })
@@ -317,9 +319,19 @@ def test_real_window_activity_labels_come_from_its_annotation(catalog_config, tm
         metadata={"target_speaker": "a", "window_utts": [
             {"speaker": "a", "start": 0.0, "duration": 0.3}, {"speaker": "b", "start": 0.2, "duration": 0.4}]})
     write_records([record], tmp_path / "ts.jsonl.gz")
-    sample = CatalogSwiftDataset({**config, "objective": {"ts_activity_weight": 0.1}}, message_format="qwen3_asr")[0]
+    labelled = {**config, "objective": {"ts_activity_weight": 0.1}}
+    sample = CatalogSwiftDataset(labelled, message_format="qwen3_asr")[0]
     # 0.75 s mixture: the target in frames 0-29, the other speaker in 20-59, overlap in 20-29
     assert sample["ts_activity"].tolist() == [1] * 20 + [3] * 10 + [2] * 30 + [0] * 15
+    # A window without per-utterance times cannot be labelled: the whole window is not the target.
+    unannotated = replace(record, metadata={"target_speaker": "a"})
+    write_records([unannotated], tmp_path / "ts.jsonl.gz")
+    assert "ts_activity" not in CatalogSwiftDataset(labelled, message_format="qwen3_asr")[0]
+    # Lance-indexed real windows include target-absent ones; an annotation that still names the
+    # target in such a window is a broken record, not a label.
+    holder = SimpleNamespace(activity_labels=True, sampling_rate=16000)
+    with pytest.raises(ValueError, match="target-absent"):
+        CatalogSwiftDataset._set_activity(holder, replace(record, target=""), 12000, [(0, 4800)], [])
 
 
 def test_plain_asr_nonspeech_source_trains_on_an_empty_transcript(catalog_config, tmp_path):
