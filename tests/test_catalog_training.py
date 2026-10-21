@@ -285,6 +285,43 @@ def test_online_mix_target_timing_changes_the_window(catalog_config, tmp_path):
     assert lengths == {1.25, 1.75, 2.25}  # leave, enter, middle around the 0.75 s target
 
 
+def test_online_mix_activity_labels_follow_the_target_timing(catalog_config, tmp_path):
+    from open_audio_llm.data.ts_online import activity_codes
+
+    config = _online_ts_config(catalog_config, tmp_path, {
+        "absent_prob": 0.0, "entry_prob": 1.0, "lead_seconds": [1.0, 1.0], "trail_seconds": [0.5, 0.5],
+        "interferer_probs": [1.0], "speaker_rir_prob": 0.0,
+    })
+    assert "ts_activity" not in CatalogSwiftDataset(config, message_format="qwen3_asr")[0]
+    dataset = CatalogSwiftDataset({**config, "objective": {"ts_activity_weight": 0.1}}, message_format="qwen3_asr")
+    seen = set()
+    for epoch in range(12):
+        dataset.set_epoch(epoch)
+        sample = dataset[0]
+        mix, _ = sf.read(BytesIO(sample["mix_wav"]))
+        lead = 0 if len(mix) == int(1.25 * 16000) else 16000  # leave, or enter / middle
+        expected = activity_codes(len(mix), [(lead, lead + 12000)], [], 16000)
+        assert np.array_equal(sample["ts_activity"], expected)
+        seen.add(len(mix))
+    assert len(seen) == 3
+
+
+def test_real_window_activity_labels_come_from_its_annotation(catalog_config, tmp_path):
+    config = _online_ts_config(catalog_config, tmp_path, {
+        "absent_prob": 0.0, "interferer_probs": [1.0], "speaker_rir_prob": 0.0,
+    })
+    base = {"dataset_id": "ts", "version": "1", "split": "train"}
+    record = AudioRecord("window", "ts_asr", (
+        AudioSlot("enrollment", AudioRef(**base, cut_id="speech", start=0.0, duration=0.3)),
+        AudioSlot("mixture", AudioRef(**base, cut_id="speech", start=0.25))), "hello", language="en",
+        metadata={"target_speaker": "a", "window_utts": [
+            {"speaker": "a", "start": 0.0, "duration": 0.3}, {"speaker": "b", "start": 0.2, "duration": 0.4}]})
+    write_records([record], tmp_path / "ts.jsonl.gz")
+    sample = CatalogSwiftDataset({**config, "objective": {"ts_activity_weight": 0.1}}, message_format="qwen3_asr")[0]
+    # 0.75 s mixture: the target in frames 0-29, the other speaker in 20-59, overlap in 20-29
+    assert sample["ts_activity"].tolist() == [1] * 20 + [3] * 10 + [2] * 30 + [0] * 15
+
+
 def test_plain_asr_nonspeech_source_trains_on_an_empty_transcript(catalog_config, tmp_path):
     import gzip
 

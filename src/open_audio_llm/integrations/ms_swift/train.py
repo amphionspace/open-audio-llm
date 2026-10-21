@@ -158,6 +158,17 @@ class CatalogTrainingMixin:
         liger = getattr(self.args, "use_liger_kernel", False) and self.args.model_type == "amphion_asr_1.7b"
         if liger and getattr(self.args, "retention_teacher", None):
             raise ValueError("Liger RoPE is module-wide and would change the frozen retention teacher")
+        activity_weight = self.args._catalog_config.get("objective", {}).get("ts_activity_weight")
+        if activity_weight is not None and (
+            not isinstance(activity_weight, (int, float)) or not activity_weight > 0
+            or getattr(self.args, "rlhf_type", None) == "grpo"
+            or not getattr(self.args, "supervised_head_loss", False)
+            or not getattr(self.args, "audio_encoder_batching", False)
+            or getattr(self.args, "packed_text", False)
+        ):
+            # The loss reads the batched encoder's frame layout and adds to the supervised-head SFT loss.
+            raise ValueError("objective.ts_activity_weight must be positive and needs SFT with "
+                             "supervised_head_loss and audio_encoder_batching, without packed_text")
         original_create_optimizer = None
         if getattr(self.args, "rlhf_type", None) == "grpo":
             config = self.args._catalog_config
@@ -271,6 +282,12 @@ class CatalogTrainingMixin:
 
             restore_text = enable_packed_text(trainer.model)
             logging.getLogger(__name__).warning("Packed text batches: FlashAttention-2 varlen text decoder")
+        if activity_weight:
+            from .ts_activity import enable_ts_activity_loss
+
+            # Last: its forward takes ts_activity off the batch before the wrapped forwards see it.
+            enable_ts_activity_loss(trainer, float(activity_weight))
+            logging.getLogger(__name__).warning("TS speaker-activity auxiliary loss, weight %s", activity_weight)
         try:
             return super().train(trainer)
         finally:

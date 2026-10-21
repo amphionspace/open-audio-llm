@@ -359,6 +359,7 @@ class Qwen3ASRTemplate(Template):
     def _drop_mix_source(self, inputs) -> None:
         extra = getattr(inputs, 'extra_kwargs', None) or {}
         extra.pop('mix_wav', None)
+        extra.pop('ts_activity', None)
         nested = extra.get('chat_template_kwargs')
         if isinstance(nested, dict):
             nested.pop('mix_wav', None)
@@ -453,6 +454,8 @@ class Qwen3ASRTemplate(Template):
             # Do not set AMPHION_TSASR_INSERT_SEP during training. That env
             # splits a single concat waveform; this path already has two clips.
             enroll = self._waveform(inputs.audios[0], enroll=True)
+            # Mixture speaker activity per 10 ms from catalog online mixing, for the auxiliary loss.
+            activity = (getattr(inputs, 'extra_kwargs', None) or {}).get('ts_activity')
             inputs._ts_mix_wav = self._waveform(self._mix_source(inputs), enroll=False)
             inputs._audio_llm_waveforms = [enroll]
             self._drop_mix_source(inputs)
@@ -466,6 +469,11 @@ class Qwen3ASRTemplate(Template):
             encoded['input_features'] = feat.contiguous()
             encoded['feature_attention_mask'] = mask.contiguous()
             encoded['enroll_n_frames'] = int(enroll_n)
+            if activity is not None:
+                # One code per mixture Mel frame (same 10 ms hop); -1 where the mixture has none.
+                mix_frames = int(feat.shape[-1]) - int(enroll_n)
+                codes = torch.as_tensor(activity, dtype=torch.long)[:mix_frames]
+                encoded['ts_activity'] = F.pad(codes, (0, mix_frames - len(codes)), value=-1)
             return encoded
         extra = getattr(inputs, 'extra_kwargs', None) or {}
         # ms-swift 4.5 keeps chat_template_kwargs as an input attribute.
@@ -581,6 +589,13 @@ class Qwen3ASRTemplate(Template):
             ]
             res['input_features'] = torch.concat(input_features)
             res['feature_attention_mask'] = torch.concat(feature_attention_mask)
+        if any(b.get('ts_activity') is not None for b in batch):
+            width = max(len(b['ts_activity']) for b in batch if b.get('ts_activity') is not None)
+            res['ts_activity'] = torch.stack([
+                F.pad(b['ts_activity'], (0, width - len(b['ts_activity'])), value=-1)
+                if b.get('ts_activity') is not None else torch.full((width,), -1, dtype=torch.long)
+                for b in batch
+            ])
         if any('enrollment_lengths' in b for b in batch):
             res['enrollment_lengths'] = torch.cat([
                 b.get('enrollment_lengths', torch.zeros((b['input_features'].shape[0], 3), dtype=torch.long))

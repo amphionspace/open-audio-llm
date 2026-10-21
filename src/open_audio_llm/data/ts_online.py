@@ -16,6 +16,10 @@ import numpy as np
 
 # Below this RMS a clip is treated as silence and is not rescaled.
 _SILENT_RMS = 1e-6
+# Frame-level speaker activity of a mixture, one code per 10 ms (the Mel hop of the
+# Qwen3-ASR feature extractor): bit 0 the target speaks, bit 1 someone else does.
+ACTIVITY_FRAME_SECONDS = 0.01
+TARGET_ACTIVE, OTHERS_ACTIVE = 1, 2
 # Peak ceiling after level scaling, to avoid clipping in the WAV transport.
 _MAX_PEAK = 0.99
 
@@ -125,14 +129,36 @@ def _fit(rng, audio, length):
 
 
 def _place(rng, audio, length):
-    """Place an interferer so it overlaps the window partly or fully."""
+    """Place an interferer so it overlaps the window partly or fully; return it and its span."""
     out = np.zeros(length, dtype=np.float32)
     # Start anywhere from fully before the window to its last sample, so
     # overlap ranges from a short tail to the whole window.
     start = rng.randrange(-len(audio) + 1, length)
     begin, end = max(start, 0), min(start + len(audio), length)
     out[begin:end] = audio[begin - start : end - start]
-    return out
+    return out, (begin, end)
+
+
+def _spans(mask):
+    """[begin, end) sample spans where ``mask`` is true."""
+    edges = np.flatnonzero(np.diff(np.concatenate([[0], np.asarray(mask, dtype=np.int8), [0]])))
+    return list(zip(edges[::2].tolist(), edges[1::2].tolist()))
+
+
+def activity_codes(length, target_spans, other_spans, sampling_rate):
+    """Activity code per 10 ms frame of a ``length``-sample window from speech spans in samples.
+
+    Spans are utterance extents, so pauses inside an utterance count as speech, as in
+    a diarization reference.
+    """
+    hop = round(ACTIVITY_FRAME_SECONDS * sampling_rate)
+    codes = np.zeros(-(-length // hop), dtype=np.int8)
+    for spans, bit in ((target_spans, TARGET_ACTIVE), (other_spans, OTHERS_ACTIVE)):
+        for begin, end in spans:
+            begin, end = max(int(begin), 0), min(int(end), length)
+            if end > begin:
+                codes[begin // hop : -(-end // hop)] |= bit
+    return codes
 
 
 def _scale_to(audio, reference_rms, ratio_db):
@@ -188,7 +214,8 @@ def build_mixture(rng, target, config, *, absent, speech_loader, rir_loader, sam
 
     The window is the target plus any padding drawn by ``timing``, so the target can enter
     late or leave early. When the target is absent the window holds only interferers, or
-    silence for the later noise step. ``info`` receives the padding in seconds.
+    silence for the later noise step. ``info`` receives the padding in seconds and the
+    sample spans of the target and of the interferers.
     """
     target = np.asarray(target, dtype=np.float32)
     length = len(target)
@@ -201,12 +228,15 @@ def build_mixture(rng, target, config, *, absent, speech_loader, rir_loader, sam
     mixture = np.zeros(window, dtype=np.float32)
     if not absent:
         mixture[lead : lead + length] = present
+    other_spans = []
     for _ in range(count):
         other = reverberate(rng, speech_loader(rng, sampling_rate), config, rir_loader, sampling_rate)
-        other = _place(rng, other, window)
+        other, span = _place(rng, other, window)
+        other_spans.append(span)
         mixture += _scale_to(other, reference, rng.uniform(*config.sir_db))
     if info is not None:
-        info.update(lead=lead / sampling_rate, trail=trail / sampling_rate, window=window / sampling_rate)
+        info.update(lead=lead / sampling_rate, trail=trail / sampling_rate, window=window / sampling_rate,
+                    target_spans=[] if absent else [(lead, lead + length)], other_spans=other_spans)
     return mixture, count
 
 
@@ -291,7 +321,8 @@ def build_scene(rng, mode, targets, others, config, *, rir_loader, sampling_rate
         spoken = target_track != 0
         others_on = np.any([track != 0 for track in tracks], axis=0) if tracks else np.zeros(length, dtype=bool)
         info.update(lead=0.0, trail=0.0, window=length / sampling_rate,
-                    overlap=float(np.mean(others_on[spoken])) if spoken.any() else 0.0)
+                    overlap=float(np.mean(others_on[spoken])) if spoken.any() else 0.0,
+                    target_spans=_spans(spoken), other_spans=_spans(others_on))
     return mixture
 
 

@@ -173,6 +173,33 @@ def test_ts_encode_uses_independent_mel_and_sep_pad_count(monkeypatch):
     assert not hasattr(inputs, "_ts_mix_wav")
 
 
+def test_ts_encode_aligns_activity_to_mixture_mel_frames_and_collates_with_padding(monkeypatch):
+    from transformers import WhisperFeatureExtractor
+
+    from open_audio_llm.integrations.ms_swift import register_qwen3_asr as module
+    from open_audio_llm.tsasr.sep_token import extract_wav_mel
+
+    if module.Template is object:
+        pytest.skip("ms-swift is unavailable")
+    template = object.__new__(module.Qwen3ASRTemplate)
+    template.sampling_rate = 16000
+    template._hop_length = 160
+    template._feature_extractor = WhisperFeatureExtractor(feature_size=128, sampling_rate=16000)
+    monkeypatch.setattr(module.Template, "_encode", lambda self, inputs: self.replace_tag("audio", 0, inputs) and {})
+    enroll, mix = np.full(16000, 0.1, dtype=np.float32), np.full(8000, 0.2, dtype=np.float32)
+    _, _, mix_n = extract_wav_mel(template.feature_extractor, mix, 16000)
+    codes = np.array([1] * 20 + [3] * 10 + [2] * 20, dtype=np.int8)  # 50 frames, shorter than the mixture
+    inputs = SimpleNamespace(audios=[enroll], extra_kwargs={"mix_wav": mix, "ts_activity": codes})
+    result = template._encode(inputs)
+    assert result["ts_activity"].tolist() == codes.tolist() + [-1] * (mix_n - 50)
+    assert "ts_activity" not in inputs.extra_kwargs  # never reaches model.forward through the template
+
+    monkeypatch.setattr(module.Template, "_data_collator", lambda *a, **kw: {})
+    rows = [{"ts_activity": torch.tensor([1, 2, 3])}, {}, {"ts_activity": torch.tensor([0])}]
+    assert template._data_collator(rows)["ts_activity"].tolist() == [[1, 2, 3], [-1, -1, -1], [0, -1, -1]]
+    assert "ts_activity" not in template._data_collator([{}, {}])
+
+
 def test_encode_releases_waveform_on_failure(audio_template, monkeypatch):
     module, template = audio_template
     if module is generic:
