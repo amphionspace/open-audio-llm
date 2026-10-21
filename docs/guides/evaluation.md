@@ -134,7 +134,7 @@ evaluation:
 
 ### 6. 热词评测
 
-热词能力用 `open-audio-llm/hotword-bench@v2-20261019` 评测（数据 `hotword_bench@v2-20261019`），评测器 `hotwords`，`samples_per_source: 0`。调研和 v1 构建过程见 [热词评测集实验记录](../experiments/2026-10-18-hotword-benchmark/README.md)，v2 的热词池与基线见 [热词评测集 v2](../experiments/2026-10-19-hotword-bench-v2/README.md)。
+热词能力用 `open-audio-llm/hotword-bench@v3-20261020` 评测（数据 `hotword_bench@v3-20261020`），评测器 `hotwords`，`samples_per_source: 0`。调研和 v1 构建过程见 [热词评测集实验记录](../experiments/2026-10-18-hotword-benchmark/README.md)，v2 的热词池与基线见 [热词评测集 v2](../experiments/2026-10-19-hotword-bench-v2/README.md)，v3 的类型、领域分项见 [热词评测集 v3](../experiments/2026-10-20-hotword-bench-types/README.md)。
 
 - **数据**：
   - 中文：AISHELL1-NE（SeACo）、ContextASR-Bench Speech-ZH、真实口语（SpeechIO、WenetSpeech test）、Common Voice 中文、AISHELL-2/3、KeSpeech；
@@ -146,5 +146,6 @@ evaluation:
   - `k50` / `k50_no_gold`（cv-en）：正确词加随机词，以及去掉正确词。
   - `official` / `n100` / `n1000` / `l20` / `l50` / `l100`：论文列表，用于和公开数字对照。
 - **主指标**：`pool50` 的 B-CER 和 F1；`pool50_no_gold` 的误触发率和 CER 变化（`error_rate_delta`）。CER/WER、U-CER 作守门。
+- **分项**：summary 的 `breakdowns.<来源>/<条件>.hotword_type` 按正确词类型（人名、地名、机构、产品、作品、术语、其他专名、普通词）给召回和误触发率，ContextASR 另有 `domain_group`（13 个领域大类）。两个基线上人名最难，给列表后最容易被同音易混词带偏，看热词改进时重点看人名的 `pool50` 召回和 `pool50_no_gold` 误触发率。
 - **请求格式**：与第 3 节相同，system 写 `Hotwords: w1,w2,...`（顺序按列表存的顺序）。
-- **旧集**：`hotword-bench@v1-20261018` 的中文 `k50` 用随机词补满，两个基线模型上难度与 v2 接近，但数字不能和 v2 混比，只用于历史对照；`open-audio-llm/qwen3-asr-hotwords@20261001` 每条只有 10 个随机干扰词，34479 在上面已经饱和。
+- **旧集**：v2 与 v3 请求逐条相同，总指标可直接比较，v3 只多了分项标签；`hotword-bench@v1-20261018` 的中文 `k50` 用随机词补满，两个基线模型上难度与 v2 接近，但数字不能和 v2 混比，只用于历史对照；`open-audio-llm/qwen3-asr-hotwords@20261001` 每条只有 10 个随机干扰词，34479 在上面已经饱和。
