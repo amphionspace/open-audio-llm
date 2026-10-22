@@ -1,0 +1,37 @@
+# eval set open-audio-llm/context-correction-zh@v1-20261018 without the TS split (synthetic_ts)
+tags:
+- zh
+- context-correction
+groups:
+- name: 上下文纠偏 · 合成
+  section: 上下文纠偏
+  labels:
+  - synthetic
+  description: 看 summary 的 context_correction：纠正成功率、保持率（误改率）、说明识别率、条件纠正率、成对正确率
+- name: 上下文纠偏 · 真实录音
+  section: 上下文纠偏
+  labels:
+  - mined_real
+  description: 真实播客录音；每条单独成题（没有成对的确认题），看 mined_accuracy
+sampling_rate: 16000
+evaluation:
+- dataset_id: context_correction_zh
+  version: v1-20261018
+  split: synthetic
+  task: asr
+  label: synthetic
+  tags:
+  - zh
+  - context-correction
+  display: 合成 · 普通 ASR
+  description: LLM 生成的成对题目，Qwen3-TTS 用测试划分说话人的声音合成；显式说字、同名一致性、隐式语义
+- dataset_id: context_correction_zh
+  version: v1-20261018
+  split: mined_real
+  task: asr
+  label: mined_real
+  tags:
+  - zh
+  - context-correction
+  display: 真实录音 · 普通 ASR
+  description: 从 WenetSpeech 播客挖掘、两个 LLM 一致标注的真实录音

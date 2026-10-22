@@ -1,0 +1,21 @@
+# Qwen3-ASR-1.7B 官方权重基线：vLLM 0.18.0 原生 Qwen3-ASR 实现，贪心解码；与 34479 同一评测口径。
+# 官方模型没有 TS 模式，只跑普通 ASR 的两个来源（data-asr-only.yaml）。
+suite_id: asr-regression-native@1
+evaluator: ts-asr
+data_config: /workspace/workspace/mingdong/repo/open-audio-llm-ctxcorr/docs/experiments/2026-10-18-context-correction-benchmark/baselines/qwen3-asr-1.7b/data-asr-only.yaml
+server_url: http://127.0.0.1:18121
+served_model: Qwen/Qwen3-ASR-1.7B
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/qwen3-asr-1.7b
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+# 发布到 COS 前先问用户
+publish:
+  enabled: false
