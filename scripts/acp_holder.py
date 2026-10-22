@@ -1,7 +1,7 @@
 """Hold ACP capacity for this project: keep NODES nodes busy with ASR- jobs (AGENTS.md "ACP Compute").
 
 Polls the pool; when the ASR- jobs hold fewer than --nodes nodes and a whole node is idle, submits one
-GPU-burning holder job (scripts/gpu_hold.py) (display name ASR-holder-<time>) and exits. Real or debug jobs are queued first and the holder
+GPU-burning holder job (scripts/gpu_hold.py) (display name ASR-<--name-stem>-h<HHMM>, an ordinary experiment-style name) and exits. Real or debug jobs are queued first and the holder
 is stopped afterwards (`sco acp jobs stop`). Cluster settings (image, spec, mounts) come from the `cluster:` section
 of any train config. Usage: acp_holder.py --config <train.yaml> [--nodes 2] [--interval 120] [--once]
 """
@@ -52,8 +52,8 @@ def holder_command(cluster, python):
     return f"{python} {target}"
 
 
-def submit_holder(cluster, python):
-    name = f"{JOB_PREFIX}holder-{datetime.now(timezone.utc):%Y%m%d-%H%M}"
+def submit_holder(cluster, python, stem):
+    name = f"{JOB_PREFIX}{stem}-h{datetime.now(timezone.utc):%H%M}"
     code, output = run_sco(
         cluster, "acp", "jobs", "create", f"--workspace-name={cluster['workspace']}",
         f"--aec2-name={cluster['aec2']}", f"--job-name={name}",
@@ -72,6 +72,7 @@ def main():
     parser.add_argument("--nodes", type=int, default=2)
     parser.add_argument("--interval", type=int, default=120)
     parser.add_argument("--once", action="store_true")
+    parser.add_argument("--name-stem", default="ts-robust-v7set-continue-from016-ckpt15000-1node")
     args = parser.parse_args()
     config = yaml.safe_load(open(args.config))
     cluster, python = config["cluster"], config["runtime"]["python"]
@@ -82,7 +83,7 @@ def main():
         idle = idle_gpus(run_sco(cluster, "aec2", "clusters", "usage", f"--name={cluster['aec2']}")[1])
         print(f"{datetime.now(timezone.utc):%F %T}Z ASR nodes {held}/{args.nodes}, idle GPUs {idle}", flush=True)
         if held < args.nodes and idle >= GPUS_PER_NODE:
-            print(*submit_holder(cluster, python), flush=True)
+            print(*submit_holder(cluster, python, args.name_stem), flush=True)
             return 0
         if args.once:
             return 1
