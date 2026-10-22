@@ -114,7 +114,9 @@ except:
 
 logger = init_logger(__name__)
 
+from open_audio_llm.tsasr.concat_audio import configured_enroll_sec  # noqa: E402
 from open_audio_llm.tsasr.sep_token import (  # noqa: E402
+    REQUEST_ENROLL_SEC,
     AudioSepToken,
     audio_token_count,
     conv_pack_features,
@@ -124,9 +126,14 @@ from open_audio_llm.tsasr.sep_token import (  # noqa: E402
     rebuild_cu_seqlens,
     stitch_sep_between_segments,
     transformer_window_aftercnn,
+    tsasr_sep_enabled,
 )
 
 install_independent_mel_fe()
+
+
+# One Whisper window; the enrollment is extracted as its own clip.
+MAX_ENROLL_SECONDS = 30.0
 
 
 def _get_feat_extract_output_lengths(input_lengths: torch.Tensor):
@@ -138,19 +145,24 @@ def _get_feat_extract_output_lengths(input_lengths: torch.Tensor):
     return output_lengths
 
 
-def _audio_pad_count(mel_len: int) -> int:
-    enroll = default_enroll_n_frames()
+def _audio_pad_count(mel_len: int, enroll: int | None = None) -> int:
+    if enroll is None:
+        enroll = default_enroll_n_frames()
     return audio_token_count(
-        int(mel_len), insert_sep=bool(enroll), enroll_n_frames=enroll
+        int(mel_len), insert_sep=bool(enroll), enroll_n_frames=int(enroll)
     )
 
 
-def _audio_pad_counts(mel_lens) -> list[int]:
-    if torch.is_tensor(mel_lens):
-        vals = [int(x) for x in mel_lens.reshape(-1).tolist()]
-    else:
-        vals = [int(x) for x in mel_lens]
-    return [_audio_pad_count(v) for v in vals]
+def _int_list(values) -> list[int]:
+    if torch.is_tensor(values):
+        return [int(x) for x in values.reshape(-1).tolist()]
+    return [int(x) for x in values]
+
+
+def _audio_pad_counts(mel_lens, enroll_lens=None) -> list[int]:
+    vals = _int_list(mel_lens)
+    enrolls = [None] * len(vals) if enroll_lens is None else _int_list(enroll_lens)
+    return [_audio_pad_count(v, e) for v, e in zip(vals, enrolls, strict=True)]
 
 
 # ============= Audio Encoder Components =============
@@ -501,6 +513,8 @@ class Qwen3ASRProcessingInfo(BaseProcessingInfo):
         return self.ctx.get_hf_config(Qwen3ASRConfig).thinker_config
 
     def get_hf_processor(self, **kwargs: object) -> Qwen3ASRProcessor:
+        # Per-request split point; consumed by the multimodal processor, not HF.
+        kwargs.pop("enroll_seconds", None)
         processor = self.ctx.get_hf_processor(
             Qwen3ASRProcessor,
             use_fast=kwargs.pop("use_fast", True),
@@ -574,6 +588,11 @@ def _qwen3asr_field_config(hf_inputs: Mapping[str, torch.Tensor]):
         ),
         feature_attention_mask=MultiModalFieldConfig.batched("audio"),
         audio_feature_lengths=MultiModalFieldConfig.batched("audio"),
+        **(
+            {"enroll_feature_lengths": MultiModalFieldConfig.batched("audio")}
+            if "enroll_feature_lengths" in hf_inputs
+            else {}
+        ),
     )
 
 
@@ -603,6 +622,41 @@ class Qwen3ASRMultiModalProcessor(
             target_sr=int(sr),
         )
 
+    def _call_hf_processor(
+        self,
+        prompt: str,
+        mm_data: Mapping[str, object],
+        mm_kwargs: Mapping[str, object],
+        tok_kwargs: Mapping[str, object],
+    ) -> BatchFeature:
+        mm_kwargs = dict(mm_kwargs)
+        seconds = mm_kwargs.pop("enroll_seconds", None)
+        if not tsasr_sep_enabled():
+            if seconds is not None:
+                raise ValueError("enroll_seconds needs the TS-ASR service (AMPHION_TSASR_INSERT_SEP=1)")
+            return super()._call_hf_processor(prompt, mm_data, mm_kwargs, tok_kwargs)
+        # Every TS request carries its own split, so all items in a batch have
+        # enroll_feature_lengths; requests without it use the server default.
+        seconds = configured_enroll_sec() if seconds is None else float(seconds)
+        if not 0 < seconds <= MAX_ENROLL_SECONDS:
+            raise ValueError(f"enroll_seconds must be in (0, {MAX_ENROLL_SECONDS}]")
+        # The enrollment must end on a Mel hop: the mixture is extracted from the
+        # next sample, and vLLM pads only the whole clip. Clients zero-pad the
+        # enrollment to a multiple of the hop (at most 10 ms), which leaves its Mel unchanged.
+        feature_extractor = self.info.get_feature_extractor()
+        hop_seconds = feature_extractor.hop_length / feature_extractor.sampling_rate
+        hops = seconds / hop_seconds
+        if abs(hops - round(hops)) > 1e-6:
+            raise ValueError(
+                f"enroll_seconds={seconds} is not a multiple of {hop_seconds} s; "
+                "zero-pad the enrollment to whole hops"
+            )
+        token = REQUEST_ENROLL_SEC.set(seconds)
+        try:
+            return super()._call_hf_processor(prompt, mm_data, mm_kwargs, tok_kwargs)
+        finally:
+            REQUEST_ENROLL_SEC.reset(token)
+
     def _get_mm_fields_config(
         self,
         hf_inputs: BatchFeature,
@@ -626,13 +680,14 @@ class Qwen3ASRMultiModalProcessor(
         out_mm_data = out_mm_kwargs.get_data()
         audio_feature_lengths = out_mm_data.get("audio_feature_lengths")
         feature_attention_mask = out_mm_data.get("feature_attention_mask")
+        enroll_feature_lengths = out_mm_data.get("enroll_feature_lengths")
         if audio_feature_lengths is None and feature_attention_mask is None:
             audio_output_lengths = []
         elif audio_feature_lengths is not None:
-            audio_output_lengths = _audio_pad_counts(audio_feature_lengths)
+            audio_output_lengths = _audio_pad_counts(audio_feature_lengths, enroll_feature_lengths)
         elif feature_attention_mask is not None:
             assert isinstance(feature_attention_mask, torch.Tensor)
-            audio_output_lengths = _audio_pad_counts(feature_attention_mask.sum(-1))
+            audio_output_lengths = _audio_pad_counts(feature_attention_mask.sum(-1), enroll_feature_lengths)
 
         def get_replacement_qwen2_audio(item_idx: int):
             num_features = audio_output_lengths[item_idx]
@@ -731,6 +786,8 @@ class Qwen3ASRForConditionalGeneration(
 
     def _parse_and_validate_multimodal_inputs(self, **kwargs: object) -> dict:
         mm_input_by_modality = {}
+        # Per-item enrollment frames from TS requests; absent for plain ASR.
+        enroll_lens = kwargs.pop("enroll_feature_lengths", None)
 
         # Preserve the order of modalities if there are multiple of them
         # from the order of kwargs.
@@ -739,28 +796,30 @@ class Qwen3ASRForConditionalGeneration(
                 input_key in ("input_audio_features")
                 and "audio" not in mm_input_by_modality
             ):
-                mm_input_by_modality["audio"] = self._parse_and_validate_audio_input(
-                    **kwargs
+                mm_input_by_modality["audio"] = (
+                    self._parse_and_validate_audio_input(**kwargs),
+                    enroll_lens,
                 )
         return mm_input_by_modality
 
     def _process_audio_input(
         self,
         audio_input: Qwen2_5OmniAudioFeatureInputs,
+        enroll_lens: torch.Tensor | None = None,
         audio_hashes: list[str] | None = None,
         cached_audio_features: torch.Tensor | None = None,
     ) -> torch.Tensor:
         input_features = audio_input["input_features"]
         audio_feature_lengths = audio_input["audio_feature_lengths"]
 
-        enroll_n_frames = default_enroll_n_frames()
+        enroll_n_frames = default_enroll_n_frames() if enroll_lens is None else enroll_lens
         audio_features = self.audio_tower(
             input_features.to(self.audio_tower.dtype),
             feature_lens=audio_feature_lengths,
             aftercnn_lens=_get_feat_extract_output_lengths(audio_feature_lengths),
             enroll_n_frames=enroll_n_frames,
         )
-        split_lens = _audio_pad_counts(audio_feature_lengths)
+        split_lens = _audio_pad_counts(audio_feature_lengths, enroll_lens)
         return audio_features.split(split_lens)
 
     def get_language_model(self) -> torch.nn.Module:
@@ -780,7 +839,7 @@ class Qwen3ASRForConditionalGeneration(
         for modality in mm_input_by_modality:
             multimodal_input = mm_input_by_modality[modality]
             if modality == "audio":
-                audio_embeddings = self._process_audio_input(multimodal_input)
+                audio_embeddings = self._process_audio_input(*multimodal_input)
                 multimodal_embeddings += tuple(audio_embeddings)
         return multimodal_embeddings
 
@@ -868,7 +927,9 @@ class Qwen3ASRForConditionalGeneration(
             audio_feature_length = mm_feature.data["audio_feature_lengths"].data
             if isinstance(audio_feature_length, torch.Tensor):
                 audio_feature_length = audio_feature_length.item()
-            audio_len = _audio_pad_count(int(audio_feature_length))
+            enroll = mm_feature.data.get("enroll_feature_lengths")
+            enroll = None if enroll is None else int(enroll.data)
+            audio_len = _audio_pad_count(int(audio_feature_length), enroll)
 
             # Text segment before audio (includes audio_start token)
             text_len = offset - st

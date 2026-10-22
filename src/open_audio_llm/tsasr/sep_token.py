@@ -9,6 +9,7 @@ the audio transformer. Plain ASR / hotword-ASR never split or insert SEP.
 """
 from __future__ import annotations
 
+import contextvars
 import os
 from pathlib import Path
 
@@ -175,6 +176,14 @@ def _replace_fe_out(first_out, feats, masks):
         return first_out
 
 
+# Per-request enrollment length in seconds. The vLLM processor sets it from the
+# request's ``mm_processor_kwargs`` (``enroll_seconds``); unset keeps the
+# server-wide AMPHION_TSASR_ENROLL_SEC split.
+REQUEST_ENROLL_SEC: contextvars.ContextVar[float | None] = contextvars.ContextVar(
+    "tsasr_request_enroll_sec", default=None
+)
+
+
 def install_independent_mel_fe() -> None:
     """TS-eval: Whisper FE splits concat wav (first 3s / rest) and extracts separately.
 
@@ -196,7 +205,8 @@ def install_independent_mel_fe() -> None:
         if not wavs:
             return orig(self, raw_speech, *args, **kwargs)
         sr = kwargs.get("sampling_rate") or getattr(self, "sampling_rate", 16000)
-        feats, masks = [], []
+        feats, masks, enroll_lens = [], [], []
+        request_sec = REQUEST_ENROLL_SEC.get()
         first_out = None
         for wav in wavs:
             # vLLM 0.18 pads the concat waveform before calling the HF processor.
@@ -206,11 +216,12 @@ def install_independent_mel_fe() -> None:
                 import numpy as np
 
                 wav = np.pad(wav, (0, pad))
-            enroll, mix = split_enroll_mix_wav(wav, sr=int(sr))
+            enroll, mix = split_enroll_mix_wav(wav, enroll_sec=request_sec, sr=int(sr))
             e_out = orig(self, [enroll], *args, **kwargs)
             if first_out is None:
                 first_out = e_out
             e_f, e_m = _crop_fe_item(e_out, 0)
+            enroll_lens.append(int(e_m.sum()))
             if mix.shape[0] > 0:
                 m_out = orig(self, [mix], *args, **kwargs)
                 m_f, m_m = _crop_fe_item(m_out, 0)
@@ -226,7 +237,12 @@ def install_independent_mel_fe() -> None:
                 feats.append(e_f)
                 masks.append(e_m)
         stacked_f, stacked_m = _pad_stack_mel(feats, masks)
-        return _replace_fe_out(first_out, stacked_f, stacked_m)
+        out = _replace_fe_out(first_out, stacked_f, stacked_m)
+        if request_sec is not None:
+            # Mel frames of each item's enrollment, so the vLLM encoder splits every
+            # item where its own enrollment ends. Native inference keeps the old keys.
+            out["enroll_feature_lengths"] = torch.tensor(enroll_lens, dtype=torch.long)
+        return out
 
     wrapped._ts_indep_mel = True
     WhisperFeatureExtractor.__call__ = wrapped
