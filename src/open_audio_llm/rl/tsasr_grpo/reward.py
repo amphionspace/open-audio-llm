@@ -4,10 +4,11 @@
 - Target present: ``1 - min(error_rate, ERROR_RATE_CAP)``, so it ranges from 1
   down to -1. Output dominated by another speaker has an error rate above 1
   and scores below a miss; a plain ``max(0, 1 - CER)`` would score both 0.
-- Target present but nothing output: ``miss_reward``. With 0 the policy learns
-  that silence is a safe answer whenever it is unsure (miss rate rose from
-  8.97% to 14.77% on ts-asr-benchmark v9 in the first run), so a negative
-  value is the default.
+- Target present but nothing output: ``miss_reward``. With 0 the miss rate
+  rose with every step (8.97% -> 14.77% on ts-asr-benchmark v9 after 240
+  steps). -0.5 only slows that drift: on the held-out set both runs trace the
+  same false-alarm/miss curve (13.2%/11.7% at run-1 step 120, 12.9%/11.9% at
+  run-2 step 180), so the miss penalty alone does not fix the trade-off.
 """
 
 from __future__ import annotations
