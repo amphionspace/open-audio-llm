@@ -1,0 +1,22 @@
+# 只含 AISHELL-1 test，用于核对 X2 worker 与论文报告的流式 CER（1.53）是否一致。
+task: asr
+groups:
+- name: 中文
+  section: 公开测试集
+  description: 常用普通话公开测试集
+  labels:
+  - aishell
+  aggregate: macro
+sampling_rate: 16000
+evaluation:
+- dataset_id: aishell
+  version: icefall-20260908
+  split: test
+  task: asr
+  label: aishell
+  tags:
+  - zh
+  display: AISHELL-1
+  description: 安静环境下的普通话朗读
+catalog: /workspace/data/registry/catalog
+roots: /workspace/data/registry/roots.json
