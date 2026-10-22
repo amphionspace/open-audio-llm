@@ -5,6 +5,7 @@ import pytest
 
 from open_audio_llm.data.ts_online import (
     OnlineMixConfig,
+    activity_codes,
     build_mixture,
     build_scene,
     contaminate_enrollment,
@@ -314,3 +315,51 @@ def test_scene_seconds_bounds_the_mixture_the_scene_builds(mode):
                for seed in range(30)]
     assert max(lengths) <= bound + 1e-3
     assert max(lengths) > bound - 1.0  # a bound, not a loose multiple
+
+
+def test_activity_codes_mark_who_speaks_in_each_10ms_frame():
+    # 1000 samples are 7 frames of 160; a span covers every frame it touches.
+    codes = activity_codes(1000, [(0, 320)], [(300, 500), (900, 2000), (-50, -10)], SR)
+    assert codes.tolist() == [1, 3, 2, 2, 0, 2, 2]
+    assert activity_codes(1000, [], [], SR).tolist() == [0] * 7
+
+
+def test_mixture_info_names_where_the_target_and_each_interferer_speak():
+    config = OnlineMixConfig(interferer_probs=(0, 0, 1), speaker_rir_prob=0, entry_prob=1.0,
+                             lead_seconds=(0.5, 0.5), trail_seconds=(0.5, 0.5))
+    for seed in range(10):
+        info = {}
+        mixture, count = _impulse_free(config, info=info, seed=seed)
+        lead = int(info["lead"] * SR)
+        assert info["target_spans"] == [(lead, lead + 2 * SR)]
+        others = mixture.copy()
+        others[lead : lead + 2 * SR] -= _tone(200, 2.0)
+        sounding = np.zeros(len(mixture), dtype=bool)
+        for begin, end in info["other_spans"]:
+            sounding[begin:end] = True
+        assert count == 2 and np.array_equal(np.abs(others) > 1e-6, sounding & (np.abs(others) > 1e-6))
+        assert not np.abs(others[~sounding]).max(initial=0) > 1e-6  # nothing else sounds
+        # Recording the spans draws nothing from the random stream.
+        again, _ = _impulse_free(config, seed=seed)
+        assert np.array_equal(mixture, again)
+    info = {}
+    _impulse_free(config, info=info, absent=True)
+    assert info["target_spans"] == []
+
+
+def test_scene_info_spans_follow_each_track():
+    target = _tone(200, 1.0)
+    for mode, others in (("alternate", [[_tone(500, 1.0)], [_tone(700, 0.5)]]), ("burst", [[_tone(500, 1.0)] * 3])):
+        info = {}
+        mixture = build_scene(random.Random(1), mode, [target], others, OnlineMixConfig(speaker_rir_prob=0, sir_db=(0, 0)),
+                              rir_loader=None, sampling_rate=SR, info=info)
+        codes = activity_codes(len(mixture), info["target_spans"], info["other_spans"], SR)
+        frames = len(mixture) // 160
+        tone_on = lambda f: _active(mixture, f, frame=160)
+        for bit, heard, spans in ((1, tone_on(200), info["target_spans"]),
+                                  (2, np.any([tone_on(f) for f in (500, 700)], axis=0), info["other_spans"])):
+            marked = codes[:frames] & bit > 0
+            assert marked[heard].all()  # every frame where the speaker sounds is marked
+            assert (marked & ~heard).sum() <= 2 * len(spans)  # extra marks only where a span starts or ends mid-frame
+        assert (3 in codes) == (mode == "burst")  # the burst target always has company
+

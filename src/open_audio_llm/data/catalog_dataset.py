@@ -30,7 +30,9 @@ from .sot import TIMESTAMP_FORMAT, with_sot_timestamps
 from .sot_alignment import AlignmentIndex
 from .target_sot import EnrollmentConfig, TARGET_FORMAT, eligible_candidates
 from .ts_online import (
+    ACTIVITY_FRAME_SECONDS,
     OnlineMixConfig,
+    activity_codes,
     build_mixture,
     build_scene,
     contaminate_enrollment,
@@ -362,6 +364,12 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         self._audio_cuts = {}
         self._sot_alignments = {}
         self.config = config
+        # Online mixtures, and recorded windows with an annotation, carry frame-level speaker activity
+        # for the auxiliary loss.
+        self.activity_labels = bool(config.get("objective", {}).get("ts_activity_weight"))
+        if self.activity_labels and self.augmentation.speed_prob:
+            raise ValueError("objective.ts_activity_weight needs speed_prob 0: time warping moves the speakers")
+        self._activity = None
         self.source_ranges = []
         records = []
         sources = config["train" if training else "validation"]
@@ -769,6 +777,11 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                 augmentation = for_slot(augmentation, slot.name)
                 if resolved.dataset_id in augmentation.noise_exclude_datasets:
                     augmentation = replace(augmentation, noise_prob=0.0)
+                metadata = resolved.record.metadata
+                if (not online and slot.name == "mixture" and self.activity_labels
+                        and "window_utts" in metadata and "target_speaker" in metadata):
+                    # Noise and direct-path reverberation keep the window's timeline.
+                    self._window_activity(resolved.record, len(audio), 0)
                 audio = augment_waveform(
                     audio,
                     self.sampling_rate,
@@ -782,6 +795,11 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             if online:
                 audio = set_level(rng, audio, slot_level(
                     OnlineMixConfig(**online), resolved.record.metadata.get("online_nonspeech"), slot.name))
+                if slot.name != "enrollment" and self._activity is not None:
+                    # Only noise and level changes follow the mix, so the labels must still fit.
+                    hop = round(ACTIVITY_FRAME_SECONDS * self.sampling_rate)
+                    if len(self._activity) != -(-len(audio) // hop):
+                        raise ValueError(f"{resolved.record.id}: activity labels do not match the mixture")
             elif resolved.record.metadata.get("nonspeech"):
                 audio = set_level(rng, audio, tuple(resolved.record.metadata["nonspeech"]["level_dbfs"]))
             if self.collect_metrics:
@@ -830,7 +848,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
 
         return load
 
-    def _scene_mixture(self, record, scene, config, rng):
+    def _scene_mixture(self, record, scene, config, rng, info=None):
         """Place the utterances a scene record names; every one is a span of the scene pool's audio."""
         ref = record.slot("mixture").ref
         base = (ref.dataset_id, ref.version, ref.split)
@@ -844,7 +862,22 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         return build_scene(
             rng, scene["mode"], [clip(t) for t in scene["targets"]],
             [[clip(u) for u in other["utts"]] for other in scene["interferers"]], config,
-            rir_loader=self._rir_loader(), sampling_rate=self.sampling_rate, gaps=gaps)
+            rir_loader=self._rir_loader(), sampling_rate=self.sampling_rate, info=info, gaps=gaps)
+
+    def _window_activity(self, record, length, lead, other_spans=()):
+        """Labels of a recorded window from its annotation (``window_utts``), ``lead`` samples into the mix."""
+        rate = self.sampling_rate
+        spans = [(u["speaker"] == record.metadata["target_speaker"], lead + round(u["start"] * rate),
+                  lead + round((u["start"] + u["duration"]) * rate)) for u in record.metadata["window_utts"]]
+        self._set_activity(record, length, [(b, e) for own, b, e in spans if own],
+                           list(other_spans) + [(b, e) for own, b, e in spans if not own])
+
+    def _set_activity(self, record, length, target_spans, other_spans):
+        if not self.activity_labels:
+            return
+        if not record.target.strip() and target_spans:
+            raise ValueError(f"{record.id}: a target-absent mixture cannot have target speech")
+        self._activity = activity_codes(length, target_spans, other_spans, self.sampling_rate)
 
     def _online_slot(self, record, name, audio, rng):
         """Rebuild one slot of an online-mixed sample; return audio and the slot's augmentation."""
@@ -862,21 +895,33 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         if record.metadata.get("online_nonspeech"):
             # Nobody talks and the transcript is empty: noise or music of its own length.
             audio = nonspeech_window(rng, config, noise, self.sampling_rate)
+            self._set_activity(record, len(audio), [], [])
             return audio, replace(augmentation, noise_prob=0.0)
+        info = {}
         scene = record.metadata.get("scene")
         if scene:
-            audio = self._scene_mixture(record, scene, config, rng)
+            audio = self._scene_mixture(record, scene, config, rng, info)
+            self._set_activity(record, len(audio), info["target_spans"], info["other_spans"])
             return degrade_mixture(rng, audio, config, floor, self.sampling_rate), augmentation
         audio, count = build_mixture(
             rng, audio, config, absent=absent, speech_loader=speech,
-            rir_loader=self._rir_loader(), sampling_rate=self.sampling_rate,
+            rir_loader=self._rir_loader(), sampling_rate=self.sampling_rate, info=info,
         )
         if absent and count == 0:
             # Nobody talks: the window is the noise itself (digital silence never
             # occurs in use). SNR is undefined here; set_level picks the level.
             audio = nonspeech_window(rng, config, noise, self.sampling_rate, length=len(audio))
             augmentation = replace(augmentation, noise_prob=0.0)
+            self._set_activity(record, len(audio), [], [])
         else:
+            utterances = record.metadata.get("window_utts")
+            if absent or "target_speaker" not in record.metadata:
+                # One clean target utterance (the online_mix contract), or only the drawn interferers.
+                self._set_activity(record, len(audio), info["target_spans"], info["other_spans"])
+            elif utterances is not None:
+                # A recorded window stands in for the target: only its annotation says who speaks when.
+                self._window_activity(record, len(audio), round(info["lead"] * self.sampling_rate), info["other_spans"])
+            # A recorded window without per-utterance times gets no labels.
             audio = degrade_mixture(rng, audio, config, floor, self.sampling_rate)
         return audio, augmentation
 
@@ -887,7 +932,11 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         install_m4a_backend()
         if self.collect_metrics:
             self._sample_metrics = dict(decode_s=0.0, wave_augment_s=0.0, audio_seconds=0.0)
+        self._activity = None
         sample = super().__getitem__(idx)
+        if self._activity is not None:
+            # Read by the template, which turns it into per-Mel-frame labels of the mixture.
+            sample["ts_activity"] = self._activity
         if sample.get("mix_wav") is not None:
             sample["duration"] = (
                 _audio_seconds(sample["audios"][0], self.sampling_rate)

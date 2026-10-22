@@ -84,6 +84,17 @@ def test_late_evaluation_uses_custom_step_and_existing_events_are_not_resent():
     assert upload_events(run, events, seen) == 0
 
 
+def test_training_rows_carry_the_speaker_activity_metrics(tmp_path):
+    (tmp_path / "training").mkdir()
+    row = {"loss": 0.23, "ts_activity_loss": 1.38, "ts_activity_acc": 0.39, "ts_activity_frames": 19770.4,
+           "global_step/max_steps": "20/35000"}
+    (tmp_path / "training/logging.jsonl").write_text(json.dumps(row) + "\n")
+    assert collect_events(tmp_path)["train:20"] == {
+        "global_step": 20, "train/loss": 0.23, "train/ts_activity_loss": 1.38,
+        "train/ts_activity_acc": 0.39, "train/ts_activity_frames": 19770.4,
+    }
+
+
 def test_incomplete_or_failed_evaluations_are_not_uploaded(tmp_path):
     folder = tmp_path / "training/retention-evaluations/checkpoint-100"
     for task in ("sot", "asr"):
