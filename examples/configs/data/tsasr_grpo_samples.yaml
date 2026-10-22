@@ -1,0 +1,31 @@
+# TS-ASR GRPO samples: the hard target-speaker sources of the v7set4c on-the-fly
+# recipe, plus easy present/absent controls. Rendered by
+# `python -m open_audio_llm.rl.tsasr_grpo.prepare --config <this> --split {heldout,train}`.
+# Paths are relative to this file. catalog/roots default to those of the base config.
+base: ../../../runs/train-speed-20261019/configs/train-data-v7set4c-b24.yaml
+# catalog: /path/to/registry/catalog
+# roots: /path/to/registry/roots.json
+record_index: jsonl
+# Upper bound of online_mix enrollment length; null keeps the base range (1-20 s).
+max_enrollment_seconds: null
+sources:
+  # Near-voice scenes (ERes2NetV2 top-10 neighbour): target absent with the near voice
+  # speaking (empty transcript), or target and near voice speaking together.
+  - {label: scene-hard-zh, dataset_id: ts_scene_pool, version: hard-20261016, split: zh, count: {heldout: 500, train: 1500}}
+  - {label: scene-hard-en, dataset_id: ts_scene_pool, version: hard-20261016, split: en, count: {heldout: 250, train: 750}}
+  # Multi-utterance scenes; ~26% absent twins, half with a near-voice enrollment.
+  - {label: scene-multi-zh, dataset_id: ts_scene_pool, version: multi-20261017, split: zh, count: {heldout: 500, train: 1000}}
+  - {label: scene-multi-en, dataset_id: ts_scene_pool, version: multi-20261017, split: en, count: {heldout: 250, train: 500}}
+  # Online mixtures of the 1-speaker splits: target absent, speech-free window, target present.
+  - {label: online-absent-zh, dataset_id: aishellmix, version: pack3-current-audio-record-20260910, split: train_1spk,
+     select: {absent_prob: 1.0}, count: {heldout: 300, train: 400}}
+  - {label: online-absent-en, dataset_id: librimix, version: 960-current-audio-record-20260910, split: train_1spk,
+     select: {absent_prob: 1.0}, count: {heldout: 300, train: 400}}
+  - {label: online-nonspeech-zh, dataset_id: aishellmix, version: pack3-current-audio-record-20260910, split: train_1spk,
+     select: {absent_prob: 0.05}, override: {nonspeech_prob: 1.0}, count: {heldout: 150, train: 200}}
+  - {label: online-nonspeech-en, dataset_id: librimix, version: 960-current-audio-record-20260910, split: train_1spk,
+     select: {absent_prob: 0.05}, override: {nonspeech_prob: 1.0}, count: {heldout: 150, train: 200}}
+  - {label: online-present-zh, dataset_id: aishellmix, version: pack3-current-audio-record-20260910, split: train_1spk,
+     select: {absent_prob: 0.0}, count: {heldout: 300, train: 800}}
+  - {label: online-present-en, dataset_id: librimix, version: 960-current-audio-record-20260910, split: train_1spk,
+     select: {absent_prob: 0.0}, count: {heldout: 300, train: 800}}

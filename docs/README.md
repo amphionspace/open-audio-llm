@@ -17,6 +17,7 @@
 | [AmphionASR v4 数据配方](guides/amphionasr-v4-data.md) | v4 一轮的登记来源、时长、验证子集和增强 |
 | [ACP 多机训练](guides/acp.md) | 通过 `cluster` 段向 SenseCore ACP 算力池提交任务 |
 | [多目标说话人 SOT](guides/multi-target-sot.md) | 0～3 段注册音频的日志转写训练与评测 |
+| [TS-ASR GRPO](guides/tsasr-grpo.md) | 在交付包上做目标说话人 GRPO：样本生成、奖励、训练与评测 |
 | [使用 AmphionEval 评测](guides/evaluation.md) | 训练与评测的边界协议、环境和评测步骤 |
 | [部署](guides/deployment.md) | vLLM 服务、TS-ASR、Compose、自包含镜像与 Kubernetes |
 | [实验目录与配置规范](guides/experiments.md) | 迭代流程、实验目录、执行记录、W&B 与对象存储 |

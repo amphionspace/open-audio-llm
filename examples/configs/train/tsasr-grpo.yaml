@@ -1,0 +1,57 @@
+# On-policy GRPO for TS-ASR from a delivered AmphionASR package (docs/guides/tsasr-grpo.md).
+# Model: model/ of the package pulled from COS into models/. Samples: written by
+# open_audio_llm.rl.tsasr_grpo.prepare (examples/configs/data/tsasr_grpo_samples.yaml).
+# 4 ranks x 4 samples x 8 completions = 128 rollouts per step; about 15-20 s per step on
+# shared A800s, 27 GB peak per rank (fp32 policy + AdamW + bf16 generation copy).
+# Checkpoints stay local: add a `storage` block when the machine has whai credentials.
+version: 1
+runtime:
+  python: python
+  cwd: {path: ../../..}
+  pythonpath:
+    - {path: ../../../src}
+    - {path: ../../../../audio-data-contract/src}
+  gpus: [0, 1, 2, 3]
+  distributed: {processes: 4, port: 29531}
+  threads: {omp: 4, openblas: 1}
+  environment:
+    TOKENIZERS_PARALLELISM: false
+    PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+task:
+  kind: train
+  module: open_audio_llm.rl.tsasr_grpo.train
+  arguments:
+    --model: {path: ../../../models/amphionasr-1.7b-v3-tsrobust-033avg3/model}
+    --train: {path: ../../../runs/tsasr-grpo/shared/samples/train/samples.jsonl}
+    --output_dir: {path: "{attempt}/artifacts/training"}
+    --steps: 240
+    --prompts: 4
+    --num_generations: 8
+    --learning_rate: 0.000002
+    --warmup_ratio: 0.05
+    --temperature: 1.0
+    --max_new_tokens: 200
+    --std_floor: 0.1
+    --micro_batch: 4
+    --save_steps: 60
+    # Present target with empty output. 0 raised the v9 miss rate 8.97% -> 14.77% in run 1.
+    --miss_reward: -0.5
+    # The 3-second string of open_audio_llm.tsasr.ts_prompt, which 033avg3 was trained and
+    # evaluated with. Use the checkpoint's own training string for other packages.
+    --system: "The clip starts with a 3-second enrollment of the target speaker, then the mixture. Transcribe only the enrolled speaker from the mixture. If the enrolled speaker is not present, output nothing."
+    --seed: 1234
+recording:
+  attempts_dir: {path: ../../../runs/tsasr-grpo/tasks/run/attempts}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: python
+  credentials_file: {path: ~/.bashrc}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: tsasr-grpo
+  interval: 5
+  metrics:
+    - file: {path: '{attempt}/artifacts/training/grpo.jsonl'}
+      format: jsonl
+      prefix: grpo
