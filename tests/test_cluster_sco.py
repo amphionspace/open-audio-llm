@@ -70,13 +70,13 @@ def test_missing_installation_is_not_created(tmp_path, monkeypatch):
     assert cluster.refresh_sco({"sco_home": str(tmp_path)}) is False and not calls
 
 
-def test_job_names_start_with_the_asr_prefix(tmp_path):
+def test_job_names_start_with_the_project_prefix(tmp_path):
     config = {"tracking": {"name": "zh-demo-20261016"}}
-    assert cluster.job_name(config, tmp_path / "001") == "ASR-zh-demo-20261016-001"
-    assert cluster.job_name({"tracking": {"name": "ASR-x"}}, tmp_path / "002") == "ASR-x-002"
+    assert cluster.job_name(config, tmp_path / "001") == "AmphionASR-zh-demo-20261016-001"
+    assert cluster.job_name({"tracking": {"name": "AmphionASR-x"}}, tmp_path / "002") == "AmphionASR-x-002"
 
 
-def test_holder_counts_only_asr_nodes_and_reads_idle_gpus():
+def test_holder_counts_project_nodes_of_either_prefix_and_reads_idle_gpus():
     import importlib.util
     from pathlib import Path
     spec = importlib.util.spec_from_file_location("acp_holder", Path(__file__).parents[1] / "scripts/acp_holder.py")
@@ -86,7 +86,8 @@ def test_holder_counts_only_asr_nodes_and_reads_idle_gpus():
         "| pt-a | uid | ASR-zh-demo-001 | u | 8XA800 | cluster-whai |    1 | RUNNING | P | t | NORMAL |\n"
         "|      |     | wrapped-name    |   |        |              |      |         |   |   |        |\n"
         "| pt-b | uid | supervised-tts  | u | 8XA800 | cluster-whai |    2 | RUNNING | P | t | NORMAL |\n"
-        "| pt-c | uid | ASR-holder-1    | u | 8XA800 | cluster-whai |    1 | RUNNING | P | t | NORMAL |\n")
-    assert holder.asr_nodes(table) == 2
+        "| pt-c | uid | ASR-holder-1    | u | 8XA800 | cluster-whai |    1 | RUNNING | P | t | NORMAL |\n"
+        "| pt-d | uid | AmphionASR-ts-1 | u | 8XA800 | cluster-whai |    1 | RUNNING | P | t | NORMAL |\n")
+    assert holder.asr_nodes(table) == 3
     usage = "|   GPU_NUMBER    |       40       |      32       |       8       |  0 |\n"
     assert holder.idle_gpus(usage) == 8
