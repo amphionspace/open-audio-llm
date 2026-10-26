@@ -119,9 +119,12 @@ def select_drr_far(recordings, keep: float = 0.2) -> list:
     return [item for _gap, item in scored[: max(1, int(len(scored) * keep))]]
 
 
+# Measured RIR sets whose responses are not grouped into rooms: the DRR rule runs over the whole set.
+UNGROUPED_RIR_SETS = ("dns5", "mit_ir_survey")
+
+
 def far_recordings(dataset_id: str, recordings) -> list:
-    if "dns5" in dataset_id:
-        # DNS5 responses are not grouped into rooms, so the DRR rule runs over the whole set.
+    if any(name in dataset_id for name in UNGROUPED_RIR_SETS):
         chosen = select_drr_far(recordings)
     elif "real" in dataset_id:
         chosen = select_real_far(recordings)
