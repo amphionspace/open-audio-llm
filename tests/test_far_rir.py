@@ -40,7 +40,7 @@ def test_sim_far_keeps_responses_closest_to_zero_drr(tmp_path):
     assert chosen == [str(room / "Room001-00002.wav")]
 
 
-def test_dns5_far_keeps_the_responses_closest_to_zero_drr(tmp_path):
+def test_ungrouped_sets_keep_the_responses_closest_to_zero_drr(tmp_path):
     direct = np.zeros(1600, dtype=np.float32)
     direct[0] = 1
     balanced = np.zeros(1600, dtype=np.float32)
@@ -50,5 +50,6 @@ def test_dns5_far_keeps_the_responses_closest_to_zero_drr(tmp_path):
     for name, audio in (("direct", direct), ("balanced", balanced)):
         _write(tmp_path / f"{name}.wav", audio)
         items.append(type("Rec", (), {"sources": [type("S", (), {"source": str(tmp_path / f"{name}.wav")})()]})())
-    chosen = far_recordings("dns5_noise_train", items)
-    assert [Path(item.sources[0].source).name for item in chosen] == ["balanced.wav"]
+    for dataset_id in ("dns5_noise_train", "mit_ir_survey"):
+        chosen = far_recordings(dataset_id, items)
+        assert [Path(item.sources[0].source).name for item in chosen] == ["balanced.wav"]
