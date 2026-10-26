@@ -16,6 +16,19 @@ SAMPLES_ROLE = "samples"
 # 135 MB speaker table) would stay resident in every DataLoader worker.
 _MANIFEST_KEYS = ("table_path", "lance_version", "rows")
 _RELEASES = {}
+# Cache capacity per Lance handle. With Lance's defaults every random read of emilia2@tts-unified-v0.1
+# (~10^8 rows) adds ~0.4 MB of index/metadata cache with no bound in sight, in every DataLoader worker:
+# 96 workers filled the 944 GiB node after ~7.7 h (TS-robust attempt 047). Random reads over such a table
+# rarely hit the cache, and read latency at these capacities matched the defaults.
+INDEX_CACHE_BYTES = 256 << 20
+METADATA_CACHE_BYTES = 256 << 20
+
+
+def bounded_session():
+    """A Lance session for one handle, its caches capped at the capacities above."""
+    import lance
+
+    return lance.Session(index_cache_size_bytes=INDEX_CACHE_BYTES, metadata_cache_size_bytes=METADATA_CACHE_BYTES)
 
 
 def open_lance_release(catalog, roots, dataset_id, version, artifact):
@@ -25,10 +38,14 @@ def open_lance_release(catalog, roots, dataset_id, version, artifact):
     """
     key = (os.getpid(), dataset_id, version, artifact)
     if key not in _RELEASES:
+        import lance
         from audio_data_contract.tts_lance import open_release
 
         release = open_release(catalog, dataset_id, version, artifact, roots)
-        _RELEASES[key] = replace(release, manifest={k: release.manifest[k] for k in _MANIFEST_KEYS})
+        # open_release verified this snapshot; read it through a handle with bounded caches.
+        dataset = lance.dataset(release.dataset.uri, version=release.dataset.version, session=bounded_session())
+        _RELEASES[key] = replace(release, dataset=dataset,
+                                 manifest={k: release.manifest[k] for k in _MANIFEST_KEYS})
     return _RELEASES[key]
 
 

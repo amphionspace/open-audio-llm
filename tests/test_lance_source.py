@@ -92,6 +92,17 @@ def test_lance_release_trains_with_embedded_audio(lance_config, tmp_path, cached
     assert "hello" in json.dumps(sample["messages"], ensure_ascii=False)
 
 
+def test_release_reads_go_through_a_bounded_cache_session(lance_config, monkeypatch):
+    from open_audio_llm.data import lance_source
+
+    created, bounded = [], lance_source.bounded_session
+    monkeypatch.setattr(lance_source, "_RELEASES", {})
+    monkeypatch.setattr(lance_source, "bounded_session", lambda: created.append(bounded()) or created[-1])
+    dataset = CatalogSwiftDataset(lance_config)
+    dataset[1]
+    (release,) = lance_source._RELEASES.values()
+    assert any(release.dataset.session().is_same_as(session) for session in created)
+
 def test_lance_filter_is_pushed_into_the_scan(lance_config):
     lance_config["train"][0]["lance_filter"] = "language = 'en'"
     dataset = CatalogSwiftDataset(lance_config)

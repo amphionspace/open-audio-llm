@@ -262,7 +262,10 @@ class LanceSourceIndex:
         if self._pid != os.getpid():
             import lance
 
-            self._dataset, self._pid = lance.dataset(self.uri, version=self.snapshot), os.getpid()
+            from .lance_source import bounded_session
+
+            self._dataset = lance.dataset(self.uri, version=self.snapshot, session=bounded_session())
+            self._pid = os.getpid()
         return self._dataset
 
     def __getitem__(self, index):
