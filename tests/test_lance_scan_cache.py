@@ -24,11 +24,11 @@ class InlinePool:
         return [function(item) for item in items]
 
 
-def _dataset(tmp_path, sha="index-a", cache=True):
+def _dataset(tmp_path, sha="index-a", cache=True, recipe_parameters=None):
     artifact = SimpleNamespace(sha256=sha)
     spec = SimpleNamespace(dataset_id="demo", version="v1", key="demo@v1",
                            splits={"train": SimpleNamespace(artifacts={lance_index.ROLE: ("records",)})},
-                           artifact=lambda name: artifact)
+                           artifact=lambda name: artifact, recipe_parameters=recipe_parameters or {})
     catalog = SimpleNamespace(get=lambda dataset_id, version: spec)
     resolver = SimpleNamespace(catalog=catalog, catalog_path="catalog", roots_path="roots")
     return SimpleNamespace(resolver=resolver, augmentation=SimpleNamespace(speed_prob=0.0),
@@ -71,3 +71,17 @@ def test_without_a_metadata_cache_every_open_scans(tmp_path, monkeypatch):
     _open(_dataset(tmp_path, cache=False), sources, monkeypatch, scanned)
     assert scanned == ["train", "train"]
     assert not (tmp_path / "cache").exists()
+
+
+def test_require_clean_pass_uses_the_index_only_for_a_clean_pass_only_version(tmp_path, monkeypatch):
+    sources = [{"dataset_id": "demo", "version": "v1", "split": "train", "require_clean_pass": True}]
+    scanned = []
+    found = _open(_dataset(tmp_path, cache=False), sources, monkeypatch, scanned)
+    assert found == [None] and scanned == []  # markers are not in the index: keep the JSONL cache
+    for declared in ("true", 1, False):
+        found = _open(_dataset(tmp_path, cache=False, recipe_parameters={"clean_pass_only": declared}),
+                      sources, monkeypatch, scanned)
+        assert found == [None] and scanned == []
+    found = _open(_dataset(tmp_path, cache=False, recipe_parameters={"clean_pass_only": True}),
+                  sources, monkeypatch, scanned)
+    assert found[0] is not None and scanned == ["train"]

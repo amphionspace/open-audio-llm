@@ -9,6 +9,9 @@
 `require_clean_pass: true`。Lhotse 按 `custom.clean.pass` 为布尔 `true` 且时间范围
 有效过滤；AudioRecord 按 `metadata.clean.pass` 为布尔 `true` 过滤。失败、缺少标记
 或伪布尔值不通过；整个所选 clean 来源没有合格记录则报错，不偷偷混入失败样本。
+Lance 记录索引不保存清洗标记，`record_index: lance` 下设置 `require_clean_pass` 的来源默认走
+JSONL 缓存；只有 Catalog `recipe_parameters.clean_pass_only: true`（版本内每行都已按上游标记通过，
+如 `wenetspeech_clean@clean-v3-pass-20261027`）的版本才直接读索引。
 
 没有适用 clean 版本时允许使用原训练集，省略 `require_clean_pass` 或设为 `false`。
 不会因缺少标记、包含多路音频或 Catalog 标记未重新审核而阻断这些来源。
