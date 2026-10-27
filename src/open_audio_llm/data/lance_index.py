@@ -7,7 +7,9 @@ DataLoader workers fork; each worker opens its own handle on first use.
 
 A source is served from the index only when every key of its config is understood here.
 Anything else keeps the JSONL cache, so enabling ``record_index: lance`` never changes the
-meaning of a source.
+meaning of a source. The index does not store clean-pass markers, so ``require_clean_pass``
+is understood only for versions whose catalog ``recipe_parameters.clean_pass_only`` declares
+that every row already passed.
 """
 
 from __future__ import annotations
@@ -30,10 +32,19 @@ SUPPORTED_KEYS = {
     "dataset_id", "version", "split", "weight", "task",
     "exclude_records", "min_duration", "max_duration", "online_mix", "nonspeech",
 }
+# Accepted on top of SUPPORTED_KEYS when the version declares every row clean-pass.
+CLEAN_PASS_ONLY_KEYS = {"require_clean_pass"}
 ROW_COLUMNS = [
     "id", "task", "language", "text", "cut_id", "root_alias", "relative_path",
     "start_frame", "num_frames", "sample_rate", "channels", "channel", "slots", "record_json",
 ]
+
+
+def _served_keys(spec):
+    """Source keys this reader implements for one dataset version."""
+    if (getattr(spec, "recipe_parameters", None) or {}).get("clean_pass_only") is True:
+        return SUPPORTED_KEYS | CLEAN_PASS_ONLY_KEYS
+    return SUPPORTED_KEYS
 
 
 def _expression(split, min_duration, max_duration):
@@ -193,7 +204,7 @@ class LanceSourceIndex:
         for number, source in enumerate(sources):
             spec = dataset.resolver.catalog.get(source["dataset_id"], source["version"])
             names = spec.splits[source["split"]].artifacts.get(ROLE)
-            if names and not set(source) - SUPPORTED_KEYS and not dataset.augmentation.speed_prob:
+            if names and not set(source) - _served_keys(spec) and not dataset.augmentation.speed_prob:
                 excluded_path = source.get("exclude_records")
                 allowed, excluded = None, None
                 if excluded_path:
