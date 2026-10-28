@@ -1,0 +1,81 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: dns5_noise_train
+  version: v1-20261016
+  languages:
+  - und
+  tasks:
+  - noise
+  - rir
+  aliases: []
+  artifacts:
+  - name: audioset-recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/dns5_noise_train/source/v1-20261016/recordings/dns5_audioset_recordings.jsonl.gz
+    expected_bytes: 588542
+    sha256: bae3a28851068cf4d926a0c17ee1969c25f171d0a09d5d4594b352f04ee1cff9
+    metadata:
+      record_count: 52926
+  - name: freesound-recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/dns5_noise_train/source/v1-20261016/recordings/dns5_freesound_recordings.jsonl.gz
+    expected_bytes: 123975
+    sha256: e1efcccb0eac35ee2a583b8699771e7c8c02c5884c8c59d6d86ad40e5fa4f386
+    metadata:
+      record_count: 10072
+  - name: stationary-recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/dns5_noise_train/source/v1-20261016/recordings/dns5_stationary_recordings.jsonl.gz
+    expected_bytes: 314128
+    sha256: a311b7549c1478d0f9bb58ad2b5cd93fb6da868196c62142df89b7d6c582f23c
+    metadata:
+      record_count: 27475
+  - name: rir-recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/dns5_noise_train/source/v1-20261016/recordings/dns5_rir_recordings.jsonl.gz
+    expected_bytes: 67750
+    sha256: be5ba13d6e0033a41387ffd61d3fcb2cb0a8ea9af438ea03da96be8edbdd71aa
+    metadata:
+      record_count: 5000
+  splits:
+    audioset:
+      artifacts:
+        recordings:
+        - audioset-recordings
+      task: noise
+      statistics:
+        records: 52926
+        duration_hours: 147.02
+    freesound:
+      artifacts:
+        recordings:
+        - freesound-recordings
+      task: noise
+      statistics:
+        records: 10072
+        duration_hours: 27.86
+    stationary:
+      artifacts:
+        recordings:
+        - stationary-recordings
+      task: noise
+      statistics:
+        records: 27475
+        duration_hours: 76.3
+    rir:
+      artifacts:
+        recordings:
+        - rir-recordings
+      task: rir
+      statistics:
+        records: 5000
+        duration_hours: 1.39
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-16'
+    source: dns5_noise_rir@official-noise-rir-20260924
+    description: 训练用 DNS5 噪声与模拟房间响应：AudioSet 与 Freesound 噪声（16 kHz 单声道 FLAC，≤30 s，RMS 归一到 −30 dBFS），stationary 为电平稳定、适合做噪声底的片段；rir 为 impulse_responses_000 的模拟房间响应。已跳过 ts_asr_benchmark v3 用到的片段与哈希最小的 300 个响应，训练与评测互不重叠。提取脚本 scripts/ts_robust/prepare_training_noise.py。

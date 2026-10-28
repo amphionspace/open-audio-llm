@@ -1,0 +1,147 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: babble_noise_synth
+  version: v1-20261013
+  languages:
+  - en
+  - zh
+  tasks:
+  - noise
+  aliases: []
+  artifacts:
+  - name: audio_dir
+    kind: source-directory
+    root_alias: open_noise
+    relative_path: babble_synth
+    metadata:
+      audio_files: 6000
+      audio_bytes: 3963638457
+      format: flac 16 kHz mono 30 s
+  - name: manifest
+    kind: jsonl-metadata
+    root_alias: open_noise
+    relative_path: babble_synth/manifest.jsonl
+    sha256: 4a30fe20b1ee48497b9059537b9ae8e5768f81e1de7b3e90e922b86595888a2c
+    expected_bytes: 12408236
+    metadata:
+      record_count: 6000
+  splits:
+    en_dev:
+      artifacts:
+        source_directory:
+        - audio_dir
+        metadata:
+        - manifest
+      task: noise
+      statistics:
+        duration_hours: 1.67
+        num_clips: 200
+        num_source_speakers: 25
+      provenance:
+        path_prefix: en/dev/
+        language: en
+    en_test:
+      artifacts:
+        source_directory:
+        - audio_dir
+        metadata:
+        - manifest
+      task: noise
+      statistics:
+        duration_hours: 1.67
+        num_clips: 200
+        num_source_speakers: 26
+      provenance:
+        path_prefix: en/test/
+        language: en
+    en_train:
+      artifacts:
+        source_directory:
+        - audio_dir
+        metadata:
+        - manifest
+      task: noise
+      statistics:
+        duration_hours: 21.67
+        num_clips: 2600
+        num_source_speakers: 200
+      provenance:
+        path_prefix: en/train/
+        language: en
+    zh_dev:
+      artifacts:
+        source_directory:
+        - audio_dir
+        metadata:
+        - manifest
+      task: noise
+      statistics:
+        duration_hours: 1.67
+        num_clips: 200
+        num_source_speakers: 34
+      provenance:
+        path_prefix: zh/dev/
+        language: zh
+    zh_test:
+      artifacts:
+        source_directory:
+        - audio_dir
+        metadata:
+        - manifest
+      task: noise
+      statistics:
+        duration_hours: 1.67
+        num_clips: 200
+        num_source_speakers: 34
+      provenance:
+        path_prefix: zh/test/
+        language: zh
+    zh_train:
+      artifacts:
+        source_directory:
+        - audio_dir
+        metadata:
+        - manifest
+      task: noise
+      statistics:
+        duration_hours: 21.67
+        num_clips: 2600
+        num_source_speakers: 272
+      provenance:
+        path_prefix: zh/train/
+        language: zh
+  recipe_parameters:
+    script: scripts/synthesize_babble_noise.py
+    seed: 20261013
+    duration_s: 30.0
+    num_speakers: uniform integer 5-20 distinct speakers per clip
+    speaker_gain_db: uniform -6..+6
+    target_rms_dbfs: -25.0
+    speaker_split: 80/10/10 by speaker, disjoint across train/dev/test
+    sources:
+      en: librispeech@legacy-20260804 train-clean-100
+      zh: aishell@legacy-20260804 train
+  provenance:
+    snapshot_date: '2026-10-13'
+    source: synthesized from LibriSpeech train-clean-100 and AISHELL train
+    description: 合成背景人声（babble）噪声：每条 30 秒，叠加 5–20 个不同说话人，中英文各 3000 条（train 2600、dev 200、test 200）；train/dev/test 的说话人互不重叠。每条的说话人、增益和来源句子见
+      manifest.jsonl。
+    license: 继承源语料：LibriSpeech 为 CC BY 4.0，AISHELL-1 为 Apache 2.0
+    usage_guidance:
+      summary: 本数据只提供背景人声素材，音量在训练框架里按信噪比（SNR）控制，并建议按 manifest 的 num_speakers 分档使用。
+      tiers:
+      - num_speakers: 5-8
+        character: 能听出部分背景说话内容（信息掩蔽强）
+        suggested_snr_db: 13-20
+        reason: SNR 过低时背景语音与目标同样响，模型无法判断该转写谁，而标签只有目标说话人
+      - num_speakers: 10-20
+        character: 接近扩散的人群声，内容基本不可辨
+        suggested_snr_db: 0-15
+        reason: 可懂度随人数增多而下降
+      status: 分档和 SNR 数值是建议值，未在本项目的 ASR 任务上做对照实验验证；每人 ±6 dB 的增益差是自行设定，无文献依据。
+      limitations: 源语料为朗读语音，没有真实混响和距离感，训练时建议再叠加 RIR。
+      references:
+      - claim: Kaldi MUSAN babble 配方：3-7 个背景语音，SNR 20/17/15/13 dB
+        url: https://github.com/kaldi-asr/kaldi/blob/master/egs/voxceleb/v2/run.sh
+      - claim: 自然 babble 的可懂度不随人数单调下降，N=6 到 128 之间有宽最低点
+        url: https://laslab.org/journal_paper/consonant-identification-is-n-talker-babble-is-a-nonmonotonic-function-of-n
+      researched_on: '2026-10-13'

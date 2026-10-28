@@ -1,0 +1,69 @@
+# WenetSpeech-Chuan 川渝方言训练集：用 Qwen3-ASR 逐条核对机器标注，按听审定的规则保留与 Qwen 字错误率 < 30% 的条目。
+- schema_version: dataset-catalog/2.0
+  dataset_id: wenetspeech_chuan
+  version: clean-qwen3-asr-v1-20261023
+  languages:
+    - zh
+  tasks:
+    - asr
+  aliases: []
+  derived_from: wenetspeech_chuan@icefall-20260908
+  artifacts:
+    - name: preparation_state
+      kind: dataset-state
+      root_alias: aidc_data
+      relative_path: datasets/wenetspeech_chuan/versions/clean-qwen3-asr-v1-20261023/state.json
+    - name: train_cuts_0
+      kind: lhotse-cuts
+      root_alias: aidc_data
+      relative_path: datasets/wenetspeech_chuan/versions/clean-qwen3-asr-v1-20261023/wenetspeech_chuan_cuts_train_qwen_cer_lt30.jsonl.gz
+      expected_bytes: 387695561
+      sha256: e71ad7d801cc01962fceaad62295cc90cdc3b7296c91d18dfbec55e6729665b5
+      metadata:
+        record_count: 3277696
+        description: 源 cuts 中保留条目的原样拷贝（原标注不改，音频仍按 dd 偏移从 DATA-TTS/WenetSpeech-Chuan 的 tar 读取）
+  splits:
+    train:
+      artifacts:
+        cuts:
+          - train_cuts_0
+        preparation_state:
+          - preparation_state
+      statistics:
+        records: 3277696
+        duration_hours: 7075.7
+        duration_basis: sum of kept cut durations
+        hours_before_filter: 10259.6
+        records_before_filter: 4938701
+        dropped_hours:
+          qwen_empty: 342.6
+          qwen_at_least_2x_label: 312.5
+          cer_30_to_100: 2041.3
+          cer_100_plus_other_unreviewed: 333.8
+          label_empty_after_norm_unreviewed: 103.7
+          over_157s_not_transcribed: 50.0
+      provenance:
+        preparation_status: prepared
+  provenance:
+    preparation_status: prepared
+    owner: mingdong
+    description: >-
+      WenetSpeech-Chuan 训练集（4,938,701 条 / 10,259.6 h）是机器标注，不带置信度。
+      用共享的 Qwen3-ASR-1.7B 逐条转写，按 SpeechIO TextNorm 算与原标注的字错误率（Qwen 在 WSC-Eval 上自身 12.1 / 21.1），
+      保留错误率 < 30% 的 3,277,696 条 / 7,075.7 h（69.3%），原标注不改，不拿 Qwen 的文字替换。
+      规则经 6 轮听审（60 条 1–10 秒片段，每类 20 条）确定：Qwen 空输出的 20 条中 17 条没有人声；
+      Qwen 输出 ≥ 原标注 2 倍的 20 条原标注全不可用（多人只标一人、漏标语音、音乐、人声太轻太远）；
+      错误率 30–100% 的 20 条中原标注对的只有 3 条。
+      错误率 ≥ 100% 的其余条目（333.8 h）和原标注规范化后为空的（103.7 h）未听审，按用户决定一并不用；超过约 157 秒、服务拒收的 795 条 / 50.0 h 未核对，也不在本版本内。
+      问题集中在 cut id 前缀 01316 的子来源（5,383 h，保留 55.3%）；cq*、sc* 等其余来源保留 79–88%。
+    source: wenetspeech_chuan@icefall-20260908
+    run_dir: /workspace/workspace/mingdong/data/amphiondata/wenetspeech-chuan-qwen-20261023
+    audit: datasets/wenetspeech_chuan/versions/clean-qwen3-asr-v1-20261023/state.json
+    known_issues: >-
+      听审只覆盖 1–10 秒片段；≥ 60 秒的条目只保留 26.6%（143.6 h 中 38.2 h），长条目多为原标注只标了部分语音，未单独听审。
+      保留部分（错误率 < 30%）未听审，仍可能有个别方言用字或漏字错误。
+  recipe_parameters:
+    check_model: Qwen3-ASR-1.7B
+    check_unit: utterance
+    text_normalization: speechio-textnorm-zh
+    keep_rule: label non-empty after TextNorm and per-utterance CER vs Qwen < 30%

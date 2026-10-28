@@ -1,0 +1,1168 @@
+  - schema_version: dataset-catalog/2.0
+    dataset_id: aishell3
+    version: tts-unified-v0.1
+    languages:
+      - zh
+    tasks:
+      - tts
+      - asr
+    artifacts:
+      - name: samples
+        kind: tts-lance-release
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/datasets/aishell3/v0.1/manifest.json
+        expected_bytes: 19718
+        sha256: e76f13885ea2c64bc2d578f8905ee263086889a402022df7f183f304b8cd9e72
+        metadata:
+          lance_version: 2
+          rows: 88035
+          schema_sha256: bf5bc8ca20bd9b2087554249b521534e0324a1d5578dbe77f0f8cbe92cfa54fa
+          storage_version: '2.2'
+    splits:
+      train:
+        artifacts:
+          samples:
+            - samples
+        statistics:
+          rows: 88035
+          duration_hours: 85.6
+    provenance:
+      source: DATA-TTS-UNIFIED
+      contract: DATA-TTS-UNIFIED/CONTRACT.md
+      contract_version: v0.1
+      release_id: v0.1
+      release_digest: 752fe35bde205734229d6f2c747fc93fb595a85855469f31c7627259343a2a43
+      source_directory: DATA-TTS/AISHELL-3
+      source_files: 1
+      excluded_source_files: []
+      finished_at: '2026-09-28T10:58:54.723592+00:00'
+      description: 音频编码字节存放在 Lance 表内；原始划分在 metadata_json.original_split，统一输出全部为 train。ASR 用 tts_lance.iter_asr_samples（tts-asr-rules/v1）读取，会排除原始 dev/test 等。
+      asr_notes: 人工转写；须排除 original_split=test（与 AISHELL-3 测试集相同）
+  - schema_version: dataset-catalog/2.0
+    dataset_id: csemotions
+    version: tts-unified-v0.1
+    languages:
+      - zh
+    tasks:
+      - tts
+    artifacts:
+      - name: samples
+        kind: tts-lance-release
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/datasets/csemotions/v0.1/manifest.json
+        expected_bytes: 7777
+        sha256: 4ad2a12757477367ea2052bd7240480d86d65e488ccfc5e4f5a36661564dcbb7
+        metadata:
+          lance_version: 2
+          rows: 4160
+          schema_sha256: bf5bc8ca20bd9b2087554249b521534e0324a1d5578dbe77f0f8cbe92cfa54fa
+          storage_version: '2.2'
+    splits:
+      train:
+        artifacts:
+          samples:
+            - samples
+        statistics:
+          rows: 4160
+          duration_hours: 10.2
+    provenance:
+      source: DATA-TTS-UNIFIED
+      contract: DATA-TTS-UNIFIED/CONTRACT.md
+      contract_version: v0.1
+      release_id: v0.1
+      release_digest: 923a0255ef3138591127129d384487e57366b6c059195847fe70a3112f645849
+      source_directory: DATA-TTS/CSEMOTIONS
+      source_files: 8
+      excluded_source_files: []
+      finished_at: '2026-09-28T07:58:24.382857+00:00'
+      description: 音频编码字节存放在 Lance 表内；原始划分在 metadata_json.original_split，统一输出全部为 train。ASR 用 tts_lance.iter_asr_samples（tts-asr-rules/v1）读取，会排除原始 dev/test 等。
+  - schema_version: dataset-catalog/2.0
+    dataset_id: emilia
+    version: tts-unified-v0.1
+    languages:
+      - de
+      - en
+      - fr
+      - ja
+      - ko
+      - zh
+    tasks:
+      - tts
+      - asr
+    artifacts:
+      - name: samples
+        kind: tts-lance-release
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/datasets/emilia/v0.1/manifest.json
+        expected_bytes: 80322391
+        sha256: 0d973d59af4cede097b84a1d13c917033ded879124ac1b05eaa23d58672ed1ba
+        metadata:
+          lance_version: 2
+          rows: 40264231
+          schema_sha256: bf5bc8ca20bd9b2087554249b521534e0324a1d5578dbe77f0f8cbe92cfa54fa
+          storage_version: '2.2'
+      - name: tts-ann-effective_bandwidth-20261020T153104bjt-01
+        kind: tts-lance-annotation
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/annotations/effective_bandwidth/tts-ann-effective_bandwidth-20261020T153104bjt-01/manifest.json
+        expected_bytes: 7977
+        sha256: 12e5abdbf3bf79557ee3fea21c686793b895bcd23e47c37f2629aec964de6ce2
+        metadata:
+          task: effective_bandwidth
+          schema_version: effective-bandwidth-v1
+          profile: welch-band-edge-v1
+          table_path: DATA-TTS-UNIFIED/datasets/emilia/v0.1/annotations/effective_bandwidth/tts-ann-effective_bandwidth-20261020T153104bjt-01/results.lance
+          lance_version: 2
+          rows: 40264231
+          coverage:
+            total_targets: 40264231
+            missing: 0
+            ok: 40264231
+            failed: 0
+            unsupported: 0
+            skipped: 0
+      - name: tts-ann-speaker_structure-20261019T093525bjt-01
+        kind: tts-lance-annotation
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/annotations/speaker_structure/tts-ann-speaker_structure-20261019T093525bjt-01/manifest.json
+        expected_bytes: 10613
+        sha256: c6b1ed50a0f527e3bcb2578617ff8ea69d01df1570fcfab937264b5bf82e44e4
+        metadata:
+          task: speaker_structure
+          schema_version: speaker-structure-moss-v1
+          profile: moss-transcribe-diarize-v1
+          table_path: DATA-TTS-UNIFIED/datasets/emilia/v0.1/annotations/speaker_structure/tts-ann-speaker_structure-20261019T093525bjt-01/results.lance
+          lance_version: 2
+          rows: 40264231
+          coverage:
+            total_targets: 40264231
+            missing: 0
+            ok: 40220982
+            failed: 43249
+            unsupported: 0
+            skipped: 0
+      - name: tts-ann-transcription-20261012T092945bjt-01
+        kind: tts-lance-annotation
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/annotations/transcription/tts-ann-transcription-20261012T092945bjt-01/manifest.json
+        expected_bytes: 937423
+        sha256: b29ab6cf67ea7eff4f05ad03b574c532c55962431e437b311ead3b58c72d3f82
+        metadata:
+          task: transcription
+          schema_version: qwen-asr-transcription-v2
+          profile: qwen3-asr-1.7b-emilia-metadata-v1
+          table_path: DATA-TTS-UNIFIED/datasets/emilia/v0.1/annotations/transcription/tts-ann-transcription-20261012T092945bjt-01/results.lance
+          lance_version: 2
+          rows: 40264231
+          coverage:
+            total_targets: 40264231
+            missing: 0
+            ok: 40264231
+            failed: 0
+            unsupported: 0
+            skipped: 0
+      - name: tts-ann-upstream_quality-20261013T143341bjt-01
+        kind: tts-lance-annotation
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/annotations/upstream_quality/tts-ann-upstream_quality-20261013T143341bjt-01/manifest.json
+        expected_bytes: 11963
+        sha256: be2058a65959dddbab1b8ef68b922ce2e796c014bf9e75983f864058ad45cde0
+        metadata:
+          task: upstream_quality
+          schema_version: upstream-quality-dnsmos-v1
+          profile: upstream-dnsmos-p835-ovrl-v1
+          table_path: DATA-TTS-UNIFIED/datasets/emilia/v0.1/annotations/upstream_quality/tts-ann-upstream_quality-20261013T143341bjt-01/results.lance
+          lance_version: 2
+          rows: 40264231
+          coverage:
+            total_targets: 40264231
+            missing: 0
+            ok: 40264231
+            failed: 0
+            unsupported: 0
+            skipped: 0
+    splits:
+      train:
+        artifacts:
+          samples:
+            - samples
+          effective_bandwidth:
+            - tts-ann-effective_bandwidth-20261020T153104bjt-01
+          speaker_structure:
+            - tts-ann-speaker_structure-20261019T093525bjt-01
+          transcription:
+            - tts-ann-transcription-20261012T092945bjt-01
+          upstream_quality:
+            - tts-ann-upstream_quality-20261013T143341bjt-01
+        statistics:
+          rows: 40264231
+          duration_hours: 101655.6
+    provenance:
+      source: DATA-TTS-UNIFIED
+      contract: DATA-TTS-UNIFIED/CONTRACT.md
+      contract_version: v0.1
+      release_id: v0.1
+      release_digest: 5aef9cdd2aa2b619f100696e9474b4be006be70e4a7bd70c8f6fd3ff64272705
+      source_directory: DATA-TTS/Emilia
+      source_files: 2360
+      excluded_source_files: []
+      finished_at: '2026-09-28T15:17:37.931823+00:00'
+      description: 音频编码字节存放在 Lance 表内；原始划分在 metadata_json.original_split，统一输出全部为 train。ASR 用 tts_lance.iter_asr_samples（tts-asr-rules/v1）读取，会排除原始 dev/test 等。
+      asr_notes: 机器转写，须做质量过滤；文本开头带空格
+  - schema_version: dataset-catalog/2.0
+    dataset_id: emilia2
+    version: tts-unified-v0.1
+    languages:
+      - ar
+      - as
+      - bn
+      - cs
+      - da
+      - de
+      - el
+      - en
+      - es
+      - fa
+      - fi
+      - fil
+      - fr
+      - gu
+      - hi
+      - hu
+      - it
+      - ja
+      - kn
+      - ko
+      - mk
+      - ml
+      - mr
+      - ne
+      - nl
+      - pa
+      - pl
+      - pt
+      - ro
+      - ru
+      - sa
+      - sd
+      - sv
+      - ta
+      - te
+      - th
+      - tr
+      - ur
+      - vi
+      - yue
+      - zh
+    tasks:
+      - tts
+    artifacts:
+      - name: samples
+        kind: tts-lance-release
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/datasets/emilia2/v0.1/manifest.json
+        expected_bytes: 153055583
+        sha256: 873d584c19d70681c7fdb9af5c032259f1f0eccc9629382b81531a3a29849120
+        metadata:
+          lance_version: 3
+          rows: 99840397
+          schema_sha256: bf5bc8ca20bd9b2087554249b521534e0324a1d5578dbe77f0f8cbe92cfa54fa
+          storage_version: '2.2'
+      - name: tts-ann-upstream_quality-20261013T143341bjt-01
+        kind: tts-lance-annotation
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/annotations/upstream_quality/tts-ann-upstream_quality-20261013T143341bjt-01/manifest.json
+        expected_bytes: 11963
+        sha256: be2058a65959dddbab1b8ef68b922ce2e796c014bf9e75983f864058ad45cde0
+        metadata:
+          task: upstream_quality
+          schema_version: upstream-quality-dnsmos-v1
+          profile: upstream-dnsmos-p835-ovrl-v1
+          table_path: DATA-TTS-UNIFIED/datasets/emilia2/v0.1/annotations/upstream_quality/tts-ann-upstream_quality-20261013T143341bjt-01/results.lance
+          lance_version: 2
+          rows: 99840397
+          coverage:
+            total_targets: 99840397
+            missing: 0
+            ok: 99840397
+            failed: 0
+            unsupported: 0
+            skipped: 0
+    splits:
+      train:
+        artifacts:
+          samples:
+            - samples
+          upstream_quality:
+            - tts-ann-upstream_quality-20261013T143341bjt-01
+        statistics:
+          rows: 99840397
+          duration_hours: 146325.0
+    provenance:
+      source: DATA-TTS-UNIFIED
+      contract: DATA-TTS-UNIFIED/CONTRACT.md
+      contract_version: v0.1
+      release_id: v0.1
+      ingest_profile_id: 0d7249d78eecf2f2d621e5e52c8507a1c3a14bdd5551e4fb1982f39a24a25c0e
+      input_manifest_sha256: 7211149209bb4d6f8cb5014ce65573e14cb4e07998a944bb9477394c03731804
+      source_directory: DATA-TTS/Emilia2
+      source_files: 9325
+      excluded_source_files:
+        - Emilia2_TTS_m4a/ASMR/asmr-00000.tar
+        - Emilia2_TTS_m4a/ASMR/asmr-00001.tar
+        - Emilia2_TTS_m4a/ASMR/asmr-00002.tar
+        - Emilia2_TTS_m4a/ASMR/asmr-00003.tar
+        - Emilia2_TTS_m4a/ASMR/asmr-00004.tar
+        - Emilia2_TTS_m4a/ASMR/asmr-00005.tar
+        - Emilia2_TTS_m4a/ASMR/asmr-00006.tar
+        - Emilia2_TTS_m4a/ASMR/asmr-00007.tar
+        - Emilia2_TTS_m4a/ASMR/asmr-00008.tar
+        - Emilia2_TTS_m4a/ASMR/asmr-00009.tar
+        - Emilia2_TTS_m4a/ASMR/asmr-00010.tar
+        - Emilia2_TTS_m4a/ASMR/asmr-00011.tar
+        - Emilia2_TTS_m4a/ASMR/asmr-00012.tar
+      finished_at: '2026-10-12T03:10:16.232568+08:00'
+      description: 音频编码字节存放在 Lance 表内；原始划分在 metadata_json.original_split，统一输出全部为 train。ASR 用 tts_lance.iter_asr_samples（tts-asr-rules/v1）读取，会排除原始 dev/test 等。
+      manifest_correction: 2026-10-12 发布方修正 manifest，只补 spec-10 字段（finished_at、code_sha256、speakers 等），Lance 表与快照版本 3 不变；原 manifest sha256 24779fb04467d1926d5ed7e90b310cffd1101059de6406c9eb6fbe424a1102c7（7,290,534 字节）记录在 manifest 的 manifest_correction 字段。登记于 2026-10-18 改为修正后的 sha256，此前按旧值无法打开本版本。
+  - schema_version: dataset-catalog/2.0
+    dataset_id: emilia_yodas
+    version: tts-unified-v0.1
+    languages:
+      - de
+      - en
+      - fr
+      - ja
+      - ko
+      - zh
+    tasks:
+      - tts
+      - asr
+    artifacts:
+      - name: samples
+        kind: tts-lance-release
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/datasets/emilia_yodas/v0.1/manifest.json
+        expected_bytes: 76549229
+        sha256: af27299a5db4616a80efe869c44e52481cae7c9eda94d8727b0e71bdc78e83ee
+        metadata:
+          lance_version: 2
+          rows: 43964905
+          schema_sha256: bf5bc8ca20bd9b2087554249b521534e0324a1d5578dbe77f0f8cbe92cfa54fa
+          storage_version: '2.2'
+      - name: tts-ann-effective_bandwidth-20261020T155412bjt-01
+        kind: tts-lance-annotation
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/annotations/effective_bandwidth/tts-ann-effective_bandwidth-20261020T155412bjt-01/manifest.json
+        expected_bytes: 8019
+        sha256: 702996529c4eaf0a06d310665db50d699bd910b2d16007464e1cfb8dbaea6e02
+        metadata:
+          task: effective_bandwidth
+          schema_version: effective-bandwidth-v1
+          profile: welch-band-edge-v1
+          table_path: DATA-TTS-UNIFIED/datasets/emilia_yodas/v0.1/annotations/effective_bandwidth/tts-ann-effective_bandwidth-20261020T155412bjt-01/results.lance
+          lance_version: 2
+          rows: 43964905
+          coverage:
+            total_targets: 43964905
+            missing: 0
+            ok: 43964905
+            failed: 0
+            unsupported: 0
+            skipped: 0
+      - name: tts-ann-transcription-20261010T161238bjt-01
+        kind: tts-lance-annotation
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/annotations/transcription/tts-ann-transcription-20261010T161238bjt-01/manifest.json
+        expected_bytes: 26065
+        sha256: ec10994951af78b6a39fb52254cea2d0eb1bf99ea177c967d39dd08edd825172
+        metadata:
+          task: transcription
+          schema_version: qwen-asr-transcription-v2
+          profile: qwen3-asr-1.7b-base-v2-sglang
+          table_path: DATA-TTS-UNIFIED/datasets/emilia_yodas/v0.1/annotations/transcription/tts-ann-transcription-20261010T161238bjt-01/results.lance
+          lance_version: 2
+          rows: 43964905
+          coverage:
+            total_targets: 43964905
+            missing: 0
+            ok: 43964455
+            failed: 450
+            unsupported: 0
+            skipped: 0
+      - name: tts-ann-upstream_quality-20261013T143341bjt-01
+        kind: tts-lance-annotation
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/annotations/upstream_quality/tts-ann-upstream_quality-20261013T143341bjt-01/manifest.json
+        expected_bytes: 11963
+        sha256: be2058a65959dddbab1b8ef68b922ce2e796c014bf9e75983f864058ad45cde0
+        metadata:
+          task: upstream_quality
+          schema_version: upstream-quality-dnsmos-v1
+          profile: upstream-dnsmos-p835-ovrl-v1
+          table_path: DATA-TTS-UNIFIED/datasets/emilia_yodas/v0.1/annotations/upstream_quality/tts-ann-upstream_quality-20261013T143341bjt-01/results.lance
+          lance_version: 2
+          rows: 43964905
+          coverage:
+            total_targets: 43964905
+            missing: 0
+            ok: 43964905
+            failed: 0
+            unsupported: 0
+            skipped: 0
+    splits:
+      train:
+        artifacts:
+          samples:
+            - samples
+          effective_bandwidth:
+            - tts-ann-effective_bandwidth-20261020T155412bjt-01
+          transcription:
+            - tts-ann-transcription-20261010T161238bjt-01
+          upstream_quality:
+            - tts-ann-upstream_quality-20261013T143341bjt-01
+        statistics:
+          rows: 43964905
+          duration_hours: 113820.6
+    provenance:
+      source: DATA-TTS-UNIFIED
+      contract: DATA-TTS-UNIFIED/CONTRACT.md
+      contract_version: v0.1
+      release_id: v0.1
+      release_digest: 3973813155aa1b8c36243a2ffd0119144279a5a6a128b26948323c6a0ddec05f
+      source_directory: DATA-TTS/Emilia-YODAS
+      source_files: 1982
+      excluded_source_files:
+        - DE/DE-B000049.tar
+      finished_at: '2026-09-29T02:30:50.082640+00:00'
+      description: 音频编码字节存放在 Lance 表内；原始划分在 metadata_json.original_split，统一输出全部为 train。ASR 用 tts_lance.iter_asr_samples（tts-asr-rules/v1）读取，会排除原始 dev/test 等。
+      asr_notes: 机器转写，须做质量过滤；文本开头带空格
+  - schema_version: dataset-catalog/2.0
+    dataset_id: galgame
+    version: tts-unified-v0.1
+    languages:
+      - ja
+    tasks:
+      - tts
+    artifacts:
+      - name: samples
+        kind: tts-lance-release
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/datasets/galgame/v0.1/manifest.json
+        expected_bytes: 1473494
+        sha256: 3fb044f166086c2bef9ee23e975f2f54f987bd8dcff24e59a8af2a765e7ea624
+        metadata:
+          lance_version: 2
+          rows: 7101489
+          schema_sha256: bf5bc8ca20bd9b2087554249b521534e0324a1d5578dbe77f0f8cbe92cfa54fa
+          storage_version: '2.2'
+    splits:
+      train:
+        artifacts:
+          samples:
+            - samples
+        statistics:
+          rows: 7101489
+          duration_hours: 10173.7
+    provenance:
+      source: DATA-TTS-UNIFIED
+      contract: DATA-TTS-UNIFIED/CONTRACT.md
+      contract_version: v0.1
+      release_id: v0.1
+      release_digest: fad95a3b5d4e1ff46838f430b32f2e7c5289cde93754ce2deda19790ad7d08ff
+      source_directory: DATA-TTS/Galgame-VisualNovel-Reupload
+      source_files: 1230
+      excluded_source_files: []
+      finished_at: '2026-09-28T10:43:11.601228+00:00'
+      description: 音频编码字节存放在 Lance 表内；原始划分在 metadata_json.original_split，统一输出全部为 train。ASR 用 tts_lance.iter_asr_samples（tts-asr-rules/v1）读取，会排除原始 dev/test 等。
+  - schema_version: dataset-catalog/2.0
+    dataset_id: genshin_voice
+    version: tts-unified-v0.1
+    languages:
+      - en-US
+      - ja
+      - ko
+      - zh
+    tasks:
+      - tts
+    artifacts:
+      - name: samples
+        kind: tts-lance-release
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/datasets/genshin_voice/v0.1/manifest.json
+        expected_bytes: 637888
+        sha256: 77b812e62d868c887e73a5731ff10c119159a93a8897a6292dcf2d1157f9abf4
+        metadata:
+          lance_version: 2
+          rows: 654252
+          schema_sha256: bf5bc8ca20bd9b2087554249b521534e0324a1d5578dbe77f0f8cbe92cfa54fa
+          storage_version: '2.2'
+      - name: tts-ann-speaker_structure-20261021T124643bjt-01
+        kind: tts-lance-annotation
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/annotations/speaker_structure/tts-ann-speaker_structure-20261021T124643bjt-01/manifest.json
+        expected_bytes: 25405
+        sha256: 75bd3456822b060fd10fe02d98e42c11b320c624df07cac2b58ad0291b269b21
+        metadata:
+          task: speaker_structure
+          schema_version: speaker-structure-moss-v1
+          profile: moss-transcribe-diarize-v1
+          table_path: DATA-TTS-UNIFIED/datasets/genshin_voice/v0.1/annotations/speaker_structure/tts-ann-speaker_structure-20261021T124643bjt-01/results.lance
+          lance_version: 2
+          rows: 654252
+          coverage:
+            total_targets: 654252
+            missing: 0
+            ok: 653149
+            failed: 1103
+            unsupported: 0
+            skipped: 0
+      - name: tts-ann-transcription-20261010T111659bjt-01
+        kind: tts-lance-annotation
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/annotations/transcription/tts-ann-transcription-20261010T111659bjt-01/manifest.json
+        expected_bytes: 24808
+        sha256: 49d5406b7343de2008196d2e9152855f286871e8229bf8c518dda24897fb94af
+        metadata:
+          task: transcription
+          schema_version: qwen-asr-transcription-v2
+          profile: qwen3-asr-1.7b-game-v1
+          table_path: DATA-TTS-UNIFIED/datasets/genshin_voice/v0.1/annotations/transcription/tts-ann-transcription-20261010T111659bjt-01/results.lance
+          lance_version: 2
+          rows: 654252
+          coverage:
+            total_targets: 654252
+            missing: 0
+            ok: 654132
+            failed: 120
+            unsupported: 0
+            skipped: 0
+    splits:
+      train:
+        artifacts:
+          samples:
+            - samples
+          speaker_structure:
+            - tts-ann-speaker_structure-20261021T124643bjt-01
+          transcription:
+            - tts-ann-transcription-20261010T111659bjt-01
+        statistics:
+          rows: 654252
+          duration_hours: 1039.7
+    provenance:
+      source: DATA-TTS-UNIFIED
+      contract: DATA-TTS-UNIFIED/CONTRACT.md
+      contract_version: v0.1
+      release_id: v0.1
+      release_digest: a8c383b12f74f8145813982f99fa6b0fb5fee16dff1303d5eb50f5ed9beda04d
+      source_directory: DATA-TTS/genshin-voice
+      source_files: 75
+      excluded_source_files: []
+      finished_at: '2026-09-28T11:00:30.075741+00:00'
+      description: 音频编码字节存放在 Lance 表内；原始划分在 metadata_json.original_split，统一输出全部为 train。ASR 用 tts_lance.iter_asr_samples（tts-asr-rules/v1）读取，会排除原始 dev/test 等。
+  - schema_version: dataset-catalog/2.0
+    dataset_id: hifitts
+    version: tts-unified-v0.1
+    languages:
+      - en
+    tasks:
+      - tts
+      - asr
+    artifacts:
+      - name: samples
+        kind: tts-lance-release
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/datasets/hifitts/v0.1/manifest.json
+        expected_bytes: 17693
+        sha256: d784e3c9964ad9c08a4fb9ede4545ed506e639f33f56f8605c90ce7395f3f98a
+        metadata:
+          lance_version: 2
+          rows: 323978
+          schema_sha256: bf5bc8ca20bd9b2087554249b521534e0324a1d5578dbe77f0f8cbe92cfa54fa
+          storage_version: '2.2'
+    splits:
+      train:
+        artifacts:
+          samples:
+            - samples
+        statistics:
+          rows: 323978
+          duration_hours: 291.7
+    provenance:
+      source: DATA-TTS-UNIFIED
+      contract: DATA-TTS-UNIFIED/CONTRACT.md
+      contract_version: v0.1
+      release_id: v0.1
+      release_digest: a2a5c577de5a85b45b1e72ef00d994de42ad1a8f1eec1901628622ebb7b695b4
+      source_directory: DATA-TTS/HiFiTTS
+      source_files: 1
+      excluded_source_files: []
+      finished_at: '2026-09-28T16:40:21.885207+00:00'
+      description: 音频编码字节存放在 Lance 表内；原始划分在 metadata_json.original_split，统一输出全部为 train。ASR 用 tts_lance.iter_asr_samples（tts-asr-rules/v1）读取，会排除原始 dev/test 等。
+      asr_notes: 有声书原文；须排除 original_split=dev/test
+  - schema_version: dataset-catalog/2.0
+    dataset_id: hifitts2
+    version: tts-unified-v0.1
+    languages:
+      - en
+    tasks:
+      - tts
+      - asr
+    artifacts:
+      - name: samples
+        kind: tts-lance-release
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/datasets/hifitts2/v0.1/manifest.json
+        expected_bytes: 2809521
+        sha256: 237178b0f9f3300565ee1f2f68393d78849002bad0f0fcfd995647b18403ba4c
+        metadata:
+          lance_version: 2
+          rows: 12809875
+          schema_sha256: bf5bc8ca20bd9b2087554249b521534e0324a1d5578dbe77f0f8cbe92cfa54fa
+          storage_version: '2.2'
+      - name: tts-ann-transcription-20261019T143130bjt-01
+        kind: tts-lance-annotation
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/annotations/transcription/tts-ann-transcription-20261019T143130bjt-01/manifest.json
+        expected_bytes: 17822
+        sha256: 702fc9212103e3d0387c86cc50a96f43f945b7cad45531ec5c2ec4acfbc8b6d1
+        metadata:
+          task: transcription
+          schema_version: qwen-asr-transcription-v2
+          profile: qwen3-asr-1.7b-base-v2-sglang
+          table_path: DATA-TTS-UNIFIED/datasets/hifitts2/v0.1/annotations/transcription/tts-ann-transcription-20261019T143130bjt-01/results.lance
+          lance_version: 2
+          rows: 12809875
+          coverage:
+            total_targets: 12809875
+            missing: 0
+            ok: 12809875
+            failed: 0
+            unsupported: 0
+            skipped: 0
+    splits:
+      train:
+        artifacts:
+          samples:
+            - samples
+          transcription:
+            - tts-ann-transcription-20261019T143130bjt-01
+        statistics:
+          rows: 12809875
+          duration_hours: 35932.7
+    provenance:
+      source: DATA-TTS-UNIFIED
+      contract: DATA-TTS-UNIFIED/CONTRACT.md
+      contract_version: v0.1
+      release_id: v0.1
+      release_digest: dc75ce53f9af79d1655143721a0ff66dfcf3bb44f81b9bcd77597ca5580bb345
+      source_directory: DATA-TTS/HiFiTTS2
+      source_files: 5284
+      excluded_source_files: []
+      finished_at: '2026-09-29T03:22:30.978546+00:00'
+      description: 音频编码字节存放在 Lance 表内；原始划分在 metadata_json.original_split，统一输出全部为 train。ASR 用 tts_lance.iter_asr_samples（tts-asr-rules/v1）读取，会排除原始 dev/test 等。
+      asr_notes: 有声书原文；须排除 dev_*/test_* 划分
+  - schema_version: dataset-catalog/2.0
+    dataset_id: libriheavy
+    version: tts-unified-v0.1
+    languages:
+      - en
+    tasks:
+      - tts
+      - asr
+    artifacts:
+      - name: samples
+        kind: tts-lance-release
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/datasets/libriheavy/v0.1/manifest.json
+        expected_bytes: 1851681
+        sha256: 2351f302dbe09c0ca2713d8c592962e6a0c69f48d6694b599b10f9fe0c57130f
+        metadata:
+          lance_version: 2
+          rows: 12441758
+          schema_sha256: bf5bc8ca20bd9b2087554249b521534e0324a1d5578dbe77f0f8cbe92cfa54fa
+          storage_version: '2.2'
+    splits:
+      train:
+        artifacts:
+          samples:
+            - samples
+        statistics:
+          rows: 12441758
+          duration_hours: 51044.7
+    provenance:
+      source: DATA-TTS-UNIFIED
+      contract: DATA-TTS-UNIFIED/CONTRACT.md
+      contract_version: v0.1
+      release_id: v0.1
+      release_digest: c4e99fea3c95b05b33a7accc609b567017d080610561f9afd585ce937c9a06c1
+      source_directory: DATA-TTS/libriheavy
+      source_files: 3292
+      excluded_source_files: []
+      finished_at: '2026-09-29T02:27:50.658396+00:00'
+      description: 音频编码字节存放在 Lance 表内；原始划分在 metadata_json.original_split，统一输出全部为 train。ASR 用 tts_lance.iter_asr_samples（tts-asr-rules/v1）读取，会排除原始 dev/test 等。
+      asr_notes: 书本原文（带大小写和标点），text_variants 另有 source_asr；超过 30 秒的约 44 万条需切分或过滤
+  - schema_version: dataset-catalog/2.0
+    dataset_id: libritts_r
+    version: tts-unified-v0.1
+    languages:
+      - en
+    tasks:
+      - tts
+      - asr
+    artifacts:
+      - name: samples
+        kind: tts-lance-release
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/datasets/libritts_r/v0.1/manifest.json
+        expected_bytes: 171542
+        sha256: 195ae41b0cfec40038c1bb2dda7c7d376773cabe803c7c5c66f940a0dab67799
+        metadata:
+          lance_version: 2
+          rows: 374999
+          schema_sha256: bf5bc8ca20bd9b2087554249b521534e0324a1d5578dbe77f0f8cbe92cfa54fa
+          storage_version: '2.2'
+    splits:
+      train:
+        artifacts:
+          samples:
+            - samples
+        statistics:
+          rows: 374999
+          duration_hours: 583.1
+    provenance:
+      source: DATA-TTS-UNIFIED
+      contract: DATA-TTS-UNIFIED/CONTRACT.md
+      contract_version: v0.1
+      release_id: v0.1
+      release_digest: 47c35af7111e5494a87c6d50eaad3f9392851a29b043818e60e45b8be1ad27ab
+      source_directory: DATA-TTS/LibriTTS-R
+      source_files: 195
+      excluded_source_files: []
+      finished_at: '2026-09-28T09:39:41.811450+00:00'
+      description: 音频编码字节存放在 Lance 表内；原始划分在 metadata_json.original_split，统一输出全部为 train。ASR 用 tts_lance.iter_asr_samples（tts-asr-rules/v1）读取，会排除原始 dev/test 等。
+      asr_notes: 须排除 dev/test（来自 LibriSpeech dev/test，会污染 LibriSpeech 评测）；音频经修复增强
+  - schema_version: dataset-catalog/2.0
+    dataset_id: ljspeech
+    version: tts-unified-v0.1
+    languages:
+      - en
+    tasks:
+      - tts
+      - asr
+    artifacts:
+      - name: samples
+        kind: tts-lance-release
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/datasets/ljspeech/v0.1/manifest.json
+        expected_bytes: 8940
+        sha256: 602371f887b1399f7a59a147b52cb6929091458819670656f5935783ede0c4d4
+        metadata:
+          lance_version: 2
+          rows: 13100
+          schema_sha256: bf5bc8ca20bd9b2087554249b521534e0324a1d5578dbe77f0f8cbe92cfa54fa
+          storage_version: '2.2'
+    splits:
+      train:
+        artifacts:
+          samples:
+            - samples
+        statistics:
+          rows: 13100
+          duration_hours: 23.9
+    provenance:
+      source: DATA-TTS-UNIFIED
+      contract: DATA-TTS-UNIFIED/CONTRACT.md
+      contract_version: v0.1
+      release_id: v0.1
+      release_digest: 8370430303502ca8d61137d87c657c1f15624e3e4692ef43b93be9b92782e90f
+      source_directory: DATA-TTS/LJSpeech
+      source_files: 1
+      excluded_source_files: []
+      finished_at: '2026-09-28T08:44:55.642445+00:00'
+      description: 音频编码字节存放在 Lance 表内；原始划分在 metadata_json.original_split，统一输出全部为 train。ASR 用 tts_lance.iter_asr_samples（tts-asr-rules/v1）读取，会排除原始 dev/test 等。
+      asr_notes: 单说话人朗读，数字未展开
+  - schema_version: dataset-catalog/2.0
+    dataset_id: mls_sidon
+    version: tts-unified-v0.1
+    languages:
+      - de
+      - en
+      - es
+      - fr
+      - it
+      - nl
+      - pl
+      - pt
+    tasks:
+      - tts
+      - asr
+    artifacts:
+      - name: samples
+        kind: tts-lance-release
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/datasets/mls_sidon/v0.1/manifest.json
+        expected_bytes: 3458678
+        sha256: 8250fed86f018f630ed02e86ef3c4448e96fddd5dde62040f2738e0c51ab1201
+        metadata:
+          lance_version: 2
+          rows: 12288862
+          schema_sha256: bf5bc8ca20bd9b2087554249b521534e0324a1d5578dbe77f0f8cbe92cfa54fa
+          storage_version: '2.2'
+    splits:
+      train:
+        artifacts:
+          samples:
+            - samples
+        statistics:
+          rows: 12288862
+          duration_hours: 50834.3
+    provenance:
+      source: DATA-TTS-UNIFIED
+      contract: DATA-TTS-UNIFIED/CONTRACT.md
+      contract_version: v0.1
+      release_id: v0.1
+      release_digest: 65fa1094292e7f7b015332323f5552cab6b9e58274a27ba23f8d456af792e0f3
+      source_directory: DATA-TTS/mls_sidon
+      source_files: 2627
+      excluded_source_files:
+        - english/00128-of-00128/train-00000.tar.gz
+      finished_at: '2026-09-28T20:23:14.093954+00:00'
+      description: 音频编码字节存放在 Lance 表内；原始划分在 metadata_json.original_split，统一输出全部为 train。ASR 用 tts_lance.iter_asr_samples（tts-asr-rules/v1）读取，会排除原始 dev/test 等。
+      asr_notes: 须排除 valid/test（与 MLS 评测集相同）；音频经 Sidon 修复
+  - schema_version: dataset-catalog/2.0
+    dataset_id: starrail_voice
+    version: tts-unified-v0.1
+    languages:
+      - en
+      - ja
+      - ko
+      - zh-CN
+    tasks:
+      - tts
+    artifacts:
+      - name: samples
+        kind: tts-lance-release
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/datasets/starrail_voice/v0.1/manifest.json
+        expected_bytes: 442222
+        sha256: 02f86a4231090fb277bc917101ead70aa3d78618c001dd88a089bd0ceb621411
+        metadata:
+          lance_version: 2
+          rows: 403437
+          schema_sha256: bf5bc8ca20bd9b2087554249b521534e0324a1d5578dbe77f0f8cbe92cfa54fa
+          storage_version: '2.2'
+      - name: tts-ann-speaker_structure-20261021T124643bjt-01
+        kind: tts-lance-annotation
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/annotations/speaker_structure/tts-ann-speaker_structure-20261021T124643bjt-01/manifest.json
+        expected_bytes: 25405
+        sha256: 75bd3456822b060fd10fe02d98e42c11b320c624df07cac2b58ad0291b269b21
+        metadata:
+          task: speaker_structure
+          schema_version: speaker-structure-moss-v1
+          profile: moss-transcribe-diarize-v1
+          table_path: DATA-TTS-UNIFIED/datasets/starrail_voice/v0.1/annotations/speaker_structure/tts-ann-speaker_structure-20261021T124643bjt-01/results.lance
+          lance_version: 2
+          rows: 403437
+          coverage:
+            total_targets: 403437
+            missing: 0
+            ok: 402242
+            failed: 1195
+            unsupported: 0
+            skipped: 0
+      - name: tts-ann-transcription-20261010T111659bjt-01
+        kind: tts-lance-annotation
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/annotations/transcription/tts-ann-transcription-20261010T111659bjt-01/manifest.json
+        expected_bytes: 24808
+        sha256: 49d5406b7343de2008196d2e9152855f286871e8229bf8c518dda24897fb94af
+        metadata:
+          task: transcription
+          schema_version: qwen-asr-transcription-v2
+          profile: qwen3-asr-1.7b-game-v1
+          table_path: DATA-TTS-UNIFIED/datasets/starrail_voice/v0.1/annotations/transcription/tts-ann-transcription-20261010T111659bjt-01/results.lance
+          lance_version: 2
+          rows: 403437
+          coverage:
+            total_targets: 403437
+            missing: 0
+            ok: 403218
+            failed: 219
+            unsupported: 0
+            skipped: 0
+    splits:
+      train:
+        artifacts:
+          samples:
+            - samples
+          speaker_structure:
+            - tts-ann-speaker_structure-20261021T124643bjt-01
+          transcription:
+            - tts-ann-transcription-20261010T111659bjt-01
+        statistics:
+          rows: 403437
+          duration_hours: 692.6
+    provenance:
+      source: DATA-TTS-UNIFIED
+      contract: DATA-TTS-UNIFIED/CONTRACT.md
+      contract_version: v0.1
+      release_id: v0.1
+      release_digest: ce7da23d11fe6745892058edc679ef838fcd15d583df9103e1c53eae191c20c2
+      source_directory: DATA-TTS/starrail-voice
+      source_files: 47
+      excluded_source_files: []
+      finished_at: '2026-09-28T11:00:02.901925+00:00'
+      description: 音频编码字节存放在 Lance 表内；原始划分在 metadata_json.original_split，统一输出全部为 train。ASR 用 tts_lance.iter_asr_samples（tts-asr-rules/v1）读取，会排除原始 dev/test 等。
+      known_issues:
+        - en/ja/ko 配音约 94% 配的是中文文本（en 中文 78,864 条、英文 4,786 条），疑为接入时各语言共用了中文台词；待 tts-data-pipeline 修复，本仓库不改，ASR 规则按 script_mismatch 排除
+  - schema_version: dataset-catalog/2.0
+    dataset_id: vctk
+    version: tts-unified-v0.1
+    languages:
+      - en
+    tasks:
+      - tts
+      - asr
+    artifacts:
+      - name: samples
+        kind: tts-lance-release
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/datasets/vctk/v0.1/manifest.json
+        expected_bytes: 13458
+        sha256: 08ec20fa37ed435eb2f5b324c375aad9a9f415eeb39f0ef5845528e060d4f386
+        metadata:
+          lance_version: 2
+          rows: 88328
+          schema_sha256: bf5bc8ca20bd9b2087554249b521534e0324a1d5578dbe77f0f8cbe92cfa54fa
+          storage_version: '2.2'
+    splits:
+      train:
+        artifacts:
+          samples:
+            - samples
+        statistics:
+          rows: 88328
+          duration_hours: 82.7
+    provenance:
+      source: DATA-TTS-UNIFIED
+      contract: DATA-TTS-UNIFIED/CONTRACT.md
+      contract_version: v0.1
+      release_id: v0.1
+      release_digest: a0ff24cb1c92e344d113e5029fb9c659d49d68456059296cffd205eaf384bbb6
+      source_directory: DATA-TTS/VCTK
+      source_files: 1
+      excluded_source_files: []
+      finished_at: '2026-09-28T09:46:51.147054+00:00'
+      description: 音频编码字节存放在 Lance 表内；原始划分在 metadata_json.original_split，统一输出全部为 train。ASR 用 tts_lance.iter_asr_samples（tts-asr-rules/v1）读取，会排除原始 dev/test 等。
+      asr_notes: 朗读文本；172 条无文本
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech4tts
+    version: tts-unified-v0.1
+    languages:
+      - zh
+    tasks:
+      - tts
+      - asr
+    artifacts:
+      - name: samples
+        kind: tts-lance-release
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/datasets/wenetspeech4tts/v0.1/manifest.json
+        expected_bytes: 236165
+        sha256: cfab09cbcaea96e2d41703348aa50e4729a214294682c1f520b47b5beb6eb786
+        metadata:
+          lance_version: 2
+          rows: 3932472
+          schema_sha256: bf5bc8ca20bd9b2087554249b521534e0324a1d5578dbe77f0f8cbe92cfa54fa
+          storage_version: '2.2'
+    splits:
+      train:
+        artifacts:
+          samples:
+            - samples
+        statistics:
+          rows: 3932472
+          duration_hours: 7232.2
+    provenance:
+      source: DATA-TTS-UNIFIED
+      contract: DATA-TTS-UNIFIED/CONTRACT.md
+      contract_version: v0.1
+      release_id: v0.1
+      release_digest: 431eb66e2bd0d944cdc5d835387adc53114de0e910b033a335840f405835642e
+      source_directory: DATA-TTS/WenetSpeech4TTS
+      source_files: 70
+      excluded_source_files: []
+      finished_at: '2026-09-28T12:10:29.029508+00:00'
+      description: 音频编码字节存放在 Lance 表内；原始划分在 metadata_json.original_split，统一输出全部为 train。ASR 用 tts_lance.iter_asr_samples（tts-asr-rules/v1）读取，会排除原始 dev/test 等。
+      asr_notes: 来自 WenetSpeech 的弱标注，建议做置信度或双模型一致性过滤
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wutheringwaves
+    version: tts-unified-v0.1
+    languages:
+      - en
+      - ja
+      - ko
+      - zh
+    tasks:
+      - tts
+    artifacts:
+      - name: samples
+        kind: tts-lance-release
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/datasets/wutheringwaves/v0.1/manifest.json
+        expected_bytes: 166961
+        sha256: 703cd0abca6b32cc1de7a5bfe7eea6bfe000613eec44437818a392c59bde2fc8
+        metadata:
+          lance_version: 2
+          rows: 78777
+          schema_sha256: bf5bc8ca20bd9b2087554249b521534e0324a1d5578dbe77f0f8cbe92cfa54fa
+          storage_version: '2.2'
+      - name: tts-ann-speaker_structure-20261021T124643bjt-01
+        kind: tts-lance-annotation
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/annotations/speaker_structure/tts-ann-speaker_structure-20261021T124643bjt-01/manifest.json
+        expected_bytes: 25405
+        sha256: 75bd3456822b060fd10fe02d98e42c11b320c624df07cac2b58ad0291b269b21
+        metadata:
+          task: speaker_structure
+          schema_version: speaker-structure-moss-v1
+          profile: moss-transcribe-diarize-v1
+          table_path: DATA-TTS-UNIFIED/datasets/wutheringwaves/v0.1/annotations/speaker_structure/tts-ann-speaker_structure-20261021T124643bjt-01/results.lance
+          lance_version: 2
+          rows: 78777
+          coverage:
+            total_targets: 78777
+            missing: 0
+            ok: 77973
+            failed: 804
+            unsupported: 0
+            skipped: 0
+      - name: tts-ann-transcription-20261010T111659bjt-01
+        kind: tts-lance-annotation
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/annotations/transcription/tts-ann-transcription-20261010T111659bjt-01/manifest.json
+        expected_bytes: 24808
+        sha256: 49d5406b7343de2008196d2e9152855f286871e8229bf8c518dda24897fb94af
+        metadata:
+          task: transcription
+          schema_version: qwen-asr-transcription-v2
+          profile: qwen3-asr-1.7b-game-v1
+          table_path: DATA-TTS-UNIFIED/datasets/wutheringwaves/v0.1/annotations/transcription/tts-ann-transcription-20261010T111659bjt-01/results.lance
+          lance_version: 2
+          rows: 78777
+          coverage:
+            total_targets: 78777
+            missing: 0
+            ok: 78533
+            failed: 244
+            unsupported: 0
+            skipped: 0
+    splits:
+      train:
+        artifacts:
+          samples:
+            - samples
+          speaker_structure:
+            - tts-ann-speaker_structure-20261021T124643bjt-01
+          transcription:
+            - tts-ann-transcription-20261010T111659bjt-01
+        statistics:
+          rows: 78777
+          duration_hours: 134.8
+    provenance:
+      source: DATA-TTS-UNIFIED
+      contract: DATA-TTS-UNIFIED/CONTRACT.md
+      contract_version: v0.1
+      release_id: v0.1
+      release_digest: 8721d67ae497e979fc77f6a34809e35c526220679146bf85b0b0cdde66c1f27b
+      source_directory: DATA-TTS/WutheringWaves-2.2
+      source_files: 4
+      excluded_source_files: []
+      finished_at: '2026-09-28T09:45:23.403082+00:00'
+      description: 音频编码字节存放在 Lance 表内；原始划分在 metadata_json.original_split，统一输出全部为 train。ASR 用 tts_lance.iter_asr_samples（tts-asr-rules/v1）读取，会排除原始 dev/test 等。
+  - schema_version: dataset-catalog/2.0
+    dataset_id: zenless_voice
+    version: tts-unified-v0.1
+    languages:
+      - en
+      - ja
+      - ko
+      - zh
+    tasks:
+      - tts
+    artifacts:
+      - name: samples
+        kind: tts-lance-release
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/datasets/zenless_voice/v0.1/manifest.json
+        expected_bytes: 252648
+        sha256: 6e6317e5caa55d25e7ec809dc2a4c68ba934e5d6cdeb927d293206e2cd83d8b6
+        metadata:
+          lance_version: 2
+          rows: 406720
+          schema_sha256: bf5bc8ca20bd9b2087554249b521534e0324a1d5578dbe77f0f8cbe92cfa54fa
+          storage_version: '2.2'
+      - name: tts-ann-speaker_structure-20261021T124643bjt-01
+        kind: tts-lance-annotation
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/annotations/speaker_structure/tts-ann-speaker_structure-20261021T124643bjt-01/manifest.json
+        expected_bytes: 25405
+        sha256: 75bd3456822b060fd10fe02d98e42c11b320c624df07cac2b58ad0291b269b21
+        metadata:
+          task: speaker_structure
+          schema_version: speaker-structure-moss-v1
+          profile: moss-transcribe-diarize-v1
+          table_path: DATA-TTS-UNIFIED/datasets/zenless_voice/v0.1/annotations/speaker_structure/tts-ann-speaker_structure-20261021T124643bjt-01/results.lance
+          lance_version: 2
+          rows: 406720
+          coverage:
+            total_targets: 406720
+            missing: 0
+            ok: 404482
+            failed: 2238
+            unsupported: 0
+            skipped: 0
+      - name: tts-ann-transcription-20261010T111659bjt-01
+        kind: tts-lance-annotation
+        root_alias: aidc_data
+        relative_path: DATA-TTS-UNIFIED/annotations/transcription/tts-ann-transcription-20261010T111659bjt-01/manifest.json
+        expected_bytes: 24808
+        sha256: 49d5406b7343de2008196d2e9152855f286871e8229bf8c518dda24897fb94af
+        metadata:
+          task: transcription
+          schema_version: qwen-asr-transcription-v2
+          profile: qwen3-asr-1.7b-game-v1
+          table_path: DATA-TTS-UNIFIED/datasets/zenless_voice/v0.1/annotations/transcription/tts-ann-transcription-20261010T111659bjt-01/results.lance
+          lance_version: 2
+          rows: 406720
+          coverage:
+            total_targets: 406720
+            missing: 0
+            ok: 405421
+            failed: 1299
+            unsupported: 0
+            skipped: 0
+    splits:
+      train:
+        artifacts:
+          samples:
+            - samples
+          speaker_structure:
+            - tts-ann-speaker_structure-20261021T124643bjt-01
+          transcription:
+            - tts-ann-transcription-20261010T111659bjt-01
+        statistics:
+          rows: 406720
+          duration_hours: 554.4
+    provenance:
+      source: DATA-TTS-UNIFIED
+      contract: DATA-TTS-UNIFIED/CONTRACT.md
+      contract_version: v0.1
+      release_id: v0.1
+      release_digest: b36f4035a5283c4820a72842f6055387dfe9e3987f131495fc4b56b74ce3d923
+      source_directory: DATA-TTS/zenless-voice
+      source_files: 46
+      excluded_source_files: []
+      finished_at: '2026-10-09T10:53:17.008755+00:00'
+      description: 音频编码字节存放在 Lance 表内；原始划分在 metadata_json.original_split，统一输出全部为 train。ASR 用 tts_lance.iter_asr_samples（tts-asr-rules/v1）读取，会排除原始 dev/test 等。

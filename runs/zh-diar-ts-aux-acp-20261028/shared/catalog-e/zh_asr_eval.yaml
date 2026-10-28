@@ -1,0 +1,235 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: wenetspeech
+  version: eval-20261011
+  languages:
+  - zh
+  tasks:
+  - asr
+  aliases: []
+  artifacts:
+  - kind: lhotse-recordings
+    name: test_net_recordings
+    relative_path: datasets/wenetspeech/versions/eval-20261011/test_net_recordings.jsonl.gz
+    root_alias: aidc_data
+    expected_bytes: 3749
+    sha256: 92f238bb9fe81d2b47fee38a9ddaca550b34f162ae91750b58904c6b33b9a45d
+  - kind: lhotse-supervisions
+    name: test_net_supervisions
+    relative_path: datasets/wenetspeech/versions/eval-20261011/test_net_supervisions.jsonl.gz
+    root_alias: aidc_data
+    expected_bytes: 966047
+    sha256: 90addeb945646f4f196fad414a6863d5e66fdec9d0595f30af678c2ae53e8d57
+  - kind: lhotse-recordings
+    name: test_meeting_recordings
+    relative_path: datasets/wenetspeech/versions/eval-20261011/test_meeting_recordings.jsonl.gz
+    root_alias: aidc_data
+    expected_bytes: 102461
+    sha256: a9463a7265f0b6cbe8919cec994f9786a4c1dccdfb05a4dc558ee95ca9d37fc6
+  - kind: lhotse-supervisions
+    name: test_meeting_supervisions
+    relative_path: datasets/wenetspeech/versions/eval-20261011/test_meeting_supervisions.jsonl.gz
+    root_alias: aidc_data
+    expected_bytes: 399903
+    sha256: bebc9463d1bf9adf523a02573273b0d3ac213d2616ed288239578887a0ab8175
+  splits:
+    test_net:
+      artifacts:
+        recordings:
+        - test_net_recordings
+        supervisions:
+        - test_net_supervisions
+      statistics:
+        duration_hours: 23.056208333333334
+        records: 24774
+        duration_basis: sum of supervision durations
+    test_meeting:
+      artifacts:
+        recordings:
+        - test_meeting_recordings
+        supervisions:
+        - test_meeting_supervisions
+      statistics:
+        duration_hours: 15.18201111111111
+        records: 8370
+        duration_basis: sum of supervision durations
+  provenance:
+    source: COS backup audio-data-contract/datasets/wenetspeech/legacy_asr (official
+      WenetSpeech v1 test sets)
+    transcript: official, unpunctuated supervisions (not the *_punc variants)
+    snapshot_date: '2026-10-11'
+- schema_version: dataset-catalog/2.0
+  dataset_id: speechio
+  version: eval-original-20261011
+  languages:
+  - zh
+  tasks:
+  - asr
+  aliases: []
+  artifacts:
+  - kind: lhotse-recordings
+    name: test_recordings
+    relative_path: datasets/speechio/versions/eval-original-20261011/test_recordings.jsonl.gz
+    root_alias: aidc_data
+    expected_bytes: 574345
+    sha256: 42fa89e06d72ce4c2e1663f19f3043a0509eae0008f44a7f414ebe146db290e4
+  - kind: lhotse-supervisions
+    name: test_supervisions
+    relative_path: datasets/speechio/versions/eval-original-20261011/test_supervisions.jsonl.gz
+    root_alias: aidc_data
+    expected_bytes: 3748107
+    sha256: b5482721435941d4d92fc87591dd26955bbead6bfe69b9ce790e098edf75c7b3
+  splits:
+    test:
+      artifacts:
+        recordings:
+        - test_recordings
+        supervisions:
+        - test_supervisions
+      statistics:
+        duration_hours: 63.82761498916667
+        records: 41893
+        duration_basis: sum of supervision durations
+  provenance:
+    source: speechio@legacy manifests
+    snapshot_date: '2026-10-11'
+    transcript: custom.original_text (official leaderboard reference); legacy rewritten
+      text kept in custom.legacy_text
+    subsets: custom.subset_id ZH00000-ZH00026
+- schema_version: dataset-catalog/2.0
+  dataset_id: cs_dialogue
+  version: eval-utterance-20261011
+  languages:
+  - zh
+  tasks:
+  - asr
+  aliases: []
+  artifacts:
+  - kind: lhotse-recordings
+    name: test_recordings
+    relative_path: datasets/cs_dialogue/versions/eval-utterance-20261011/test_recordings.jsonl.gz
+    root_alias: aidc_data
+    expected_bytes: 747
+    sha256: ce0e4418ddcffe0d5b1f96af28e5512c6cd58da1c01d7c526ef171f08d4ffcf7
+  - kind: lhotse-supervisions
+    name: test_supervisions
+    relative_path: datasets/cs_dialogue/versions/eval-utterance-20261011/test_supervisions.jsonl.gz
+    root_alias: aidc_data
+    expected_bytes: 446093
+    sha256: 46fc1c8bebb211542b3c77933b1f048135354f233b9a84823f4e3a1e3b993550
+  splits:
+    test:
+      artifacts:
+        recordings:
+        - test_recordings
+        supervisions:
+        - test_supervisions
+      statistics:
+        duration_hours: 16.63783232638889
+        records: 6257
+        duration_basis: sum of supervision durations
+  provenance:
+    source: ModelScope BAAI/CS-Dialogue long_wav + official short_wav test index (text,
+      wav.scp)
+    segmentation: official utterance ids <session>_<n> = TextGrid interval n of the
+      long recording
+    transcript: official text with annotation tags removed; original in custom.official_text
+    snapshot_date: '2026-10-11'
+- schema_version: dataset-catalog/2.0
+  dataset_id: wenetspeech_chuan
+  version: eval-20261012
+  languages:
+  - zh
+  tasks:
+  - asr
+  aliases: []
+  artifacts:
+  - kind: lhotse-recordings
+    name: test_easy_recordings
+    relative_path: datasets/wenetspeech_chuan/versions/eval-20261012/test_easy_recordings.jsonl.gz
+    root_alias: aidc_data
+    expected_bytes: 129579
+    sha256: 00250cdfa2e7a0e5b9d7de227db421149ee9cbdfa5adca472e1083e337e8cdee
+  - kind: lhotse-supervisions
+    name: test_easy_supervisions
+    relative_path: datasets/wenetspeech_chuan/versions/eval-20261012/test_easy_supervisions.jsonl.gz
+    root_alias: aidc_data
+    expected_bytes: 319373
+    sha256: 0b86e22d9c0b04b7fc48f2bc8812c0c50d9e002c435e9f818faef1e0c40049c4
+  - kind: lhotse-recordings
+    name: test_hard_recordings
+    relative_path: datasets/wenetspeech_chuan/versions/eval-20261012/test_hard_recordings.jsonl.gz
+    root_alias: aidc_data
+    expected_bytes: 28653
+    sha256: 63692498d0a9721e2dcad6dc9204180471b8a145e8daa4df0f700bd0afdc98d9
+  - kind: lhotse-supervisions
+    name: test_hard_supervisions
+    relative_path: datasets/wenetspeech_chuan/versions/eval-20261012/test_hard_supervisions.jsonl.gz
+    root_alias: aidc_data
+    expected_bytes: 57205
+    sha256: 2258c3d6e2a1d32b8fae30952960dddf4f44069a7832fb3637140520e9f1d7cf
+  splits:
+    test_easy:
+      artifacts:
+        recordings:
+        - test_easy_recordings
+        supervisions:
+        - test_easy_supervisions
+      statistics:
+        duration_hours: 8.547505555555556
+        records: 6981
+        duration_basis: sum of supervision durations
+    test_hard:
+      artifacts:
+        recordings:
+        - test_hard_recordings
+        supervisions:
+        - test_hard_supervisions
+      statistics:
+        duration_hours: 1.1528055555555556
+        records: 1392
+        duration_basis: sum of supervision durations
+  provenance:
+    source: https://huggingface.co/datasets/ASLP-lab/WSC-Eval (WSC-Eval-ASR Easy/Hard),
+      revision ed17d0cf87ac1bba1ed0290dfee02d460bfc8bbb, downloaded via hf-mirror.com
+    paper: arXiv:2509.18004 WenetSpeech-Chuan; Easy 8.55 h audiobook/reading, Hard
+      1.15 h short video/drama
+    license: CC BY-NC-SA 4.0 (non-commercial)
+    transcript: official manually verified text, unchanged
+    snapshot_date: '2026-10-12'
+- schema_version: dataset-catalog/2.0
+  dataset_id: kespeech
+  version: eval-southwestern-20261012
+  languages:
+  - zh
+  tasks:
+  - asr
+  aliases: []
+  artifacts:
+  - kind: lhotse-recordings
+    name: test_recordings
+    relative_path: datasets/kespeech/versions/eval-southwestern-20261012/test_recordings.jsonl.gz
+    root_alias: aidc_data
+    expected_bytes: 49031
+    sha256: e934a5dd11679ec839a914e9200e01b30f827f3075a8b0cfaed0fef87f29b2d9
+  - kind: lhotse-supervisions
+    name: test_supervisions
+    relative_path: datasets/kespeech/versions/eval-southwestern-20261012/test_supervisions.jsonl.gz
+    root_alias: aidc_data
+    expected_bytes: 122476
+    sha256: 3ca09c5a771e10868f4b35db6276845e9526299b06e73073467f8e9798046850
+  splits:
+    test:
+      artifacts:
+        recordings:
+        - test_recordings
+        supervisions:
+        - test_supervisions
+      statistics:
+        duration_hours: 4.240197899305556
+        records: 2693
+        duration_basis: sum of supervision durations
+  provenance:
+    source: kespeech@legacy-20260804 test, supervisions with language == Southwestern
+    transcript: official unpunctuated KeSpeech text (Mandarin characters of dialect-accented
+      reading)
+    snapshot_date: '2026-10-12'

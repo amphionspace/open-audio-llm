@@ -24,6 +24,12 @@ C  = A with the Emilia2 dialogue source switched to moss-transcribe-diarize-0.9B
      still carry 0.9B labels (1,850 in all; the 1,115 suspects Pro relabelled stay). A window is Pro-labelled when its
      target differs from the 0.9B version's (25,420, all among the 4+ windows, matching the catalog count).
 
+E  = C with the Emilia2 dialogue source switched to moss-transcribe-diarize-0.9B-pro4plus-sim06 (audio-data-contract PR #134):
+     the pro4plus windows that still carried 0.9B labels, had 2-3 speakers and max_sim >= 0.6 (the similar-voice windows
+     where our attribution trails MOSS most) relabelled by MOSS Pro too, 35,544 windows / 944.2 h Pro-labelled in all; its
+     exclusion list holds the 515 windows that still carry 0.9B labels and are 4+ speakers or split-cap-0.80 suspects (same
+     rule as C's 1,850). Its catalog is shared/catalog-e: the frozen copy plus that one entry (A-D keep shared/catalog).
+
 Catalog: a directory with a frozen copy of the registry catalog (/workspace/data/registry/catalog) and the entries of
 the control's frozen catalog that the registry does not declare (synthetic and localized meeting views). Where both
 declare a version the registry entry is used: the frozen Emilia2 dialogue entry still points at the m4a audio index,
@@ -49,6 +55,11 @@ EXCLUDE = Path("/workspace/data/datasets/emilia2_zh_dialogue_diarize/versions/mo
 PRO4PLUS = "moss-transcribe-diarize-0.9B-pro4plus"
 PRO4PLUS_EXCLUDE = Path("/workspace/data/datasets/emilia2_zh_dialogue_diarize/versions/moss-transcribe-diarize-0.9B-pro4plus/"
                         "excluded-records-local4plus-splitcap080-20261028.txt")
+SIM06 = "moss-transcribe-diarize-0.9B-pro4plus-sim06"
+SIM06_EXCLUDE = Path("/workspace/data/datasets/emilia2_zh_dialogue_diarize/versions/moss-transcribe-diarize-0.9B-pro4plus-sim06/"
+                     "excluded-records-local4plus-splitcap080-20261028.txt")
+# Read once, when shared/catalog-e is first written (the entry of audio-data-contract PR #134).
+SIM06_DECLARATION = Path("/workspace/workspace/mingdong/repo/adc-emilia2-pro-sim06/catalog/emilia2_zh_dialogue_diarize.yaml")
 TS_SHARE = 20.0
 TS_SECTIONS = ("interference_sources", "rir_sources", "floor_sources", "nonspeech_sources")
 SPLIT_TAG = "diar-restart-20261028"
@@ -147,6 +158,17 @@ def main():
         if (s["dataset_id"], s["version"]) == EMILIA2:
             s.update(version=PRO4PLUS, exclude_records=str(PRO4PLUS_EXCLUDE))
     assert [s["weight"] for s in c["train"]] == [s["weight"] for s in a["train"]]
+    catalog_e = shared / "catalog-e"
+    if not catalog_e.exists():
+        shutil.copytree(catalog_dir, catalog_e)
+        (entry,) = [x for x in yaml.safe_load(SIM06_DECLARATION.read_text()) if x.get("version") == SIM06]
+        (catalog_e / "zz-arm-e-emilia2-pro4plus-sim06.jsonl").write_text(json.dumps(entry, ensure_ascii=False) + "\n")
+    e = base()
+    e["catalog"] = str(catalog_e)
+    for s in e["train"]:
+        if (s["dataset_id"], s["version"]) == EMILIA2:
+            s.update(version=SIM06, exclude_records=str(SIM06_EXCLUDE))
+    assert [s["weight"] for s in e["train"]] == [s["weight"] for s in a["train"]]
     for name, data, head in (
         ("a", a, "# A 组（对照）：zh-nosimilar-control-acp-20261016 prepare 002 的冻结配方，只把 Emilia2 对话的排除名单换成 0.80 拆人上限版本；"
                  "catalog 与 roots 见 scripts/make_recipes.py。由 scripts/make_recipes.py 生成。\n"),
@@ -154,6 +176,8 @@ def main():
                  "与 TS 在线混合用的干扰人 / 冲激响应 / 底噪 / 非语音源；批处理、回放、增强、噪声源与 A 组相同。由 scripts/make_recipes.py 生成。\n"),
         ("c", c, "# C 组：A 组只把 Emilia2 对话换成 moss-transcribe-diarize-0.9B-pro4plus（4 人及以上窗口用 MOSS Pro 重标的 682.6 h），"
                  "排除仍是 0.9B 标签的 4 人以上窗口与拆人可疑窗口；权重与其余数据源同 A 组。由 scripts/make_recipes.py 生成。\n"),
+        ("e", e, "# E 组：C 组只把 Emilia2 对话换成 moss-transcribe-diarize-0.9B-pro4plus-sim06（另把 2–3 人、声音相近 max_sim ≥ 0.6 的窗口用 MOSS Pro 重标，"
+                 "Pro 标注共 944.2 h），排除名单按同一规则重算（515 条）；catalog 用 shared/catalog-e（冻结副本加这一条）。由 scripts/make_recipes.py 生成。\n"),
     ):
         (RUN / "configs" / f"train-data-{name}.yaml").write_text(head + yaml.safe_dump(data, allow_unicode=True, sort_keys=False))
     print(json.dumps({"registry_entries": len(registry_keys), "frozen_only_entries": len(only),

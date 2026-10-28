@@ -10,6 +10,7 @@
 | B（加目标说话人任务） | A 组全部缩到 80，加 TS-robust v7set23 的目标说话人任务数据 20（场景池、真实会议 TS 窗口、轮流说话窗口等 45 个源，相对权重和在线混合参数不变） | 目标说话人识别作为辅助任务（SoulX-Transcriber 等的做法）能否减少归错和重叠字错 |
 | C（Emilia2 换 MOSS Pro 部分重标） | A 组配方，Emilia2 对话换成 `moss-transcribe-diarize-0.9B-pro4plus`（4 人及以上窗口用 MOSS Pro 重标），排除本地 4+ 人窗口 505 个与 0.9B 拆人嫌疑 1,370 个 | 用户 10-28：“开始用上moss pro的数据，哪怕只有一部分”；替换 B 组的节点 |
 | D（时间刻度） | A 组配方；音频 token 之间每 5 秒插入已过秒数（照 MOSS 的 `time_marker_every_seconds: 5`），代码 `shared/code-tm` = code-v17 + 时间刻度补丁（PR #97），训练与 vLLM 服务都由 `OPEN_AUDIO_LLM_AUDIO_TIME_MARKER_SECONDS: '5'` 开启 | 用户 10-28 同意“参考moss的做法，加入时间刻度”；A 或 C 节点空出后自动提交（`scripts/submit_d_after_free.sh`） |
+| E（Emilia2 换 MOSS Pro 第二批重标） | C 组配方，Emilia2 对话换成 `moss-transcribe-diarize-0.9B-pro4plus-sim06`（另把 2–3 人、声音相近 max_sim ≥ 0.6 的 10,721 个窗口送 MOSS Pro 重标，Pro 标注共 944.2 h；audio-data-contract PR #134），排除名单按同一规则重算为 515 条；catalog 用 `shared/catalog-e` | 声音相近时的归错（我们 3.3% 对 MOSS 0.3%）能否靠更好的标签减少；第二个节点空出后自动提交（`scripts/submit_e_after_d.sh`，第一个归 D 组） |
 
 各组其余全同：起点 Emilia2 轮 6000 步（模型文件从对象存储拉到 `/workspace/data/ae-runs/zh-emilia2-dialogue-6000/checkpoint-6000`），新优化器，全局 batch 32，学习率 5e-6、500 步 warmup、cosine 至 12000 步，每 1000 步保存；代码 `shared/code` = TS 线 code-v17（SOT 相关文件与旧快照逐字相同）；ACP 最高优先级。
 

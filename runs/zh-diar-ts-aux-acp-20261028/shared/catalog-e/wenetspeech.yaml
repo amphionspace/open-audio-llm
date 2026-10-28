@@ -1,0 +1,789 @@
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech
+    version: legacy-20260804
+    languages:
+      - zh
+    tasks:
+      - asr
+    aliases: []
+    artifacts:
+      - name: train_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/WenetSpeech/data/manifests/wenetspeech_recordings_L.jsonl.gz
+        expected_bytes: 1464697
+        sha256: aad6b67a67486fa091b7f6da28715e7db378c1001186a9c6330e5692303f6e51
+      - name: train_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/LHOTSE/WenetSpeech/data/manifests/wenetspeech_supervisions_L.jsonl.gz
+        expected_bytes: 426686689
+        sha256: 75eb9e7d4549fd59c26804610207a56e60f3c7d09c43da3e93b8e780517c10cd
+      - name: dev_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/WenetSpeech/data/manifests/wenetspeech_recordings_DEV.jsonl.gz
+        expected_bytes: 167671
+        sha256: 1d5bf691e409f2db05eb76133b61db04a8cbc9f227b8c3dd74d9144f96825307
+      - name: dev_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/LHOTSE/WenetSpeech/data/manifests/wenetspeech_supervisions_DEV.jsonl.gz
+        expected_bytes: 607947
+        sha256: fee0267046ed29885e10594c85619ef1b4788f7ee51870c4eb136d47739815ab
+      - name: test_net_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/WenetSpeech/data/manifests/wenetspeech_recordings_TEST_NET.jsonl.gz
+        expected_bytes: 3676
+        sha256: 9e7ff94a853fc68a8fa4fe6b906dc6953e1f9510dd71de949243317212125735
+      - name: test_net_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/LHOTSE/WenetSpeech/data/manifests/wenetspeech_supervisions_TEST_NET.jsonl.gz
+        expected_bytes: 966059
+        sha256: a937878d8daac470abafb3fb7a33d0a40faaaa56e9f48c69d3c2f2e20a76609a
+      - name: test_meeting_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/WenetSpeech/data/manifests/wenetspeech_recordings_TEST_MEETING.jsonl.gz
+        expected_bytes: 102807
+        sha256: b3667870863676dfe6fb8b3b9b072e89f2f28c9672aa54aeb74a89394a36ae3b
+      - name: test_meeting_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/LHOTSE/WenetSpeech/data/manifests/wenetspeech_supervisions_TEST_MEETING.jsonl.gz
+        expected_bytes: 399915
+        sha256: ef11b3856dfadab93ec237517cc938f73575ab18b45f8c717a895ff0c58f74e4
+    splits:
+      train:
+        artifacts:
+          recordings:
+            - train_rec_0
+          supervisions:
+            - train_sup_0
+        statistics:
+          duration_hours: 10005.411338888889
+          duration_basis: 'sum of supervisions durations; overlapping segments may count speech more than once; sources: legacy_asr:LHOTSE/WenetSpeech/data/manifests/wenetspeech_supervisions_L.jsonl.gz'
+      dev:
+        artifacts:
+          recordings:
+            - dev_rec_0
+          supervisions:
+            - dev_sup_0
+        statistics:
+          duration_hours: 20.017830555555555
+          duration_basis: 'sum of supervisions durations; overlapping segments may count speech more than once; sources: legacy_asr:LHOTSE/WenetSpeech/data/manifests/wenetspeech_supervisions_DEV.jsonl.gz'
+      test_net:
+        artifacts:
+          recordings:
+            - test_net_rec_0
+          supervisions:
+            - test_net_sup_0
+        group: test
+      test_meeting:
+        artifacts:
+          recordings:
+            - test_meeting_rec_0
+          supervisions:
+            - test_meeting_sup_0
+        group: test
+    provenance:
+      source: icefall pre-migration registry
+      snapshot_date: '2026-08-04'
+      upstream_version: unknown
+      reference_duration:
+        hours: 10000
+        basis: 参考表登记值；未核实当前文件时长及 split 覆盖
+        url: https://ccnuebbmik1f.feishu.cn/wiki/CEXFwEjPoi2bIukVjk9c5FdOn12?sheet=3d4d23
+        sheet_range: A8:P8
+        sheet_revision: 1594
+        consulted_at: '2026-09-09'
+      restored_from: cos://amphion-audio-backup-1373259071/audio-data-contract/datasets/wenetspeech/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech
+    version: icefall-20260908
+    languages:
+      - zh
+    tasks:
+      - asr
+    derived_from: wenetspeech@weak-source-20260904
+    artifacts:
+      - name: train_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/WenetSpeech/data/manifests/wenetspeech_recordings_L.jsonl.gz
+        expected_bytes: 1464697
+        sha256: aad6b67a67486fa091b7f6da28715e7db378c1001186a9c6330e5692303f6e51
+      - name: train_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/LHOTSE/WenetSpeech/data/manifests/wenetspeech_supervisions_L.jsonl.gz
+        expected_bytes: 426686689
+        sha256: 75eb9e7d4549fd59c26804610207a56e60f3c7d09c43da3e93b8e780517c10cd
+      - name: train_sup_clean_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/WenetSpeech/lhotse/clean/v3-firered/wenetspeech_supervisions_L_punc.jsonl.gz
+        expected_bytes: 613039056
+        sha256: 21eb3204fbd74dde18ddb12cac2b34eec20b48664012a5878fa4d6d0c48f270d
+      - name: train_sup_clean_no_punc_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/WenetSpeech/lhotse/clean/v3-firered/wenetspeech_supervisions_L_clean.jsonl.gz
+        expected_bytes: 602617836
+        sha256: d02fa738bb9e7792c5b68b8ac35aabc1c0df0d6f1553167812b41b4e31389c2d
+      - name: dev_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/WenetSpeech/data/manifests/wenetspeech_recordings_DEV.jsonl.gz
+        expected_bytes: 167671
+        sha256: 1d5bf691e409f2db05eb76133b61db04a8cbc9f227b8c3dd74d9144f96825307
+      - name: dev_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/LHOTSE/WenetSpeech/data/manifests/wenetspeech_supervisions_DEV.jsonl.gz
+        expected_bytes: 607947
+        sha256: fee0267046ed29885e10594c85619ef1b4788f7ee51870c4eb136d47739815ab
+      - name: test_net_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/WenetSpeech/data/manifests/wenetspeech_recordings_TEST_NET.jsonl.gz
+        expected_bytes: 3676
+        sha256: 9e7ff94a853fc68a8fa4fe6b906dc6953e1f9510dd71de949243317212125735
+      - name: test_net_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/LHOTSE/WenetSpeech/data/manifests/wenetspeech_supervisions_TEST_NET.jsonl.gz
+        expected_bytes: 966059
+        sha256: a937878d8daac470abafb3fb7a33d0a40faaaa56e9f48c69d3c2f2e20a76609a
+      - name: test_meeting_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/WenetSpeech/data/manifests/wenetspeech_recordings_TEST_MEETING.jsonl.gz
+        expected_bytes: 102807
+        sha256: b3667870863676dfe6fb8b3b9b072e89f2f28c9672aa54aeb74a89394a36ae3b
+      - name: test_meeting_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/LHOTSE/WenetSpeech/data/manifests/wenetspeech_supervisions_TEST_MEETING.jsonl.gz
+        expected_bytes: 399915
+        sha256: ef11b3856dfadab93ec237517cc938f73575ab18b45f8c717a895ff0c58f74e4
+      - name: dev_sup_0_punc
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/LHOTSE/WenetSpeech/data/manifests/wenetspeech_supervisions_DEV_punc.jsonl.gz
+        expected_bytes: 627740
+        sha256: c7b88e6a66809a475f66af10024d5b3d849fa9de04aeebe391a212f5af7a8198
+      - name: test_net_sup_0_punc
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/LHOTSE/WenetSpeech/data/manifests/wenetspeech_supervisions_TEST_NET_punc.jsonl.gz
+        expected_bytes: 993526
+        sha256: 154cdb962ed09afe1c3cd19039ca7ac61b6e8b3454b650eb34a634c7e4de1153
+      - name: test_meeting_sup_0_punc
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/LHOTSE/WenetSpeech/data/manifests/wenetspeech_supervisions_TEST_MEETING_punc.jsonl.gz
+        expected_bytes: 415437
+        sha256: 0bbd7222d508322d6996f6b4265483539e5b9e81e16ae46c2cf51b5c81cd1ccb
+    splits:
+      train:
+        artifacts:
+          recordings:
+            - train_rec_0
+          supervisions:
+            - train_sup_0
+          clean_supervisions:
+            - train_sup_clean_0
+          clean_no_punc_supervisions:
+            - train_sup_clean_no_punc_0
+        statistics:
+          duration_hours: 10005.411338888889
+          duration_basis: 'sum of supervisions durations; overlapping segments may count speech more than once; sources: legacy_asr:LHOTSE/WenetSpeech/data/manifests/wenetspeech_supervisions_L.jsonl.gz'
+      dev:
+        artifacts:
+          recordings:
+            - dev_rec_0
+          supervisions:
+            - dev_sup_0
+          punctuated_supervisions:
+            - dev_sup_0_punc
+        statistics:
+          duration_hours: 20.017830555555555
+          duration_basis: 'sum of supervisions durations; overlapping segments may count speech more than once; sources: legacy_asr:LHOTSE/WenetSpeech/data/manifests/wenetspeech_supervisions_DEV.jsonl.gz'
+      test_net:
+        artifacts:
+          recordings:
+            - test_net_rec_0
+          supervisions:
+            - test_net_sup_0
+          punctuated_supervisions:
+            - test_net_sup_0_punc
+        group: test
+      test_meeting:
+        artifacts:
+          recordings:
+            - test_meeting_rec_0
+          supervisions:
+            - test_meeting_sup_0
+          punctuated_supervisions:
+            - test_meeting_sup_0_punc
+        group: test
+    provenance:
+      source: icefall runtime manifest snapshot
+      snapshot_date: '2026-09-08'
+      restored_from: cos://amphion-audio-backup-1373259071/audio-data-contract/datasets/wenetspeech/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_disfluency
+    version: icefall-20260908
+    languages:
+      - zh
+    tasks:
+      - asr
+    artifacts:
+      - name: train_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/WenetSpeech/data/manifests/wenetspeech_recordings_L.jsonl.gz
+        expected_bytes: 1464697
+        sha256: aad6b67a67486fa091b7f6da28715e7db378c1001186a9c6330e5692303f6e51
+      - name: train_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/WenetSpeech/lhotse/clean/v3-firered/derived/police-v9/wenetspeech_supervisions_restore_disfluency.jsonl.gz
+        expected_bytes: 11664786
+        sha256: 58f9f8702e81a2aaaece57dc75371fb4ec73dc90639bcba1cf980d6213756937
+    splits:
+      train:
+        artifacts:
+          recordings:
+            - train_rec_0
+          supervisions:
+            - train_sup_0
+        statistics:
+          duration_hours: 182.45928888888886
+          duration_basis: 'sum of supervisions durations; overlapping segments may count speech more than once; sources: legacy_asr:WenetSpeech/lhotse/clean/v3-firered/derived/police-v9/wenetspeech_supervisions_restore_disfluency.jsonl.gz'
+    provenance:
+      source: icefall runtime manifest snapshot
+      snapshot_date: '2026-09-08'
+      restored_from: cos://amphion-audio-backup-1373259071/audio-data-contract/datasets/wenetspeech/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_traffic_snr0
+    version: icefall-20260908
+    languages:
+      - zh
+    tasks:
+      - asr
+    derived_from: wenetspeech_traffic_snr0@recipe-1
+    artifacts:
+      - name: test_net_cuts_0
+        kind: lhotse-cuts
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/eval_traffic/wenetspeech_test_net_traffic_noisy_snr0db_cuts.jsonl.gz
+        expected_bytes: 3049833
+        sha256: cbf4c993e5062a61e7535852baf8a6558cbc281a60fec8b899b983647ce32abd
+    splits:
+      test_net:
+        artifacts:
+          cuts:
+            - test_net_cuts_0
+        group: test
+    provenance:
+      source: icefall runtime manifest snapshot
+      snapshot_date: '2026-09-08'
+      restored_from: cos://amphion-audio-backup-1373259071/audio-data-contract/datasets/wenetspeech/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_traffic_snr5
+    version: icefall-20260908
+    languages:
+      - zh
+    tasks:
+      - asr
+    derived_from: wenetspeech_traffic_snr5@recipe-1
+    artifacts:
+      - name: test_net_cuts_0
+        kind: lhotse-cuts
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/eval_traffic/wenetspeech_test_net_traffic_noisy_snr5db_cuts.jsonl.gz
+        expected_bytes: 3050381
+        sha256: 8ff8468c9116f4745401e0dea6f5b2623d8c2c68c7e9914d8839e2d5c86e6f1a
+    splits:
+      test_net:
+        artifacts:
+          cuts:
+            - test_net_cuts_0
+        group: test
+    provenance:
+      source: icefall runtime manifest snapshot
+      snapshot_date: '2026-09-08'
+      restored_from: cos://amphion-audio-backup-1373259071/audio-data-contract/datasets/wenetspeech/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_traffic_snr10
+    version: icefall-20260908
+    languages:
+      - zh
+    tasks:
+      - asr
+    derived_from: wenetspeech_traffic_snr10@recipe-1
+    artifacts:
+      - name: test_net_cuts_0
+        kind: lhotse-cuts
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/eval_traffic/wenetspeech_test_net_traffic_noisy_snr10db_cuts.jsonl.gz
+        expected_bytes: 3052466
+        sha256: 487ab967077789a8e17555a1d129b2cc0f4c790d1de6a30be8655c8a07d9340f
+    splits:
+      test_net:
+        artifacts:
+          cuts:
+            - test_net_cuts_0
+        group: test
+    provenance:
+      source: icefall runtime manifest snapshot
+      snapshot_date: '2026-09-08'
+      restored_from: cos://amphion-audio-backup-1373259071/audio-data-contract/datasets/wenetspeech/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_traffic_snr15
+    version: icefall-20260908
+    languages:
+      - zh
+    tasks:
+      - asr
+    derived_from: wenetspeech_traffic_snr15@recipe-1
+    artifacts:
+      - name: test_net_cuts_0
+        kind: lhotse-cuts
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/eval_traffic/wenetspeech_test_net_traffic_noisy_snr15db_cuts.jsonl.gz
+        expected_bytes: 3052594
+        sha256: a39d0eaa03cdc19fc05bb1c5f1c74f71252db6731daa22153875d0984469a43b
+    splits:
+      test_net:
+        artifacts:
+          cuts:
+            - test_net_cuts_0
+        group: test
+    provenance:
+      source: icefall runtime manifest snapshot
+      snapshot_date: '2026-09-08'
+      restored_from: cos://amphion-audio-backup-1373259071/audio-data-contract/datasets/wenetspeech/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_traffic_snr20
+    version: icefall-20260908
+    languages:
+      - zh
+    tasks:
+      - asr
+    derived_from: wenetspeech_traffic_snr20@recipe-1
+    artifacts:
+      - name: test_net_cuts_0
+        kind: lhotse-cuts
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/eval_traffic/wenetspeech_test_net_traffic_noisy_snr20db_cuts.jsonl.gz
+        expected_bytes: 3052678
+        sha256: 4947c2b1886ad92022a771f54886f2b07e8d1d52cc70af5772c53b9cbaa90eac
+    splits:
+      test_net:
+        artifacts:
+          cuts:
+            - test_net_cuts_0
+        group: test
+    provenance:
+      source: icefall runtime manifest snapshot
+      snapshot_date: '2026-09-08'
+      restored_from: cos://amphion-audio-backup-1373259071/audio-data-contract/datasets/wenetspeech/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_traffic_snr0
+    version: recipe-1
+    languages:
+      - zh
+    tasks:
+      - asr
+    aliases: []
+    derived_from: wenetspeech
+    artifacts:
+      - name: test_net_cuts
+        kind: lhotse-cuts
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/eval_traffic/wenetspeech_test_net_traffic_noisy_snr0db_cuts.jsonl.gz
+        expected_bytes: 3049833
+        sha256: cbf4c993e5062a61e7535852baf8a6558cbc281a60fec8b899b983647ce32abd
+    splits:
+      test_net:
+        artifacts:
+          cuts:
+            - test_net_cuts
+        statistics:
+          duration_hours: 23.056208333333334
+          duration_basis: 'sum of cuts durations; overlapping segments may count speech more than once; sources: legacy_asr:LHOTSE/eval_traffic/wenetspeech_test_net_traffic_noisy_snr0db_cuts.jsonl.gz'
+    recipe_parameters:
+      noise: AudioSet RoadTraffic
+      snr_db: 0
+    provenance:
+      source: icefall
+      recipe: build_noisy_test_cuts.py
+      restored_from: cos://amphion-audio-backup-1373259071/audio-data-contract/datasets/wenetspeech/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_traffic_snr5
+    version: recipe-1
+    languages:
+      - zh
+    tasks:
+      - asr
+    aliases: []
+    derived_from: wenetspeech
+    artifacts:
+      - name: test_net_cuts
+        kind: lhotse-cuts
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/eval_traffic/wenetspeech_test_net_traffic_noisy_snr5db_cuts.jsonl.gz
+        expected_bytes: 3050381
+        sha256: 8ff8468c9116f4745401e0dea6f5b2623d8c2c68c7e9914d8839e2d5c86e6f1a
+    splits:
+      test_net:
+        artifacts:
+          cuts:
+            - test_net_cuts
+        statistics:
+          duration_hours: 23.056208333333334
+          duration_basis: 'sum of cuts durations; overlapping segments may count speech more than once; sources: legacy_asr:LHOTSE/eval_traffic/wenetspeech_test_net_traffic_noisy_snr5db_cuts.jsonl.gz'
+    recipe_parameters:
+      noise: AudioSet RoadTraffic
+      snr_db: 5
+    provenance:
+      source: icefall
+      recipe: build_noisy_test_cuts.py
+      restored_from: cos://amphion-audio-backup-1373259071/audio-data-contract/datasets/wenetspeech/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_traffic_snr10
+    version: recipe-1
+    languages:
+      - zh
+    tasks:
+      - asr
+    aliases: []
+    derived_from: wenetspeech
+    artifacts:
+      - name: test_net_cuts
+        kind: lhotse-cuts
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/eval_traffic/wenetspeech_test_net_traffic_noisy_snr10db_cuts.jsonl.gz
+        expected_bytes: 3052466
+        sha256: 487ab967077789a8e17555a1d129b2cc0f4c790d1de6a30be8655c8a07d9340f
+    splits:
+      test_net:
+        artifacts:
+          cuts:
+            - test_net_cuts
+        statistics:
+          duration_hours: 23.056208333333334
+          duration_basis: 'sum of cuts durations; overlapping segments may count speech more than once; sources: legacy_asr:LHOTSE/eval_traffic/wenetspeech_test_net_traffic_noisy_snr10db_cuts.jsonl.gz'
+    recipe_parameters:
+      noise: AudioSet RoadTraffic
+      snr_db: 10
+    provenance:
+      source: icefall
+      recipe: build_noisy_test_cuts.py
+      restored_from: cos://amphion-audio-backup-1373259071/audio-data-contract/datasets/wenetspeech/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_traffic_snr15
+    version: recipe-1
+    languages:
+      - zh
+    tasks:
+      - asr
+    aliases: []
+    derived_from: wenetspeech
+    artifacts:
+      - name: test_net_cuts
+        kind: lhotse-cuts
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/eval_traffic/wenetspeech_test_net_traffic_noisy_snr15db_cuts.jsonl.gz
+        expected_bytes: 3052594
+        sha256: a39d0eaa03cdc19fc05bb1c5f1c74f71252db6731daa22153875d0984469a43b
+    splits:
+      test_net:
+        artifacts:
+          cuts:
+            - test_net_cuts
+        statistics:
+          duration_hours: 23.056208333333334
+          duration_basis: 'sum of cuts durations; overlapping segments may count speech more than once; sources: legacy_asr:LHOTSE/eval_traffic/wenetspeech_test_net_traffic_noisy_snr15db_cuts.jsonl.gz'
+    recipe_parameters:
+      noise: AudioSet RoadTraffic
+      snr_db: 15
+    provenance:
+      source: icefall
+      recipe: build_noisy_test_cuts.py
+      restored_from: cos://amphion-audio-backup-1373259071/audio-data-contract/datasets/wenetspeech/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_traffic_snr20
+    version: recipe-1
+    languages:
+      - zh
+    tasks:
+      - asr
+    aliases: []
+    derived_from: wenetspeech
+    artifacts:
+      - name: test_net_cuts
+        kind: lhotse-cuts
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/eval_traffic/wenetspeech_test_net_traffic_noisy_snr20db_cuts.jsonl.gz
+        expected_bytes: 3052678
+        sha256: 4947c2b1886ad92022a771f54886f2b07e8d1d52cc70af5772c53b9cbaa90eac
+    splits:
+      test_net:
+        artifacts:
+          cuts:
+            - test_net_cuts
+        statistics:
+          duration_hours: 23.056208333333334
+          duration_basis: 'sum of cuts durations; overlapping segments may count speech more than once; sources: legacy_asr:LHOTSE/eval_traffic/wenetspeech_test_net_traffic_noisy_snr20db_cuts.jsonl.gz'
+    recipe_parameters:
+      noise: AudioSet RoadTraffic
+      snr_db: 20
+    provenance:
+      source: icefall
+      recipe: build_noisy_test_cuts.py
+      restored_from: cos://amphion-audio-backup-1373259071/audio-data-contract/datasets/wenetspeech/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_clean
+    version: clean-v1-20260805
+    languages:
+      - zh
+    tasks:
+      - asr
+    aliases: []
+    derived_from: wenetspeech
+    artifacts:
+      - name: train_recordings
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/WenetSpeech/data/manifests/wenetspeech_recordings_L.jsonl.gz
+        expected_bytes: 1464697
+        sha256: aad6b67a67486fa091b7f6da28715e7db378c1001186a9c6330e5692303f6e51
+      - name: train_supervisions
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/WenetSpeech/lhotse/clean/v1/wenetspeech_supervisions_L_punc.jsonl.gz
+        expected_bytes: 540552956
+        sha256: 5bea50f76dfcf5446121398fd345d1e2ccbf0b6d006e20350dcda5ba02fdf45a
+        metadata:
+          record_count: 14625245
+    splits:
+      train:
+        artifacts:
+          recordings:
+            - train_recordings
+          supervisions:
+            - train_supervisions
+        statistics:
+          duration_hours: 10005.411338888889
+          duration_basis: 'sum of supervisions durations; overlapping segments may count speech more than once; sources: legacy_asr:WenetSpeech/lhotse/clean/v1/wenetspeech_supervisions_L_punc.jsonl.gz'
+    recipe_parameters:
+      pipeline:
+        - punctuation
+        - clean:v1
+      writes:
+        - text
+        - custom.clean
+    provenance:
+      source: local DATA_ASR lhotse scan
+      snapshot_date: '2026-08-05'
+      integrity: verified
+      restored_from: cos://amphion-audio-backup-1373259071/audio-data-contract/datasets/wenetspeech/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_clean
+    version: clean-v3-20260828
+    languages:
+      - zh
+    tasks:
+      - asr
+    aliases: []
+    derived_from: wenetspeech
+    artifacts:
+      - name: train_recordings
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/WenetSpeech/data/manifests/wenetspeech_recordings_L.jsonl.gz
+        expected_bytes: 1464697
+        sha256: aad6b67a67486fa091b7f6da28715e7db378c1001186a9c6330e5692303f6e51
+      - name: train_supervisions
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/WenetSpeech/lhotse/clean/v3-firered/wenetspeech_supervisions_L_clean.jsonl.gz
+        expected_bytes: 602617836
+        sha256: d02fa738bb9e7792c5b68b8ac35aabc1c0df0d6f1553167812b41b4e31389c2d
+        metadata:
+          record_count: 14625245
+          pass_count: 14568791
+          punctuated: false
+      - name: train_supervisions_punc
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/WenetSpeech/lhotse/clean/v3-firered/wenetspeech_supervisions_L_punc.jsonl.gz
+        expected_bytes: 613039056
+        sha256: 21eb3204fbd74dde18ddb12cac2b34eec20b48664012a5878fa4d6d0c48f270d
+        metadata:
+          record_count: 14625245
+          pass_count: 14568791
+          punctuated: true
+    splits:
+      train:
+        artifacts:
+          recordings:
+            - train_recordings
+          supervisions:
+            - train_supervisions
+          punctuated_supervisions:
+            - train_supervisions_punc
+        statistics:
+          duration_hours: 9971.091938888889
+          duration_basis: 'sum of supervisions durations; overlapping segments may count speech more than once; custom.clean.pass=true only; sources: legacy_asr:WenetSpeech/lhotse/clean/v3-firered/wenetspeech_supervisions_L_clean.jsonl.gz'
+    recipe_parameters:
+      filter_rules: consensus-v6
+      rewrite_rules: wenetspeech-faithful-v5
+      writes:
+        - text
+        - custom.clean
+      filters: custom.clean.pass=false
+      text_variants:
+        - plain
+        - punctuated
+    provenance:
+      source: AmphionData WenetSpeech cleaning pipeline
+      registered_at: '2026-08-28'
+      integrity: verified
+      verification_report: WenetSpeech/lhotse/clean/v3-firered/verification_report.json
+      restored_from: cos://amphion-audio-backup-1373259071/audio-data-contract/datasets/wenetspeech/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech
+    version: weak-source-20260904
+    languages:
+      - zh
+    tasks:
+      - asr
+    aliases: []
+    artifacts:
+      - name: train_recordings
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/WenetSpeech/lhotse/weak-manifests/wenetspeech_recordings_W.jsonl.gz
+        expected_bytes: 1411301
+        sha256: 867add6d08a682415117397d2d9a50e791c5d81662de4e3c731b2ae6c2acab6a
+        metadata:
+          record_count: 58511
+      - name: train_supervisions
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/WenetSpeech/lhotse/weak-manifests/wenetspeech_supervisions_W.jsonl.gz
+        expected_bytes: 133365776
+        sha256: e49f387e855af4241aa8412e03446dc2aee0c6cc70fd54184f21fa49cff15d16
+        metadata:
+          record_count: 3222760
+    splits:
+      train:
+        artifacts:
+          recordings:
+            - train_recordings
+          supervisions:
+            - train_supervisions
+        statistics:
+          recordings: 58511
+          supervisions: 3222760
+          hours: 2477.941
+    provenance:
+      source: WenetSpeech W subset prepared by AmphionData
+      registered_at: '2026-09-04'
+      integrity: verified
+      preparation_report: WenetSpeech/lhotse/weak-manifests/wenetspeech_W_report.json
+      subset: W
+      confidence_range:
+        - 0.6
+        - 0.95
+      restored_from: cos://amphion-audio-backup-1373259071/audio-data-contract/datasets/wenetspeech/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech
+    version: clean-weak-v1-20260904
+    languages:
+      - zh
+    tasks:
+      - asr
+    aliases: []
+    derived_from: wenetspeech
+    artifacts:
+      - name: train_recordings
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/WenetSpeech/lhotse/weak-manifests/wenetspeech_recordings_W.jsonl.gz
+        expected_bytes: 1411301
+        sha256: 867add6d08a682415117397d2d9a50e791c5d81662de4e3c731b2ae6c2acab6a
+        metadata:
+          record_count: 58511
+      - name: train_supervisions
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/WenetSpeech/lhotse/clean/weak-v1/wenetspeech_supervisions_W_clean.jsonl.gz
+        expected_bytes: 157881938
+        sha256: 57ad0c8f94ba9dc863294fbed5b3f37569c9b5f4fc2fc9d90fc1318ea72514ab
+        metadata:
+          record_count: 3222760
+          pass_count: 3149292
+          punctuated: false
+      - name: train_supervisions_punc
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/WenetSpeech/lhotse/clean/weak-v1/wenetspeech_supervisions_W_punc.jsonl.gz
+        expected_bytes: 157865388
+        sha256: d06f648bf3378a4aef6f88bdf1cc4dcc4b9ac3369d1370142a14305f0f94ba23
+        metadata:
+          record_count: 3222760
+          pass_count: 3149292
+          punctuated: true
+    splits:
+      train:
+        artifacts:
+          recordings:
+            - train_recordings
+          supervisions:
+            - train_supervisions
+          punctuated_supervisions:
+            - train_supervisions_punc
+        statistics:
+          recordings: 58511
+          supervisions: 3222760
+          pass: 3149292
+          reject: 73468
+          hours_before_filter: 2477.941
+          duration_hours: 2409.5894055555555
+          duration_basis: 'sum of supervisions durations; overlapping segments may count speech more than once; custom.clean.pass=true only; sources: legacy_asr:WenetSpeech/lhotse/clean/weak-v1/wenetspeech_supervisions_W_clean.jsonl.gz'
+    recipe_parameters:
+      source_version: weak-source-20260904
+      subset: W
+      engines:
+        - Qwen3-ASR-1.7B
+        - FireRedASR2-AED
+      filter_rules: consensus-v6
+      rewrite_rules: wenetspeech-faithful-v5
+      writes:
+        - target
+        - metadata.clean
+      filters: custom.clean.pass=false
+      text_variants:
+        - plain
+        - punctuated
+    provenance:
+      source: AmphionData WenetSpeech Weak cleaning pipeline
+      registered_at: '2026-09-04'
+      integrity: verified
+      run_manifest: WenetSpeech/lhotse/clean/weak-v1/run_manifest.json
+      verification_report: WenetSpeech/lhotse/clean/weak-v1/verification_report.json
+      manual_review:
+        policy: confirm proposed transcription; answer no only when correction is needed
+        content_review: 6
+        replaced_review: 4
+        proposal_confirmed: 10
+        proposal_rejected: 0
+      restored_from: cos://amphion-audio-backup-1373259071/audio-data-contract/datasets/wenetspeech/

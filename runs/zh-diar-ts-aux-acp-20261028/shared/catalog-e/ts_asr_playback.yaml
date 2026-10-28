@@ -1,0 +1,109 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_asr_playback
+  version: v1-20261022
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  artifacts:
+  - name: audio-index
+    kind: audio-index
+    root_alias: ts_asr_playback
+    relative_path: versions/v1-20261022/audio-index.jsonl.gz
+    sha256: 6d245dd6dd253ebc8cd97682e4fab3ae5ca48dd0f14741afb70871bd3c70a785
+    metadata:
+      record_count: 1600
+  - name: playback-neg-records
+    kind: audio-records
+    root_alias: ts_asr_playback
+    relative_path: versions/v1-20261022/records/playback-neg.jsonl.gz
+    sha256: 4650b58b46581a56a75b001c95b1ee9a89f51e1839e2208393236a105c1f976e
+    metadata:
+      record_count: 200
+  - name: playback-room-neg-records
+    kind: audio-records
+    root_alias: ts_asr_playback
+    relative_path: versions/v1-20261022/records/playback-room-neg.jsonl.gz
+    sha256: 1e1df577de14b7f2924070c35be3868d4fc0d16d6be87a3eb12058bac06e8854
+    metadata:
+      record_count: 200
+  - name: playback-realreg5-neg-records
+    kind: audio-records
+    root_alias: ts_asr_playback
+    relative_path: versions/v1-20261022/records/playback-realreg5-neg.jsonl.gz
+    sha256: 7dcc0e0c313eb33a4109be4e7487cd94db5bb6ebc1e55cce26f6f123e52ab6af
+    metadata:
+      record_count: 200
+  - name: playback-room-pos-records
+    kind: audio-records
+    root_alias: ts_asr_playback
+    relative_path: versions/v1-20261022/records/playback-room-pos.jsonl.gz
+    sha256: e929d1a021ed0740d8bd7f3520bb8a698a4c4fc6bafdfbe8160eb9bbbe71150d
+    metadata:
+      record_count: 200
+  splits:
+    playback-neg:
+      artifacts:
+        records:
+        - playback-neg-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 200
+        duration_hours: 0.8393
+        duration_basis: Mixture duration
+      provenance:
+        description: 'playback: {"kind": "neg", "k": [2, 3], "interferer_pool": "drama", "interferer_schedule": "dialogue", "duration": [6, 25], "mix_gain_db": [-18, -14], "pair": "playback-neg", "noise_floor": {"dbfs": [-58, -48], "kinds": {"white": 0.15, "pink": 0.15, "real": 0.7}, "real_pools": ["wham", "dns5_audioset", "dns5_freesound"]}, "enroll_store_seconds": 10}'
+    playback-room-neg:
+      artifacts:
+        records:
+        - playback-room-neg-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 200
+        duration_hours: 0.8393
+        duration_basis: Mixture duration
+      provenance:
+        description: 'playback: {"kind": "neg", "k": [2, 3], "interferer_pool": "drama", "interferer_schedule": "dialogue", "duration": [6, 25], "mix_gain_db": [-18, -14], "rir": {"interferer": "real"}, "pair": "playback-neg", "noise_floor": {"dbfs": [-58, -48], "kinds": {"white": 0.15, "pink": 0.15, "real": 0.7}, "real_pools": ["wham", "dns5_audioset", "dns5_freesound"]}, "enroll_store_seconds": 10}'
+    playback-realreg5-neg:
+      artifacts:
+        records:
+        - playback-realreg5-neg-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 200
+        duration_hours: 0.8393
+        duration_basis: Mixture duration
+      provenance:
+        description: 'playback: {"kind": "neg", "k": [2, 3], "interferer_pool": "drama", "interferer_schedule": "dialogue", "duration": [6, 25], "mix_gain_db": [-18, -14], "enroll_file": "realreg5", "pair": "playback-neg", "noise_floor": {"dbfs": [-58, -48], "kinds": {"white": 0.15, "pink": 0.15, "real": 0.7}, "real_pools": ["wham", "dns5_audioset", "dns5_freesound"]}, "enroll_store_seconds": 10}'
+    playback-room-pos:
+      artifacts:
+        records:
+        - playback-room-pos-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 200
+        duration_hours: 0.8424
+        duration_basis: Mixture duration
+      provenance:
+        description: 'playback: {"kind": "pos", "schedule": "full", "k": [2, 3], "interferer_pool": "drama", "interferer_schedule": "dialogue", "sir_db": [2, 10], "duration": [6, 25], "mix_gain_db": [-11, -7], "rir": {"interferer": "real"}, "pair": "playback-pos", "noise_floor": {"dbfs": [-58, -48], "kinds": {"white": 0.15, "pink": 0.15, "real": 0.7}, "real_pools": ["wham", "dns5_audioset", "dns5_freesound"]}, "enroll_store_seconds": 10}'
+  provenance:
+    status: complete
+    synthetic: full
+    description: 目标说话人 ASR 评测集：由 AISHELL-3、KeSpeech、MagicData、AISHELL-2、AISHELL-1 的官方 test 划分合成，覆盖注册音频劣化、目标说话人进场离场与缺席、纯噪声、环境与设备。只用于评测，不进训练。场景见 scripts/ts_benchmark/recipe.yaml。
+    sources:
+    - aishell3@legacy-20260804:test
+    - kespeech@legacy-20260804:test
+    - magicdata@legacy-20260804:test
+    - aishell2@legacy-20260804:test
+    - aishell@legacy-20260804:test
+    - cnceleb1@speaker-records-v1-20260912:test
+    - cnceleb1@speaker-records-v1-20260912:train
+    - cnceleb2@speaker-records-v1-20260912:train

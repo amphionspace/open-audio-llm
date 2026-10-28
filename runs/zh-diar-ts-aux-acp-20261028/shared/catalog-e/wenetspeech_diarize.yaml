@@ -1,0 +1,42 @@
+# 占位登记：WenetSpeech L 长音频的说话人日志伪标签已停止打标（2026-10-14），不转正、不进训练，详见状态文件。
+- schema_version: dataset-catalog/2.0
+  dataset_id: wenetspeech_diarize
+  version: moss-transcribe-diarize-0.9B
+  languages:
+    - zh
+  tasks:
+    - diarization
+    - speaker_attributed_asr
+  aliases: []
+  artifacts:
+    - name: preparation_state
+      kind: dataset-state
+      root_alias: aidc_data
+      relative_path: datasets/wenetspeech_diarize/versions/moss-transcribe-diarize-0.9B/state.json
+  splits:
+    train:
+      artifacts:
+        preparation_state:
+          - preparation_state
+      statistics:
+        source_recordings: 51358
+        source_hours: 22174
+      provenance:
+        preparation_status: stopped
+  provenance:
+    preparation_status: stopped
+    owner: mingdong
+    description: >-
+      WenetSpeech L 训练集原始长音频（≥120 秒，51,358 条 / 22,174 h）的说话人日志伪标签：
+      沿用 emilia2_zh_dialogue_diarize 的流程，本地 MOSS-Transcribe-Diarize 0.9B 整条打说话人和文本，
+      粗筛多人录音，在停顿处切 30–120 秒窗口，Qwen3-ASR 整窗核对；门槛先在试跑集上以 MOSS Pro 为参照重新确定。
+      2026-10-14 停止全量打标：保留 b000–b040 共 41 批（共 52 批）的整条打标与粗筛结果，
+      Qwen3-ASR 整窗核对只做到 30 批。不转正、不进训练，不发布为可用训练版本；
+      是否改为定向打标（声纹筛选音色相近的多人录音）看音色相近数据的效果再定。
+    source: wenetspeech@legacy-20260804
+    run_dir: /workspace/workspace/mingdong/data/amphiondata/wenetspeech-l-diarize-20261012
+  recipe_parameters:
+    diarization_model: MOSS-Transcribe-Diarize-0.9B
+    text_check_model: Qwen3-ASR
+    text_check_unit: window
+    window_seconds: [30, 120]

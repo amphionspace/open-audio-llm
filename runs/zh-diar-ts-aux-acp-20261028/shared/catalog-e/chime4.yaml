@@ -1,0 +1,233 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: chime4
+  version: hf-prummn-20261023
+  languages:
+  - en
+  tasks:
+  - asr
+  aliases:
+  - chime-4
+  - chime_4
+  artifacts:
+  - name: archive
+    kind: source-archive
+    root_alias: chime4
+    relative_path: source/hf-prummn-20261023/CHiME4.tar
+    expected_bytes: 11056834560
+    sha256: 46c7e669578e8f01c1e3ac151b9ee9c852cbe512e3473ed24f9eefecb9b4c9cd
+    metadata:
+      source_url: https://huggingface.co/datasets/Prummn/chime4
+      download_url: https://hf-mirror.com/datasets/Prummn/chime4/resolve/main/CHiME4.tar
+      upstream_lfs_sha256: 46c7e669578e8f01c1e3ac151b9ee9c852cbe512e3473ed24f9eefecb9b4c9cd
+  - name: isolated_1ch_track_dir
+    kind: source-directory
+    root_alias: chime4
+    relative_path: source/hf-prummn-20261023/extracted/CHiME4/data/audio/16kHz/isolated_1ch_track
+    metadata:
+      file_count: 5920
+      expected_bytes: 1163097652
+      tree_sha256: b1462763ee9579b4767f828ee91a354ba3af1bb84201cdd2b2aa5a7d68b4ed8b
+  - name: isolated_2ch_track_dir
+    kind: source-directory
+    root_alias: chime4
+    relative_path: source/hf-prummn-20261023/extracted/CHiME4/data/audio/16kHz/isolated_2ch_track
+    metadata:
+      file_count: 11840
+      expected_bytes: 2326195304
+      tree_sha256: 9694c83a2dc44be158881f5b34d7220712ae0b5be4cf90230981c9f57c2fbe23
+  - name: transcriptions_dir
+    kind: source-directory
+    root_alias: chime4
+    relative_path: source/hf-prummn-20261023/extracted/CHiME4/data/transcriptions
+    metadata:
+      file_count: 45890
+      expected_bytes: 11252567
+      tree_sha256: 185fb8875d45ea9b1181c6e713a23e6fb45bc476f6df54acf7eba355e0918507
+  - name: annotations_dir
+    kind: source-directory
+    root_alias: chime4
+    relative_path: source/hf-prummn-20261023/extracted/CHiME4/data/annotations
+    metadata:
+      file_count: 15
+      expected_bytes: 12202825
+      tree_sha256: 1d14a4d9f87c470e6b2aa39ffdcd8c9dcdfe9d51836242b4d3b6f3369b9f11f2
+  - name: wsj0_dir
+    kind: source-directory
+    root_alias: chime4
+    relative_path: source/hf-prummn-20261023/extracted/CHiME4/data/WSJ0
+    metadata:
+      file_count: 16436
+      expected_bytes: 2171315914
+      tree_sha256: c5624b50e79b50372fd26dd38448c70742c1532449eea7d9349be0d3569d6f02
+      license: LDC93S6A (WSJ0), LDC license required
+  - name: extracted_dir
+    kind: source-directory
+    root_alias: chime4
+    relative_path: source/hf-prummn-20261023/extracted/CHiME4
+    metadata: {}
+  - name: license
+    kind: license
+    root_alias: chime4
+    relative_path: source/hf-prummn-20261023/extracted/CHiME4/LICENCE.txt
+    expected_bytes: 1177
+    sha256: d32d97dd5e251d86276589fed7926dd38654893f9f0d40e411aba858a4d69716
+  splits:
+    dt05_real:
+      artifacts:
+        source_directory:
+        - isolated_1ch_track_dir
+        - isolated_2ch_track_dir
+        transcriptions:
+        - transcriptions_dir
+      statistics:
+        utterances: 1640
+        speakers: 4
+        duration_hours: 2.7468
+        duration_basis: sum of utterance audio lengths; the 1ch and 2ch tracks hold the same utterances
+      provenance:
+        source_split: dt05 real
+        audio_1ch: isolated_1ch_track/dt05_{bus,caf,ped,str}_real/<utt>_<ENV>.wav
+        audio_2ch: isolated_2ch_track/dt05_{bus,caf,ped,str}_real/<utt>_<ENV>.CH<n>.wav
+        transcript_file: transcriptions/dt05_real.trn_all
+    dt05_simu:
+      artifacts:
+        source_directory:
+        - isolated_1ch_track_dir
+        - isolated_2ch_track_dir
+        transcriptions:
+        - transcriptions_dir
+      statistics:
+        utterances: 1640
+        speakers: 4
+        duration_hours: 2.8936
+        duration_basis: sum of utterance audio lengths; the 1ch and 2ch tracks hold the same utterances
+      provenance:
+        source_split: dt05 simu
+        audio_1ch: isolated_1ch_track/dt05_{bus,caf,ped,str}_simu/<utt>_<ENV>.wav
+        audio_2ch: isolated_2ch_track/dt05_{bus,caf,ped,str}_simu/<utt>_<ENV>.CH<n>.wav
+        transcript_file: transcriptions/dt05_simu.trn_all
+    et05_real:
+      artifacts:
+        source_directory:
+        - isolated_1ch_track_dir
+        - isolated_2ch_track_dir
+        transcriptions:
+        - transcriptions_dir
+      statistics:
+        utterances: 1320
+        speakers: 4
+        duration_hours: 2.1741
+        duration_basis: sum of utterance audio lengths; the 1ch and 2ch tracks hold the same utterances
+      provenance:
+        source_split: et05 real
+        audio_1ch: isolated_1ch_track/et05_{bus,caf,ped,str}_real/<utt>_<ENV>.wav
+        audio_2ch: isolated_2ch_track/et05_{bus,caf,ped,str}_real/<utt>_<ENV>.CH<n>.wav
+        transcript_file: transcriptions/et05_real.trn_all
+    et05_simu:
+      artifacts:
+        source_directory:
+        - isolated_1ch_track_dir
+        - isolated_2ch_track_dir
+        transcriptions:
+        - transcriptions_dir
+      statistics:
+        utterances: 1320
+        speakers: 4
+        duration_hours: 2.2795
+        duration_basis: sum of utterance audio lengths; the 1ch and 2ch tracks hold the same utterances
+      provenance:
+        source_split: et05 simu
+        audio_1ch: isolated_1ch_track/et05_{bus,caf,ped,str}_simu/<utt>_<ENV>.wav
+        audio_2ch: isolated_2ch_track/et05_{bus,caf,ped,str}_simu/<utt>_<ENV>.CH<n>.wav
+        transcript_file: transcriptions/et05_simu.trn_all
+  provenance:
+    source: CHiME-4 challenge package (University of Sheffield, Inria, MERL), community mirror Prummn/chime4 on Hugging Face
+    url: https://www.chimechallenge.org/challenges/chime4/download
+    snapshot_date: '2026-10-23'
+    license: Real, booth and simulated CHiME data are CC BY-NC-SA 2.0 UK (non-commercial; commercial products need the authors'
+      permission). WSJ0 audio and prompts are LDC93S6A and need an LDC license. The mirror is unofficial.
+    description: CHiME-4 评测数据：WSJ0 句子在公交（BUS）、咖啡馆（CAF）、步行街（PED）、街道（STR）四种噪声环境下用 6 麦平板录制（real）或模拟（simu），英文
+      16 kHz 单声道 16 bit。这里有 dev（dt05）和 eval（et05）的 1 通道、2 通道 track 音频与全部转写，共 5920 条、10.09 小时，每组 4 个说话人；常用 1 通道
+      track 的 et05_real 报 WER。没有训练音频（tr05）、6 通道 track、背景噪声和 embedded 连续录音，这些属于完整 CHiME-3（LDC2017S24），公开渠道拿不到，只能评测。
+    acquisition: Downloaded CHiME4.tar from hf-mirror.com (sha256 equals the Hugging Face LFS oid) and extracted it under extracted/.
+      The 31 symlinks into the absent ../../CHiME3 tree (Manifest/CHiME3_*.txt and audio/16kHz/{backgrounds,embedded,enhanced,isolated,isolated_6ch_track})
+      were not extracted. The tar also carries the WSJ0 si_tr_s/si_dt_05/si_et_05 .wv1 files and the Kaldi baseline models under
+      tools/ASR_models.
+    known_issues:
+    - annotations/ has the 1ch/2ch track channel lists only for dt05; the et05 lists are not in this package.
+    integrity: local_sha256_recorded
+- schema_version: dataset-catalog/2.0
+  dataset_id: chime4
+  version: isolated-1ch-20261026
+  languages:
+  - en
+  tasks:
+  - asr
+  aliases: []
+  artifacts:
+  - name: dt05_real_recordings
+    kind: lhotse-recordings
+    root_alias: chime4
+    relative_path: versions/isolated-1ch-20261026/manifests/chime4_recordings_dt05_real.jsonl.gz
+    expected_bytes: 26541
+    sha256: a55b5271e24356a2002f5f7bb196b378e044010a11d595ae9cb7516ac16f1092
+    metadata:
+      record_count: 1640
+  - name: dt05_real_supervisions
+    kind: lhotse-supervisions
+    root_alias: chime4
+    relative_path: versions/isolated-1ch-20261026/manifests/chime4_supervisions_dt05_real.jsonl.gz
+    expected_bytes: 84356
+    sha256: ef7b611f61e0377bfd4882a43ba413bcfb5fe864e3fc7ccca0e674e7d1222e7f
+    metadata:
+      record_count: 1640
+  - name: et05_real_recordings
+    kind: lhotse-recordings
+    root_alias: chime4
+    relative_path: versions/isolated-1ch-20261026/manifests/chime4_recordings_et05_real.jsonl.gz
+    expected_bytes: 21016
+    sha256: 83b38ce581292c02f0bf811787205b6f94dbfe6bd627d9dd32d2f427d06acfb7
+    metadata:
+      record_count: 1320
+  - name: et05_real_supervisions
+    kind: lhotse-supervisions
+    root_alias: chime4
+    relative_path: versions/isolated-1ch-20261026/manifests/chime4_supervisions_et05_real.jsonl.gz
+    expected_bytes: 60879
+    sha256: b9b8aaae5fe085ed1ed10c28cfcf8c981068e5913bf0c3631ecb8dd051bf312c
+    metadata:
+      record_count: 1320
+  splits:
+    dt05_real:
+      artifacts:
+        recordings:
+        - dt05_real_recordings
+        supervisions:
+        - dt05_real_supervisions
+      task: asr
+      statistics:
+        utterances: 1640
+        speakers: 4
+        duration_hours: 2.7468
+        duration_basis: sum of utterance audio lengths
+    et05_real:
+      artifacts:
+        recordings:
+        - et05_real_recordings
+        supervisions:
+        - et05_real_supervisions
+      task: asr
+      statistics:
+        utterances: 1320
+        speakers: 4
+        duration_hours: 2.1741
+        duration_basis: sum of utterance audio lengths
+  provenance:
+    source: chime4@hf-prummn-20261023 (CHiME-4 challenge package, community mirror Prummn/chime4)
+    snapshot_date: '2026-10-26'
+    license: Real CHiME data CC BY-NC-SA 2.0 UK (non-commercial); WSJ0 prompts LDC93S6A.
+    description: CHiME-4 真实录音 1 通道 track 的评测清单：dev（dt05_real，1,640 条）和 eval（et05_real，1,320 条），公交 / 咖啡馆 / 步行街 / 街道四种环境，每组
+      4 个说话人，英文 16 kHz。音频是 hf-prummn-20261023 解包目录里的 isolated_1ch_track 原文件（不复制），参考文本取每条的 .trn（挑战赛官方规范化文本：大写，缩写拼成 N. E. C.）。只能评测：训练音频
+      tr05 属于完整 CHiME-3（LDC），公开渠道没有；常用 et05_real 报单通道 WER。
+    derived_from: chime4@hf-prummn-20261023
+    integrity: local_sha256_recorded

@@ -1,0 +1,344 @@
+# Emilia2 中文多人对话说话人日志伪标签：30–120 秒窗口，按窗口整体核对后保留。
+- schema_version: dataset-catalog/2.0
+  dataset_id: emilia2_zh_dialogue_diarize
+  version: moss-transcribe-diarize-0.9B
+  languages:
+    - zh
+  tasks:
+    - speaker_attributed_asr
+    - diarization
+  aliases: []
+  artifacts:
+    - name: preparation_state
+      kind: dataset-state
+      root_alias: aidc_data
+      relative_path: datasets/emilia2_zh_dialogue_diarize/versions/moss-transcribe-diarize-0.9B/state.json
+    - name: train-audio-index
+      kind: jsonl-metadata
+      root_alias: aidc_data
+      relative_path: datasets/emilia2_zh_dialogue_diarize/versions/moss-transcribe-diarize-0.9B/emilia2_zh_dialogue-train-audio-index-flac.jsonl.gz
+      expected_bytes: 1302821
+      sha256: 8fb1d9e77ef3a72f22e4e0ef15466a5a2f10637e9f53b2b13637e3aaf07e0dd1
+      metadata:
+        record_count: 53965
+        description: cut_id → emilia2@extracted-enzh-20261012 解包后转成的 16 kHz 单声道 FLAC（m4a-128k/zh/dialog；m4a 已删除，只用 flac）
+    - name: train_120s-records
+      kind: audio-records
+      root_alias: aidc_data
+      relative_path: datasets/emilia2_zh_dialogue_diarize/versions/moss-transcribe-diarize-0.9B/emilia2_zh_dialogue-train_120s.jsonl.gz
+      expected_bytes: 378812832
+      sha256: bd3dd519d45e39d74b277bccf0b58432c6d740294e420922112a07da364a9243
+      metadata:
+        record_count: 221492
+    - name: train_120s-speaker-merge-excluded-records
+      kind: metadata
+      root_alias: aidc_data
+      relative_path: datasets/emilia2_zh_dialogue_diarize/versions/moss-transcribe-diarize-0.9B/train_120s-speaker-merge-excluded-records.txt
+      expected_bytes: 691963
+      sha256: 2b403cceecd9cd94717f6b52ef0d29b818489f9f386e6690869576914115a7b1
+      metadata:
+        record_count: 10766
+        description: 训练要排除的 train_120s 记录 id（每行一个）：MOSS 把两个 Emilia2 原始说话人标成一人的窗口
+  splits:
+    train_120s:
+      artifacts:
+        records:
+          - train_120s-records
+        audio_index:
+          - train-audio-index
+      group: train
+      statistics:
+        records: 221492
+        recordings: 53965
+        duration_hours: 5803.9
+        target_speech_hours: 5131.3
+        max_duration_seconds: 120.0
+        speaker_count_share_percent:
+          "1": 16.8
+          "2": 51.0
+          "3": 19.2
+          "4": 7.4
+          "5+": 5.6
+      provenance:
+        training_use: train
+  provenance:
+    preparation_status: prepared
+    owner: mingdong
+    description: >-
+      Emilia2 中文多人对话（只取 zh、≥120 秒，源 78,994 条 / 8,097 h）的说话人日志伪标签。
+      本地 MOSS-Transcribe-Diarize 0.9B 粗筛（≥2 人且每人 ≥5 秒，保留 6,112.6 h）并整条打说话人和文本；
+      在停顿处切成 30–120 秒窗口，按窗口整体保留或丢弃：Qwen3-ASR 整窗识别，文字差异 ≤ 15%（不计重叠处）；
+      再与 Emilia2 自带的带时间短句比对说话人，上游同一人被拆到其他编号的比例 ≤ 0.2。
+      音频直接引用 emilia2@extracted-enzh-20261012 解包的 m4a（AAC 128 kbps、44.1 kHz 单声道，与打标所用的 tar 成员逐字节同大小），
+      记录按 cut_id + start/duration 引用；读取需要 PATH 上有 ffmpeg（lhotse 的 audioread 后端），训练时重采样到 16 kHz。
+      2026-10-12 起由原先自转的 16 kHz FLAC 改为引用解包 m4a，时间轴不变（抽查波形对齐误差 0 样本，53,965 条录音解码时长全部一致）。
+      试跑 100 段以 MOSS Pro 为参照：保留窗口文字错误率约 3%，说话人混淆 0.86%。
+      已知局限：约 16.8% 的窗口只有一个说话人；有声剧、短剧中一人配多角时 MOSS 可能按角色拆成多个说话人。
+      与 emilia2@tts-unified-v0.1 同源，可按 recording_id 对应；如需留验证/测试集，请两边一起排除。
+    source: /workspace/data/DATA-TTS/Emilia2/Emilia2_TTS_m4a/data
+    source_dataset: emilia2
+    annotation: moss-transcribe-diarize-0.9b+qwen3-asr-window-check(cer<=15)+emilia2-utterance-speaker-check(split<=0.2)
+    window_rule: windows kept whole by the window text and speaker checks
+    training_exclusions: >-
+      exclude_records train_120s-speaker-merge-excluded-records.txt in this version directory
+      (2026-10-15)：10,766 条 / 295.7 h，MOSS 的一个说话人覆盖了两个及以上 Emilia2 原始说话人
+      （只用整条落在一个 MOSS 说话人上的原始短句判断）。听审 9 题中 7 题确为两人被并成一人，
+      声纹（ERes2NetV2）分不开，故全部排除。排除后 210,726 条 / 5,508.2 h；各说话人数档丢 4.3–7.8%。
+      原始短句只覆盖约 47% 的语音，没有短句覆盖处的并人查不到。
+    audit: datasets/emilia2_zh_dialogue_diarize/versions/moss-transcribe-diarize-0.9B/audit.json
+    audio_source: emilia2@extracted-enzh-20261012
+    known_issues:
+      - 读取 m4a 需要 ffmpeg；训练环境没有 ffmpeg 时 lhotse 报 AudioLoadingError（NoBackendError）
+    superseded_by: emilia2_zh_dialogue_diarize@moss-transcribe-diarize-0.9B-pro4plus
+    run_dir: /workspace/workspace/mingdong/data/amphiondata/emilia2-zh-dialogue-diarize-20261010
+  recipe_parameters:
+    diarization_model: MOSS-Transcribe-Diarize-0.9B
+    prescreen: at_least_2_speakers_each_5s
+    window_seconds: [30, 120]
+    text_check_model: Qwen3-ASR
+    text_check_unit: window
+    max_text_cer: 15
+    speaker_check_reference: emilia2_own_timed_utterances
+    max_speaker_split: 0.2
+    audio: emilia2_extracted_m4a_128k
+# Emilia2 中文多人对话说话人日志伪标签（m4a-128k）：在 moss-transcribe-diarize-0.9B 基础上，≥4 个说话人的窗口改用 MOSS Pro 标注并复核，并人窗口已剔除（2026-10-22 导出）。
+- schema_version: dataset-catalog/2.0
+  dataset_id: emilia2_zh_dialogue_diarize
+  version: moss-transcribe-diarize-0.9B-pro4plus
+  languages:
+    - zh
+  tasks:
+    - speaker_attributed_asr
+    - diarization
+  aliases: []
+  artifacts:
+    - name: preparation_state
+      kind: dataset-state
+      root_alias: aidc_data
+      relative_path: datasets/emilia2_zh_dialogue_diarize/versions/moss-transcribe-diarize-0.9B-pro4plus/state.json
+    - name: train-audio-index
+      kind: jsonl-metadata
+      root_alias: aidc_data
+      relative_path: datasets/emilia2_zh_dialogue_diarize/versions/moss-transcribe-diarize-0.9B-pro4plus/emilia2_zh_dialogue-train-audio-index.jsonl.gz
+      expected_bytes: 1308965
+      sha256: 7b7a788ca1ca932e7748b43c1fad88c2562e2afbafaea3934dc08a4fb2e04241
+      metadata:
+        record_count: 53194
+        description: cut_id → emilia2@extracted-enzh-flac16k-20261012 的 16 kHz 单声道 FLAC（m4a-128k/zh/dialog；m4a 已删除，只用 flac）
+    - name: train_120s-records
+      kind: audio-records
+      root_alias: aidc_data
+      relative_path: datasets/emilia2_zh_dialogue_diarize/versions/moss-transcribe-diarize-0.9B-pro4plus/emilia2_zh_dialogue-train_120s.jsonl.gz
+      expected_bytes: 360767790
+      sha256: b54a1aff2815ca1abdd6000584ace120179c240d80d73c4ed4dbc564b0387c3d
+      metadata:
+        record_count: 209816
+  splits:
+    train_120s:
+      artifacts:
+        records:
+          - train_120s-records
+        audio_index:
+          - train-audio-index
+      group: train
+      statistics:
+        records: 209816
+        recordings: 53194
+        duration_hours: 5483.6
+        target_speech_hours: 4870.2
+        max_duration_seconds: 120.0
+        moss_pro_labeled_records: 25420
+        moss_pro_labeled_hours: 682.6
+        speaker_count_share_percent:
+          "1": 16.8
+          "2": 51.8
+          "3": 20.8
+          "4": 5.4
+          "5+": 5.2
+      provenance:
+        training_use: train
+  provenance:
+    preparation_status: prepared
+    owner: mingdong
+    description: >-
+      替代 moss-transcribe-diarize-0.9B：同一批 m4a-128k 中文对话录音、同样的 30–120 秒窗口，两个版本不要一起用。
+      MOSS Pro 质量抽检显示本地 0.9B 在 ≥4 个说话人的窗口上偏弱（好窗口 4 人约 74%、5 人及以上 51–60%），
+      因此把上一版本保留窗口中本地标出 ≥4 人的 28,834 个 / 778.2 h 按窗口片段送 MOSS Pro（moss-transcribe-diarize-pro）重标，
+      再过同样的整窗文字核对（Qwen3-ASR，CER ≤ 15%，不计重叠）和说话人检查（Emilia2 自带短句，split ≤ 0.2）：
+      27,762 个 / 749.4 h 换成 Pro 标注；521 个 / 13.5 h 未通过而丢弃；551 个 / 15.3 h Pro 没有结果（多为安全策略拒绝），沿用本地标注。
+      Pro 常把本地多出来的说话人合并：本地 4 人的窗口中 3,396 个 Pro 判为 3 人、411 个判为 2 人（听审确认过本地把同一人拆成多人的例子）。
+      被并人检查标记的窗口（一个说话人覆盖两个及以上 Emilia2 原始说话人）导出时已经剔除，按最终标注重算，共 11,155 个 / 306.7 h
+      （本地标注 8,813 个，与上一版本的排除名单一致；Pro 标注 2,342 个），训练不需要再排除。
+      结果 209,816 条 / 5,483.6 h，其中 Pro 标注 25,420 条 / 682.6 h；上一版本排除并人窗口后是 210,726 条 / 5,508.2 h。
+      记录里不区分标注来源，逐窗口的来源（labels_from）在运行目录 export/window-merge-v6/。
+      音频引用解包后转成的 16 kHz 单声道 FLAC，记录按 cut_id + start/duration 引用，不需要 ffmpeg；
+      约 11% 的记录窗口末尾超出 FLAC 末尾，最多 0.6 毫秒（上一版本同样）。
+      已知局限：约 16.8% 的窗口只有一个说话人；有声剧、短剧中一人配多角时可能按角色拆成多个说话人；
+      10 题听审中多人重叠处 Pro 并不比本地明显更好（两边都会漏标对方标出的重叠）。
+      与 emilia2@tts-unified-v0.1 同源，可按 recording_id 对应；如需留验证/测试集，请两边一起排除。
+    source: emilia2_zh_dialogue_diarize@moss-transcribe-diarize-0.9B
+    source_dataset: emilia2
+    annotation: moss-transcribe-diarize-0.9b+moss-transcribe-diarize-pro(windows-with-4+-local-speakers)+qwen3-asr-window-check(cer<=15)+emilia2-utterance-speaker-check(split<=0.2)+speaker-merge-excluded
+    window_rule: windows kept whole by the window text and speaker checks; windows flagged by speaker_merge (> 0) dropped
+    audit: datasets/emilia2_zh_dialogue_diarize/versions/moss-transcribe-diarize-0.9B-pro4plus/audit.json
+    audio_source: emilia2@extracted-enzh-flac16k-20261012
+    run_dir: /workspace/workspace/mingdong/data/amphiondata/emilia2-zh-dialogue-diarize-20261010
+  recipe_parameters:
+    diarization_model: MOSS-Transcribe-Diarize-0.9B
+    relabel_model: moss-transcribe-diarize-pro
+    relabel_selection: kept_windows_with_at_least_4_local_speakers
+    prescreen: at_least_2_speakers_each_5s
+    window_seconds: [30, 120]
+    text_check_model: Qwen3-ASR
+    text_check_unit: window
+    max_text_cer: 15
+    speaker_check_reference: emilia2_own_timed_utterances
+    max_speaker_split: 0.2
+    speaker_merge: drop_flagged_windows
+    audio: emilia2_extracted_flac16k_m4a_128k
+# Emilia2 m4a-64k 中文对话的说话人日志伪标签：30–120 秒窗口，按窗口整体核对后保留，并人窗口已剔除（2026-10-15 起打标，2026-10-19 导出）。
+- schema_version: dataset-catalog/2.0
+  dataset_id: emilia2_zh_dialogue_diarize
+  version: moss-transcribe-diarize-0.9B-m4a64k
+  languages:
+    - zh
+  tasks:
+    - speaker_attributed_asr
+    - diarization
+  aliases: []
+  artifacts:
+    - name: preparation_state
+      kind: dataset-state
+      root_alias: aidc_data
+      relative_path: datasets/emilia2_zh_dialogue_diarize/versions/moss-transcribe-diarize-0.9B-m4a64k/state.json
+    - name: train-audio-index
+      kind: jsonl-metadata
+      root_alias: aidc_data
+      relative_path: datasets/emilia2_zh_dialogue_diarize/versions/moss-transcribe-diarize-0.9B-m4a64k/emilia2_zh_dialogue-train-audio-index.jsonl.gz
+      expected_bytes: 973289
+      sha256: 87ac6fda8436ef1156f552e4d9a89da29a57dc8f6f2bcf1cc5fa758f1493f050
+      metadata:
+        record_count: 43103
+        description: cut_id → emilia2@extracted-enzh-flac16k-20261012 的 16 kHz 单声道 FLAC（m4a-64k/zh/dialog；m4a 已删除，只用 flac）
+    - name: train_120s-records
+      kind: audio-records
+      root_alias: aidc_data
+      relative_path: datasets/emilia2_zh_dialogue_diarize/versions/moss-transcribe-diarize-0.9B-m4a64k/emilia2_zh_dialogue-train_120s.jsonl.gz
+      expected_bytes: 227785207
+      sha256: 30bf90002641746b5849cf913c85fe9eca6ed9a607e1e4a7a22128d1c6dd14e8
+      metadata:
+        record_count: 138644
+  splits:
+    train_120s:
+      artifacts:
+        records:
+          - train_120s-records
+        audio_index:
+          - train-audio-index
+      group: train
+      statistics:
+        records: 138644
+        recordings: 43103
+        duration_hours: 3440.9
+        target_speech_hours: 3039.2
+        max_duration_seconds: 120.0
+        speaker_count_share_percent:
+          "1": 10.7
+          "2": 53.2
+          "3": 19.9
+          "4": 9.0
+          "5+": 7.3
+      provenance:
+        training_use: train
+  provenance:
+    preparation_status: prepared
+    owner: mingdong
+    description: >-
+      Emilia2 解包数据中 m4a-64k 子集的中文对话（≥120 秒，源 46,615 条 / 3,895 h）的说话人日志伪标签；
+      moss-transcribe-diarize-0.9B 版本只覆盖 m4a-128k 子集，两者录音不重叠，可以一起用。
+      流程与该版本相同：本地 MOSS-Transcribe-Diarize 0.9B 粗筛（≥2 人且每人 ≥5 秒，保留 43,877 条 / 3,720.4 h）并整条打说话人和文本；
+      在停顿处切成 30–120 秒窗口（149,199 个 / 3,715.4 h），按窗口整体保留或丢弃：Qwen3-ASR 整窗识别，文字差异 ≤ 15%（不计重叠处，丢 48.8 h）；
+      与 Emilia2 自带的带时间短句比对说话人，上游同一人被拆到其他编号的比例 ≤ 0.2（丢 45.0 h）；120 秒内无停顿等其他原因丢 19.4 h，
+      剩 144,774 个 / 3,602.0 h。规则和门槛沿用 128k 版本的校准与听审结论，没有重新校准（同一来源、同类节目，只是码率不同）。
+      与 128k 版本不同，被并人检查标记的窗口（一个 MOSS 说话人覆盖两个及以上 Emilia2 原始说话人）导出时已经剔除，
+      共 6,130 个 / 161.1 h，各说话人数档丢 3.0–6.5%；训练不需要再排除。
+      音频引用解包后转成的 16 kHz 单声道 FLAC（完整解码 m4a，不补零不截断），记录按 cut_id + start/duration 引用，不需要 ffmpeg。
+      约 3.3% 的记录最后一句的结束时间比音频末尾晚（MOSS 时间戳），几乎都在 0.1 秒以内，最多的两条晚 0.8 秒和 9.9 秒；128k 版本也有同样现象。
+      已知局限：约 10.7% 的窗口只有一个说话人；有声剧、短剧中一人配多角时 MOSS 可能按角色拆成多个说话人。
+      与 emilia2@tts-unified-v0.1 同源，可按 recording_id 对应；如需留验证/测试集，请两边一起排除。
+    source: /workspace/data/DATA-TTS/Emilia2/Emilia2_TTS_m4a_64kbps/data
+    source_dataset: emilia2
+    annotation: moss-transcribe-diarize-0.9b+qwen3-asr-window-check(cer<=15)+emilia2-utterance-speaker-check(split<=0.2)+speaker-merge-excluded
+    window_rule: windows kept whole by the window text and speaker checks; windows flagged by speaker_merge (> 0) dropped
+    audit: datasets/emilia2_zh_dialogue_diarize/versions/moss-transcribe-diarize-0.9B-m4a64k/audit.json
+    audio_source: emilia2@extracted-enzh-flac16k-20261012
+    run_dir: /workspace/workspace/mingdong/data/amphiondata/emilia2-64k-zh-dialogue-diarize-20261015
+  recipe_parameters:
+    diarization_model: MOSS-Transcribe-Diarize-0.9B
+    prescreen: at_least_2_speakers_each_5s
+    window_seconds: [30, 120]
+    text_check_model: Qwen3-ASR
+    text_check_unit: window
+    max_text_cer: 15
+    speaker_check_reference: emilia2_own_timed_utterances
+    max_speaker_split: 0.2
+    speaker_merge: drop_flagged_windows
+    audio: emilia2_extracted_flac16k_m4a_64k
+# Emilia2 m4a-64k 中文对话的句级热词标注（2026-10-16 起，47 批全部完成于 2026-10-19；b000–b020 用 qwen3.8-flash，b021–b046 用 doubao-seed-2-1-turbo）。
+- schema_version: dataset-catalog/2.0
+  dataset_id: emilia2_zh_dialogue_diarize
+  version: hotwords-qwen3.8-flash-m4a64k-v1
+  languages:
+    - zh
+  tasks:
+    - asr
+  aliases: []
+  artifacts:
+    - name: preparation_state
+      kind: dataset-state
+      root_alias: aidc_data
+      relative_path: datasets/emilia2_zh_dialogue_diarize/versions/hotwords-qwen3.8-flash-m4a64k-v1/state.json
+    - name: hotwords
+      kind: metadata
+      root_alias: aidc_data
+      relative_path: datasets/emilia2_zh_dialogue_diarize/versions/hotwords-qwen3.8-flash-m4a64k-v1/hotwords.jsonl.gz
+      expected_bytes: 15959729
+      sha256: 088195b4d974913f5fba74625705f60f91df0805f547c940ea3b737847695cd6
+      metadata:
+        record_count: 3794060
+  splits:
+    train:
+      artifacts:
+        preparation_state:
+          - preparation_state
+        hotwords:
+          - hotwords
+      statistics:
+        utterances: 3794902
+        duration_hours: 3167.4
+        labeled_utterances: 3794060
+        utterances_with_hotwords: 733944
+        hours_with_hotwords: 983.3
+        hotword_mentions: 921092
+      provenance:
+        preparation_status: complete
+  provenance:
+    preparation_status: complete
+    owner: mingdong
+    description: >-
+      对 emilia2_zh_dialogue_diarize@moss-transcribe-diarize-0.9B-m4a64k 窗口合并后的每句转写，
+      用通用大模型抽取热词（人名、地名、机构、专有名词），每次 20 句、按录音内相邻句分组，
+      结果逐句写回；经规则过滤（单字、纯英文碎片、常见国名、长于 12 字）。
+      前后两段用了不同模型：b000–b020（1,710,408 句）用阿里 qwen3.8-flash；阿里账号欠费后，
+      b021–b046（2,084,494 句）改用火山 doubao-seed-2-1-turbo-260628，提示词相同。
+      在 300 句开发集上 doubao 精确率 0.79、召回 0.70，qwen3.8-flash 为 0.87、0.74（参照由 qwen 输出生成，偏向 qwen）；
+      有热词的句子占比 qwen 段 20.9%、doubao 段 18.1%。文件里不区分行来自哪个模型，按批次号区分。
+      hotwords.jsonl.gz 每行 {id, hotwords}，id 对应窗口合并 supervisions 的句 id；842 句未标（hotwords 缺失），
+      其中 234 句是 qwen 段内容审核拒绝，608 句是 doubao 段重试后仍失败。
+      句级旁路文件，按窗口使用时需同时排除 speaker_merge 窗口。
+    source: emilia2_zh_dialogue_diarize@moss-transcribe-diarize-0.9B-m4a64k
+    run_dir: /workspace/workspace/mingdong/data/amphiondata/emilia2-64k-hotwords-20261016
+  recipe_parameters:
+    hotword_model: qwen3.8-flash (b000-b020) + doubao-seed-2-1-turbo-260628 (b021-b046)
+    prompt: extract_hotword + conversational rules v3 + batch mode
+    utterances_per_call: 20

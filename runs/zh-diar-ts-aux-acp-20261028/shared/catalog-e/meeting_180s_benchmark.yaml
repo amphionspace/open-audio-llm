@@ -1,0 +1,139 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: meeting_180s_benchmark
+  version: v1-20261008
+  languages:
+  - en
+  - zh
+  - zh-en
+  tasks:
+  - speaker_attributed_asr
+  artifacts:
+  - name: audio-index
+    kind: audio-index
+    root_alias: meeting_180s_benchmark
+    relative_path: versions/v1-20261008/audio-index.jsonl.gz
+    sha256: 3466a9a5daf18fd784d2b04108e157a1ace8aa6729dd9053083230f73937b297
+    metadata:
+      record_count: 424
+  - name: aishell4_test-records
+    kind: audio-records
+    root_alias: meeting_180s_benchmark
+    relative_path: versions/v1-20261008/records/aishell4_test.jsonl.gz
+    sha256: 3fbd2c305e17defaed8fe2d6646649098788def28ed4d79150d365f8c2ee7c7d
+    metadata:
+      record_count: 120
+  - name: alimeeting_test-records
+    kind: audio-records
+    root_alias: meeting_180s_benchmark
+    relative_path: versions/v1-20261008/records/alimeeting_test.jsonl.gz
+    sha256: 327ef28a9cf4ffc3fb41878b835ad8172cd6a64611f598fac1d77e6c3436e952
+    metadata:
+      record_count: 120
+  - name: ami_test-records
+    kind: audio-records
+    root_alias: meeting_180s_benchmark
+    relative_path: versions/v1-20261008/records/ami_test.jsonl.gz
+    sha256: 5aa24860d275e6f5463e4ba70fcc40bd51c13915ad9d1757c4f360eb9e317d3a
+    metadata:
+      record_count: 94
+  - name: synthetic_en-records
+    kind: audio-records
+    root_alias: meeting_180s_benchmark
+    relative_path: versions/v1-20261008/records/synthetic_en.jsonl.gz
+    sha256: 3d941462762c752bfd70e83f235a02963546410808981e3cda8f87a3e02a9e63
+    metadata:
+      record_count: 30
+  - name: synthetic_zh-records
+    kind: audio-records
+    root_alias: meeting_180s_benchmark
+    relative_path: versions/v1-20261008/records/synthetic_zh.jsonl.gz
+    sha256: 15e7fc03f0fc8852e654ec1e78e656a5ecdc69a699800ebc1bb76db6c95413ee
+    metadata:
+      record_count: 30
+  - name: synthetic_zh-en-records
+    kind: audio-records
+    root_alias: meeting_180s_benchmark
+    relative_path: versions/v1-20261008/records/synthetic_zh-en.jsonl.gz
+    sha256: 7ff49dcc1edc5ed14fb09a708866e7f39d66c348762b5e41b5ca945c8e9b3c59
+    metadata:
+      record_count: 30
+  splits:
+    aishell4_test:
+      artifacts:
+        records:
+        - aishell4_test-records
+        audio_index:
+        - audio-index
+      statistics:
+        records: 120
+        duration_hours: 5.9598
+        duration_basis: Clip audio duration
+    alimeeting_test:
+      artifacts:
+        records:
+        - alimeeting_test-records
+        audio_index:
+        - audio-index
+      statistics:
+        records: 120
+        duration_hours: 6.0829
+        duration_basis: Clip audio duration
+    ami_test:
+      artifacts:
+        records:
+        - ami_test-records
+        audio_index:
+        - audio-index
+      statistics:
+        records: 94
+        duration_hours: 4.6865
+        duration_basis: Clip audio duration
+    synthetic_en:
+      artifacts:
+        records:
+        - synthetic_en-records
+        audio_index:
+        - audio-index
+      statistics:
+        records: 30
+        duration_hours: 1.4941
+        duration_basis: Clip audio duration
+    synthetic_zh:
+      artifacts:
+        records:
+        - synthetic_zh-records
+        audio_index:
+        - audio-index
+      statistics:
+        records: 30
+        duration_hours: 1.4849
+        duration_basis: Clip audio duration
+    synthetic_zh-en:
+      artifacts:
+        records:
+        - synthetic_zh-en-records
+        audio_index:
+        - audio-index
+      statistics:
+        records: 30
+        duration_hours: 1.4961
+        duration_basis: Clip audio duration
+  provenance:
+    status: complete
+    synthetic: partial
+    description: 部署长度（约 180 秒）会议转写评测集：AISHELL-4 test、AliMeeting Test、AMI SDM test 各会议均匀取 6 个窗口，另有中文 / 英文 / 中英混合 6、8、10 人远场合成会议各 10 段；共 424 段 21.2 小时。仅用于评测。
+    windowing: 在 150–210 秒内的说话空隙处切，不切断句子；无空隙时把跨界句子完整并入窗口（最长 244 秒）。真实会议远场通道取均值。
+    references: 说话人标签按首次发言排序为 S1、S2…；时间相对片段起点；真实会议为原始人工标注，合成会议为合成时间线。
+    sources:
+    - aishell4@legacy-20260804:test
+    - alimeeting_sdm@icefall-20260908:test
+    - ami_sdm@icefall-20260908:test
+    - aishell@legacy-20260804:test（合成说话人）
+    - librispeech@legacy-20260804:test-clean（合成说话人）
+    - real_rir_slr28@prepared-20260908（合成混响）
+    - musan@legacy-20260804:noise sound-bible（合成噪声，SNR 10–20 dB）
+    limitations: 合成噪声与 open-audio-llm 训练加噪同为 MUSAN；无 8 人以上真实会议；切点对齐说话空隙。
+    builder: open-audio-llm runs/unified-diarization-asr-20261001 configs/build-meeting-benchmark.yaml（执行 003）与 export-meeting-benchmark-dataset.yaml
+    backup: whai:open-audio-llm/datasets/meeting_180s_benchmark/
+    dataset_family: meeting_benchmark
+    usage: evaluation_only

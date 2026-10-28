@@ -1,0 +1,58 @@
+  - schema_version: dataset-catalog/2.0
+    dataset_id: magicdata_ramc
+    version: clean-dual-pass-20261027
+    languages:
+      - zh
+    tasks:
+      - asr
+    aliases: []
+    derived_from: magicdata_ramc@clean-dual-qwen-moss-v1-20261008
+    artifacts:
+      - name: train_recordings
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/magicdata_ramc/versions/legacy-20260804/train_rec_0/magicdata_ramc_recordings_train.jsonl.gz
+        expected_bytes: 4561
+        sha256: 9b3dbbe731f17f1821d92aad52cd2ae7d7d5333a4586e13b31c8a4378f79bcdc
+        metadata:
+          record_count: 289
+          shared_with: magicdata_ramc@icefall-20260908
+      - name: train_supervisions
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/magicdata_ramc/versions/clean-dual-pass-20261027/supervisions/train.jsonl.gz
+        expected_bytes: 7167650
+        sha256: 4998989aaa2dccd4f41dcfacab47ed296dff9e706e344ee4ca2382614aa08d2f
+        metadata:
+          record_count: 166711
+          pass_count: 166711
+          punctuated: false
+      - name: record_index
+        kind: lance-record-index
+        root_alias: aidc_data
+        relative_path: datasets/magicdata_ramc/versions/clean-dual-pass-20261027/record_index/index.json
+        expected_bytes: 766
+        sha256: 82f8b86dae17bc2189273dabbb5ec72d46190ada91c3dd64a90ca1ee6622fe20
+        metadata:
+          snapshot_version: 13
+          rows: 166711
+          schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+    splits:
+      train:
+        artifacts:
+          recordings:
+            - train_recordings
+          supervisions:
+            - train_supervisions
+          records_lance:
+            - record_index
+        statistics:
+          duration_hours: 124.9863
+          duration_basis: sum of supervision durations of the kept rows
+    recipe_parameters:
+      filter_rules: consensus-v6
+      rewrite_rules: wenetspeech-faithful-v5
+      filters: rows of magicdata_ramc@clean-dual-qwen-moss-v1-20261008 train_supervisions_no_punc (plain text) with custom.clean.pass=true
+      clean_pass_only: true
+    provenance:
+      description: magicdata_ramc@clean-dual-qwen-moss-v1-20261008 训练集（MagicData-RAMC 电话对话）里清洗标记 custom.clean.pass=true 的分段，共 166711 条 / 125.0 小时（源 168464 条，去掉未通过的 1753 条）；每行原样保留，包括 custom.clean，只用无标点文本。录音清单沿用源版本（与 icefall-20260908 共用），不复制音频；保留所有说话人，留出测试 / 验证集说话人由读取方决定。用途：带 Lance 记录索引的 clean-only 版本，供 RAMC 目标说话人场景池（build_ts_scene_pool.py --ramc）按说话人取句；recipe_parameters.clean_pass_only 声明每行都已通过。脚本 scripts/ramc_clean_pass.py。

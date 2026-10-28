@@ -1,0 +1,63 @@
+# Emilia2 真实对话重排为重叠远场多人窗口（2026-10-13 生成完成）。
+- schema_version: dataset-catalog/2.0
+  dataset_id: emilia2_zh_overlap_farsim
+  version: overlap-farsim-v1-20261013
+  languages:
+  - zh
+  tasks:
+  - speaker_attributed_asr
+  aliases: []
+  artifacts:
+  - name: audio-index
+    kind: jsonl-metadata
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_zh_overlap_farsim/versions/overlap-farsim-v1-20261013/emilia2_zh_overlap_farsim-audio-index.jsonl.gz
+    expected_bytes: 1591864
+    sha256: c68e5d9a3738fe5abe4830baf20cf69df1e709158873d5eefffc60f576b1e2b2
+  - name: train_120s-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_zh_overlap_farsim/versions/overlap-farsim-v1-20261013/emilia2_zh_overlap_farsim-train_120s.jsonl.gz
+    expected_bytes: 113046895
+    sha256: 342c4708185deaafea40f896a8f90df0ac5308e0ffcc087206a4c69abae7b0d2
+    metadata:
+      record_count: 74971
+  splits:
+    train_120s:
+      artifacts:
+        records:
+        - train_120s-records
+        audio_index:
+        - audio-index
+      group: train
+      statistics:
+        records: 74971
+        duration_hours: 1534.81
+        duration_basis: Clip audio duration
+        overlap_ratio_mean: 0.2327
+      provenance:
+        training_use: train
+  provenance:
+    preparation_status: prepared
+    owner: mingdong
+    description: 由 emilia2_zh_dialogue_diarize@moss-transcribe-diarize-0.9B 的 2–3 人 120 秒窗口（排除 ≥4 人名单）重排生成的重叠远场多人对话：逐句从原窗口单声道剪出，与他人相距 < 0.02 秒（含原本重叠）的句子保持原相对时间作为整块，其余按说话人连续段提前造成重叠（窗口目标重叠率 0.15 + 0.35·Beta(2,2)，单处重叠 ≤ 较短一段的 80%），并把短应答放进对方长段内；每位说话人在同一真实房间（SLR28）不同测点卷积，MUSAN 噪声 0–20 dB。实测重叠率均值 0.23（p10/p50/p90 0.14/0.22/0.35），实测 < 0.12 的窗口不收（80,465 个，多为独白或大段整块）。文字与说话人沿用 MOSS 0.9B 伪标签（试跑以 MOSS Pro 为参照文字错误率约 3%），时间戳按重排后更新。试跑难度核对：zh-emilia2-6000 / MOSS 0.9B 不计复读 cpER 34.4 / 25.6（AliMeeting dev 为 20.8 / 15.6）。只用于训练。
+    source: emilia2_zh_dialogue_diarize@moss-transcribe-diarize-0.9B train_120s
+    run_dir: /workspace/workspace/mingdong/data/amphiondata/emilia2-overlap-farsim-20261013
+    code: amphiondata feat/emilia2-overlap-resim (2d7bfac), python -m amphiondata.multispeaker.overlap_resim
+    report: datasets/emilia2_zh_overlap_farsim/versions/overlap-farsim-v1-20261013/report.json
+  recipe_parameters:
+    seed: 20261013
+    snr_db:
+    - 0.0
+    - 20.0
+    level_db: 3.0
+    speech_dbfs: -26.0
+    clean_margin: 0.02
+    target_ratio:
+    - 0.15
+    - 0.5
+    min_ratio: 0.12
+    max_overlap_fraction: 0.8
+    backchannel_chars: 3
+    backchannel_seconds: 1.2
+    inject_rate: 0.15
