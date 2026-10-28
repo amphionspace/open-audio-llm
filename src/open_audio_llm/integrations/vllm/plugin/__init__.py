@@ -24,10 +24,13 @@ def register():
         "1", "true", "yes", "on",
     }
     enable_target_sot = os.environ.get("OPEN_AUDIO_LLM_TARGET_SOT_VLLM") == "1"
-    if enable_qwen3_asr_embeds and enable_ts_sep:
-        # Both register Qwen3ASRForConditionalGeneration; the later one would win silently.
+    from open_audio_llm.audio import time_markers
+
+    enable_time_markers = time_markers.time_marker_seconds() > 0
+    if enable_qwen3_asr_embeds + enable_ts_sep + enable_time_markers > 1:
+        # Each registers Qwen3ASRForConditionalGeneration; the later one would win silently.
         raise ValueError(
-            "OPEN_AUDIO_LLM_ENABLE_QWEN3_ASR_EMBEDS and AMPHION_TSASR_INSERT_SEP select "
+            f"OPEN_AUDIO_LLM_ENABLE_QWEN3_ASR_EMBEDS, AMPHION_TSASR_INSERT_SEP and {time_markers.ENV} select "
             "different Qwen3-ASR vLLM classes; enable one"
         )
     if not (
@@ -37,6 +40,7 @@ def register():
         or enable_funasr
         or enable_ts_sep
         or enable_target_sot
+        or enable_time_markers
     ):
         return
 
@@ -70,6 +74,12 @@ def register():
             "FunASRForConditionalGeneration",
             "open_audio_llm.integrations.vllm.plugin.funasr.funasr_model:"
             "FunASRForVLLM",
+        )
+    if enable_time_markers:
+        ModelRegistry.register_model(
+            "Qwen3ASRForConditionalGeneration",
+            "open_audio_llm.integrations.vllm.plugin.qwen3_asr_time_markers:"
+            "Qwen3ASRForVLLMWithTimeMarkers",
         )
     if enable_ts_sep:
         # v3 TS-ASR: one concat waveform, independent Mel/conv, learned SEP.

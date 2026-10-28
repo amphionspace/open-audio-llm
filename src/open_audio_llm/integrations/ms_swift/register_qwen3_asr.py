@@ -113,6 +113,7 @@ from swift.template import Template, TemplateMeta, register_template
 from swift.template.vision_utils import load_audio, load_batch
 from swift.utils import get_env_args, get_logger
 
+from open_audio_llm.audio.time_markers import marked_placeholders, time_marker_seconds
 from open_audio_llm.data.augment import augment_features
 
 # ---------------------------------------------------------------------------
@@ -445,6 +446,11 @@ class Qwen3ASRTemplate(Template):
                 wav,
                 hop_length=self._hop_length,
             )
+            every = time_marker_seconds()
+            if every:
+                # Elapsed-second digits between the placeholders; the vLLM processor builds the same span.
+                return (['<|audio_start|>'] + marked_placeholders('<|audio_pad|>', n_tokens, every)
+                        + ['<|audio_end|>'])
         return ['<|audio_start|>'] + ['<|audio_pad|>'] * n_tokens + ['<|audio_end|>']
 
     def _encode(self, inputs) -> Dict[str, Any]:
