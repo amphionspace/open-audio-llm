@@ -134,7 +134,8 @@ def ready(url, name, process, timeout):
     raise TimeoutError(f'{url} did not serve {name}')
 
 
-TURN = re.compile(r'^\[(S\d+)\]\[([\d.]+)-([\d.]+)\]\s*(.*)$')
+# A malformed time such as "69.99.45" (step-2000 output of arm A) leaves the line unparsed, like any other non-turn line.
+TURN = re.compile(r'^\[(S\d+)\]\[(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\]\s*(.*)$')
 UNIT = re.compile(r'[\u4e00-\u9fffA-Za-z0-9]')
 # Reference turns are matched to hypothesis text starting or ending within this many seconds (text_errors).
 TEXT_MARGIN = 2.0

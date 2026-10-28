@@ -23,13 +23,17 @@ parameters:
   # measured again on every panel so the new turn diagnostics have a baseline.
   # Step 0 is measured again: the panels now run on the released AmphionEval 0.10.0 instead of the meeting branch source.
   base_model: {path: /workspace/data/ae-runs/zh-emilia2-dialogue-6000/checkpoint-6000}
+  # Attempt 001 failed at step 2000 on a malformed hypothesis time ("69.99.45") in the turn diagnostics; its
+  # baseline and step 1000 stay valid, step 2000 is evaluated again.
+  previous_state: {path: ../tasks/03-select-a/attempts/001/artifacts}
   training_attempts:
   - {path: ../tasks/02-train-a/attempts/001}
   interval: 1000
   max_steps: 12000
   poll_seconds: 60
   # One GPU per checkpoint; shared machine: pick by nvidia-smi before launching, never GPU 0 (2026-10-15: GPU 3 had 75 GB free, then only 18 GB at step 7000 and vLLM failed; GPU 2 was empty).
-  gpus: [2]
+  # Two GPUs from attempt 002 (2026-10-28 18:10 UTC: GPU 2 60 GB free, GPU 1 47 GB) to catch up on steps 2000-3000.
+  gpus: [2, 1]
   port_base: 8921
   server_startup_timeout: 1800
   readable_timeout: 1800
