@@ -1,0 +1,16 @@
+version: 1
+name: zh-diar-ts-aux-acp-20261028
+purpose: Diarization 重启第一轮：两组都从 Emilia2 轮 6000 步续训 12000 步。A 组（对照）只把 Emilia2 伪标签换成 0.80 拆人上限的排除名单，回答续训本身会不会退化；B 组再混入 20% 的目标说话人（TS-ASR）任务数据，看 TS 线学到的认人、分离重叠能力能否减少 AliMeeting 的说话人归错与重叠字错
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training_coverage: all_eligible_records
+  training_steps: 12000
+inputs:
+  init_model: /workspace/data/ae-runs/zh-emilia2-dialogue-6000/checkpoint-6000
+tasks:
+- {id: recipes, name: 两组数据配置（scripts/make_recipes.py 生成 configs/train-data-a.yaml、train-data-b.yaml）, config: scripts/make_recipes.py, depends_on: []}
+- {id: train-a, name: A 组 ACP 单机 8 卡全参数 12000 步, config: configs/train-a.yaml, depends_on: [recipes]}
+- {id: train-b, name: B 组 ACP 单机 8 卡全参数 12000 步, config: configs/train-b.yaml, depends_on: [recipes]}
+- {id: select-a, name: A 组开发机异步选模与结束评测（测 step 0 基线）, config: configs/select-a.yaml, depends_on: [recipes]}
+- {id: select-b, name: B 组开发机异步选模与结束评测（用 A 组的 step 0 基线）, config: configs/select-b.yaml, depends_on: [select-a]}
