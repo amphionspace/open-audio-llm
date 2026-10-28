@@ -25,6 +25,7 @@ reporting panels. Execution completion and quality are recorded separately.
 """
 import argparse
 import difflib
+import fcntl
 import shutil
 from concurrent.futures import ThreadPoolExecutor
 import json
@@ -302,13 +303,38 @@ def turn_diagnostics(predictions, label, similarity=None):
     return out | {'duplicate_speaker_windows': duplicated, 'windows': windows}
 
 
+# Shared with the run's eval scripts (serve_and_eval.sh, pack self-checks): one vLLM start at a time on this machine, as
+# a start whose memory profiling overlaps another start or a release of GPU memory fails.
+GPU_LOCK = '/dev/shm/ts-robust-eval-gpu.lock'
+
+
+def pick_gpu(settings):
+    """The card of gpu_pool with the most free memory, once one has gpu_free_mib free (2026-10-28: the fixed cards of
+    two selectors filled up with other evaluations and vLLM refused to start with 9.7 and 18.7 GiB free)."""
+    while True:
+        out = subprocess.run(['nvidia-smi', '--query-gpu=index,memory.total,memory.used', '--format=csv,noheader,nounits'],
+                             capture_output=True, text=True, check=True).stdout
+        free = {int(i): int(total) - int(used) for i, total, used in (line.split(', ') for line in out.splitlines())}
+        gpu = max(settings['gpu_pool'], key=lambda g: free[g])
+        if free[gpu] >= settings['gpu_free_mib']:
+            return gpu
+        time.sleep(60)
+
+
 def evaluate_model(settings, model, step, gpu, port, prefix):
-    """Serve one model, run every panel against it, return each panel's summary."""
+    """Serve one model, run every panel against it, return each panel's summary.
+
+    ``gpu`` is the slot's configured card; with ``gpu_pool`` the card is picked when the server starts."""
     folder = Path(settings['output']) / 'checkpoints' / f'step-{step}'
     name, url = f'step{step}', f'http://127.0.0.1:{port}'
     serve = recipe(settings['serve_template'], folder, folder / 'preview')
     serve['task']['model'] = str(model)
     serve['task']['arguments'].update({'--port': port, '--served-model-name': name})
+    lock = None
+    if settings.get('gpu_pool'):
+        lock = open(GPU_LOCK, 'a')
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        gpu = pick_gpu(settings)
     serve['runtime']['gpus'] = [gpu]
     serve['recording'] = {'attempts_dir': {'path': str(folder / 'serve/attempts')}}
     (folder / 'serve.yaml').write_text(yaml.safe_dump(serve, sort_keys=False, allow_unicode=True))
@@ -322,7 +348,12 @@ def evaluate_model(settings, model, step, gpu, port, prefix):
                                    str(folder / 'serve.yaml')], stdout=log, stderr=subprocess.STDOUT,
                                   start_new_session=True)
     try:
-        ready(url, name, server, settings['server_startup_timeout'])
+        try:
+            ready(url, name, server, settings['server_startup_timeout'])
+        finally:
+            if lock:
+                fcntl.flock(lock, fcntl.LOCK_UN)
+                lock.close()
         jobs = {}
         for panel, spec in settings['panels'].items():
             config = recipe(spec['template'], folder, folder / 'preview')

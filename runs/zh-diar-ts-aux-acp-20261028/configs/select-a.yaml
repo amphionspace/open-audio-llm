@@ -25,7 +25,8 @@ parameters:
   base_model: {path: /workspace/data/ae-runs/zh-emilia2-dialogue-6000/checkpoint-6000}
   # Attempt 001 failed at step 2000 on a malformed hypothesis time ("69.99.45") in the turn diagnostics; its
   # baseline and step 1000 stay valid, step 2000 is evaluated again.
-  previous_state: {path: ../tasks/03-select-a/attempts/001/artifacts}
+  # Attempt 002 (steps 1000-4000 evaluated) failed at step 5000: vLLM found 9.7 GiB free on its fixed card.
+  previous_state: {path: ../tasks/03-select-a/attempts/002/artifacts}
   training_attempts:
   - {path: ../tasks/02-train-a/attempts/001}
   interval: 1000
@@ -35,6 +36,11 @@ parameters:
   # Two GPUs from attempt 002 (2026-10-28 18:10 UTC: GPU 2 60 GB free, GPU 1 47 GB) to catch up on steps 2000-3000.
   gpus: [2, 1]
   port_base: 8921
+  # Card picked at each server start (scripts/select_checkpoints.py pick_gpu, under the eval scripts' GPU lock): the one
+  # with the most free memory among gpu_pool, once it has gpu_free_mib (0.3 of 80 GB plus margin); never 0 (see above)
+  # nor 5 (another session's server). `gpus` above only sets the parallel slots and their ports.
+  gpu_pool: [1, 2, 3, 4, 6, 7]
+  gpu_free_mib: 26000
   server_startup_timeout: 1800
   readable_timeout: 1800
   serve_template: {path: serve-step8000.yaml}
