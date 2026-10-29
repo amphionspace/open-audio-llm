@@ -24,6 +24,9 @@ parameters:
   # Step 0 as measured by arm A's selector (same start model, panels and AmphionEval).
   baseline: {path: ../tasks/03-select-a/attempts/001/artifacts/baseline.json}
   base_model: {path: /workspace/data/ae-runs/zh-emilia2-dialogue-6000/checkpoint-6000}
+  # Attempt 001 (steps 1000-3000 evaluated) failed at step 4000: vLLM aborted its memory profiling when another
+  # process on the card released memory; starts are now retried on a freshly picked card.
+  previous_state: {path: ../tasks/03-select-e/attempts/001/artifacts}
   training_attempts:
   - {path: ../tasks/02-train-e/attempts/001}
   interval: 1000

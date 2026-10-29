@@ -330,30 +330,45 @@ def evaluate_model(settings, model, step, gpu, port, prefix):
     serve = recipe(settings['serve_template'], folder, folder / 'preview')
     serve['task']['model'] = str(model)
     serve['task']['arguments'].update({'--port': port, '--served-model-name': name})
-    lock = None
-    if settings.get('gpu_pool'):
-        lock = open(GPU_LOCK, 'a')
-        fcntl.flock(lock, fcntl.LOCK_EX)
-        gpu = pick_gpu(settings)
-    serve['runtime']['gpus'] = [gpu]
     serve['recording'] = {'attempts_dir': {'path': str(folder / 'serve/attempts')}}
-    (folder / 'serve.yaml').write_text(yaml.safe_dump(serve, sort_keys=False, allow_unicode=True))
-    # vLLM listens with SO_REUSEPORT, so a second server on a busy port starts "successfully" and
-    # the kernel splits requests between them; refuse a port that already has a listener.
-    with socket.socket() as probe:
-        if probe.connect_ex(('127.0.0.1', port)) == 0:
-            raise RuntimeError(f'Port {port} already has a listener; give each selector its own port_base')
-    with (folder / 'serve.log').open('a') as log:
-        server = subprocess.Popen([sys.executable, '-m', 'open_audio_llm.cli', 'serve', '--config',
-                                   str(folder / 'serve.yaml')], stdout=log, stderr=subprocess.STDOUT,
-                                  start_new_session=True)
-    try:
+    # With gpu_pool, a start whose process exits is retried on a freshly picked card (2026-10-29: vLLM aborted its
+    # memory profiling when another process on the card released memory meanwhile, which the lock cannot prevent).
+    tries = 3 if settings.get('gpu_pool') else 1
+    for attempt in range(1, tries + 1):
+        lock = None
+        if settings.get('gpu_pool'):
+            lock = open(GPU_LOCK, 'a')
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            gpu = pick_gpu(settings)
+        serve['runtime']['gpus'] = [gpu]
+        (folder / 'serve.yaml').write_text(yaml.safe_dump(serve, sort_keys=False, allow_unicode=True))
         try:
-            ready(url, name, server, settings['server_startup_timeout'])
+            # vLLM listens with SO_REUSEPORT, so a second server on a busy port starts "successfully" and
+            # the kernel splits requests between them; refuse a port that already has a listener.
+            with socket.socket() as probe:
+                if probe.connect_ex(('127.0.0.1', port)) == 0:
+                    raise RuntimeError(f'Port {port} already has a listener; give each selector its own port_base')
+            with (folder / 'serve.log').open('a') as log:
+                server = subprocess.Popen([sys.executable, '-m', 'open_audio_llm.cli', 'serve', '--config',
+                                           str(folder / 'serve.yaml')], stdout=log, stderr=subprocess.STDOUT,
+                                          start_new_session=True)
+            try:
+                ready(url, name, server, settings['server_startup_timeout'])
+                break
+            except RuntimeError:
+                if server.poll() is None or attempt == tries:
+                    raise
+            except BaseException:
+                if server.poll() is None:
+                    os.killpg(server.pid, signal.SIGTERM)
+                    server.wait(timeout=300)
+                raise
         finally:
             if lock:
                 fcntl.flock(lock, fcntl.LOCK_UN)
                 lock.close()
+        time.sleep(60)
+    try:
         jobs = {}
         for panel, spec in settings['panels'].items():
             config = recipe(spec['template'], folder, folder / 'preview')
