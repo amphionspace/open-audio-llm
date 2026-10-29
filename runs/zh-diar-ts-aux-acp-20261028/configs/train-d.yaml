@@ -47,7 +47,9 @@ task:
     --freeze_llm: false
     --torch_dtype: bfloat16
     --attn_impl: sdpa
-    --max_length: 16384
+    # A's 16384 plus room for the time markers: up to ~400 digit tokens (650 s, the longest source, slowed by speed 0.95);
+    # attempt 001 failed at step 248 on a 16,498-token row. Rows are not filtered by length, so the data stay A's.
+    --max_length: 16896
     --per_device_train_batch_size: 2
     --per_device_eval_batch_size: 1
     # One node per round (user, 2026-10-12; the single-speaker round holds the other): 8 GPUs x 2 x 2
