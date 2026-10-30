@@ -45,7 +45,9 @@ task:
     --freeze_llm: false
     --torch_dtype: bfloat16
     --attn_impl: sdpa
-    --max_length: 16384
+    # 0.95x speed makes audio 20/19 longer: 82 long windows (AliMeeting, its far-field simulation, AISHELL-5, CHiME-6)
+    # reach up to 16,604 tokens, none above 16,896 (exact count over all 17,983 timestamped windows >= 250 s, 10-30).
+    --max_length: 16896
     --per_device_train_batch_size: 2
     --per_device_eval_batch_size: 1
     # One node per round (user, 2026-10-12; the single-speaker round holds the other): 8 GPUs x 2 x 2
