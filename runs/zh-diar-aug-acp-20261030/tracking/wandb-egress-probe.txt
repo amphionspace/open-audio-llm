@@ -1,0 +1,41 @@
+api.wandb.ai 403 的定位（2026-10-30 22:00–23:10 UTC）
+=====================================================
+
+现象
+  21:37 / 21:53 UTC，03-select-h / 03-select-i 的评测子任务在 wandb.init 收到
+  403 Forbidden（返回体是通用 HTML 403 页，不是 W&B 的 JSON 错误），
+  run_tracking 的“启动指标远端核验”失败，选模器整体退出 1。
+  同一把 key 在 17:16 UTC 还能正常读写 run。
+
+定位
+  响应头带 `via: 1.1 google`、content-length 134，是 Google Cloud Armor 的拒绝页；
+  换 User-Agent、换 HTTP/1.1、不带鉴权访问 /healthz 都是 403，所以不是鉴权或客户端问题。
+  status.forge.coreweave.com（W&B 现在的状态页）显示 All Systems Operational。
+
+  按出口 IP 逐个探测（本地 mihomo 多 listener，每个 listener 绑一个节点）：
+    出口 IP            位置        /healthz   /graphql(带 key)
+    101.89.57.42      本机直连      403        403
+    188.253.115.13    HK           403        403
+    5.34.216.210      US           200        200
+    185.220.239.50    JP           200        200
+    188.253.121.25    SG           200        200
+    45.77.55.181      DE           200        200
+  结论：W&B 边缘按出口 IP 封禁，本机直连的 101.89.57.42 在封禁名单里，换海外出口即恢复。
+
+处置
+  1. 只把 W&B 流量改走本地中转，权重和对象存储仍直连（whai 的
+     *.sensecoreapi-oss.cn 已在 NO_PROXY 列表里，不受影响）。
+     configs/select-h.yaml / select-i.yaml 的 runtime.environment 增加
+       WANDB_HTTP_PROXY / WANDB_HTTPS_PROXY = http://127.0.0.1:17910
+     wandb 0.30.0 的 core 认这两个变量（已用一次真实 wandb.init 端到端验证；
+     不设时同一条命令仍然 403）。
+  2. 中转进程（26 个海外节点的 fallback 组，健康检查 URL 就是 https://api.wandb.ai/healthz，
+     被封的节点会自动被判死）：
+       mihomo -d <dir> -f <dir>/config.yaml
+     配置生成脚本与目录见本次会话 scratchpad 的 mihomo-wandb/。
+  3. 02-train-h 的 run 远端只到 11455 步、状态 crashed；本地 run 目录完整，
+     已用 `wandb sync --no-skip-online`（先把 root 拥有的 run 目录复制到可写位置）补录，
+     远端现在是 finished / global_step 12000 / launcher/exit_code 0。
+  4. 02-train-i 还在 ACP 上跑，节点出口同样被封（wandb.log: "Fatal error while
+     uploading data ... Use `wandb sync` at the end of the run"），远端停在 6075 步。
+     训练结束后用同样的方式补录。
