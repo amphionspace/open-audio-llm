@@ -1,0 +1,10 @@
+# 训过数据的固定集：两组都在训的 AliMeeting / AISHELL-4 真实会议 120 秒训练窗口（143 + 126 条，scripts/make_train_fit_catalog.py
+# 生成，名单 shared/catalog-train-fit/ids.txt）。与没训过的 AliMeeting dev 同口径对比，看模型是否在背训练数据。
+catalog: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-aug-acp-20261030/shared/catalog-train-fit/catalog.yaml
+roots: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-aug-acp-20261030/shared/catalog-train-fit/roots.json
+sampling_rate: 16000
+groups:
+- {name: 训过的真实会议窗口, labels: [alimeeting_train, aishell4_train], aggregate: macro}
+evaluation:
+- {dataset_id: alimeeting_sdm_meeting_sot, version: real-meetings-v2-20261010, split: train_120s, label: alimeeting_train}
+- {dataset_id: aishell4_meeting_sot, version: real-meetings-v2-20261010, split: train_120s, label: aishell4_train}
