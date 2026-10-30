@@ -890,6 +890,34 @@ def test_spec_augment_preserves_lengths_and_padding():
     assert torch.all(features == 1)
 
 
+def test_spec_augment_time_masks_grow_with_length():
+    def masked_runs(frames, **config):
+        policy = {"seed": "s", "config": {"spec_aug_prob": 1, "time_mask_width": 5,
+                                          "frequency_mask_width": 0, **config}}
+        column = augment_features(torch.ones(1, 4, frames), torch.tensor([frames]), policy)[0, 0]
+        zero = (column == 0).int()
+        return int(zero[0]) + int(((zero[1:] - zero[:-1]) == 1).sum())
+
+    # The default keeps one mask per sample, so a 60 s window gets at most 0.05 s masked.
+    assert masked_runs(6000) <= 1
+    assert masked_runs(6000, time_masks_per_second=0.5) > 10
+    default = {"seed": "s", "config": {"spec_aug_prob": 1, "time_mask_width": 10, "frequency_mask_width": 4}}
+    explicit = {**default, "config": {**default["config"], "time_masks_per_second": 0, "frequency_masks": 1}}
+    features = torch.ones(2, 8, 50)
+    torch.testing.assert_close(augment_features(features, torch.tensor([30, 50]), default),
+                               augment_features(features, torch.tensor([30, 50]), explicit))
+
+
+def test_preflight_reports_augmentation_after_record_overrides(catalog_config):
+    from open_audio_llm.data.catalog_preflight import check_data
+
+    catalog_config['augmentation'] = {'speed_prob': .25, 'speed_factors': [.9, 1., 1.1], 'noise_prob': .5,
+                                      'spec_aug_prob': .1, 'noise_exclude_datasets': ['speech']}
+    report = check_data(catalog_config)
+    assert report['sources'][0]['augmentation'] == {
+        'speed_prob': .25, 'noise_prob': 0., 'rir_prob': 0., 'far_rir_prob': 0., 'spec_aug_prob': .1}
+
+
 def test_noise_source_weight_selects_wham_thirty_percent():
     sources = [{"dataset_id": name, "weight": weight} for name, weight in (
         ("wham", 30), ("musan", 17.5), ("1spk", 17.5), ("2spk", 17.5), ("3spk", 17.5),

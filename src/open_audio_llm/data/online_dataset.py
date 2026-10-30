@@ -182,6 +182,10 @@ class OnlineAudioDataset(Dataset):
     def _resolve_audio(self, resolved, rng):
         raise NotImplementedError("The Catalog dataset resolves audio slots on demand")
 
+    def _prepare_record(self, resolved, seed):
+        """Per-sample record changes that must reach the transcript too (e.g. retimed targets)."""
+        return resolved
+
     def __len__(self) -> int:
         return len(self.records)
 
@@ -221,6 +225,8 @@ class OnlineAudioDataset(Dataset):
                                  metadata={**record.metadata, "online_absent": True,
                                            **({"online_nonspeech": True} if nonspeech else {})})
                 resolved = replace(resolved, record=record)
+        resolved = self._prepare_record(resolved, seed)
+        record = resolved.record
         if record.metadata.get("enrollment_view"):
             from .qwen3_asr import native_messages
 
