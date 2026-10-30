@@ -1,0 +1,10 @@
+# 训练集拟合诊断：真实会议训练窗口（120 秒），与训练用的是同一份登记版本。只读共享登记；
+# 训练时排除的窗口（zh-v2-train-excluded-records.txt）在打分后剔除，见 tasks/05-train-fit/README.md。
+catalog: /workspace/data/registry/catalog/zh_meeting_v2.yaml
+roots: /workspace/data/registry/roots.json
+sampling_rate: 16000
+groups:
+- {name: 真实会议训练窗口, labels: [alimeeting_train, aishell4_train], aggregate: macro}
+evaluation:
+- {dataset_id: alimeeting_sdm_meeting_sot, version: real-meetings-v2-20261010, split: train_120s, label: alimeeting_train}
+- {dataset_id: aishell4_meeting_sot, version: real-meetings-v2-20261010, split: train_120s, label: aishell4_train}

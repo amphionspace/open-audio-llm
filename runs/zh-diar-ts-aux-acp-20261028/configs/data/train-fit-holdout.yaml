@@ -1,0 +1,10 @@
+# 训练集拟合诊断的对照：zh245 留出的 18 场训练集会议（从未训练）的全部 120 秒窗口，与训练窗口同一构建
+# （real-meetings-v2-20261010）；本地 catalog 由 scripts/make_holdout_catalog.py 生成。
+catalog: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-ts-aux-acp-20261028/shared/catalog-holdout/catalog.yaml
+roots: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-ts-aux-acp-20261028/shared/catalog-holdout/roots.json
+sampling_rate: 16000
+groups:
+- {name: 留出训练会议, labels: [alimeeting_holdout, aishell4_holdout], aggregate: macro}
+evaluation:
+- {dataset_id: alimeeting_sdm_meeting_sot, version: real-meetings-v2-20261010, split: train_120s, label: alimeeting_holdout}
+- {dataset_id: aishell4_meeting_sot, version: real-meetings-v2-20261010, split: train_120s, label: aishell4_holdout}
