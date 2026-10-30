@@ -53,4 +53,9 @@
 
 ## 状态
 
-- 10-30：配置、固定集、选模器和预检准备中（见下方逐项记录）。
+- 10-30 08:20 UTC：准备完成。H 组预检通过（`tracking/preflight-h.json`），增强抽样核验通过（`tasks/00-augmentation-audit/audit-h.json`：带时间戳的会议来源 `speed_applied` 0.45–0.9、`retimed_ok` 与 `retimed_checked` 相等，SpecAugment 实际遮挡约一半样本）；`tracking/check-max-tokens.log` 显示变速后最长的 82 条记录仍在 16896 之内。
+- 10-30 09:15 UTC：**H 组提交**（ACP `pt-sqfoodzk`，占原空占任务 `pt-jxvca9ci` 的节点），选模器同时启动。W&B 远端已核验（run `AmphionASR-zh-diar-r2-h-speed-specaug-from-emilia2-6k-001`，指标在上传）。
+- 10-30 14:55 UTC：I 组预检通过（`tracking/preflight-i.json`；上一次在 09:46 被中断，重跑时复用了 127 个已建索引）。I 组与 H 组的数据配置只差权重，增强设置逐字相同，因此沿用 H 组的增强抽样核验，不再重复抽样。
+- 10-30 15:00 UTC：**I 组提交**（ACP `pt-f5nw1i10`，占原空占任务 `pt-72a5wgdy` 的节点），选模器同时启动，W&B run 已创建。两个节点现在都在跑正式训练，没有空占任务占着机器。
+- H 组进度（15:00 UTC）：5400/12000 步，3.7 秒/步（增强打开后比第一轮慢），预计 22:00 UTC 前后训完；I 组预计 10-31 03:30 UTC 前后训完。
+- H 组前 4 个保存点（选模面板，AliMeeting dev 不计复读 cpER，起点 20.42）：1000 步 21.01、2000 步 21.42、3000 步 22.03、4000 步 22.37，复读 0 条；训过窗口 7.48 → 8.9 / 8.8 / 8.7 / 8.7，fit_gap 12.94 → 12.08 / 12.65 / 13.30 / 13.71。**暂时看不到增强带来的收益，dev 随步数变差、fit_gap 没有缩小**；等 5000 步以后的点和 I 组再判断。
