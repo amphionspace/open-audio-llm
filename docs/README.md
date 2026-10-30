@@ -44,6 +44,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [2026-10-30 复盘](experiments/2026-10-30-real-meeting-memorization/README.md) | Diarization 主线不涨的原因：真实会议训练数据被反复训练到背熟；新增的训练守则 |
 | [2026-10-10 至 10-15](experiments/2026-10-16/README.md) | 中文会议 Diarization 训练系列总结：7 轮均未超过起点，沉淀的结论与可复用工具 |
 | [2026-10-06 至 10-08](experiments/2026-10-08/README.md) | 8×A800 续训、数据质检、180 秒会议评测集，与 MOSS 同口径对比 |
 | [截至 2026-10-06](experiments/2026-10-06/README.md) | 训练轨迹、评测结果与权重下载 |
