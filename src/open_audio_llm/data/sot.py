@@ -14,6 +14,21 @@ TIMESTAMP_SYSTEM = (
     "word as the utterance boundaries, excluding leading and trailing silence."
 )
 
+# Some annotated turns carry no text ("[S2][18.06-19.87] "); they are retimed like the others.
+_TIMED_LINE = re.compile(r"\[(S[1-9]\d*)\]\[(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\] (.*)")
+
+
+def scale_timestamps(target, ratio):
+    """Times of a TIMESTAMP_FORMAT target after its audio is stretched `ratio` times longer."""
+    lines = []
+    for line in target.split("\n") if target else []:
+        match = _TIMED_LINE.fullmatch(line)
+        if match is None:
+            raise ValueError(f"Not a timestamped SOT line: {line!r}")
+        label, start, end, text = match.groups()
+        lines.append(f"[{label}][{float(start) * ratio:.2f}-{float(end) * ratio:.2f}] {text}")
+    return "\n".join(lines)
+
 
 def with_sot_timestamps(record, alignments):
     """Join by exact source identity; fail instead of dropping or relabeling audio."""

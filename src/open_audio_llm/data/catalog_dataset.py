@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 import time
 import hashlib
 from dataclasses import asdict, replace
@@ -19,14 +20,14 @@ from audio_data_contract import (
     resolve_split,
 )
 
-from .augment import AugmentConfig, augment_waveform, direct_to_reverberant_db, for_slot
+from .augment import AugmentConfig, augment_waveform, direct_to_reverberant_db, for_slot, speed_ratio
 from .catalog_resolver import LhotseCatalogAudioResolver
 from .interference_pool import PoolClip, pool_clips
 from .lance_source import SAMPLES_ROLE, lance_records, open_lance_release, read_lance_audio
 from .online_dataset import TASK_TEMPLATES, OnlineAudioDataset
 from .m4a_backend import install_m4a_backend
 from .records import ResolvedAudioRecord
-from .sot import TIMESTAMP_FORMAT, with_sot_timestamps
+from .sot import TIMESTAMP_FORMAT, scale_timestamps, with_sot_timestamps
 from .sot_alignment import AlignmentIndex
 from .target_sot import EnrollmentConfig, TARGET_FORMAT, eligible_candidates
 from .ts_online import (
@@ -739,6 +740,39 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                 cuts={name: cut} if self.metadata_cache else None,
             )
 
+    def _prepare_record(self, resolved, seed):
+        """Draw the speed of a timestamped SOT sample and retime its target to match."""
+        record = resolved.record
+        if (not self.training or not self.augmentation.speed_prob
+                or record.metadata.get("sot_output_format") != TIMESTAMP_FORMAT
+                or record.metadata.get("online_mix") is not None):
+            return resolved
+        # Own stream: the waveform transforms keep the draws they had before.
+        rng = random.Random(f"{seed}:speed")
+        if rng.random() >= self.augmentation.speed_prob:
+            return resolved
+        factor = rng.choice(self.augmentation.speed_factors)
+        if factor == 1:
+            return resolved
+        return replace(resolved, record=replace(
+            record, target=scale_timestamps(record.target, float(speed_ratio(factor))),
+            metadata={**record.metadata, "speed_factor": factor}))
+
+    def record_augmentation(self, augmentation, record, dataset_id, slot_name):
+        """The waveform augmentation one slot of a record gets (also reported by the data preflight)."""
+        factor = record.metadata.get("speed_factor")
+        if factor is not None:
+            # _prepare_record drew this speed and retimed the target for it.
+            augmentation = replace(augmentation, speed_prob=1.0, speed_factors=(factor,))
+        elif record.metadata.get("sot_output_format") in {TIMESTAMP_FORMAT, TARGET_FORMAT}:
+            # Without a retimed target, time warping would invalidate the aligned times; RIRs
+            # start at the direct path, so reverberation keeps them.
+            augmentation = replace(augmentation, speed_prob=0.0)
+        augmentation = for_slot(augmentation, slot_name)
+        if dataset_id in augmentation.noise_exclude_datasets:
+            augmentation = replace(augmentation, noise_prob=0.0)
+        return augmentation
+
     def _resolve_audio(self, resolved, rng):
         import soundfile as sf
 
@@ -769,14 +803,8 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             if online:
                 audio, augmentation = self._online_slot(resolved.record, slot.name, audio, rng)
             if self.training:
-                augmentation = augmentation if online else self.augmentation
-                if resolved.record.metadata.get("sot_output_format") in {TIMESTAMP_FORMAT, TARGET_FORMAT}:
-                    # Aligned times are fixed and time warping invalidates them; RIRs start
-                    # at the direct path, so reverberation keeps them.
-                    augmentation = replace(augmentation, speed_prob=0.0)
-                augmentation = for_slot(augmentation, slot.name)
-                if resolved.dataset_id in augmentation.noise_exclude_datasets:
-                    augmentation = replace(augmentation, noise_prob=0.0)
+                augmentation = self.record_augmentation(
+                    augmentation if online else self.augmentation, resolved.record, resolved.dataset_id, slot.name)
                 metadata = resolved.record.metadata
                 if (not online and slot.name == "mixture" and self.activity_labels
                         and "window_utts" in metadata and "target_speaker" in metadata):

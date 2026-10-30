@@ -151,7 +151,7 @@ def test_index_rejects_incomplete_or_changed_alignment_outputs(tmp_path, issue):
 
 
 @pytest.mark.parametrize('cached', [False, True])
-def test_catalog_timed_audio_stays_in_sync_and_cache_tracks_alignment(tmp_path, cached):
+def test_catalog_timed_audio_is_retimed_with_speed_and_cache_tracks_alignment(tmp_path, cached):
     index, _ = make_index(tmp_path)
     write_records([record()], tmp_path / 'records.jsonl.gz')
     sf.write(tmp_path / 'mixed.wav', np.zeros(64000), 16000)
@@ -171,10 +171,13 @@ def test_catalog_timed_audio_stays_in_sync_and_cache_tracks_alignment(tmp_path, 
         config['metadata_cache'] = str(tmp_path / 'cache')
     dataset = CatalogSwiftDataset(config, message_format='qwen3_asr')
     from open_audio_llm.data.catalog_cache import sampling_cost
-    assert sampling_cost(dataset.records[0], dataset)[0] == pytest.approx(4., abs=.001)
+    # Half speed doubles the audio: the batch budget, the waveform and every time in the target.
+    assert sampling_cost(dataset.records[0], dataset)[0] == pytest.approx(8., abs=.001)
     sample = dataset[0]
-    assert sample['duration'] == 4.  # Speed augmentation would double this.
-    assert '[S1][0.28-0.84]' in sample['messages'][-1]['content']
+    assert sample['duration'] == 8.
+    assert '[S1][0.56-1.68]' in sample['messages'][-1]['content']
+    still = CatalogSwiftDataset({**config, 'augmentation': {}}, message_format='qwen3_asr')[0]
+    assert still['duration'] == 4. and '[S1][0.28-0.84]' in still['messages'][-1]['content']
     if cached:
         from open_audio_llm.data.catalog_cache import source_identity
         before = source_identity(dataset, source)
@@ -183,3 +186,15 @@ def test_catalog_timed_audio_stays_in_sync_and_cache_tracks_alignment(tmp_path, 
         assert source_identity(dataset, source) != before
     with pytest.raises(ValueError, match='qwen3_asr'):
         CatalogSwiftDataset(config)
+
+
+def test_scale_timestamps_stretches_every_line_and_rejects_other_text():
+    from open_audio_llm.data.sot import scale_timestamps
+
+    assert scale_timestamps('[S1][0.20-1.00] hi there\n[S2][1.50-2.25] ok', 20 / 19) == (
+        '[S1][0.21-1.05] hi there\n[S2][1.58-2.37] ok')
+    assert scale_timestamps('', 2) == ''
+    assert scale_timestamps('[S2][1.00-2.00] ', 2) == '[S2][2.00-4.00] '
+    for bad in ('[S1] untimed', '[S1][0.20-1.00]', 'free text'):
+        with pytest.raises(ValueError, match='timestamped'):
+            scale_timestamps(bad, 2)

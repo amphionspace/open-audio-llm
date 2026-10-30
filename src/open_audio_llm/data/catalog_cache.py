@@ -190,6 +190,8 @@ def _legacy_source_identity(dataset, source):
         "message_format": dataset.message_format,
         "speed_prob": dataset.augmentation.speed_prob,
         "speed_factors": dataset.augmentation.speed_factors,
+        # Indexes built before 2026-10-30 budgeted timestamped SOT at 1x speed (it was never warped).
+        **({"timestamped_speed": True} if dataset.augmentation.speed_prob else {}),
     }
 
 
@@ -262,8 +264,6 @@ def reuse_indexes(config, previous_config, root, message_format="qwen3_asr"):
 def sampling_cost(row, dataset):
     speed = dataset.augmentation
     slowest = min(1.0, *speed.speed_factors) if speed.speed_prob else 1.0
-    if row.record.metadata.get("sot_output_format") == TIMESTAMP_FORMAT:
-        slowest = 1.0
     native_ts = (
         getattr(dataset, "message_format", None) == "qwen3_asr"
         and row.record.task == "ts_asr"
