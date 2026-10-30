@@ -1,5 +1,5 @@
-"""Local catalog holding only the 120 s windows of the 18 zh245 held-out training meetings (never trained on), for
-tasks/05-train-fit: the same build as the trained windows, but unseen.
+"""Local catalog holding only the 120 s windows of the 18 zh245 held-out training meetings (out of training since 2026-10-08; the earliest base, LoRA 8000, saw them), for
+tasks/05-train-fit: the same build as the trained windows.
 
 Copies the registry entries of aishell4 / alimeeting_sdm @ real-meetings-v2-20261010 (shared/catalog-holdout/), keeping
 dataset_id, version and the split name train_120s so the records' audio refs still resolve; only the train_120s records
