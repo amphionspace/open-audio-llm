@@ -449,11 +449,13 @@ class Qwen3ASRAudioEncoder(nn.Module):
                 hidden_states, aftercnn_lens, groups, self.sep_token.weight
             )
         window_aftercnn = transformer_window_aftercnn(self)
-        cu_seqlens = rebuild_cu_seqlens(
-            aftercnn_lens, window_aftercnn, aftercnn_lens.device
-        )
-
+        # Lengths arrive on the host (_process_audio_input), so cu_seqlens and max_seqlen are
+        # built there. The flash-attention wrapper calls max_seqlen.item() in every layer; on a
+        # device tensor that is one GPU sync per layer, and on a time-sliced GPU each sync waits
+        # for the other processes' slices.
+        cu_seqlens = rebuild_cu_seqlens(aftercnn_lens, window_aftercnn, "cpu")
         max_seqlen = self.compute_attn_mask_seqlen(cu_seqlens)
+        cu_seqlens = cu_seqlens.to(hidden_states.device, non_blocking=True)
 
         for encoder_layer in self.layers:
             hidden_states = encoder_layer(
@@ -811,6 +813,12 @@ class Qwen3ASRForConditionalGeneration(
     ) -> torch.Tensor:
         input_features = audio_input["input_features"]
         audio_feature_lengths = audio_input["audio_feature_lengths"]
+        # The encoder splits audio by these lengths in Python: one host copy here instead of a
+        # GPU sync at every .tolist() downstream (see Qwen3ASRAudioEncoder.forward).
+        if torch.is_tensor(audio_feature_lengths):
+            audio_feature_lengths = audio_feature_lengths.cpu()
+        if torch.is_tensor(enroll_lens):
+            enroll_lens = enroll_lens.cpu()
 
         enroll_n_frames = default_enroll_n_frames() if enroll_lens is None else enroll_lens
         audio_features = self.audio_tower(
