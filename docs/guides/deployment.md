@@ -99,6 +99,42 @@ attention kernel 或 PyTorch/vLLM 之间逐 token 相同，`temperature=0` 也�
 旧版独立交付包包含源码副本，需要更新其 TS-ASR runtime，并在启动参数中加入
 `--no-enable-prefix-caching`；仅更新本仓库不会修改已运行的服务。
 
+### 普通 ASR 置信度拒识（可选中间件）
+
+**作用**：远处、听不清的背景人声会被模型转写成不稳定的文字。
+[`confidence_gate.py`](../../src/open_audio_llm/integrations/vllm/confidence_gate.py)
+是 vLLM 的 ASGI 中间件，满足下面任一条件时，把这次识别改成模型自己的「无语音」输出
+`language None<asr_text>`：
+
+- 转写开头 16 个 token 的平均 logprob 低于阈值；
+- 输出撞到长度上限，并且是复读。
+
+**来源**：问题 91。标定和评测见
+[`2026-10-30-issue91-background-loops`](../experiments/2026-10-30-issue91-background-loops/README.md)。
+
+**启用方式**：只挂在普通 ASR 服务上；TS-ASR 有自己的出字判断，不挂。在服务 YAML 里加两项：
+
+```yaml
+runtime:
+  environment:
+    AMPHION_CONFIDENCE_THRESHOLD: '-0.831'   # 只对 054 avg3 标定，换 checkpoint 要重标
+task:
+  arguments:
+    --middleware: open_audio_llm.integrations.vllm.confidence_gate.ConfidenceGate
+```
+
+模块只依赖标准库。交付包可以把它作为顶层模块放进 `runtime/`，然后用
+`--middleware confidence_gate.ConfidenceGate` 启用。
+
+**对客户端的约定**：
+- **返回形式不变**：上游 vLLM 统一按非流式解码，拿到完整结果、判定之后，再按客户端要求的形式返回（JSON 或 SSE）。流式客户端拿到的 chunk 不变，只是在解码结束后一次性发出。
+- **拒识时以 stop 结束**：被拒时 `finish_reason` 一律为 `stop`；撞到上限的复读也一样，不会再触发客户端的重解码。
+- **判定信息**：每个响应带 `amphion_confidence`，内容是分数、阈值、规则、是否拒识。只有客户端自己请求了 logprobs，响应里才有 logprobs。
+- **带前缀续写**（`continue_final_message`）：
+  - 前缀部分用 prompt logprobs 打分，所以前缀必须按 token 截断（audiollm-go 的 `partialPrefix` 就是这样做的）。按字截断会产生模型从不生成的 token 合并，分数会偏低。
+  - 这类请求被拒时返回空续写，客户端看到 `amphion_confidence.rejected` 为真时，要自己丢掉前缀。
+- **额外开销**：每次请求多算 token logprobs；带前缀的请求还要多算 prompt logprobs。
+
 ## Compose 部署
 
 Compose 由配置生成有效文件，默认只检查配置：
