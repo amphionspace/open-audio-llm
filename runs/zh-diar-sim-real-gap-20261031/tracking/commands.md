@@ -35,3 +35,12 @@ open-audio-llm prepare --config configs/probe-sequential.yaml
 PYTHONPATH=shared/code/src python scripts/overlap_breakdown.py --item <name>=<label>:<predictions.jsonl>[,...] --output tracking/overlap-breakdown-*.json
 PYTHONPATH=shared/code/src python scripts/seq_compare.py --predictions <tasks/03-sequential-eval/.../predictions.jsonl> --output tracking/seq-compare.json
 ```
+
+```bash
+# 其余对照（参数同上：面板记录、Eval_Ali_near 目录、变体输出目录、shared/catalog-variants；PYTHONPATH=amphiondata/src）
+python scripts/build_dev_shuffled.py ...;  open-audio-llm prepare --config configs/probe-shuffled.yaml
+python scripts/build_dev_channel.py ...;   open-audio-llm prepare --config configs/probe-channel.yaml
+python scripts/build_dev_retimed.py ...;   open-audio-llm prepare --config configs/probe-retimed.yaml
+python scripts/build_dev_readswap.py ... --aishell /workspace/data/datasets/aishell/versions/legacy-20260804
+open-audio-llm prepare --config configs/probe-readswap.yaml   # attempt 001 作废（同一人朗读句自重叠），002 为修正版
+```
