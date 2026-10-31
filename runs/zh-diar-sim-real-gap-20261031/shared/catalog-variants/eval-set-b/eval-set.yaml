@@ -1,0 +1,99 @@
+task: diarization
+tags:
+- meeting
+- multi-speaker
+- timestamps
+sampling_rate: 16000
+groups:
+- name: sim_train
+  section: 声学对照
+  labels:
+  - sim_train
+  aggregate: macro
+  description: 训练用的近场转远场仿真（同房间不同 RIR 位置、±3 dB、MUSAN 0–20 dB）
+- name: sim_quiet
+  section: 声学对照
+  labels:
+  - sim_quiet
+  aggregate: macro
+  description: sim_train 去掉噪声
+- name: sim_reallevel
+  section: 声学对照
+  labels:
+  - sim_reallevel
+  aggregate: macro
+  description: sim_train 改用真实远场里测得的每人音量
+- name: sim_roomnoise
+  section: 声学对照
+  labels:
+  - sim_roomnoise
+  aggregate: macro
+  description: sim_train 改用本场会议自己的房间噪声和实测信噪比
+- name: sim_real
+  section: 声学对照
+  labels:
+  - sim_real
+  aggregate: macro
+  description: 实测音量 + 本场房间噪声与实测信噪比
+evaluation:
+- dataset_id: meeting_simreal_probe
+  version: v1-20261031
+  split: sim_train
+  task: speaker_attributed_asr
+  label: sim_train
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: 训练用的近场转远场仿真（同房间不同 RIR 位置、±3 dB、MUSAN 0–20 dB）
+  description: AliMeeting 官方 Eval 8 场 138 个选模窗口：训练用的近场转远场仿真（同房间不同 RIR 位置、±3 dB、MUSAN
+    0–20 dB）
+- dataset_id: meeting_simreal_probe
+  version: v1-20261031
+  split: sim_quiet
+  task: speaker_attributed_asr
+  label: sim_quiet
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: sim_train 去掉噪声
+  description: AliMeeting 官方 Eval 8 场 138 个选模窗口：sim_train 去掉噪声
+- dataset_id: meeting_simreal_probe
+  version: v1-20261031
+  split: sim_reallevel
+  task: speaker_attributed_asr
+  label: sim_reallevel
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: sim_train 改用真实远场里测得的每人音量
+  description: AliMeeting 官方 Eval 8 场 138 个选模窗口：sim_train 改用真实远场里测得的每人音量
+- dataset_id: meeting_simreal_probe
+  version: v1-20261031
+  split: sim_roomnoise
+  task: speaker_attributed_asr
+  label: sim_roomnoise
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: sim_train 改用本场会议自己的房间噪声和实测信噪比
+  description: AliMeeting 官方 Eval 8 场 138 个选模窗口：sim_train 改用本场会议自己的房间噪声和实测信噪比
+- dataset_id: meeting_simreal_probe
+  version: v1-20261031
+  split: sim_real
+  task: speaker_attributed_asr
+  label: sim_real
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: 实测音量 + 本场房间噪声与实测信噪比
+  description: AliMeeting 官方 Eval 8 场 138 个选模窗口：实测音量 + 本场房间噪声与实测信噪比

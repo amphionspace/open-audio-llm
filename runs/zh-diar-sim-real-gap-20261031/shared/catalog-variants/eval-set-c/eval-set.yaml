@@ -1,0 +1,44 @@
+task: diarization
+tags:
+- meeting
+- multi-speaker
+- timestamps
+sampling_rate: 16000
+groups:
+- name: near_gated
+  section: 声学对照
+  labels:
+  - near_gated
+  aggregate: macro
+  description: 近讲耳机按各自标注区间门控后直接相加（第二次解码）
+- name: near_seq
+  section: 声学对照
+  labels:
+  - near_seq
+  aggregate: macro
+  description: 同一批句子从各自近讲耳机切出、按原顺序依次排开（无重叠），文字与说话人不变
+evaluation:
+- dataset_id: meeting_simreal_probe
+  version: v1-20261031
+  split: near_gated
+  task: speaker_attributed_asr
+  label: near_gated
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: 近讲耳机按各自标注区间门控后直接相加（第二次解码）
+  description: AliMeeting 官方 Eval 8 场 138 个选模窗口：近讲耳机按各自标注区间门控后直接相加（第二次解码）
+- dataset_id: meeting_simreal_probe
+  version: v1-20261031
+  split: near_seq
+  task: speaker_attributed_asr
+  label: near_seq
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: 同一批句子从各自近讲耳机切出、按原顺序依次排开（无重叠），文字与说话人不变
+  description: AliMeeting 官方 Eval 8 场 138 个选模窗口：同一批句子从各自近讲耳机切出、按原顺序依次排开（无重叠），文字与说话人不变
