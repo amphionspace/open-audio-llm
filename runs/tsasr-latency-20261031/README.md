@@ -10,3 +10,11 @@
 |---|---|
 | [01-stream-bench](tasks/01-stream-bench/README.md) | 各服务变体（base / suffix / fp8 / fp8+suffix / base 复测）的流式回放与 prefill 微基准 |
 | [02-accuracy-gates](tasks/02-accuracy-gates/README.md) | suffix、fp8、线上 "5-second" 指令三项的 v12 全量准确率闸门（AmphionEval） |
+
+<!-- execution-status -->
+
+执行状态：partial；质量状态：未核实。
+
+开始：未知；结束：未结束；退出码：未知。
+
+<!-- /execution-status -->

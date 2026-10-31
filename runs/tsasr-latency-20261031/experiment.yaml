@@ -8,3 +8,7 @@ inputs:
   model: /workspace/data/packages/amphionasr-1.7b-v3-tsrobust-054avg3
 tasks:
 - {id: stream-bench, name: 流式回放测延迟与吞吐, config: configs/stream-bench.yaml, depends_on: []}
+- {id: runtime-levers, name: runtime 侧 final 时机与窗口复用, config: configs/runtime-levers.yaml, depends_on: []}
+- {id: prefill-bench, name: prefill 微基准：指令长度与预处理, config: configs/prefill-bench.yaml, depends_on: []}
+- {id: profile-prefill, name: prefill 剖析：音频侧开销来源, config: configs/profile-prefill.yaml, depends_on: []}
+- {id: nosync-ab, name: 编码器去 GPU 同步 A/B, config: configs/nosync-ab.yaml, depends_on: []}

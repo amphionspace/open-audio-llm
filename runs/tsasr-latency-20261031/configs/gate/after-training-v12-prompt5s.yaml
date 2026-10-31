@@ -7,6 +7,8 @@ model_name: amphionasr-054avg3-prompt5s
 tsasr_server_url: http://127.0.0.1:18194
 tsasr_served_model: 054-avg3-base-tsasr
 worker_timeout: 600
+# 同一 output_root 里的其他服务变体会被当作可复用推理（只看权重与评测集），闸门必须各自重新推理。
+reuse: false
 output_root: /workspace/data/ae-runs/tsasr-latency-20261031
 parameters:
   split_group: evaluation

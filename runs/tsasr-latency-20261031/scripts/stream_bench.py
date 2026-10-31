@@ -19,9 +19,11 @@ import asyncio
 import base64
 import gzip
 import io
+import itertools
 import json
 import os
 import random
+import re
 import signal
 import socket
 import statistics
@@ -36,6 +38,7 @@ import soundfile as sf
 import yaml
 
 SR = 16000
+NONCE = itertools.count(1)
 
 
 def wav_b64(pcm):
@@ -110,7 +113,16 @@ class Client:
         self.session, self.url, self.model, self.max_tokens = session, url, model, max_tokens
         self.records = []
 
-    async def transcribe(self, audio, prompt, kind, tag, max_tokens=None):
+    async def transcribe(self, audio, prompt, kind, tag, max_tokens=None, unique=True):
+        if unique:
+            # Focus serves with --mm-processor-cache-gb 0 (not usable with the pack runtime), so make
+            # every request's audio hash unique instead: one sample within the last 50 ms moves by a
+            # few LSB (about -90 to -70 dBFS; (position, step) never repeats). Without this, arms
+            # replaying the same audio hit vLLM's processor cache.
+            count = next(NONCE)  # process-wide, so clients created per phase never collide
+            audio = audio.copy()
+            index = len(audio) - 1 - count % min(len(audio), 800)
+            audio[index] = np.clip(int(audio[index]) + 1 + count // 800, -32768, 32767)
         payload = {
             "model": self.model, "temperature": 0, "max_tokens": max_tokens or self.max_tokens,
             "messages": [
@@ -174,10 +186,41 @@ async def final(client, ref, pcm, prompt, tag, p):
     return " ".join(texts)
 
 
-async def run_segment(client, item, prompt_name, prompt, p, segments, sid):
+async def final_windowed(client, ref, pcm, prompt, state, tag, p):
+    """Runtime arm: the final reuses the preview's stable windows and decodes only the rest.
+
+    Windows follow the preview rule (6 s stable, <=7 s tail); a window is reused only when the
+    last completed preview decoded exactly the same span. New windows are decoded final-style
+    (no virtual silence, empty-text retry).
+    """
+    stable, maximum = int(p["stable_s"] * SR), int(p["max_window_s"] * SR)
+    texts, offset, index = [], 0, 0
+    while offset < len(pcm):
+        end = len(pcm) if len(pcm) - offset <= maximum else offset + stable
+        if index < len(state) and state[index][0] == (offset, end):
+            raw = state[index][1]
+        else:
+            audio = np.concatenate([ref, pcm[offset:end]])
+            raw = await client.transcribe(audio, prompt, "final", tag)
+            if not split_raw(raw)[1]:
+                padding = np.zeros(int(p["final_empty_retry_s"] * SR), dtype=np.int16)
+                raw = await client.transcribe(np.concatenate([audio, padding]), prompt, "final_retry", tag)
+        text = split_raw(raw)[1]
+        if text:
+            texts.append(text)
+        offset, index = end, index + 1
+    return " ".join(texts)
+
+
+async def run_segment(client, item, arm, p, segments, sid):
+    """One VAD segment. ``arm`` picks the prompt and the runtime final policy:
+    final_mode full (main) or windowed; final_start_s is when the final decode starts after the
+    audio ends (main: at the endpoint decision; silence-time preparation: earlier). The result is
+    published no earlier than the endpoint decision."""
+    prompt = arm["system"]
     ref, pcm = load_pcm(item["enroll"], p["enroll_s"]), load_pcm(item["mix"])
     duration = len(pcm) / SR
-    tag = {"session": sid, "segment": item["id"], "prompt": prompt_name}
+    tag = {"session": sid, "segment": item["id"], "prompt": arm["name"]}
     t0 = time.perf_counter()
     events, state = [], []
     pending = {"end": None}
@@ -203,12 +246,17 @@ async def run_segment(client, item, prompt_name, prompt, p, segments, sid):
             last_end, pending["end"] = end, end
             wake.set()
         tick += p["partial_interval_s"]
-    # The final starts after the endpoint decision; advancing the segment cancels the preview.
-    await asyncio.sleep(max(0.0, t0 + duration + p["endpoint_delay_s"] - time.perf_counter()))
+    # main starts the final at the endpoint decision; advancing the segment cancels the preview.
+    start_after = arm.get("final_start_s", p["endpoint_delay_s"])
+    await asyncio.sleep(max(0.0, t0 + duration + start_after - time.perf_counter()))
     task.cancel()
     final_start = time.perf_counter()
-    text = await final(client, ref, pcm, prompt, tag, p)
-    done = time.perf_counter()
+    if arm.get("final_mode", "full") == "windowed":
+        text = await final_windowed(client, ref, pcm, prompt, state, tag, p)
+    else:
+        text = await final(client, ref, pcm, prompt, tag, p)
+    decoded = time.perf_counter()
+    done = max(decoded, t0 + duration + p["endpoint_delay_s"])
     texts = [e for e in events if e[2]]
     changes = [e[0] for i, e in enumerate(texts) if i == 0 or e[2] != texts[i - 1][2]]
     ref_text, hyp = normalize(item["reference"]), normalize(text)
@@ -219,7 +267,7 @@ async def run_segment(client, item, prompt_name, prompt, p, segments, sid):
         # How stale each preview is when it returns: completion time minus the end of the audio it saw.
         "preview_lag_ms": [(e[0] - e[1]) * 1000 for e in events],
         "text_gaps_ms": [(b - a) * 1000 for a, b in zip(changes, changes[1:])],
-        "final_decode_ms": (done - final_start) * 1000,
+        "final_decode_ms": (decoded - final_start) * 1000,
         "stop_to_final_ms": (done - t0 - duration) * 1000,
         "previews": len(events), "final": text, "reference": item["reference"],
         "errors": edit_distance(ref_text, hyp) if not item["negative"] else None,
@@ -264,7 +312,7 @@ def summarize(segments, requests):
     return out
 
 
-async def run_stream(url, model, items, prompts, concurrency, seconds, p):
+async def run_stream(url, model, items, arms, concurrency, seconds, p):
     connector = aiohttp.TCPConnector(limit=0)
     timeout = aiohttp.ClientTimeout(total=p["request_timeout_s"])
     segments = []
@@ -274,13 +322,13 @@ async def run_stream(url, model, items, prompts, concurrency, seconds, p):
         cursor = {"i": 0}
 
         async def session_loop(sid):
-            # Sessions alternate prompt variants per segment so variants share the same load.
+            # Sessions alternate arms per segment so arms share the same load.
             while time.perf_counter() < deadline:
                 index = cursor["i"]
                 cursor["i"] += 1
-                item = items[index % len(items)]
-                name = prompts[index % len(prompts)]["name"]
-                await run_segment(client, item, name, prompts[index % len(prompts)]["system"], p, segments, sid)
+                # Consecutive segments replay one item under every arm, so arms are paired by item.
+                item = items[(index // len(arms)) % len(items)]
+                await run_segment(client, item, arms[index % len(arms)], p, segments, sid)
 
         started = time.perf_counter()
         await asyncio.gather(*(session_loop(i) for i in range(concurrency)))
@@ -301,10 +349,15 @@ async def run_prefill(url, model, items, prompts, concurrency, count, p):
         async def worker(wid):
             while not queue.empty():
                 item, prompt = queue.get_nowait()
+                # repeat_audio arms resend one fixed clip unchanged, so every request after the first
+                # hits vLLM's processor cache: the difference to a unique-audio arm is preprocessing.
+                repeat = prompt.get("repeat_audio", False)
+                item = items[0] if repeat else item
                 ref = load_pcm(item["enroll"], p["enroll_s"])
                 window = load_pcm(item["mix"])[:int(p["prefill_window_s"] * SR)]
                 await client.transcribe(np.concatenate([ref, window]), prompt["system"], "prefill",
-                                        {"session": wid, "segment": item["id"], "prompt": prompt["name"]}, 1)
+                                        {"session": wid, "segment": item["id"], "prompt": prompt["name"]}, 1,
+                                        unique=not repeat)
 
         await asyncio.gather(*(worker(i) for i in range(concurrency)))
     rows = {}
@@ -321,8 +374,10 @@ def port_free(port):
         probe.settimeout(2)
         if probe.connect_ex(("127.0.0.1", port)) == 0:
             return False
-    listing = subprocess.run(["ps", "-eo", "cmd"], capture_output=True, text=True).stdout
-    return f"--port {port}" not in listing
+    # Only server processes count; shells whose command text merely mentions the port do not.
+    listing = subprocess.run(["ps", "-eo", "cmd"], capture_output=True, text=True).stdout.splitlines()
+    server = re.compile(rf"(serve_qwen3\.py|vllm serve|open-audio-llm serve|vllm\.entrypoints).*--port[ =]{port}\b")
+    return not any(server.search(line) for line in listing)
 
 
 def start_server(variant, p, log_path):
@@ -334,7 +389,8 @@ def start_server(variant, p, log_path):
                PYTHON=variant["python"], NAME=p["model_name"], HOST="127.0.0.1")
     env.pop("PYTHONPATH", None)
     env.update({k: str(v) for k, v in variant.get("environment", {}).items()})
-    command = ["bash", str(Path(p["pack"]) / "serve.sh"), "tsasr", *p["server_arguments"], *variant.get("arguments", [])]
+    pack = variant.get("pack", p["pack"])
+    command = ["bash", str(Path(pack) / "serve.sh"), "tsasr", *p["server_arguments"], *variant.get("arguments", [])]
     log = open(log_path, "w")
     process = subprocess.Popen(command, env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
     return process, log, command
@@ -426,7 +482,18 @@ async def main_async(p):
             runtime = await wait_ready(p, process, p["server_startup_timeout_s"])
             (vdir / "server-runtime.json").write_text(json.dumps({"command": command, **runtime}, indent=2))
             # Warm up graphs and the audio path before measuring.
-            await run_prefill(url, p["model_name"], items, p["prompts"], 4, 16, p)
+            await run_prefill(url, p["model_name"], items, p["prompts"] or p["stream_arms"], 4, 16, p)
+            if p.get("identity_requests"):
+                # Same requests, full decode, sequential: raw outputs are compared across variants.
+                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=120)) as http:
+                    client = Client(http, url, p["model_name"], p["max_tokens"])
+                    for item in items[:p["identity_requests"]]:
+                        ref = load_pcm(item["enroll"], p["enroll_s"])
+                        mix = load_pcm(item["mix"])[:int((p["final_window_s"] - p["enroll_s"]) * SR)]
+                        await client.transcribe(np.concatenate([ref, mix]), p["stream_arms"][0]["system"], "identity",
+                                                {"session": 0, "segment": item["id"], "prompt": "identity"}, unique=False)
+                (vdir / "identity.jsonl").write_text(
+                    "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in client.records))
             for concurrency in p.get("prefill_concurrency", []):
                 before = await scrape_metrics(p)
                 result, records = await run_prefill(url, p["model_name"], items, p["prompts"], concurrency,
@@ -439,7 +506,8 @@ async def main_async(p):
                              "metrics": {k: after.get(k, 0) - before.get(k, 0) for k in after}})
             for concurrency in p.get("stream_concurrency", []):
                 before = await scrape_metrics(p)
-                segments, records, wall = await run_stream(url, p["model_name"], items, p["stream_prompts"],
+                segments, records, wall = await run_stream(url, p["model_name"], items,
+                                                           p.get("stream_arms") or p["stream_prompts"],
                                                            concurrency, p["stream_seconds"], p)
                 after = await scrape_metrics(p)
                 (vdir / f"stream-c{concurrency}-segments.jsonl").write_text(
