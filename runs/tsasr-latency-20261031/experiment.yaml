@@ -1,0 +1,10 @@
+version: 1
+name: tsasr-latency-20261031
+purpose: 提升 NVIDIA 线上（Focus）TS-ASR 的出字速度：按 audiollm-go main 的预览/final 节奏回放，量化各手段（suffix 投机解码、FP8、缩短指令）的延迟收益与准确率代价
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+inputs:
+  model: /workspace/data/packages/amphionasr-1.7b-v3-tsrobust-054avg3
+tasks:
+- {id: stream-bench, name: 流式回放测延迟与吞吐, config: configs/stream-bench.yaml, depends_on: []}

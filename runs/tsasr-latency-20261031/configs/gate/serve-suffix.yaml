@@ -1,0 +1,40 @@
+# suffix 投机解码（arctic-inference 0.1.1，独立 env vllm-serving-spec），不改权重。
+# 其余设置与 ts-robust-acp-20261015 的 eval-054-avg3-v12/serve-tsasr.yaml 一致（10.28 版本权重、插 SEP、5 s 注册、关闭 prefix cache）。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving-spec/bin/python}
+  cwd: {path: ../../../..}
+  pythonpath: [{path: ../../../../src}]
+  gpus: [3]
+  threads: {omp: 4, openblas: 1}
+  environment:
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    HF_HUB_OFFLINE: '1'
+    VLLM_ENGINE_READY_TIMEOUT_S: '1800'
+    PYTHONUNBUFFERED: '1'
+    AMPHION_TSASR_INSERT_SEP: '1'
+    AMPHION_TSASR_ENROLL_SEC: '5'
+    AMPHION_TSASR_ENROLL_NOPAD: '0'
+    COT_TSASR_ENROLL_RANDOM: '0'
+    COT_AUDIO_CHUNKED_ATTN: '0'
+task:
+  kind: serve
+  backend: vllm
+  model: {path: /workspace/data/ae-runs/ts-robust-054-avg3/checkpoint-avg3}
+  arguments:
+    --host: 127.0.0.1
+    --port: 18191
+    --served-model-name: 054-avg3-suffix-tsasr
+    --dtype: bfloat16
+    --tensor-parallel-size: 1
+    --limit-mm-per-prompt: {audio: 1}
+    --gpu-memory-utilization: 0.2
+    --max-model-len: 8192
+    --hf-overrides:
+      thinker_config:
+        audio_config:
+          n_window_infer: 1000000000
+    --speculative-config: {method: suffix}
+  flags: [--trust-remote-code, --no-enable-prefix-caching]
+recording:
+  attempts_dir: {path: ../../tasks/02-accuracy-gates/serve-suffix/attempts}
