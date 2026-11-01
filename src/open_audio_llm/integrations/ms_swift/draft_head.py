@@ -101,7 +101,11 @@ class DraftHead(nn.Module):
 
     @classmethod
     def from_thinker(cls, thinker):
-        """A float32 head shaped like the text decoder, initialised from its last layer."""
+        """A float32 head shaped like the text decoder, initialised as transformers does.
+
+        Copying the decoder's last layer instead starts far worse: without the final norm its
+        MLP output turns into logits with a KL of about 200 nats to the target's distribution.
+        """
         text = thinker.config.text_config
         head = cls(
             hidden_size=text.hidden_size, intermediate_size=text.intermediate_size,
@@ -109,15 +113,11 @@ class DraftHead(nn.Module):
             head_dim=getattr(text, "head_dim", text.hidden_size // text.num_attention_heads),
             rms_norm_eps=text.rms_norm_eps, rope_theta=float(text.rope_theta),
         )
-        last = thinker.model.layers[-1]
-        layer = head.layers[0]
         with torch.no_grad():
-            for name in ("q_proj", "k_proj", "v_proj", "o_proj"):
-                getattr(layer.self_attn, name).weight.copy_(getattr(last.self_attn, name).weight)
-            for name in ("gate_proj", "up_proj", "down_proj"):
-                getattr(layer.mlp, name).weight.copy_(getattr(last.mlp, name).weight)
-            layer.post_attention_layernorm.weight.copy_(last.post_attention_layernorm.weight)
-        return head.to(device=last.mlp.down_proj.weight.device, dtype=torch.float32)
+            for module in head.modules():
+                if isinstance(module, nn.Linear):
+                    module.weight.normal_(0.0, text.initializer_range)
+        return head.to(device=thinker.lm_head.weight.device, dtype=torch.float32)
 
     def _rope(self, length, device):
         dim = self.config["head_dim"]

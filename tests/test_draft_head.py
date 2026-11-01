@@ -200,8 +200,7 @@ def test_enable_draft_head_trains_only_the_head_and_saves_a_vllm_draft(tmp_path)
     trainer._save_model = MethodType(
         lambda self, output_dir=None, state_dict=None: saved.update(state=state_dict), trainer)
     head = enable_draft_head(trainer, 3, 0.8)
-    last = model.thinker.model.layers[-1]
-    torch.testing.assert_close(head.layers[0].mlp.down_proj.weight, last.mlp.down_proj.weight)
+    assert head.fc.weight.dtype == torch.float32 and abs(head.fc.weight.std() - 0.02) < 0.005
     trainable = {name for name, p in model.named_parameters() if p.requires_grad}
     assert trainable and all(name.startswith(f"{DRAFT}.") for name in trainable)
 
