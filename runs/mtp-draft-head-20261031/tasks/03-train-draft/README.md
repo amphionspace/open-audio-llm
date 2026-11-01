@@ -3,18 +3,18 @@
 - 输入：10.28 版本权重（冻结）、`configs/train-data.yaml`（054 训练配方原样）、本分支代码快照 `shared/code`。
 - 配置：`configs/train-draft.yaml`。与 01/002 只差规模：ACP 1 节点 8 卡、全局 batch 192（12 × 8 × 累积 2）、20000 步（384 万条，约数据配方两轮）、warmup 300；学习率 1e-4 余弦到 1e-5、草稿步数 3、逐步衰减 0.8、不用 DeepSpeed 不变。按 002 的 0.46 s/步（每卡吞吐相同）估计 2.6–3.5 小时。
 - 完成条件：训练正常结束；最后的 `checkpoint-20000/eagle/` 用 02 的 `configs/spec-check.yaml`（把草稿路径换成新 checkpoint）复测接受长度与速度，并与 01/002 的 2500 步草稿对比。
-- 进展：未启动，由用户作为记录实验提交。
+- 进展：未启动，由用户作为记录实验提交。`--dry-run` 已核对：8 卡 torchrun、`--draft_head_steps 3`、ACP 任务名 `AmphionASR-mtp-draft-eagle-3step-on-1028-054avg3-20k-1node-001`。
 
 ## 提交
 
 ```bash
 cd /workspace/workspace/mingdong/repo/oal-mtp
-# 1. 冻结代码（任务容器只挂载 /workspace；已存在则不覆盖）
-bash runs/mtp-draft-head-20261031/scripts/snapshot_code.sh
+# 1. 代码快照：shared/code 已按 e9c9118 生成（任务容器只挂载 /workspace，训练只读快照）。
+#    之后若改了代码，先移走旧快照再重新生成：bash runs/mtp-draft-head-20261031/scripts/snapshot_code.sh
 # 2. 预览（不启动进程、不写外部系统）
 env -u PYTHONPATH /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/open-audio-llm train \
     --config runs/mtp-draft-head-20261031/configs/train-draft.yaml --dry-run
-# 3. 提交 ACP（任务名自动带 AmphionASR- 前缀，W&B 名 AmphionASR-mtp-draft-eagle-k3-on-1028-054avg3-20k-1node）
+# 3. 提交 ACP（任务名自动带 AmphionASR- 前缀，W&B 名 AmphionASR-mtp-draft-eagle-3step-on-1028-054avg3-20k-1node）
 env -u PYTHONPATH /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/open-audio-llm train \
     --config runs/mtp-draft-head-20261031/configs/train-draft.yaml
 ```
