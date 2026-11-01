@@ -100,6 +100,25 @@ def test_render_keeps_the_timeline_sets_the_snr_and_the_level():
     assert 10 * np.log10(np.mean(speech**2)) == pytest.approx(-26.0, abs=0.5)
 
 
+def test_render_drops_digital_silence_from_the_noise_and_keeps_the_speech():
+    config = _config(snr_db=(20.0, 20.0), speech_dbfs=(-26.0, -26.0), level_db_std=0.0)
+    length = SR * 2
+    track = np.zeros(length, dtype=np.float32)
+    track[SR // 2 : SR] = np.sin(np.arange(SR // 2) * 0.1).astype(np.float32)
+    # Mostly zeros, as some meeting_room_noise clips are: every window still has noise at the set SNR.
+    noise = np.concatenate([np.zeros(SR * 3, np.float32), np.random.default_rng(0).normal(0, 1, SR).astype(np.float32)])
+    frame = round(0.1 * SR)
+    for seed in range(5):
+        mixture = render_meeting(random.Random(seed), [track], [[(SR // 2, SR)]], length, config, rooms=[],
+                                 load_rir=None, noise_loader=lambda r: noise, sampling_rate=SR)
+        assert (mixture.reshape(-1, frame) ** 2).mean(axis=1).min() > 0
+        assert 10 * np.log10(np.mean(mixture[: SR // 2] ** 2)) == pytest.approx(-46.0, abs=0.5)
+    # A noise clip with nothing but zeros leaves the speech in place.
+    mixture = render_meeting(random.Random(0), [track], [[(SR // 2, SR)]], length, config, rooms=[],
+                             load_rir=None, noise_loader=lambda r: np.zeros(SR, np.float32), sampling_rate=SR)
+    assert 10 * np.log10(np.mean(mixture[SR // 2 : SR] ** 2)) == pytest.approx(-26.0, abs=0.5)
+
+
 def test_render_reverberates_from_the_direct_path():
     config = _config(dry_prob=0.0, rir_sources=({"dataset_id": "rir", "version": "1", "split": "train"},),
                      snr_db=(80.0, 80.0), level_db_std=0.0)

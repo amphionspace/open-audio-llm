@@ -1,0 +1,15 @@
+# 在线会议合成器 v1 的配置（open_audio_llm.data.meeting_online.OnlineMeetingConfig）。保真度检查
+# （scripts/build_dev_fidelity.py、synth_label_stats.py）读这里的 online_meeting 段；训练数据配置复制同一段。
+catalog: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/shared/catalog
+roots: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/shared/roots.json
+online_meeting:
+  material: {dataset_id: meeting_synth_zh, version: v1-20261031, split: material}
+  rir_sources:
+  - {dataset_id: real_rir_slr28, version: prepared-20260908, split: all}
+  noise_sources:
+  - {dataset_id: meeting_room_noise, version: v2-20261014, split: train}
+  corpus_weights: {alimeeting: 1.0, aishell5: 1.0}
+  # 声学范围由 scripts/fit_far_acoustics.py 在训练集远场上测得（tracking/far-acoustics-train.json），见 README。
+  snr_db: [9.0, 28.0]
+  level_db_std: 3.0
+  speech_dbfs: [-30.0, -22.0]

@@ -29,6 +29,11 @@ BACKCHANNEL_CHARS = 2
 CHARS_PATTERN = re.compile(r"[\W_]+")
 _SILENT_RMS = 1e-6
 _MAX_PEAK = 0.99
+# Noise clips lose their digitally silent 100 ms frames (power below -120 dBFS, under any 16-bit quantization floor)
+# before a window is cut: meeting_room_noise@v2-20261014 train has AISHELL-4 clips that are up to 88% zeros, in runs
+# of up to 266 s, and a window cut inside one had no noise.
+_NOISE_FRAME_SECONDS = 0.1
+_DIGITAL_SILENCE = 1e-12
 
 
 @dataclass(frozen=True)
@@ -303,6 +308,16 @@ def _tile(rng, clip, length):
     return clip[start : start + length]
 
 
+def _drop_digital_silence(clip, sampling_rate):
+    clip = np.asarray(clip, dtype=np.float32)
+    frame = round(_NOISE_FRAME_SECONDS * sampling_rate)
+    frames = clip[: len(clip) // frame * frame].reshape(-1, frame)
+    live = (frames.astype(np.float64) ** 2).mean(axis=1) > _DIGITAL_SILENCE
+    if live.all() or not live.any():
+        return clip
+    return frames[live].reshape(-1)
+
+
 def render_meeting(rng, tracks, spans, length, config, *, rooms, load_rir, noise_loader, sampling_rate, info=None):
     """Reverberate each dry speaker track at its own position in one room, set levels, add room noise.
 
@@ -340,10 +355,12 @@ def render_meeting(rng, tracks, spans, length, config, *, rooms, load_rir, noise
     speech = np.sum(wet, axis=0) if wet else np.zeros(length, dtype=np.float32)
     power = float(np.mean(speech[active] ** 2)) if active.any() else 0.0
     snr = rng.uniform(*config.snr_db)
-    noise = _tile(rng, noise_loader(rng), length)
+    noise = _tile(rng, _drop_digital_silence(noise_loader(rng), sampling_rate), length)
     noise_power = float(np.mean(noise**2))
-    if power > 0 and noise_power > 0:
-        mixture = speech + noise * math.sqrt(power / (noise_power * 10 ** (snr / 10)))
+    if power > 0:
+        # A silent noise window leaves the speech without noise; it never replaces the speech.
+        scale = math.sqrt(power / (noise_power * 10 ** (snr / 10))) if noise_power > 0 else 0.0
+        mixture = speech + noise * scale
         gain = 10 ** (rng.uniform(*config.speech_dbfs) / 20) / math.sqrt(power)
     else:
         mixture = noise
