@@ -205,7 +205,11 @@ W&B：run `issue91-confprobe-054avg3-001`（entity `1016097967-amphion`，projec
 - **阈值**：−0.831，即第八节 scene-asr 误拒 0.5% 那一档，用环境变量 `AMPHION_CONFIDENCE_THRESHOLD` 传入，不设就启动失败。
 - **端到端验证**（`probes/confgate_smoke.py`，客户片段，复现运行时请求形态）：
   - 背景 33/33 不出字，对照 4/4 保留；
-  - 前缀续写：对照段按 token 回退 5 个后续写，通过；背景段带设备前缀续写，被拒；
+  - 前缀续写：对照段按 token 回退 5 个后续写，4/4 通过；背景段带设备定稿的前 8 个字续写，31/33 被拒（11-01 更正，原文写成全部被拒）。没被拒的两段，强制前缀后模型续写变得自信，开头 16 个 token 的平均分在 −0.64～−0.66：
+    - s2_seg00 的前缀是 8 个相同的字；
+    - s2_seg07 的前缀不重复。
+    
+    两次运行都是这两段，分数基本相同。真实运行时的前缀是模型自己的中间结果，而中间结果请求本身也经过拒识，所以这里用的是偏坏的情形，实际效果要靠原音回放确认；
   - 判定和离线小测 37/37 一致；
   - AmphionEval 形态的请求（带 system block，`max_tokens` 512）下，有 1 段背景（s1_seg34）仍会出字。
 - **单元测试**：12 条。
@@ -240,18 +244,24 @@ W&B：run `issue91-confprobe-054avg3-001`（entity `1016097967-amphion`，projec
 
 W&B：6 个 run 都是 `finished`，指标已上传，模型名 `amphionasr-054avg3-confgate`。结果没有发布到 AmphionEval 榜单（`publish.enabled: false`）。
 
-### 交付前
+### 交付流程（10-31 定）
 
-- **要产品判断的**：方言短句和英文带热词列表上的误拒能否接受。下调阈值能减少误拒，但背景召回会跟着降，具体多少要在这两个集合上取分数后才知道。
-- **阈值和模型绑定**：如果下次交付换了 checkpoint，要用 `probes/confprobe.py` 在 scene-asr 上重新标定。
-- **交付包改动**（确认后做）：
-  - 把 `confidence_gate.py` 放进 `runtime/`；
-  - `serve.sh` 的普通 ASR 模式加上 `--middleware confidence_gate.ConfidenceGate` 和阈值；
-  - README 写明客户端约定；
-  - 照例过一遍警务全量词表检查。
-- **还没覆盖**：
-  - audiollm-go 链路的原音回放：设备前缀本身就是复读（「嗯嗯…」）的情况没测；
-  - 用新的客户背景录音验证召回。
+从 10.28 之后的下一个交付包起，`serve.sh asr` 默认带这个插件；方言短句和英文带热词列表上的误拒是已知代价。每个包按下面四步做，脚本在调试机的 `scratch/ts033/pack/`（不入库），代码一律取 open-audio-llm 的 `origin/main`：
+
+1. **标定**（`calibrate_confgate.py`）：checkpoint 换了就要重标。在不挂插件的服务上按运行时请求形态解码，取 head16 在 scene-asr 误拒 0.5% 处的值。054 avg3 是 −0.831。
+2. **带插件评测**：评测配置照 `configs/eval-054-avg3-confgate/` 写，README 里的普通 ASR 数字注明插件开启；警务全量词表检查也在挂插件的服务上跑。
+3. **打包**（`confgate_pack.py`）：
+   - 把 `confidence_gate.py` 放进 `runtime/`；
+   - `serve.sh asr` 加上中间件和阈值（`AMPHION_CONFIDENCE_GATE=off` 可关闭，TS-ASR 模式不挂）；
+   - README 写明客户端约定。
+4. **自检**（`check_confgate_pack.py`）：
+   - 检查包内启动参数和启动日志里的阈值；
+   - 跑客户片段冒烟，违反约定就算失败，背景召回只报数字；
+   - 用包内 `serve.sh asr` 跑 babble 和 scene-asr，和第 2 步的 run 对照。
+
+还没覆盖：
+- audiollm-go 链路的原音回放：设备前缀续写有 2/33 段没被拒，见上文；
+- 用新的客户背景录音验证召回。
 
 ## 资源与复现
 
