@@ -1,0 +1,86 @@
+# 10000 步草稿头的完整速度协议（同 008，未运行，等空闲的卡）。
+version: 1
+parameters:
+  output: /workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/tasks/02-serve-bench/attempts/015/artifacts
+  pack: /workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/shared/pack-eagle
+  gpu_util: 0.3
+  max_model_len: 8192
+  model_name: spec-check
+  server_arguments:
+  - --max-num-seqs
+  - '48'
+  - --max-num-batched-tokens
+  - '4096'
+  server_startup_timeout_s: 1800
+  enroll_s: 5
+  ts_max_mix_s: 22
+  catalog: /workspace/data/registry/catalog
+  roots: /workspace/data/registry/roots.json
+  asr_samples: /workspace/data/ae-runs/ts-robust-054-avg3/runs/run-20261028T035924Z-0142dad8/samples.jsonl
+  asr_per_source: 9
+  ts_samples: /workspace/data/ae-runs/pack-054avg3-check/runs/run-20261028T184730Z-524b4f4b/samples.jsonl
+  ts_count: 300
+  seed: 20261031
+  max_tokens: 256
+  request_timeout_s: 300
+  warmup_requests: 16
+  modes:
+  - asr
+  - tsasr
+  concurrency:
+  - 1
+  - 16
+  - 48
+  variants:
+  - name: base
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+  - name: eagle1-k2
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+    arguments:
+    - --speculative-config
+    - '{"method": "eagle", "model": "/workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/tasks/01-validate-draft/attempts/010/artifacts/training/checkpoint-10000/eagle", "num_speculative_tokens": 2}'
+  - name: eagle1-k3
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+    arguments:
+    - --speculative-config
+    - '{"method": "eagle", "model": "/workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/tasks/01-validate-draft/attempts/010/artifacts/training/checkpoint-10000/eagle", "num_speculative_tokens": 3}'
+  - name: eagle3-k1
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+    arguments:
+    - --speculative-config
+    - '{"method": "eagle3", "model": "/workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/tasks/01-validate-draft/attempts/011/artifacts/training/checkpoint-10000/eagle", "num_speculative_tokens": 1}'
+  - name: eagle3-k2
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+    arguments:
+    - --speculative-config
+    - '{"method": "eagle3", "model": "/workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/tasks/01-validate-draft/attempts/011/artifacts/training/checkpoint-10000/eagle", "num_speculative_tokens": 2}'
+  - name: eagle3-k3
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+    arguments:
+    - --speculative-config
+    - '{"method": "eagle3", "model": "/workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/tasks/01-validate-draft/attempts/011/artifacts/training/checkpoint-10000/eagle", "num_speculative_tokens": 3}'
+  lanes:
+  - gpu: 4
+    port: 18310
+    variants:
+    - base
+  - gpu: 5
+    port: 18320
+    variants:
+    - eagle3-k3
+    - eagle1-k2
+  - gpu: 6
+    port: 18330
+    variants:
+    - eagle3-k2
+    - eagle1-k3
+  - gpu: 7
+    port: 18340
+    variants:
+    - eagle3-k1
+  wandb:
+    enabled: true
+    mode: online
+    entity: 1016097967-amphion
+    project: open-audio-llm
+    name: mtp-draft-head-20261031-a015-spec-check

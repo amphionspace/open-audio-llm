@@ -1,6 +1,6 @@
 version: 1
 name: mtp-draft-head-20261031
-purpose: 给 AmphionASR 2.0（Qwen3-ASR-1.7B）训练一层 EAGLE 草稿头，用 vLLM 0.18 投机解码加速推理；贪心校验保证输出与原模型一致，只比速度
+purpose: 给 AmphionASR 2.0（Qwen3-ASR-1.7B）训练一层 EAGLE-3 草稿头，用 vLLM 0.18 投机解码加速推理；贪心校验保证输出与原模型一致，只比速度
 policy:
   evaluation_backend: vllm
   human_review_required: false
@@ -8,6 +8,6 @@ inputs:
   target_model: /workspace/data/packages/amphionasr-1.7b-v3-tsrobust-054avg3/model
   data_config: configs/train-data.yaml
 tasks:
-- {id: validate-draft, name: 草稿头短训验证（ACP 开发节点 GPU 4–7，2500 步，不接 W&B）, depends_on: []}
+- {id: validate-draft, name: 草稿头短训（ACP 开发节点 GPU 4–7，2500–10000 步，自蒸馏 A/B）, depends_on: []}
 - {id: serve-bench, name: vLLM 投机解码无损、接受率与并发 1/16/48 速度（对照无投机与 suffix）, depends_on: [validate-draft]}
 - {id: train-draft, name: 正式草稿头训练（ACP 1 节点，未启动）, config: configs/train-draft.yaml, depends_on: [validate-draft]}

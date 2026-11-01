@@ -1,9 +1,10 @@
-# 正式草稿头训练（未启动，由用户作为记录实验提交）：10.28 版本（054 avg3）权重全部冻结，只训练一层 EAGLE 草稿头，
-# 用于 vLLM 0.18 投机解码（--speculative-config method eagle）。数据 = 054 的训练数据配方原样（configs/train-data.yaml）。
-# 与 01-validate-draft/002（4 卡 2500 步，见任务 README）相比只改规模：8 卡、步数、warmup；学习率、草稿步数 3、衰减 0.8 相同。
-# 目标损失：草稿头对冻结模型“下下个 token”分布的 KL，按 vLLM 草稿的 3 步展开（见 src/open_audio_llm/integrations/ms_swift/draft_head.py）。
-# checkpoint 只含草稿头：model.safetensors（mtp_draft.*，续训用）+ eagle/（vLLM 草稿目录，config.json + 权重）。
-# 骨干换成 GRPO 等新权重时必须换 --model 重训草稿头：草稿头读的是骨干最后一层的隐状态。
+# 正式草稿头训练（未启动，由用户作为记录实验提交）：骨干全部冻结，只训练一层 EAGLE-3 草稿头，用于 vLLM 0.18 投机解码（method eagle3）。
+# 最终草稿头要在 GRPO 之后的权重上训练：提交时只改 --model，其余不变（draft_info.json 自动记录骨干路径）。
+# 结构选择依据（tasks/02-serve-bench）：留出请求接受长度，10000 步（96 万条）时 EAGLE-3 高于 EAGLE-1（k=3：普通 ASR 3.43 对 3.36，TS 3.31 对 3.14）。
+# 目标选择依据：自蒸馏 A/B 没有测出收益（差别 ≤ 0.011）、成本约 17 倍，所以用数据的标注文本。
+# 数据 = 054 的训练数据配方原样（configs/train-data.yaml）。与 01/011（4 卡 10000 步）相比只改规模：8 卡、20000 步（384 万条，约数据配方两轮）、warmup 300。
+# 目标损失：草稿头对冻结模型“下下个 token”分布的 KL，按 vLLM 草稿的 3 步展开（src/open_audio_llm/integrations/ms_swift/draft_head.py）。
+# checkpoint 只含草稿头：model.safetensors（mtp_draft.*，续训用）+ eagle/（vLLM 草稿目录）。
 version: 1
 runtime:
   python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
@@ -27,11 +28,14 @@ task:
   module: open_audio_llm.integrations.ms_swift.train
   positional: [sft]
   arguments:
+    # 现为 10.28 版本权重；提交前换成 GRPO 之后的权重，这是唯一要改的地方。
     --model: /workspace/data/packages/amphionasr-1.7b-v3-tsrobust-054avg3/model
     --model_type: amphion_asr_1.7b
     --external_plugins: [{path: ../shared/code/src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py}]
     # 全部骨干参数由 --draft_head_steps 冻结（requires_grad=False、eval 模式、no_grad 前向）；tuner_type 只决定 ms-swift 的流程。
     --tuner_type: full
+    --draft_head_arch: eagle3
+    --draft_head_targets: reference
     --draft_head_steps: 3
     --draft_head_step_decay: 0.8
     # 草稿头只有 6000 万参数：DDP 即可，DeepSpeed 与草稿头不兼容（训练入口会拒绝）。
@@ -83,7 +87,7 @@ tracking:
   credentials_file: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh
   entity: 1016097967-amphion
   project: open-audio-llm
-  name: AmphionASR-mtp-draft-eagle-3step-on-1028-054avg3-20k-1node
+  name: AmphionASR-mtp-draft-eagle3-3step-20k-1node
   interval: 5
   startup_timeout: 180
   finish_timeout: 300

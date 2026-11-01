@@ -1,41 +1,47 @@
 # AmphionASR 2.0 草稿头投机解码（2026-10-31）
 
-给 10.28 版本（054 avg3，Qwen3-ASR-1.7B）训练一层 EAGLE 草稿头，用 vLLM 0.18 投机解码加速。校验是贪心的，输出与原模型一致（差异只在批次不确定性量级），所以不需要重测准确率，只比速度。
+给 Qwen3-ASR-1.7B 骨干（实验用 10.28 版本权重）训练一层草稿头，用 vLLM 0.18 投机解码加速。校验是贪心的，骨干全程冻结，所以不重测准确率，只比速度。最终草稿头会在 GRPO 之后的权重上重训。
 
 ## 结论
 
-- **2500 步短训（4 张 A800、19 分钟）的草稿头已经可用**：每次校验平均接受 2.0 个 token（k=2）/ 2.2–2.4 个（k=3）；单路普通 ASR 请求延迟 −23%，TS 流式预览滞后 −21~−28%，final 请求 −19~−23%（16/48 路）。和编码器去同步修复叠加后相对收益不变。
-- **对比 suffix**：普通 ASR（请求互不重复）suffix 几乎不被接受（接受长度 1.24），比无投机还慢；TS 流式回放里 suffix 因为 final 重放预览已转写的音频而在 final 上更快，预览滞后两者相当。草稿头不依赖重复内容，普通 ASR 与 TS 都有效，而且不需要新依赖（suffix 需要 arctic-inference）。
-- **推荐 k=2**：k=3 接受长度高 0.2–0.3，但每步多算一个草稿，各项速度与 k=2 的差别都在噪声内；k=1 稍慢。普通 ASR 16 路吞吐 +20%、48 路 +7%（GPU 接近满载，额外计算抵掉大部分收益）。
-- 正式训练（03，8 卡 20000 步，约 3 小时）配置已备好未启动；短训曲线在结束时仍在下降，正式草稿头的接受率应更高（需复测）。
+- **最终设计：EAGLE-3，融合骨干第 2 / 14 / 25 层，用标注文本训练。** 留出请求上，96 万条样本（10000 步）时每次校验接受 2.72 / 2.66 个 token（k=2，普通 ASR / TS）、3.43 / 3.31 个（k=3），k1–k3 都高于 EAGLE-1（k=3 为 3.36 / 3.14）。预算小时结论相反：24 万条时 EAGLE-1 领先，48 万条时已接近。
+- **自蒸馏不采用**：用模型贪心输出微调和用标注文本微调，接受长度差别最大 0.011，方向不一致，成本约 17 倍。只比了 4.8 万条的微调，不是从头训练。
+- **无损**：单路时所有投机变体的输出彼此逐字节相同（覆盖两种结构、k1–k3、2500 至 10000 步），与无投机都只差同样的 3 / 306 条 ASR、2 / 300 条 TS。差异来自校验前向的计算路径，与草稿头无关，数量与无投机自己换并发同级。
+- **速度**：已测的是 2500 步草稿头（独占 A800）：普通 ASR 单路 p50 78→61 ms，16 路吞吐 +19%，48 路 +7%；TS 流式预览滞后 −23~−26%（叠加去同步修复时 −20~−28%）。5000 步 k=3 单路：ASR p50 56–59 ms，TS 58–60 ms。**10000 步草稿头还没有测速**（GPU 与 GRPO 共享），脚本已备好。
+- **对比 suffix**：普通 ASR 上 suffix 接受长度只有 1.24，比无投机还慢；TS 流式里 final 重放预览已转写的音频，suffix 在 final 上比 2500 步草稿头更快（10000 步草稿头尚未对比）。
+- 正式训练配置已备好未启动（03），提交前只需换 `--model`。
 
 ## 路线与原因
 
-选 **vLLM `method: eagle` + 标准 Llama 草稿检查点**（`EagleLlamaForCausalLM`，`vllm/model_executor/models/llama_eagle.py`），不选 `method: mtp`：
+**vLLM `method: eagle3` + 标准 `LlamaForCausalLMEagle3` 草稿检查点**（`vllm/model_executor/models/llama_eagle3.py`）。vLLM 不打补丁、不注册新模型类，只在我们的目标模型类里改两处（`src/open_audio_llm/tsasr/vllm_backend.py`）：
 
-- eagle 草稿检查点 vLLM 0.18 原生能加载：`config.json` 写 `LlamaForCausalLM`、权重只有 `fc` 和 `layers.0.*`，embed_tokens / lm_head 自动共享目标模型的（日志 “Sharing target model embedding/lm_head weights”）。vLLM 侧零补丁、无需注册新模型类。
-- mtp 路线要求草稿配置的 `model_type` 在 vLLM 的 `MTPModelTypes` 列表里、并由 `SpeculativeConfig.hf_config_override` 改写架构名，Qwen3-ASR 不在其中，需要注册配置类 + 模型类 + 绕开架构改写。
-- 多模态守卫 `_raise_if_multimodal` 只在需要额外输入槽（draft_model 方法或 parallel drafting）时触发，eagle/mtp 都不触发；两条路线共同的唯一问题是 `EagleProposer.load_model` 对所有多模态目标读 `target_model.config.image_token_index`，Qwen3-ASR 的 thinker 配置没有它（实测 `AttributeError`）。解决：目标模型类里一行 `self.config.image_token_index = thinker_config.audio_token_id`（`src/open_audio_llm/tsasr/vllm_backend.py`，交付包 `runtime/vendor/qwen3_asr_vllm.py` 同一行），草稿头不读这个值。
+- `self.config.image_token_index = audio_token_id`：`EagleProposer.load_model` 对所有多模态目标都读这个属性，Qwen3-ASR 配置没有它会 `AttributeError`，草稿头不用它。
+- 基类加 `SupportsEagle3`：`Qwen3Model` 本来就带 `EagleModelMixin`，默认的 `set_aux_hidden_state_layers` 走 `get_language_model().model`，`forward` 把 `(hidden, aux)` 原样返回。
+- 多模态守卫 `_raise_if_multimodal` 只在 draft_model 方法或 parallel drafting 时触发，eagle / eagle3 不触发。
 
-训练与 vLLM 运行的结构逐项一致（`src/open_audio_llm/integrations/ms_swift/draft_head.py`，单测对照 transformers 的 Llama 层与按 vLLM 语义逐位置模拟的多步草稿）：
+训练与 vLLM 运行的结构逐项一致（`src/open_audio_llm/integrations/ms_swift/draft_head.py`，单测按 vLLM 语义逐位置模拟多步草稿并对照）：
 
-- 隐状态契约：vLLM 传给草稿的是目标模型 **final norm 之后** 的最后一层输出（与送进 lm_head 的同一个张量），位置不变；草稿第 i 行 = (目标在 i 的隐状态, 第 i+1 个 token 的 embedding)，RoPE 位置 i（目标的 MRoPE 三维位置相同，草稿用第 0 维），预测第 i+2 个 token。
-- 音频占位：`EagleLlamaForCausalLM.embed_input_ids` 不接受多模态参数，vLLM 回退为文本草稿（日志 “falling back to text-only mode”），音频位置用 `<|audio_pad|>` 的 embedding；训练里同样用 `embed_tokens(input_ids)`。
-- 结构：`fc(cat(embed, hidden))` → 去掉 input_layernorm 的 Llama 层（无 q/k norm，rope_theta 1e6，GQA 16/8，head_dim 128）→ `h + residual` → 共享 lm_head（与 embed 绑定）；没有 final norm。
-- 多步：第 k 步用上一步的输出特征和上一步的草稿 token，位置 +1，注意力看验证过的前缀（第一遍的 KV）和本次提案前几步的 KV；训练按这个掩码把 3 步并行展开（EAGLE-3 的 training-time test）。
-- 目标：冻结模型（no_grad、eval）对下下个 token 的分布做 KL，只在 assistant 回复内（输入 token 与被预测 token 都是生成的）计算；第 k 步权重 0.8^(k−1)。只有草稿头约 6000 万参数可训练。
+- 隐状态契约：vLLM 取 `hidden + residual`，id `j` 是第 `j - 1` 层之后、即进入第 `j` 层的残差流，在 final norm 之前；默认 `(2, L // 2, L - 3)`，28 层时为 2 / 14 / 25，写进检查点的 `eagle_aux_hidden_state_layer_ids`。训练用 hook 取同一张量（单测对照 transformers 的 `hidden_states`），位置不变。
+- 第一遍第 i 行 = `fc(cat(aux_2, aux_14, aux_25))` 与第 i+1 个 token 的 embedding，RoPE 位置 i（MRoPE 三维位置相同，取第 0 维），预测第 i+2 个 token。
+- 音频占位：`Eagle3LlamaForCausalLM.embed_input_ids` 接受多模态参数但忽略它，音频位置用 `<|audio_pad|>` 的 embedding，音频信息来自隐状态；训练同样用 `embed_tokens(input_ids)`。
+- 结构：`cat(input_layernorm(embed), hidden_norm(h))` → 注意力（残差为 `h`，GQA 16/8，head_dim 128，rope_theta 1e6，无 q/k norm）→ MLP → final `norm` → 共享 lm_head。后续步喂 final norm 之前的输出，不再过 `fc`。
+- 多步：第 k 步位置 +1，注意力看验证过的前缀（第一遍的 KV）和本次提案前几步的 KV；训练按这个掩码把 3 步并行展开（EAGLE-3 的 training-time test）。
+- 目标：冻结模型（no_grad、eval）对下下个 token 的分布做 KL，只在 assistant 回复内计算；第 k 步权重 0.8^(k−1)。只有草稿头 7130 万参数可训练。
 
 ## 任务
 
 | 任务 | 内容 | 状态 |
 |---|---|---|
-| [01-validate-draft](tasks/01-validate-draft/README.md) | 草稿头短训（ACP 开发节点 GPU 4–7，2500 步，不接 W&B） | 完成 |
-| [02-serve-bench](tasks/02-serve-bench/README.md) | vLLM 无损、接受率、并发 1/16/48 速度，对照无投机与 suffix，另测叠加去同步修复 | 完成，W&B 离线待补录 |
+| [01-validate-draft](tasks/01-validate-draft/README.md) | 草稿头短训（ACP 开发节点 GPU 4–7，2500 / 5000 / 10000 步，自蒸馏 A/B） | 完成 |
+| [02-serve-bench](tasks/02-serve-bench/README.md) | vLLM 无损、接受率、并发 1/16/48 速度，对照无投机、suffix、EAGLE-1，另测叠加去同步修复 | 完成到 10000 步的接受率；10000 步的测速待空闲 GPU |
 | [03-train-draft](tasks/03-train-draft/README.md) | 正式草稿头训练（`configs/train-draft.yaml`） | 未启动 |
 
 ## 风险
 
-- 骨干换成 GRPO 等新权重后必须用新权重重训草稿头（只改 `--model`）；旧草稿头接到新骨干上仍无损，但接受率会降，未测。
-- 速度只在独占的 A800 上测过；线上是 RTX PRO 4500 Blackwell 4 路分时共享，草稿头每步多一次小前向，分时 GPU 上的净收益需在 Focus test 复测。
-- 训练数据是标注文本（teacher forcing），不是骨干自己的贪心输出；骨干输出偏离标注的地方草稿头学得少，接受率可能低估潜力。
-- vLLM 的普通 ASR 内置类（`vllm/model_executor/models/qwen3_asr.py`，仓库 serve 在不插 SEP 时用它）没有这一行，要在那条路径上开投机需同样处理；交付包两种模式都走自带的类，不受影响。
+- 10000 步草稿头没有测速，384 万条的正式预算没有实测接受率；k=3 是暂定值。
+- 骨干换成 GRPO 权重后必须重训（只改 `--model`）；旧草稿头接到新骨干上仍无损，但接受率会降，未测。
+- 速度只在独占 A800 上测过；线上是分时共享的卡，草稿头每步多一次小前向，净收益要在目标环境复测。
+- 接受率样本是 306 条普通 ASR + 300 条 TS，取自评测集，不是全量；数字用于比较设计，不是全量评测结果。
+- 自蒸馏结论只覆盖微调阶段。
+- vLLM 内置 Qwen3-ASR 类（仓库 serve 在不插 SEP 时用）没有这两处改动，那条路径开投机要同样处理；交付包两种模式都走自带的类。
+- 单路无损差异里有一条 TS 缺席样本从不出字变成出字，属于近似并列翻转，无投机换并发时同样出现。
