@@ -16,7 +16,10 @@ TRAIN_KEYS = (
     "loss", "grad_norm", "learning_rate", "ce_asr", "ce_sot", "replay_kl",
     "ts_activity_loss", "ts_activity_acc", "ts_activity_frames",
     "memory(GiB)", "train_speed(s/it)",
+    "reward", "reward_std", "kl", "frac_reward_zero_std",
 )
+# GRPO logs one entry per reward function and completion statistic under these prefixes.
+TRAIN_PREFIXES = ("rewards/", "completions/", "clip_ratio/")
 CONFIG_KEYS = (
     "max_steps", "learning_rate", "vit_lr", "aligner_lr", "warmup_steps",
     "lr_scheduler_type", "gradient_accumulation_steps", "per_device_train_batch_size",
@@ -125,7 +128,8 @@ def collect_events(root):
         step = int(row["global_step/max_steps"].split("/")[0])
         if "loss" in row:
             kind = "train"
-            values = {f"train/{key}": row[key] for key in TRAIN_KEYS if key in row}
+            values = {f"train/{key}": value for key, value in row.items()
+                      if key in TRAIN_KEYS or key.startswith(TRAIN_PREFIXES)}
         elif "eval_loss" in row:
             kind = "validation"
             values = {f"validation/{key.removeprefix('eval_')}": value
