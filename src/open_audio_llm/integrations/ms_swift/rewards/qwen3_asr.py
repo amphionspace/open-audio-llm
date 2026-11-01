@@ -51,15 +51,25 @@ def _contains(haystack: list[str], needle: list[str]) -> bool:
     return bool(needle) and f" {' '.join(needle)} " in f" {' '.join(haystack)} "
 
 
-def hotword(output: str, solution: str, candidates: str | None) -> float:
+def prompt_hotwords(messages) -> str | None:
+    """The list the model was shown: the system prompt's ``Hotwords:`` line, None without one."""
+    for message in messages or []:
+        content = str(message.get("content") or "")
+        if message.get("role") == "system" and content.startswith("Hotwords:"):
+            return content.split(":", 1)[1].strip()
+    return None
+
+
+def hotword(output: str, solution: str, candidates: str | None) -> float | None:
     """Recall of listed words the reference contains, minus listed words written but not spoken.
 
     Listed words absent from the reference are the distractors (near-homophones in the hard sets);
-    the penalty is their count relative to the spoken listed words, capped at 1. No list scores 0.
+    the penalty is their count relative to the spoken listed words, capped at 1. Without a list the
+    reward is None (not scored), so prompts without hotwords neither move nor dilute it.
     """
     words = [w.strip() for w in str(candidates or "").split(",") if w.strip()]
     if not words or words == ["N/A"]:
-        return 0.0
+        return None
     hyp, ref = units(transcript(output)), units(transcript(solution))
     spoken = [w for w in words if _contains(ref, units(w))]
     hits = sum(_contains(hyp, units(w)) for w in spoken)

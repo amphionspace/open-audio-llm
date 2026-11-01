@@ -107,8 +107,11 @@ class Qwen3ASRPresenceReward(ORM):
 
 
 class Qwen3ASRHotwordReward(ORM):
-    def __call__(self, completions, solution, candidate_hotwords=None, **kwargs):
-        lists = candidate_hotwords or [None] * len(completions)
+    """Scores only prompts that showed a list; the dataset's candidate_hotwords column exists for every
+    sample but reaches the prompt only for hotword tasks."""
+
+    def __call__(self, completions, solution, messages, **kwargs):
+        lists = [qwen3_asr.prompt_hotwords(m) for m in messages]
         return [qwen3_asr.hotword(c, s, h) for c, s, h in zip(completions, solution, lists)]
 
 

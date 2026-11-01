@@ -39,8 +39,15 @@ def test_hotword_recall_minus_distractor_false_alarms():
     # The near-homophone distractor written instead of the spoken name.
     assert qwen3_asr.hotword("language Chinese<asr_text>请联系章玮处理", ref, words) == -1.0
     assert qwen3_asr.hotword("language Chinese<asr_text>请联系处理", ref, words) == 0.0
-    assert qwen3_asr.hotword(ref, ref, "N/A") == 0.0
-    assert qwen3_asr.hotword(ref, ref, None) == 0.0
+    assert qwen3_asr.hotword(ref, ref, "N/A") is None
+    assert qwen3_asr.hotword(ref, ref, None) is None
+
+
+def test_hotword_list_comes_from_the_prompt_not_the_dataset_column():
+    shown = [{"role": "system", "content": "Hotwords: 张伟,章玮"}, {"role": "user", "content": "<audio>"}]
+    hidden = [{"role": "system", "content": ""}, {"role": "user", "content": "<audio>"}]
+    assert qwen3_asr.prompt_hotwords(shown) == "张伟,章玮"
+    assert qwen3_asr.prompt_hotwords(hidden) is None
 
 
 def test_latin_hotwords_match_whole_words():
