@@ -26,21 +26,22 @@ class GRPOPromptPlan(Dataset):
     """A fixed list of ``(epoch, record, occurrence)`` draws.
 
     ``epoch`` selects fresh replay permutations and fresh online-mixing seeds, so the prompts are new
-    mixtures of the SFT sources rather than the batches the SFT run already consumed. Sources marked
-    ``grpo_mined_only`` are skipped by the replay draw: they enter only through ``mined`` plans, whose
+    mixtures of the SFT sources rather than the batches the SFT run already consumed. Sources named in
+    ``mined_only`` are skipped by the replay draw: they enter only through ``mined`` plans, whose
     entries (written by ``open_audio_llm.scripts.grpo_mining`` against the same data config) take
     ``share`` of the list. A draw is reproduced exactly from its tuple, so a mined prompt is the very
     audio, prompt and augmentation the miner scored. GRPO's own sampler then shuffles and repeats the list.
     """
 
-    def __init__(self, dataset, *, prompts: int, epoch: int, mined: list[dict] | None = None, seed: int = 0):
+    def __init__(self, dataset, *, prompts: int, epoch: int, mined: list[dict] | None = None,
+                 mined_only: list[str] | None = None, seed: int = 0):
         if dataset.config.get("replay") is None:
             raise ValueError("grpo prompts require a replay recipe")
         if type(prompts) is not int or prompts <= 0 or type(epoch) is not int or epoch < 0:
             raise ValueError("grpo.prompts must be a positive integer and grpo.epoch a non-negative integer")
         self.dataset = dataset
         ranges = {source_key(s): r for s, r in zip(dataset.sources, dataset.source_ranges)}
-        mined_only = [r for s, r in zip(dataset.sources, dataset.source_ranges) if s.get("grpo_mined_only")]
+        skipped = [ranges[key] for key in mined_only or []]
         plans, total_share = [], 0.0
         for item in mined or []:
             entries = read_mined(item["plan"])
@@ -62,7 +63,7 @@ class GRPOPromptPlan(Dataset):
         sampler = CatalogBatchSampler(dataset, batch_size=1)
         sampler.epoch = epoch
         draws = (t for t in sampler._mux(random.Random(f"{dataset.seed}:grpo:{epoch}"))
-                 if not any(t[1] in r for r in mined_only))
+                 if not any(t[1] in r for r in skipped))
         self.plan = list(islice(draws, replay))
         if len(self.plan) < replay:
             raise ValueError(f"replay epoch yields {len(self.plan)} prompts, fewer than {replay}")

@@ -11,7 +11,7 @@ def recipe():
     sources = [
         {"dataset_id": "a", "version": "v", "split": "train", "weight": 3},
         {"dataset_id": "b", "version": "v", "split": "train", "weight": 1},
-        {"dataset_id": "hard", "version": "v", "split": "all", "weight": 1, "grpo_mined_only": True},
+        {"dataset_id": "hard", "version": "v", "split": "all", "weight": 1},
     ]
     ds = dataset(sources, [60, 20, 20])
     ds.config["replay"] = {"epoch_samples": 80, "window_samples": 8}
@@ -26,7 +26,8 @@ def write_plan(path, entries):
 def test_replay_draws_skip_mined_only_sources_and_mined_entries_take_their_share(tmp_path):
     ds = recipe()
     mined = [{"source": "hard@v:all", "index": [20, i, n], "record_id": str(i)} for n, i in enumerate([85, 90])]
-    plan = GRPOPromptPlan(ds, prompts=40, epoch=3, mined=[{"plan": write_plan(tmp_path / "m.jsonl", mined), "share": 0.25}])
+    plan = GRPOPromptPlan(ds, prompts=40, epoch=3, mined_only=["hard@v:all"],
+                          mined=[{"plan": write_plan(tmp_path / "m.jsonl", mined), "share": 0.25}])
     assert len(plan) == 40
     replay, extra = plan.plan[:30], plan.plan[30:]
     assert all(index < 80 for _, index, _ in replay)
@@ -37,7 +38,6 @@ def test_replay_draws_skip_mined_only_sources_and_mined_entries_take_their_share
 
 def test_without_mined_plans_the_replay_draw_is_unchanged():
     ds = recipe()
-    ds.sources[2].pop("grpo_mined_only")
     assert len(GRPOPromptPlan(ds, prompts=40, epoch=3).plan) == 40
 
 

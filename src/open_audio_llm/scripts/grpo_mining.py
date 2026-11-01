@@ -105,6 +105,8 @@ def main():
         indexes = rng.sample(range(ranges[key].start, ranges[key].stop), min(args.candidates, len(ranges[key])))
         entries += [{"source": key, "index": [args.epoch, i, len(entries) + n],
                      "record_id": dataset.records[i].record.id} for n, i in enumerate(indexes)]
+    # A run stopped early then still covers every source in proportion.
+    rng.shuffle(entries)
     output = Path(args.output)
     # Forked workers share the record index; forkserver would pickle all 46M records into each worker.
     loader = DataLoader(Candidates(dataset, entries), batch_size=None, num_workers=args.workers)
@@ -122,6 +124,7 @@ def main():
                 all_file.write(json.dumps(row, ensure_ascii=False) + "\n")
                 if row["kept"]:
                     kept_file.write(json.dumps({k: row[k] for k in ("source", "index", "record_id")}) + "\n")
+                    kept_file.flush()
             print(f"scored {total}/{len(entries)} kept {kept}", flush=True)
 
         for item in loader:
