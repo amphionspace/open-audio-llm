@@ -774,9 +774,12 @@ class CatalogSwiftDataset(OnlineAudioDataset):
     def _prepare_record(self, resolved, seed):
         """Draw the speed of a timestamped SOT sample and retime its target to match."""
         record = resolved.record
+        # A synthesized meeting is rendered without waveform augmentation (its voices, room, levels and noise are
+        # drawn anew each epoch), so a speed draw would retime its target against unstretched audio.
         if (not self.training or not self.augmentation.speed_prob
                 or record.metadata.get("sot_output_format") != TIMESTAMP_FORMAT
-                or record.metadata.get("online_mix") is not None):
+                or record.metadata.get("online_mix") is not None
+                or record.metadata.get("online_meeting") is not None):
             return resolved
         # Own stream: the waveform transforms keep the draws they had before.
         rng = random.Random(f"{seed}:speed")
