@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Short draft-head training on the ACP dev node (GPUs 4-7, the GRPO session holds 0-3); the formal
 # run goes through configs/train-draft.yaml.
-# Usage: train_draft_acp.sh OUTPUT_DIR MAX_STEPS SAVE_STEPS WORKERS_PER_RANK [ARCH [WANDB_RUN_NAME [TARGETS [INIT LR WARMUP]]]]
+# Usage: train_draft_acp.sh OUTPUT_DIR MAX_STEPS SAVE_STEPS WORKERS_PER_RANK [ARCH [WANDB_RUN_NAME [TARGETS [INIT LR WARMUP [DATA_CONFIG]]]]]
 # INIT: a draft checkpoint's model.safetensors to fine-tune from, with its learning rate and warmup.
 # ARCH eagle1 (default) or eagle3. With WANDB_RUN_NAME the run reports to W&B through the dev-pod
 # forwarder (10.119.16.21:17920); without it, --report_to none (smoke runs).
@@ -18,6 +18,7 @@ TARGETS=${7:-reference}
 INIT=(); [[ -n ${8:-} ]] && INIT=(--draft_head_init "$8")
 LR=${9:-1e-4}
 WARMUP=${10:-100}
+DATA=${11:-}
 REPORT=(--report_to none)
 if [[ -n $RUN_NAME ]]; then
   set +x
@@ -42,7 +43,7 @@ git -c safe.directory="*" diff HEAD > "$OUT/code-diff.patch" || true
 nvidia-smi --query-gpu=index,memory.used,utilization.gpu --format=csv > "$OUT/gpus-before.csv"
 exec "$PY" -m torch.distributed.run --nproc_per_node 4 --master_port 29871 \
   --module open_audio_llm.integrations.ms_swift.train sft \
-  --data_config "$EXP/configs/train-data.yaml" \
+  --data_config "${DATA:-$EXP/configs/train-data.yaml}" \
   --model /workspace/data/packages/amphionasr-1.7b-v3-tsrobust-054avg3/model \
   --model_type amphion_asr_1.7b \
   --external_plugins "$REPO/src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py" \
