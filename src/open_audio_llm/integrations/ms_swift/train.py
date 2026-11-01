@@ -72,6 +72,10 @@ class CatalogSftArguments(CatalogArgumentsMixin, SftArguments):
     audio_encoder_parallel: bool = False
     audio_encoder_batching: bool = False
     supervised_head_loss: bool = False
+    # Freeze the model and train only an EAGLE draft head for vLLM speculative decoding,
+    # unrolled over this many draft steps (0: ordinary SFT); later steps weigh decay**(k-1).
+    draft_head_steps: int = 0
+    draft_head_step_decay: float = 0.8
     # One unpadded row per microbatch for the Qwen3-ASR text decoder (FlashAttention-2 varlen).
     packed_text: bool = False
     # None keeps the training worker count. Eval sets these explicitly because
@@ -169,6 +173,19 @@ class CatalogTrainingMixin:
             # The loss reads the batched encoder's frame layout and adds to the supervised-head SFT loss.
             raise ValueError("objective.ts_activity_weight must be positive and needs SFT with "
                              "supervised_head_loss and audio_encoder_batching, without packed_text")
+        draft_steps = getattr(self.args, "draft_head_steps", 0)
+        if draft_steps and (
+            getattr(self.args, "rlhf_type", None) == "grpo"
+            or getattr(self.args, "supervised_head_loss", False)
+            or self.args._catalog_config.get("objective")
+            or getattr(self.args, "packed_text", False)
+            or liger
+            or getattr(self.args, "retention_teacher", None)
+            or self.args.deepspeed
+        ):
+            # The head reads the frozen model's final-norm output on padded rows and replaces its loss.
+            raise ValueError("draft_head_steps is SFT-only, without supervised_head_loss, a data objective, "
+                             "packed_text, Liger, a retention teacher or DeepSpeed")
         original_create_optimizer = None
         if getattr(self.args, "rlhf_type", None) == "grpo":
             config = self.args._catalog_config
@@ -217,7 +234,11 @@ class CatalogTrainingMixin:
             if trainer.args.packed_text and (self.args.model_type != "amphion_asr_1.7b" or sample_mean):
                 # The sample-mean objective groups positions by batch row; a packed row holds every sample.
                 raise ValueError("packed_text supports Qwen3-ASR without the sample-mean objective")
-            if sample_mean:
+            if draft_steps:
+                from .draft_head import enable_draft_head
+
+                enable_draft_head(trainer, draft_steps, self.args.draft_head_step_decay)
+            elif sample_mean:
                 from .retention import install_retention_objective
 
                 install_retention_objective(trainer, self.args)
