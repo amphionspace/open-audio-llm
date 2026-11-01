@@ -1,21 +1,23 @@
-"""EAGLE draft head distilled from a frozen Qwen3-ASR model, served by vLLM speculative decoding.
+"""EAGLE draft heads distilled from a frozen Qwen3-ASR model, served by vLLM speculative decoding.
 
-The head is exactly what vLLM 0.18 runs for ``--speculative-config '{"method": "eagle", ...}'``
-with a draft checkpoint whose config names ``LlamaForCausalLM`` (``EagleLlamaForCausalLM`` in
-``vllm/model_executor/models/llama_eagle.py``, driven by ``vllm/v1/spec_decode/eagle.py``):
+Each head is exactly what vLLM 0.18 runs for its ``--speculative-config`` method, driven by
+``vllm/v1/spec_decode/eagle.py`` with the target's embeddings and ``lm_head`` shared:
 
-- Draft row ``i`` of the first pass takes the target's final-norm output at position ``i`` and
-  the embedding of token ``i + 1``, sits at RoPE position ``i`` and predicts token ``i + 2``.
-  The draft class has no multimodal ``embed_input_ids``, so vLLM drafts text-only: audio
-  placeholders keep the embedding of their placeholder token id, as ``embed_tokens(input_ids)``
-  gives here.
-- Each further draft step feeds the head's own output feature back with the drafted token, one
-  position later. It attends to the first-pass KV of the verified prefix and to the KV that the
-  earlier steps of the same proposal wrote.
-- Block: ``fc(cat(embed, hidden))`` -> Llama decoder layer without ``input_layernorm`` ->
-  ``hidden + residual`` -> the target's ``lm_head`` (tied to ``embed_tokens``). There is no
-  final norm and no q/k norm. Embeddings and ``lm_head`` are shared with the target, so the
-  exported checkpoint holds neither.
+- ``eagle`` (EAGLE-1, ``EagleLlamaForCausalLM`` in ``llama_eagle.py``): draft row ``i`` of the
+  first pass takes the target's final-norm output at ``i`` and the embedding of token
+  ``i + 1``; ``fc(cat(embed, hidden))`` -> Llama layer without ``input_layernorm`` ->
+  ``hidden + residual`` -> ``lm_head``. No final norm, no q/k norm.
+- ``eagle3`` (EAGLE-3, ``Eagle3LlamaForCausalLM`` in ``llama_eagle3.py``): the first pass takes
+  ``fc(cat(aux))`` of the target's residual stream entering decoder layers ``aux_layers``
+  (``Qwen2Model`` collects ``hidden + residual`` after layer ``j - 1`` for id ``j``), then
+  ``cat(input_layernorm(embed), hidden_norm(h))`` -> attention with residual ``h`` -> MLP ->
+  final ``norm`` -> ``lm_head``. Later steps feed back the pre-norm output, not ``fc``.
+
+Both: row ``i`` sits at RoPE position ``i`` and predicts token ``i + 2``. Neither draft class
+merges multimodal embeddings, so audio placeholders keep the embedding of their placeholder
+token id, as ``embed_tokens(input_ids)`` gives here. Each further draft step feeds the head's
+own feature back with the drafted token, one position later, attending to the first-pass KV of
+the verified prefix and to the KV that the earlier steps of the same proposal wrote.
 """
 
 from __future__ import annotations
@@ -48,11 +50,11 @@ class RMSNorm(nn.Module):
 
 
 class _Attention(nn.Module):
-    def __init__(self, hidden, heads, kv_heads, head_dim):
+    def __init__(self, hidden, heads, kv_heads, head_dim, input_size):
         super().__init__()
-        self.q_proj = nn.Linear(hidden, heads * head_dim, bias=False)
-        self.k_proj = nn.Linear(hidden, kv_heads * head_dim, bias=False)
-        self.v_proj = nn.Linear(hidden, kv_heads * head_dim, bias=False)
+        self.q_proj = nn.Linear(input_size, heads * head_dim, bias=False)
+        self.k_proj = nn.Linear(input_size, kv_heads * head_dim, bias=False)
+        self.v_proj = nn.Linear(input_size, kv_heads * head_dim, bias=False)
         self.o_proj = nn.Linear(heads * head_dim, hidden, bias=False)
 
 
@@ -68,11 +70,17 @@ class _MLP(nn.Module):
 
 
 class _Layer(nn.Module):
-    """Llama decoder layer whose input_layernorm vLLM replaces by Identity (EAGLE-1)."""
+    """EAGLE-1: Llama layer whose input_layernorm vLLM replaces by Identity.
 
-    def __init__(self, hidden, intermediate, heads, kv_heads, head_dim, eps):
+    EAGLE-3: attention reads ``cat(input_layernorm(embed), hidden_norm(hidden))``.
+    """
+
+    def __init__(self, hidden, intermediate, heads, kv_heads, head_dim, eps, eagle3):
         super().__init__()
-        self.self_attn = _Attention(hidden, heads, kv_heads, head_dim)
+        self.self_attn = _Attention(hidden, heads, kv_heads, head_dim, 2 * hidden if eagle3 else hidden)
+        if eagle3:
+            self.input_layernorm = RMSNorm(hidden, eps)
+            self.hidden_norm = RMSNorm(hidden, eps)
         self.post_attention_layernorm = RMSNorm(hidden, eps)
         self.mlp = _MLP(hidden, intermediate)
 
@@ -83,10 +91,13 @@ def _rotate_half(x):
 
 
 class DraftHead(nn.Module):
-    """Parameter names equal the vLLM EAGLE checkpoint names (``fc``, ``layers.0.*``)."""
+    """Parameter names equal the vLLM draft checkpoint names (``fc``, ``layers.0.*``, ``norm``).
+
+    ``aux_layers`` empty: EAGLE-1. Otherwise EAGLE-3 over those target layer ids.
+    """
 
     def __init__(self, *, hidden_size, intermediate_size, num_attention_heads, num_key_value_heads,
-                 head_dim, rms_norm_eps, rope_theta):
+                 head_dim, rms_norm_eps, rope_theta, aux_layers=()):
         super().__init__()
         if num_attention_heads % num_key_value_heads:
             raise ValueError("attention heads must be a multiple of the KV heads")
@@ -95,23 +106,40 @@ class DraftHead(nn.Module):
             "num_attention_heads": num_attention_heads, "num_key_value_heads": num_key_value_heads,
             "head_dim": head_dim, "rms_norm_eps": rms_norm_eps, "rope_theta": rope_theta,
         }
-        self.fc = nn.Linear(2 * hidden_size, hidden_size, bias=False)
+        self.aux_layers = tuple(aux_layers)
+        if list(self.aux_layers) != sorted(set(self.aux_layers)):
+            # vLLM appends aux states while walking the layers, so the fc input is in layer order.
+            raise ValueError("aux_layers must be strictly increasing")
+        eagle3 = bool(self.aux_layers)
+        fc_input = len(self.aux_layers) * hidden_size if eagle3 else 2 * hidden_size
+        self.fc = nn.Linear(fc_input, hidden_size, bias=False)
         self.layers = nn.ModuleList([_Layer(hidden_size, intermediate_size, num_attention_heads,
-                                            num_key_value_heads, head_dim, rms_norm_eps)])
+                                            num_key_value_heads, head_dim, rms_norm_eps, eagle3)])
+        if eagle3:
+            self.norm = RMSNorm(hidden_size, rms_norm_eps)
+
+    @property
+    def eagle3(self):
+        return bool(self.aux_layers)
 
     @classmethod
-    def from_thinker(cls, thinker):
+    def from_thinker(cls, thinker, arch="eagle1"):
         """A float32 head shaped like the text decoder, initialised as transformers does.
 
         Copying the decoder's last layer instead starts far worse: without the final norm its
         MLP output turns into logits with a KL of about 200 nats to the target's distribution.
+        EAGLE-3 reads vLLM's default layers for the target, ``(2, L // 2, L - 3)``.
         """
+        if arch not in {"eagle1", "eagle3"}:
+            raise ValueError("draft head arch must be eagle1 or eagle3")
         text = thinker.config.text_config
+        depth = text.num_hidden_layers
         head = cls(
             hidden_size=text.hidden_size, intermediate_size=text.intermediate_size,
             num_attention_heads=text.num_attention_heads, num_key_value_heads=text.num_key_value_heads,
             head_dim=getattr(text, "head_dim", text.hidden_size // text.num_attention_heads),
             rms_norm_eps=text.rms_norm_eps, rope_theta=float(text.rope_theta),
+            aux_layers=(2, depth // 2, depth - 3) if arch == "eagle3" else (),
         )
         with torch.no_grad():
             for module in head.modules():
@@ -127,28 +155,34 @@ class DraftHead(nn.Module):
         angles = torch.cat((angles, angles), dim=-1)
         return angles.cos(), angles.sin()
 
-    def unrolled(self, embeds, hidden, steps):
-        """Features of ``steps`` draft steps for every position of right-padded rows.
+    def unrolled(self, embeds, target, steps):
+        """Per step, the features fed to ``lm_head`` for every position of right-padded rows.
 
-        ``embeds[b, q]`` embeds token ``q + 1``, ``hidden[b, q]`` is the target's final-norm
-        output at ``q``. Step ``k`` (1-based) at position ``q`` is the k-th draft of the proposal
-        whose first draft row is ``a = q - k + 1``: its input feature is step ``k - 1`` at
-        ``q - 1`` and it attends to first-pass keys at ``<= a`` plus step ``m``'s key at
-        ``a + m - 1`` for ``m = 2..k``. Under teacher forcing the drafted tokens are the
-        sequence's own tokens, so every step reuses ``embeds``.
+        ``embeds[b, q]`` embeds token ``q + 1``. ``target[b, q]`` is the target's final-norm
+        output at ``q`` (EAGLE-1) or its aux hidden states there, concatenated in layer order
+        (EAGLE-3). Step ``k`` (1-based) at position ``q`` is the k-th draft of the proposal whose
+        first draft row is ``a = q - k + 1``: its input feature is step ``k - 1``'s output at
+        ``q - 1`` (EAGLE-3: before the final norm) and it attends to first-pass keys at ``<= a``
+        plus step ``m``'s key at ``a + m - 1`` for ``m = 2..k``. Under teacher forcing the
+        drafted tokens are the sequence's own tokens, so every step reuses ``embeds``.
         """
-        batch, length, _ = hidden.shape
+        batch, length, _ = target.shape
         heads, kv_heads, head_dim = (self.config[k] for k in
                                      ("num_attention_heads", "num_key_value_heads", "head_dim"))
-        cos, sin = self._rope(length, hidden.device)
+        cos, sin = self._rope(length, target.device)
         layer = self.layers[0]
         attention = layer.self_attn
-        keys, values, features = [], [], []
-        previous = hidden
+        keys, values, carried, features = [], [], [], []
         for step in range(1, steps + 1):
-            if step > 1:
-                previous = F.pad(features[-1][:, :-1], (0, 0, 1, 0))
-            x = self.fc(torch.cat((embeds.to(previous.dtype), previous), dim=-1))
+            if step == 1:
+                previous = self.fc(target) if self.eagle3 else target
+            else:
+                previous = F.pad(carried[-1][:, :-1], (0, 0, 1, 0))
+            if self.eagle3:
+                residual = previous
+                x = torch.cat((layer.input_layernorm(embeds), layer.hidden_norm(previous)), dim=-1)
+            else:
+                x = residual = self.fc(torch.cat((embeds.to(previous.dtype), previous), dim=-1))
             q = attention.q_proj(x).view(batch, length, heads, head_dim).transpose(1, 2)
             k = attention.k_proj(x).view(batch, length, kv_heads, head_dim).transpose(1, 2)
             v = attention.v_proj(x).view(batch, length, kv_heads, head_dim).transpose(1, 2)
@@ -156,13 +190,14 @@ class DraftHead(nn.Module):
             k = k * cos.to(k.dtype) + _rotate_half(k) * sin.to(k.dtype)
             keys.append(k.repeat_interleave(heads // kv_heads, dim=1))
             values.append(v.repeat_interleave(heads // kv_heads, dim=1))
-            mask = unrolled_mask(length, step, hidden.device)
+            mask = unrolled_mask(length, step, target.device)
             out = F.scaled_dot_product_attention(
                 q, torch.cat(keys, dim=2), torch.cat(values, dim=2),
                 attn_mask=None if step == 1 else mask, is_causal=step == 1,
             )
-            h = x + attention.o_proj(out.transpose(1, 2).reshape(batch, length, heads * head_dim))
-            features.append(h + layer.mlp(layer.post_attention_layernorm(h)))
+            h = residual + attention.o_proj(out.transpose(1, 2).reshape(batch, length, heads * head_dim))
+            carried.append(h + layer.mlp(layer.post_attention_layernorm(h)))
+            features.append(self.norm(carried[-1]) if self.eagle3 else carried[-1])
         return features
 
 
@@ -228,14 +263,18 @@ class _ChunkedHeadKL(torch.autograd.Function):
         return gradient, None, None
 
 
-def draft_loss(head, weight, embeds, hidden, labels, steps, decay):
+def draft_loss(head, weight, embeds, hidden, labels, steps, decay, aux=None):
     """Weighted mean over steps of the per-row KL to the target's next-next distribution.
 
-    Returns the loss and, per step, the rows' KL and argmax agreement, plus each complete
-    proposal's accepted length under teacher forcing (consecutive agreeing steps).
+    ``hidden`` is the target's final-norm output (the teacher, and EAGLE-1's input); ``aux``
+    its concatenated aux hidden states (EAGLE-3's input). Returns the loss and, per step, the
+    rows' KL and argmax agreement, plus each complete proposal's accepted length under teacher
+    forcing (consecutive agreeing steps).
     """
+    if head.eagle3 == (aux is None):
+        raise ValueError("EAGLE-3 heads take the aux hidden states, EAGLE-1 heads only the output")
     embeds = F.pad(embeds[:, 1:], (0, 0, 0, 1))
-    features = head.unrolled(embeds, hidden, steps)
+    features = head.unrolled(embeds, aux if head.eagle3 else hidden, steps)
     # The target's distribution over token q + 2 comes from its output at q + 1.
     teacher = F.pad(hidden[:, 1:], (0, 0, 0, 1)).flatten(0, 1)
     rows = draft_rows(labels, steps)
@@ -266,13 +305,21 @@ def draft_loss(head, weight, embeds, hidden, labels, steps, decay):
 
 def export_eagle(head, directory, *, vocab_size, eos_token_id=None, pad_token_id=None,
                  dtype=torch.bfloat16, info=None):
-    """Write the head as a vLLM EAGLE draft: Llama config plus fc/layers.0 weights only."""
+    """Write the head as a vLLM draft: Llama config plus the head's weights only.
+
+    EAGLE-3 drafts name ``LlamaForCausalLMEagle3`` and pin the target layers they read in
+    ``eagle_aux_hidden_state_layer_ids`` (vLLM otherwise falls back to the target's default).
+    """
     from safetensors.torch import save_file
 
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
+    eagle3 = {
+        "eagle_aux_hidden_state_layer_ids": list(head.aux_layers),
+        "target_hidden_size": head.config["hidden_size"],
+    } if head.eagle3 else {}
     config = {
-        "architectures": ["LlamaForCausalLM"],
+        "architectures": ["LlamaForCausalLMEagle3" if head.eagle3 else "LlamaForCausalLM"],
         "model_type": "llama",
         "num_hidden_layers": len(head.layers),
         "hidden_act": "silu",
@@ -286,6 +333,7 @@ def export_eagle(head, directory, *, vocab_size, eos_token_id=None, pad_token_id
         "eos_token_id": eos_token_id,
         "pad_token_id": pad_token_id,
         **head.config,
+        **eagle3,
     }
     tensors = {name: value.detach().to(dtype).contiguous().cpu()
                for name, value in head.state_dict().items()}
@@ -296,7 +344,28 @@ def export_eagle(head, directory, *, vocab_size, eos_token_id=None, pad_token_id
     return directory
 
 
-def enable_draft_head(trainer, steps, decay):
+def capture_aux(layers, ids, store):
+    """Hooks that store the residual stream entering ``layers[j]`` (after the last one for ``j == len``).
+
+    This is vLLM's aux hidden state ``j``: ``Qwen2Model`` keeps ``hidden + residual`` after
+    layer ``j - 1`` (the embeddings for ``j == 0``).
+    """
+    handles = []
+    for j in ids:
+        if j < len(layers):
+            handles.append(layers[j].register_forward_pre_hook(
+                lambda module, args, kwargs, j=j: store.__setitem__(
+                    j, args[0] if args else kwargs["hidden_states"]), with_kwargs=True))
+        elif j == len(layers):
+            handles.append(layers[-1].register_forward_hook(
+                lambda module, args, output, j=j: store.__setitem__(
+                    j, output[0] if isinstance(output, tuple) else output)))
+        else:
+            raise ValueError(f"aux layer {j} is past the decoder's {len(layers)} layers")
+    return handles
+
+
+def enable_draft_head(trainer, steps, decay, arch="eagle1"):
     """Train only an EAGLE draft head on the frozen model; checkpoints hold only the head.
 
     Each checkpoint keeps the head under ``mtp_draft.*`` in ``model.safetensors`` (for
@@ -306,7 +375,7 @@ def enable_draft_head(trainer, steps, decay):
         raise ValueError("draft_head_steps must be >= 1 and draft_head_step_decay in (0, 1]")
     model = trainer.model
     thinker = model.thinker
-    head = DraftHead.from_thinker(thinker)
+    head = DraftHead.from_thinker(thinker, arch)
     model.add_module(DRAFT, head)
     for name, parameter in model.named_parameters():
         parameter.requires_grad_(name.startswith(f"{DRAFT}."))
@@ -325,21 +394,25 @@ def enable_draft_head(trainer, steps, decay):
             captured["hidden"] = inputs[0]
             return (inputs[0][:, :0],)
 
-        hook = lm_head.register_forward_pre_hook(capture)
+        aux = {}
+        hooks = [lm_head.register_forward_pre_hook(capture),
+                 *capture_aux(thinker.model.layers, head.aux_layers, aux)]
         thinker.eval()
         try:
             with torch.no_grad():
                 forward(**kwargs, use_cache=False)
                 embeds = embed_tokens(kwargs["input_ids"])
         finally:
-            hook.remove()
+            for hook in hooks:
+                hook.remove()
             thinker.train(self.training)
         mask = kwargs.get("attention_mask")
         if mask is not None and (mask[:, 1:] > mask[:, :-1]).any():
             # Positions and the causal key range assume right padding.
             raise ValueError("draft head training needs right-padded batches")
-        loss, stats, accepted = draft_loss(head, lm_head.weight, embeds, captured["hidden"],
-                                           labels, steps, decay)
+        loss, stats, accepted = draft_loss(
+            head, lm_head.weight, embeds, captured["hidden"], labels, steps, decay,
+            aux=torch.cat([aux[j] for j in head.aux_layers], dim=-1) if head.eagle3 else None)
         pending.append((stats, accepted))
         return CausalLMOutputWithPast(loss=loss)
 
@@ -368,7 +441,8 @@ def enable_draft_head(trainer, steps, decay):
                      pad_token_id=getattr(model.config, "pad_token_id", None),
                      info={"backbone": getattr(model.config, "_name_or_path", None),
                            "global_step": self.state.global_step, "train_steps": steps,
-                           "step_decay": decay})
+                           "step_decay": decay, "arch": arch,
+                           "method": "eagle3" if head.eagle3 else "eagle"})
 
     model.forward = MethodType(draft_forward, model)
     trainer.log = MethodType(log_with_draft, trainer)
