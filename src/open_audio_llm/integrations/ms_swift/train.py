@@ -79,6 +79,9 @@ class CatalogSftArguments(CatalogArgumentsMixin, SftArguments):
     # eagle1: reads the final-norm output (vLLM method "eagle"); eagle3: fuses three decoder
     # layers' hidden states (vLLM method "eagle3").
     draft_head_arch: str = "eagle1"
+    # reference: distil on the data's transcripts; greedy: regenerate each assistant span with the
+    # frozen model's greedy decoding first (self-distillation, several times slower per step).
+    draft_head_targets: str = "reference"
     # One unpadded row per microbatch for the Qwen3-ASR text decoder (FlashAttention-2 varlen).
     packed_text: bool = False
     # None keeps the training worker count. Eval sets these explicitly because
@@ -241,7 +244,7 @@ class CatalogTrainingMixin:
                 from .draft_head import enable_draft_head
 
                 enable_draft_head(trainer, draft_steps, self.args.draft_head_step_decay,
-                                  self.args.draft_head_arch)
+                                  self.args.draft_head_arch, self.args.draft_head_targets)
             elif sample_mean:
                 from .retention import install_retention_objective
 

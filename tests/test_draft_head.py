@@ -325,3 +325,34 @@ def test_enable_draft_head_eagle3_feeds_vllm_default_layers(tmp_path):
     trainer._save_model(str(tmp_path))
     info = json.loads((tmp_path / "eagle" / "draft_info.json").read_text())
     assert info["method"] == "eagle3"
+
+
+def test_greedy_relabel_regenerates_each_assistant_span():
+    torch.manual_seed(9)
+    model = _TinyASR().eval()
+    thinker = model.thinker
+    input_ids = torch.randint(1, 12, (3, 9))
+    attention_mask = torch.ones(3, 9, dtype=torch.long)
+    attention_mask[2, 7:] = 0
+    labels = torch.full((3, 9), -100)
+    starts = [4, 6, 3]
+    for row, start in enumerate(starts):
+        end = int(attention_mask[row].sum())
+        labels[row, start:end] = input_ids[row, start:end]
+    kwargs = {"input_ids": input_ids, "attention_mask": attention_mask}
+    new, new_labels, changed = draft_head.greedy_relabel(thinker, kwargs, labels, pad_id=0, eos_ids={12},
+                                                          max_new_tokens=5)
+    for row, start in enumerate(starts):
+        tokens = input_ids[row, :start].tolist()
+        for _ in range(5):  # unbatched greedy reference
+            with torch.no_grad():
+                token = int(thinker(input_ids=torch.tensor([tokens])).logits[0, -1].argmax())
+            tokens.append(token)
+            if token == 12:
+                break
+        length = int(new["attention_mask"][row].sum())
+        assert new["input_ids"][row, :length].tolist() == tokens
+        assert (new_labels[row, :start] == -100).all()
+        assert new_labels[row, start:length].tolist() == tokens[start:]
+        assert (new_labels[row, length:] == -100).all()
+    assert changed.tolist() == [True, True, True]

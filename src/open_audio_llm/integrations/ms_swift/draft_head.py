@@ -34,6 +34,8 @@ from torch.autograd.function import once_differentiable
 from transformers.modeling_outputs import CausalLMOutputWithPast
 
 DRAFT = "mtp_draft"
+# The serving benchmark's output cap; generation stops earlier at the end token.
+GREEDY_MAX_NEW_TOKENS = 256
 # One FP32 block of the 151,936-token vocabulary is about 150 MiB at this row count.
 _LOSS_CHUNK_ROWS = 256
 
@@ -365,7 +367,50 @@ def capture_aux(layers, ids, store):
     return handles
 
 
-def enable_draft_head(trainer, steps, decay, arch="eagle1"):
+@torch.no_grad()
+def greedy_relabel(thinker, kwargs, labels, pad_id, eos_ids, max_new_tokens=GREEDY_MAX_NEW_TOKENS):
+    """The batch with every assistant span replaced by the frozen model's greedy continuation.
+
+    Generation starts from each row's prompt (everything before its first supervised token),
+    left-padded as batched generation needs; rows are rebuilt right-padded as prompt + greedy
+    tokens up to and including the first end token, all supervised. Audio inputs are reused
+    unchanged. Returns the new keyword inputs, labels and which rows changed.
+    """
+    input_ids = kwargs["input_ids"]
+    supervised = labels != -100
+    if not supervised.any(1).all():
+        raise ValueError("every row needs an assistant span to regenerate")
+    starts = supervised.int().argmax(1).tolist()
+    width = max(starts)
+    prompt = input_ids.new_full((len(starts), width), pad_id)
+    prompt_mask = torch.zeros_like(prompt)
+    for row, start in enumerate(starts):
+        prompt[row, width - start:] = input_ids[row, :start]
+        prompt_mask[row, width - start:] = 1
+    audio = {key: kwargs[key] for key in ("input_features", "feature_attention_mask", "enroll_n_frames",
+                                          "enrollment_lengths") if kwargs.get(key) is not None}
+    generated = thinker.generate(input_ids=prompt, attention_mask=prompt_mask, max_new_tokens=max_new_tokens,
+                                 do_sample=False, eos_token_id=list(eos_ids), pad_token_id=pad_id, **audio)
+    rows, spans = [], []
+    for row, start in enumerate(starts):
+        tokens = generated[row, width:].tolist()
+        end = next((i + 1 for i, token in enumerate(tokens) if token in eos_ids), len(tokens))
+        spans.append(tokens[:end])
+        rows.append(input_ids[row, :start].tolist() + tokens[:end])
+    length = max(map(len, rows))
+    new_ids = input_ids.new_full((len(rows), length), pad_id)
+    new_labels = torch.full_like(new_ids, -100)
+    new_mask = torch.zeros_like(new_ids)
+    for row, (tokens, start) in enumerate(zip(rows, starts)):
+        new_ids[row, :len(tokens)] = torch.tensor(tokens, device=new_ids.device)
+        new_labels[row, start:len(tokens)] = new_ids[row, start:len(tokens)]
+        new_mask[row, :len(tokens)] = 1
+    changed = torch.tensor([span != input_ids[row][supervised[row]].tolist()
+                            for row, span in enumerate(spans)], device=new_ids.device)
+    return {**kwargs, "input_ids": new_ids, "attention_mask": new_mask}, new_labels, changed
+
+
+def enable_draft_head(trainer, steps, decay, arch="eagle1", targets="reference"):
     """Train only an EAGLE draft head on the frozen model; checkpoints hold only the head.
 
     Each checkpoint keeps the head under ``mtp_draft.*`` in ``model.safetensors`` (for
@@ -373,6 +418,9 @@ def enable_draft_head(trainer, steps, decay, arch="eagle1"):
     """
     if steps < 1 or not 0 < decay <= 1 or not math.isfinite(decay):
         raise ValueError("draft_head_steps must be >= 1 and draft_head_step_decay in (0, 1]")
+    if targets not in {"reference", "greedy"}:
+        # reference: the data's transcripts; greedy: the frozen model's own greedy outputs.
+        raise ValueError("draft head targets must be reference or greedy")
     model = trainer.model
     thinker = model.thinker
     head = DraftHead.from_thinker(thinker, arch)
@@ -382,7 +430,11 @@ def enable_draft_head(trainer, steps, decay, arch="eagle1"):
     lm_head = thinker.lm_head
     embed_tokens = thinker.get_input_embeddings()
     forward = model.forward
-    pending = []
+    pending, pending_changed = [], []
+    generation = thinker.generation_config
+    pad_id = generation.pad_token_id
+    eos_ids = set(generation.eos_token_id if isinstance(generation.eos_token_id, list)
+                  else [generation.eos_token_id])
 
     def draft_forward(self, *args, labels=None, **kwargs):
         if labels is None or args or not self.training:
@@ -394,6 +446,13 @@ def enable_draft_head(trainer, steps, decay, arch="eagle1"):
             captured["hidden"] = inputs[0]
             return (inputs[0][:, :0],)
 
+        if targets == "greedy":
+            thinker.eval()
+            try:
+                kwargs, labels, changed = greedy_relabel(thinker, kwargs, labels, pad_id, eos_ids)
+            finally:
+                thinker.train(self.training)
+            pending_changed.append(changed)
         aux = {}
         hooks = [lm_head.register_forward_pre_hook(capture),
                  *capture_aux(thinker.model.layers, head.aux_layers, aux)]
@@ -426,6 +485,10 @@ def enable_draft_head(trainer, steps, decay, arch="eagle1"):
                 metrics[f"draft_acc_{step + 1}"].update(torch.cat([s[step][1] for s, _ in pending]).float())
             metrics[f"draft_accepted_of_{steps}"].update(torch.cat([a for _, a in pending]).float())
             pending.clear()
+        if pending_changed:
+            # Share of rows whose greedy output differs from the data's transcript.
+            self.custom_metrics["train"]["draft_greedy_changed"].update(torch.cat(pending_changed).float())
+            pending_changed.clear()
         return log(logs, *args, **kwargs)
 
     save = trainer._save_model
@@ -441,7 +504,7 @@ def enable_draft_head(trainer, steps, decay, arch="eagle1"):
                      pad_token_id=getattr(model.config, "pad_token_id", None),
                      info={"backbone": getattr(model.config, "_name_or_path", None),
                            "global_step": self.state.global_step, "train_steps": steps,
-                           "step_decay": decay, "arch": arch,
+                           "step_decay": decay, "arch": arch, "targets": targets,
                            "method": "eagle3" if head.eagle3 else "eagle"})
 
     model.forward = MethodType(draft_forward, model)
