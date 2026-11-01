@@ -183,8 +183,10 @@ augmentation:
 audio-record。多个来源默认等概率；写出正数 `weight` 时按权重抽取，且每个来源都要写。远场支使用各混响源里的远场子集；噪声仍在卷积之后相加，环境噪声保持干声。
 
 
-RIR 从直达声开始卷积，输出时间与原音频一致，因此带时间戳的 SOT 样本也会加混响
-（仍不变速）。多通道 RIR（麦克风阵列）每次随机取一个麦克风，不做通道平均。
+RIR 从直达声开始卷积，输出时间与原音频一致，因此带时间戳的 SOT 样本也会加混响。
+带时间戳的多人转写（`aligned_utterance_timestamps_v1`）也会变速：每条样本单独抽变速倍数，目标里每行的起止时间按同一比例换算，和变速后的音频对齐。
+批次时长预算按最慢的倍数计算。2026-10-30 之前，这类数据会被悄悄关掉变速，配置里写的变速对它们完全不起作用。
+目标说话人格式（`target_speaker_timestamps_v1`）仍不变速。多通道 RIR（麦克风阵列）每次随机取一个麦克风，不做通道平均。
 `reverb_noise: true` 时，本条已加混响则噪声经同一 RIR 50 ms 之后的晚期混响再混入，
 像房间里的扩散底噪；它只用于干噪声（如 MUSAN），已在房间里录制的噪声不要再加。
 
@@ -227,6 +229,12 @@ rir_sources:
 noise_sources:
 - {dataset_id: meeting_room_noise, version: v2-20261014, split: train}
 ```
+
+SpecAugment 默认每条样本只遮 1 段时间、1 段频带，不随长度变化，120–600 秒的长窗口几乎不受影响。
+`time_masks_per_second` 设为正数时，时间遮挡的段数按音频秒数增加（至少 1 段，mel 帧率为每秒 100 帧）；`frequency_masks` 控制频带遮挡的段数。
+
+数据预检报告（`data-preflight.json`）的每个来源都带 `augmentation`，列出该来源扣除逐条规则（时间戳格式、`noise_exclude_datasets`）之后实际生效的变速、加噪、混响和 SpecAugment 概率。
+启动训练前要核对：配置里写了某项增强，不等于它对每个来源都生效。
 
 训练随机性包含 seed、epoch、样本索引及重复位置，同样的采样位置可复现，不同
 reps 可以获得不同增强。索引自带 epoch，不受 persistent workers 预取跨 epoch 影响。

@@ -185,6 +185,10 @@ class OnlineAudioDataset(Dataset):
     def _plan_meeting(self, record, rng):
         raise NotImplementedError("The Catalog dataset plans online meetings")
 
+    def _prepare_record(self, resolved, seed):
+        """Per-sample record changes that must reach the transcript too (e.g. retimed targets)."""
+        return resolved
+
     def __len__(self) -> int:
         return len(self.records)
 
@@ -227,9 +231,11 @@ class OnlineAudioDataset(Dataset):
         if record.metadata.get("online_meeting") is not None:
             if not self.training:
                 raise ValueError("online_meeting windows are synthesized for training only")
-            # The plan fixes the transcript before the prompt is rendered.
+            # The plan fixes the transcript before the prompt is rendered, and before a speed draw retimes it.
             record = self._plan_meeting(record, random.Random(f"{seed}:meeting"))
             resolved = replace(resolved, record=record)
+        resolved = self._prepare_record(resolved, seed)
+        record = resolved.record
         if record.metadata.get("enrollment_view"):
             from .qwen3_asr import native_messages
 

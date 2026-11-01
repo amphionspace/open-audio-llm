@@ -16,6 +16,8 @@ import numpy as np
 LATE_REVERB_S = 0.05
 # Direct-path window for DRR: +-2.5 ms around the peak is the common convention.
 DIRECT_PATH_S = 0.0025
+# Mel frames per second of the audio front end (16 kHz, 160-sample hop).
+MEL_FRAMES_PER_SECOND = 100
 
 
 @dataclass
@@ -44,6 +46,10 @@ class AugmentConfig:
     far_level_dbfs: tuple[float, float] | None = None
     time_mask_width: int = 30
     frequency_mask_width: int = 16
+    # Time masks per second of audio (at least one); 0 keeps one mask per sample whatever its
+    # length, which leaves a 120-600 s window almost untouched.
+    time_masks_per_second: float = 0.0
+    frequency_masks: int = 1
 
     def __post_init__(self):
         for name in ("speed_prob", "rir_prob", "far_rir_prob", "noise_prob", "spec_aug_prob"):
@@ -71,6 +77,15 @@ class AugmentConfig:
             raise ValueError("far_level_dbfs must be an ordered pair <= 0 dBFS")
         if self.time_mask_width < 0 or self.frequency_mask_width < 0:
             raise ValueError("SpecAugment mask widths must be non-negative")
+        if self.time_masks_per_second < 0 or self.frequency_masks < 0:
+            raise ValueError("SpecAugment mask counts must be non-negative")
+
+
+def speed_ratio(factor):
+    """Length ratio of audio played at `factor` speed, as the resampler realizes it."""
+    from fractions import Fraction
+
+    return Fraction(1 / factor).limit_denominator(1000)
 
 
 def for_slot(config, slot_name):
@@ -95,14 +110,11 @@ def augment_waveform(
     audio, sampling_rate, rng, config, noise_loader=None, rir_loader=None
 ):
     """Apply waveform transforms in memory using only the sample's RNG."""
-    from fractions import Fraction
-
     from scipy.signal import fftconvolve, resample_poly
 
     audio = np.asarray(audio, dtype=np.float32).copy()
     if rng.random() < config.speed_prob:
-        factor = rng.choice(config.speed_factors)
-        ratio = Fraction(1 / factor).limit_denominator(1000)
+        ratio = speed_ratio(rng.choice(config.speed_factors))
         audio = resample_poly(audio, ratio.numerator, ratio.denominator)
     roll = rng.random()
     if roll < config.far_rir_prob:
@@ -165,9 +177,12 @@ def augment_features(features, lengths, policy):
     features = features.clone()
     for index, length in enumerate(lengths):
         frames = min(int(length), features.shape[-1])
+        time_masks = 1
+        if config.time_masks_per_second:
+            time_masks = max(1, round(frames / MEL_FRAMES_PER_SECOND * config.time_masks_per_second))
         for axis, size, maximum in (
-            (-1, frames, config.time_mask_width),
-            (-2, features.shape[-2], config.frequency_mask_width),
+            *[(-1, frames, config.time_mask_width)] * time_masks,
+            *[(-2, features.shape[-2], config.frequency_mask_width)] * config.frequency_masks,
         ):
             width = rng.randint(0, min(size, maximum))
             start = rng.randint(0, size - width)
