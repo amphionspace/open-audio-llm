@@ -1,0 +1,28 @@
+# 10.28 版本 + FP8（H20 数值模拟），v12 全量。与 ts-robust-acp-20261015/configs/eval-054-avg3-v12/after-training-ts-benchmark-v12.yaml 同评测集同参数，
+# 只换服务（serve-tsasr.yaml / serve-asr.yaml）、model_name 和输出目录；reuse false 防止复用同权重的 bf16 预测；先本地比对，不发榜。
+suite_id: asr-regression-native@1
+model_name: amphionasr-054avg3-fp8h20-emu
+evaluator: ts-asr
+eval_set: open-audio-llm/ts-asr-benchmark@v12-20261022
+tsasr_server_url: http://127.0.0.1:18199
+tsasr_served_model: 054-avg3-fp8h20-tsasr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/tsasr-latency-20261031
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+  enroll_seconds: 5
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false
+  model_info:
+    origin: ours
+    mode: offline
+    params: 1.7B
+    license: internal
+reuse: false

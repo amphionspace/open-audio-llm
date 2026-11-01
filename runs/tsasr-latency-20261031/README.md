@@ -14,7 +14,8 @@
 | **suffix 投机解码** | 预览滞后 p50 −26%，断句到 final p50 −23% / −38%，p95 −42% / −44%；接受率 0.61–0.68 | v12：CER 13.04 vs 13.07，翻转 40（噪声 50） | 新依赖 arctic-inference 0.1.1；关闭异步调度 | 上线前在 Focus test 复测（与去同步叠加后的增量未测） |
 | 静音期提前开始 final（runtime） | 断句到 final p50 −0.4~0.7 s | final 输入不变 | 说话人继续说时白算的 GPU 未计入 | 建议 runtime 实现后复测 |
 | final 复用预览窗口（runtime） | −0.1~0.4 s | final CER 约翻倍（7.5→14.6%，11.5→19.8%） | — | 否决 |
-| FP8 权重量化（Marlin） | 无收益，48 路更慢 | CER 13.14，翻转 80（噪声 50） | Blackwell 原生 FP8 本机测不了 | 不建议（需目标卡另测） |
+| FP8 权重量化（Marlin，A800 上唯一可跑的路径，只量化权重） | 无收益，48 路更慢 | CER 13.14，翻转 80（噪声 50） | 不代表 H20：H20 的 FP8 权重和激活都量化，见下一行 | 不建议（需目标卡另测） |
+| FP8（H20 数值，A800 模拟，任务 07） | 没测，要真 H20 | v12 CER 13.08，翻转 99（噪声 50）；ASR 全量 4.292→4.301；警务术语少命中 2–7 个 | 未含 FP8 KV cache | 取舍见任务 07 |
 | 缩短 TS 指令（39 token） | 单路 242 vs 240 ms，16 路 715 vs 718 ms：测不出 | — | 需重训 + 协议变更 | 不做 |
 | 线上 "5-second" 指令（训练为 "3-second"） | — | v12：CER 13.06，翻转 45：与训练指令无差别 | — | 不用改 |
 
@@ -30,6 +31,7 @@
 | [04-prefill-bench](tasks/04-prefill-bench/README.md) | 指令长度与 CPU/编码器开销的 prefill 微基准 |
 | [05-profile-prefill](tasks/05-profile-prefill/README.md) | torch profiler 定位编码器同步点 |
 | [06-nosync-ab](tasks/06-nosync-ab/README.md) | 去同步 runtime 与原交付包交替各两轮的 A/B |
+| [07-fp8-h20-emu](tasks/07-fp8-h20-emu/README.md) | H20 数值的 FP8 量化损失：七项全量集，配 bf16 重跑作噪声参照 |
 
 <!-- execution-status -->
 
