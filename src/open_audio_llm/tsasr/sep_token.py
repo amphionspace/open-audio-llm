@@ -383,7 +383,9 @@ def conv_pack_features(tower: nn.Module, input_features: torch.Tensor, feature_l
     """
     if feature_lens.ndim == 0:
         feature_lens = feature_lens.unsqueeze(0)
-    feature_lens = feature_lens.to(device=input_features.device, dtype=torch.long)
+    # Length arithmetic stays where the lengths are: host lengths (vLLM) need no GPU sync for
+    # the .item()/.tolist() calls below; device lengths (training) behave as before.
+    feature_lens = feature_lens.to(dtype=torch.long)
     aftercnn_lens = feat_extract_output_lengths(feature_lens)
     chunk_size = int(tower.n_window) * 2
     chunk_num = torch.ceil(feature_lens / chunk_size).long()
@@ -594,7 +596,7 @@ def _patch_hf_encoder_forward(tower: nn.Module) -> None:
         ):
             hidden_states = hidden_states.detach().requires_grad_(True)
         window_aftercnn = transformer_window_aftercnn(self)
-        cu_seqlens = rebuild_cu_seqlens(aftercnn_lens, window_aftercnn, aftercnn_lens.device)
+        cu_seqlens = rebuild_cu_seqlens(aftercnn_lens, window_aftercnn, hidden_states.device)
 
         for encoder_layer in self.layers:
             layer_outputs = encoder_layer(hidden_states, cu_seqlens)
