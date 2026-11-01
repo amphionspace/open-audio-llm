@@ -233,6 +233,7 @@ class _TinyASR(torch.nn.Module):
         self.thinker = Qwen3ForCausalLM(config)
         self.thinker.config.text_config = config
         self.config = config
+        self.generation_config = self.thinker.generation_config
 
     def forward(self, input_ids, attention_mask=None, labels=None, use_cache=None):
         return self.thinker(input_ids=input_ids, attention_mask=attention_mask, labels=labels,

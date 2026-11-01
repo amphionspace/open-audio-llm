@@ -431,10 +431,14 @@ def enable_draft_head(trainer, steps, decay, arch="eagle1", targets="reference")
     embed_tokens = thinker.get_input_embeddings()
     forward = model.forward
     pending, pending_changed = [], []
-    generation = thinker.generation_config
+    # The checkpoint's generation_config.json belongs to the top-level model; the thinker's own
+    # generation config carries no special tokens.
+    generation = model.generation_config
     pad_id = generation.pad_token_id
     eos_ids = set(generation.eos_token_id if isinstance(generation.eos_token_id, list)
                   else [generation.eos_token_id])
+    if targets == "greedy" and (pad_id is None or None in eos_ids):
+        raise ValueError("greedy draft targets need pad and end tokens in the model's generation_config")
 
     def draft_forward(self, *args, labels=None, **kwargs):
         if labels is None or args or not self.training:
