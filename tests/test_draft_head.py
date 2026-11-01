@@ -328,32 +328,58 @@ def test_enable_draft_head_eagle3_feeds_vllm_default_layers(tmp_path):
     assert info["method"] == "eagle3"
 
 
-def test_greedy_relabel_regenerates_each_assistant_span():
+def _greedy(thinker, tokens, count, eos):
+    tokens = list(tokens)
+    for _ in range(count):
+        with torch.no_grad():
+            token = int(thinker(input_ids=torch.tensor([tokens])).logits[0, -1].argmax())
+        tokens.append(token)
+        if token == eos:
+            break
+    return tokens
+
+
+def test_greedy_relabel_generates_only_rows_off_the_greedy_path(monkeypatch):
     torch.manual_seed(9)
     model = _TinyASR().eval()
     thinker = model.thinker
-    input_ids = torch.randint(1, 12, (3, 9))
-    attention_mask = torch.ones(3, 9, dtype=torch.long)
-    attention_mask[2, 7:] = 0
-    labels = torch.full((3, 9), -100)
-    starts = [4, 6, 3]
-    for row, start in enumerate(starts):
-        end = int(attention_mask[row].sum())
-        labels[row, start:end] = input_ids[row, start:end]
+    weight = thinker.lm_head.weight
+    eos = 12
+    # Row 0 is the model's own greedy path; rows 1-2 are random and leave it.
+    prompts = [[1, 2, 3, 4], [5, 6, 7, 8, 9, 10], [11, 1, 2]]
+    spans = [_greedy(thinker, prompts[0], 5, eos)[4:],
+             torch.randint(0, 12, (3,)).tolist(), torch.randint(0, 12, (4,)).tolist()]
+    width = max(len(p) + len(q) for p, q in zip(prompts, spans))
+    input_ids = torch.zeros((3, width), dtype=torch.long)
+    attention_mask = torch.zeros_like(input_ids)
+    labels = torch.full_like(input_ids, -100)
+    for row, (prompt, span) in enumerate(zip(prompts, spans)):
+        end = len(prompt) + len(span)
+        input_ids[row, :end] = torch.tensor(prompt + span)
+        attention_mask[row, :end] = 1
+        labels[row, len(prompt):end] = torch.tensor(span)
+    with torch.no_grad():
+        hidden = thinker.model(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state
+    divergence = draft_head.first_divergence(hidden, weight, input_ids, labels)
+    assert divergence[0] == -1 and all(d >= p for d, p in zip(divergence[1:], map(len, prompts[1:])))
+
+    generated_rows = []
+    original = thinker.generate
+    monkeypatch.setattr(thinker, "generate", lambda **kw: (generated_rows.append(len(kw["input_ids"])),
+                                                           original(**kw))[1])
     kwargs = {"input_ids": input_ids, "attention_mask": attention_mask}
-    new, new_labels, changed = draft_head.greedy_relabel(thinker, kwargs, labels, pad_id=0, eos_ids={12},
-                                                          max_new_tokens=5)
-    for row, start in enumerate(starts):
-        tokens = input_ids[row, :start].tolist()
-        for _ in range(5):  # unbatched greedy reference
-            with torch.no_grad():
-                token = int(thinker(input_ids=torch.tensor([tokens])).logits[0, -1].argmax())
-            tokens.append(token)
-            if token == 12:
-                break
+    new, new_labels, changed, capped = draft_head.greedy_relabel(
+        thinker, kwargs, labels, divergence, pad_id=0, eos_ids={eos}, max_new_tokens=5)
+    assert generated_rows == [2] and changed.tolist() == [False, True, True]
+    # Row 0 is kept as it was.
+    length = int(new["attention_mask"][0].sum())
+    assert new["input_ids"][0, :length].tolist() == prompts[0] + spans[0]
+    assert new_labels[0, 4:length].tolist() == spans[0]
+    # Rows 1-2 are the prefix up to the divergence plus unbatched greedy from there.
+    for row in (1, 2):
+        expected = _greedy(thinker, input_ids[row, :divergence[row]].tolist(), 5, eos)
         length = int(new["attention_mask"][row].sum())
-        assert new["input_ids"][row, :length].tolist() == tokens
-        assert (new_labels[row, :start] == -100).all()
-        assert new_labels[row, start:length].tolist() == tokens[start:]
-        assert (new_labels[row, length:] == -100).all()
-    assert changed.tolist() == [True, True, True]
+        assert new["input_ids"][row, :length].tolist() == expected
+        assert (new_labels[row, :len(prompts[row])] == -100).all()
+        assert new_labels[row, len(prompts[row]):length].tolist() == expected[len(prompts[row]):]
+        assert capped[row] == (eos not in expected)

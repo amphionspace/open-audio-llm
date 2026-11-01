@@ -82,6 +82,8 @@ class CatalogSftArguments(CatalogArgumentsMixin, SftArguments):
     # reference: distil on the data's transcripts; greedy: regenerate each assistant span with the
     # frozen model's greedy decoding first (self-distillation, several times slower per step).
     draft_head_targets: str = "reference"
+    # A draft checkpoint's model.safetensors to start the head from instead of a fresh init.
+    draft_head_init: str | None = None
     # One unpadded row per microbatch for the Qwen3-ASR text decoder (FlashAttention-2 varlen).
     packed_text: bool = False
     # None keeps the training worker count. Eval sets these explicitly because
@@ -244,7 +246,8 @@ class CatalogTrainingMixin:
                 from .draft_head import enable_draft_head
 
                 enable_draft_head(trainer, draft_steps, self.args.draft_head_step_decay,
-                                  self.args.draft_head_arch, self.args.draft_head_targets)
+                                  self.args.draft_head_arch, self.args.draft_head_targets,
+                                  self.args.draft_head_init)
             elif sample_mean:
                 from .retention import install_retention_objective
 

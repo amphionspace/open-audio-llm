@@ -36,6 +36,10 @@ from transformers.modeling_outputs import CausalLMOutputWithPast
 DRAFT = "mtp_draft"
 # The serving benchmark's output cap; generation stops earlier at the end token.
 GREEDY_MAX_NEW_TOKENS = 256
+# Greedy outputs normally end near the transcript's length; a loop that does not stops at
+# 1.5x the batch's longest transcript (+8 tokens) instead of holding the whole batch to the cap.
+GREEDY_LENGTH_FACTOR = 1.5
+GREEDY_LENGTH_MARGIN = 8
 # One FP32 block of the 151,936-token vocabulary is about 150 MiB at this row count.
 _LOSS_CHUNK_ROWS = 256
 
@@ -368,49 +372,83 @@ def capture_aux(layers, ids, store):
 
 
 @torch.no_grad()
-def greedy_relabel(thinker, kwargs, labels, pad_id, eos_ids, max_new_tokens=GREEDY_MAX_NEW_TOKENS):
+def first_divergence(hidden, weight, input_ids, labels):
+    """Per row, the first supervised position where the model's argmax differs from the token, or -1.
+
+    A row without one is the model's own greedy path: each prefix equals the greedy prefix, so by
+    induction free-running greedy decoding would produce exactly this span.
+    """
+    rows, positions = (labels != -100).nonzero(as_tuple=True)
+    wrong = []
+    for start in range(0, len(rows), _LOSS_CHUNK_ROWS):
+        chunk = slice(start, start + _LOSS_CHUNK_ROWS)
+        state = hidden[rows[chunk], positions[chunk] - 1].to(weight.dtype)
+        wrong.append((state @ weight.t()).argmax(-1) != input_ids[rows[chunk], positions[chunk]])
+    wrong = torch.cat(wrong) if wrong else rows.new_zeros(0, dtype=torch.bool)
+    result = [-1] * len(input_ids)
+    for row, position in zip(rows[wrong].tolist(), positions[wrong].tolist()):
+        if result[row] < 0:  # nonzero() is row-major, so the first hit is the row's earliest
+            result[row] = position
+    return result
+
+
+@torch.no_grad()
+def greedy_relabel(thinker, kwargs, labels, divergence, pad_id, eos_ids,
+                   max_new_tokens=GREEDY_MAX_NEW_TOKENS):
     """The batch with every assistant span replaced by the frozen model's greedy continuation.
 
-    Generation starts from each row's prompt (everything before its first supervised token),
-    left-padded as batched generation needs; rows are rebuilt right-padded as prompt + greedy
-    tokens up to and including the first end token, all supervised. Audio inputs are reused
-    unchanged. Returns the new keyword inputs, labels and which rows changed.
+    ``divergence`` comes from ``first_divergence``: rows already on the greedy path are kept and
+    the others are generated from their last agreeing prefix, left-padded as batched generation
+    needs, which spares most of the cost of generating every row from its prompt. Rows are
+    rebuilt right-padded with the spans supervised and audio inputs unchanged. Returns the new
+    keyword inputs, labels, which rows changed and which hit the length cap without an end token.
     """
     input_ids = kwargs["input_ids"]
     supervised = labels != -100
     if not supervised.any(1).all():
         raise ValueError("every row needs an assistant span to regenerate")
+    device = input_ids.device
     starts = supervised.int().argmax(1).tolist()
-    width = max(starts)
-    prompt = input_ids.new_full((len(starts), width), pad_id)
-    prompt_mask = torch.zeros_like(prompt)
-    for row, start in enumerate(starts):
-        prompt[row, width - start:] = input_ids[row, :start]
-        prompt_mask[row, width - start:] = 1
-    audio = {key: kwargs[key] for key in ("input_features", "feature_attention_mask", "enroll_n_frames",
-                                          "enrollment_lengths") if kwargs.get(key) is not None}
-    generated = thinker.generate(input_ids=prompt, attention_mask=prompt_mask, max_new_tokens=max_new_tokens,
-                                 do_sample=False, eos_token_id=list(eos_ids), pad_token_id=pad_id, **audio)
-    rows, spans = [], []
-    for row, start in enumerate(starts):
-        tokens = generated[row, width:].tolist()
-        end = next((i + 1 for i, token in enumerate(tokens) if token in eos_ids), len(tokens))
-        spans.append(tokens[:end])
-        rows.append(input_ids[row, :start].tolist() + tokens[:end])
+    rows = [input_ids[row][: start + int(supervised[row].sum())].tolist() for row, start in enumerate(starts)]
+    capped = [False] * len(rows)
+    chosen = [row for row, position in enumerate(divergence) if position >= 0]
+    if chosen:
+        width = max(divergence[row] for row in chosen)
+        prefix = input_ids.new_full((len(chosen), width), pad_id)
+        prefix_mask = torch.zeros_like(prefix)
+        for index, row in enumerate(chosen):
+            length = divergence[row]
+            prefix[index, width - length:] = input_ids[row, :length]
+            prefix_mask[index, width - length:] = 1
+        subset = torch.tensor(chosen, device=device)
+        audio = {key: kwargs[key].index_select(0, subset) for key in (
+            "input_features", "feature_attention_mask", "enroll_n_frames", "enrollment_lengths",
+        ) if kwargs.get(key) is not None}
+        longest = int(supervised.sum(1).max())
+        generated = thinker.generate(
+            input_ids=prefix, attention_mask=prefix_mask, do_sample=False, pad_token_id=pad_id,
+            eos_token_id=list(eos_ids),
+            max_new_tokens=min(max_new_tokens, int(GREEDY_LENGTH_FACTOR * longest) + GREEDY_LENGTH_MARGIN),
+            **audio)
+        for index, row in enumerate(chosen):
+            tokens = generated[index, width:].tolist()
+            end = next((i + 1 for i, token in enumerate(tokens) if token in eos_ids), None)
+            capped[row] = end is None
+            rows[row] = input_ids[row, :divergence[row]].tolist() + tokens[:end]
     length = max(map(len, rows))
     new_ids = input_ids.new_full((len(rows), length), pad_id)
     new_labels = torch.full_like(new_ids, -100)
     new_mask = torch.zeros_like(new_ids)
     for row, (tokens, start) in enumerate(zip(rows, starts)):
-        new_ids[row, :len(tokens)] = torch.tensor(tokens, device=new_ids.device)
+        new_ids[row, :len(tokens)] = torch.tensor(tokens, device=device)
         new_labels[row, start:len(tokens)] = new_ids[row, start:len(tokens)]
         new_mask[row, :len(tokens)] = 1
-    changed = torch.tensor([span != input_ids[row][supervised[row]].tolist()
-                            for row, span in enumerate(spans)], device=new_ids.device)
-    return {**kwargs, "input_ids": new_ids, "attention_mask": new_mask}, new_labels, changed
+    changed = torch.tensor([position >= 0 for position in divergence], device=device)
+    return ({**kwargs, "input_ids": new_ids, "attention_mask": new_mask}, new_labels, changed,
+            torch.tensor(capped, device=device))
 
 
-def enable_draft_head(trainer, steps, decay, arch="eagle1", targets="reference"):
+def enable_draft_head(trainer, steps, decay, arch="eagle1", targets="reference", init=None):
     """Train only an EAGLE draft head on the frozen model; checkpoints hold only the head.
 
     Each checkpoint keeps the head under ``mtp_draft.*`` in ``model.safetensors`` (for
@@ -424,6 +462,12 @@ def enable_draft_head(trainer, steps, decay, arch="eagle1", targets="reference")
     model = trainer.model
     thinker = model.thinker
     head = DraftHead.from_thinker(thinker, arch)
+    if init:
+        # Start from a draft checkpoint's head (its model.safetensors), e.g. to fine-tune it.
+        from safetensors.torch import load_file
+
+        state = {k.removeprefix(f"{DRAFT}."): v for k, v in load_file(init).items()}
+        head.load_state_dict(state)
     model.add_module(DRAFT, head)
     for name, parameter in model.named_parameters():
         parameter.requires_grad_(name.startswith(f"{DRAFT}."))
@@ -450,24 +494,32 @@ def enable_draft_head(trainer, steps, decay, arch="eagle1", targets="reference")
             captured["hidden"] = inputs[0]
             return (inputs[0][:, :0],)
 
-        if targets == "greedy":
-            thinker.eval()
+        def backbone(inputs):
+            captured.clear()
+            aux.clear()
+            hooks = [lm_head.register_forward_pre_hook(capture),
+                     *capture_aux(thinker.model.layers, head.aux_layers, aux)]
             try:
-                kwargs, labels, changed = greedy_relabel(thinker, kwargs, labels, pad_id, eos_ids)
+                with torch.no_grad():
+                    forward(**inputs, use_cache=False)
             finally:
-                thinker.train(self.training)
-            pending_changed.append(changed)
+                for hook in hooks:
+                    hook.remove()
+
         aux = {}
-        hooks = [lm_head.register_forward_pre_hook(capture),
-                 *capture_aux(thinker.model.layers, head.aux_layers, aux)]
         thinker.eval()
         try:
+            backbone(kwargs)
+            if targets == "greedy":
+                divergence = first_divergence(captured["hidden"], lm_head.weight, kwargs["input_ids"], labels)
+                kwargs, labels, changed, capped = greedy_relabel(thinker, kwargs, labels, divergence,
+                                                                 pad_id, eos_ids)
+                pending_changed.append(torch.stack([changed, capped]))
+                if changed.any():
+                    backbone(kwargs)
             with torch.no_grad():
-                forward(**kwargs, use_cache=False)
                 embeds = embed_tokens(kwargs["input_ids"])
         finally:
-            for hook in hooks:
-                hook.remove()
             thinker.train(self.training)
         mask = kwargs.get("attention_mask")
         if mask is not None and (mask[:, 1:] > mask[:, :-1]).any():
@@ -490,8 +542,10 @@ def enable_draft_head(trainer, steps, decay, arch="eagle1", targets="reference")
             metrics[f"draft_accepted_of_{steps}"].update(torch.cat([a for _, a in pending]).float())
             pending.clear()
         if pending_changed:
-            # Share of rows whose greedy output differs from the data's transcript.
-            self.custom_metrics["train"]["draft_greedy_changed"].update(torch.cat(pending_changed).float())
+            # Rows whose greedy output differs from the data's transcript / hit the length cap.
+            changed, capped = torch.cat(pending_changed, dim=1).float()
+            self.custom_metrics["train"]["draft_greedy_changed"].update(changed)
+            self.custom_metrics["train"]["draft_greedy_capped"].update(capped)
             pending_changed.clear()
         return log(logs, *args, **kwargs)
 
@@ -508,7 +562,7 @@ def enable_draft_head(trainer, steps, decay, arch="eagle1", targets="reference")
                      pad_token_id=getattr(model.config, "pad_token_id", None),
                      info={"backbone": getattr(model.config, "_name_or_path", None),
                            "global_step": self.state.global_step, "train_steps": steps,
-                           "step_decay": decay, "arch": arch, "targets": targets,
+                           "step_decay": decay, "arch": arch, "targets": targets, "init": init,
                            "method": "eagle3" if head.eagle3 else "eagle"})
 
     model.forward = MethodType(draft_forward, model)
