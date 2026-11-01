@@ -1,0 +1,45 @@
+# 普通 ASR 服务 asrb（ASR 全量分片用，第二段），其余同 serve-asr.yaml：10.28 版本 + vLLM 在线 FP8，按 H20（sm90）数值模拟。
+# 054-avg3 的普通 ASR 全量回归服务（由 eval-054-avg3-asrreg/serve-asr.yaml 生成：同一 checkpoint 与 vLLM 设置，只改端口和服务名）
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python}
+  cwd: {path: ../../../..}
+  pythonpath: [{path: ../../../../src}, {path: ../../shared/fp8-emu}]
+  gpus: [5]
+  threads: {omp: 4, openblas: 1}
+  environment:
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    HF_HUB_OFFLINE: '1'
+    VLLM_ENGINE_READY_TIMEOUT_S: '1800'
+    PYTHONUNBUFFERED: '1'
+    AMPHION_TSASR_INSERT_SEP: '0'
+    AMPHION_TSASR_ENROLL_SEC: '5'
+    AMPHION_TSASR_ENROLL_NOPAD: '0'
+    COT_TSASR_ENROLL_RANDOM: '0'
+    COT_AUDIO_CHUNKED_ATTN: '0'
+    OAL_FP8_SM90_EMULATION: '1'
+task:
+  kind: serve
+  backend: vllm
+  model: {path: /workspace/data/ae-runs/ts-robust-054-avg3/checkpoint-avg3}
+  arguments:
+    --host: 127.0.0.1
+    --port: 18201
+    --served-model-name: 054-avg3-fp8h20-asr
+    --dtype: bfloat16
+    --tensor-parallel-size: 1
+    --limit-mm-per-prompt: {audio: 1}
+    --gpu-memory-utilization: 0.14
+    --max-model-len: 8192
+    # 共享卡显存紧，用 Focus 线上值 4096（默认 8192）减小启动探测峰值；全量评测只有 1 条超过（ASR 全量里 4266 token 的 gigaspeech 非语音条目，被服务端拒绝）。
+    --max-num-batched-tokens: 4096
+    # 默认 1024 时采样器预热要多占约 600 MiB；客户端 batch_size 64，128 不构成限制。
+    --max-num-seqs: 128
+    --hf-overrides:
+      thinker_config:
+        audio_config:
+          n_window_infer: 1000000000
+    --quantization: fp8
+  flags: [--trust-remote-code, --no-enable-prefix-caching]
+recording:
+  attempts_dir: {path: ../../tasks/07-fp8-h20-emu/serve-asrb/attempts}

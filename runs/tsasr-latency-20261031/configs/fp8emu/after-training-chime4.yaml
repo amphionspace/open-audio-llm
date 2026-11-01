@@ -1,0 +1,27 @@
+# 10.28 版本 + FP8（H20 数值模拟），chime4 全量。与 ts-robust-acp-20261015/configs/eval-054-avg3-extra/after-training-chime4.yaml 同评测集同参数，
+# 只换服务（serve-tsasr.yaml / serve-asr.yaml）、model_name 和输出目录；reuse false 防止复用同权重的 bf16 预测；先本地比对，不发榜。
+suite_id: asr-regression-native@1
+evaluator: ts-asr
+data_config: /workspace/workspace/mingdong/repo/open-audio-llm-ts-robust/runs/ts-robust-acp-20261015/configs/chime4/chime4-et05-real-data.yaml
+model_name: amphionasr-054avg3-fp8h20-emu
+server_url: http://127.0.0.1:18200
+served_model: 054-avg3-fp8h20-asr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/tsasr-latency-20261031
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false
+  model_info:
+    origin: ours
+    mode: offline
+    params: 1.7B
+    license: internal
+reuse: false

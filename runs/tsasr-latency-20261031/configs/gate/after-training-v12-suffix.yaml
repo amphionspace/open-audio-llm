@@ -1,0 +1,26 @@
+# 10.28 版本 + suffix 投机解码，v12 全量。
+# 与 ts-robust-acp-20261015 的 eval-054-avg3-v12 同评测集同参数（v12 全量、enroll_seconds 5、贪心）；对照是 model_name=ts-robust-054-avg3。
+suite_id: asr-regression-native@1
+evaluator: ts-asr
+eval_set: open-audio-llm/ts-asr-benchmark@v12-20261022
+model_name: amphionasr-054avg3-suffix
+tsasr_server_url: http://127.0.0.1:18191
+tsasr_served_model: 054-avg3-suffix-tsasr
+worker_timeout: 600
+# 同一 output_root 里的其他服务变体会被当作可复用推理（只看权重与评测集），闸门必须各自重新推理。
+reuse: false
+output_root: /workspace/data/ae-runs/tsasr-latency-20261031
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+  enroll_seconds: 5
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+# 延迟手段的准确率闸门，先本地比对，发榜前问用户。
+publish:
+  enabled: false
+  model_info: {origin: ours, mode: offline, params: 1.7B, license: internal}

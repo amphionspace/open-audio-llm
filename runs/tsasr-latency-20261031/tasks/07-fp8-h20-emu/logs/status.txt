@@ -1,0 +1,105 @@
+tsasr launcher=709704 gpu=5 port=18199 11-01T06:55Z
+asr launcher=709722 gpu=4 port=18200 11-01T06:55Z
+tsasr: server died 11-01T06:58Z
+tsasr stopped vllm= 11-01T06:58Z
+asr stopped vllm= 11-01T06:58Z
+--- relaunch: GPUs 3/2, util 0.12, FP8 values stored in bf16 in place
+tsasr launcher=732560 gpu=3 port=18199 11-01T06:59Z
+asr launcher=732568 gpu=2 port=18200 11-01T06:59Z
+tsasr: server died 11-01T07:03Z
+tsasr stopped vllm= 11-01T07:03Z
+asr stopped vllm= 11-01T07:03Z
+--- relaunch 3: activation quant + GEMM in one opaque op (Triton on sm80 cannot emit E4M3)
+tsasr launcher=748675 gpu=3 port=18199 11-01T07:07Z
+asr launcher=748683 gpu=2 port=18200 11-01T07:07Z
+tsasr: server died 11-01T07:10Z
+tsasr stopped vllm= 11-01T07:10Z
+asr stopped vllm= 11-01T07:10Z
+--- relaunch 4: GPUs 5/6, util 0.14/0.13, max-num-batched-tokens 4096
+tsasr launcher=754356 gpu=5 port=18199 11-01T07:11Z
+asr launcher=754364 gpu=6 port=18200 11-01T07:11Z
+tsasr: server died 11-01T07:14Z
+tsasr stopped vllm= 11-01T07:14Z
+asr stopped vllm= 11-01T07:14Z
+--- relaunch 5: GPUs 4/2, util 0.14, max-num-seqs 64
+tsasr launcher=759760 gpu=4 port=18199 11-01T07:15Z
+asr launcher=759770 gpu=2 port=18200 11-01T07:15Z
+tsasr: emulation not active 11-01T07:18Z
+tsasr stopped vllm=759783 11-01T07:18Z
+asr stopped vllm=759784 11-01T07:18Z
+--- relaunch 6: fixed emulation check (attempt process log)
+tsasr launcher=766701 gpu=4 port=18199 11-01T07:19Z
+asr launcher=766709 gpu=2 port=18200 11-01T07:19Z
+tsasr: server died 11-01T07:22Z
+tsasr stopped vllm= 11-01T07:22Z
+asr stopped vllm= 11-01T07:22Z
+--- relaunch 7: pick the freest card at launch, retry up to 6x
+tsasr launcher=771801 gpu=2 port=18199 11-01T07:22Z
+tsasr: server died 11-01T07:25Z
+tsasr stopped vllm= 11-01T07:25Z
+tsasr launcher=776909 gpu=5 port=18199 11-01T07:26Z
+tsasr ready, 112 FP8 linear layers, /workspace/workspace/mingdong/repo/oal-tsasr-latency/runs/tsasr-latency-20261031/tasks/07-fp8-h20-emu/serve-tsasr/attempts/008/logs/process.log 11-01T07:29Z
+asr launcher=782974 gpu=4 port=18200 11-01T07:29Z
+asr ready, 112 FP8 linear layers, /workspace/workspace/mingdong/repo/oal-tsasr-latency/runs/tsasr-latency-20261031/tasks/07-fp8-h20-emu/serve-asr/attempts/007/logs/process.log 11-01T07:31Z
+police eval exit=0 11-01T08:11Z
+v12 eval exit=0 11-01T08:14Z
+tsasr stopped vllm=777002 11-01T08:14Z
+police-single eval exit=0 11-01T08:15Z
+babble eval exit=0 11-01T08:21Z
+runner 771775 stopped (second stage takes over; ae 892070 chime4 and server launcher 782974 kept)
+--- rest: running ae=892070, asr launcher=782974, then hotfull, cards in use ,4 11-01T08:24Z
+asrb launcher=897137 gpu=5 port=18201 11-01T08:24Z
+ae 892070 finished (exit state in its run.json) 11-01T08:26Z
+asrb: server died 11-01T08:29Z
+asrb stopped vllm= 11-01T08:29Z
+asrb launcher=911746 gpu=1 port=18201 11-01T08:30Z
+asrb: server died 11-01T08:32Z
+asrb stopped vllm= 11-01T08:32Z
+asrb launcher=918625 gpu=5 port=18201 11-01T08:33Z
+asrb: server died 11-01T08:37Z
+asrb stopped vllm= 11-01T08:37Z
+asrb launcher=927704 gpu=5 port=18201 11-01T08:38Z
+asrb ready, 112 FP8 linear layers, /workspace/workspace/mingdong/repo/oal-tsasr-latency/runs/tsasr-latency-20261031/tasks/07-fp8-h20-emu/serve-asrb/attempts/004/logs/process.log 11-01T08:41Z
+asrc launcher=934197 gpu=6 port=18202 11-01T08:41Z
+asrc: server died 11-01T08:43Z
+asrc stopped vllm= 11-01T08:43Z
+asrc launcher=939516 gpu=6 port=18202 11-01T08:44Z
+asrc: server died 11-01T08:46Z
+asrc stopped vllm= 11-01T08:46Z
+asrc launcher=943229 gpu=7 port=18202 11-01T08:47Z
+asrc ready, 112 FP8 linear layers, /workspace/workspace/mingdong/repo/oal-tsasr-latency/runs/tsasr-latency-20261031/tasks/07-fp8-h20-emu/serve-asrc/attempts/003/logs/process.log 11-01T08:49Z
+--- bf16 rerun 11-01T08:55Z
+bf16rerun launcher=961768 gpu=6 port=18203 11-01T08:55Z
+bf16rerun: emulation not active (/workspace/workspace/mingdong/repo/oal-tsasr-latency/runs/tsasr-latency-20261031/tasks/07-fp8-h20-emu/serve-bf16rerun/attempts/001/logs/process.log) 11-01T08:58Z
+bf16rerun stopped vllm=961776 11-01T08:58Z
+bf16rerun launcher=976477 gpu=0 port=18203 11-01T08:59Z
+bf16rerun: emulation not active (/workspace/workspace/mingdong/repo/oal-tsasr-latency/runs/tsasr-latency-20261031/tasks/07-fp8-h20-emu/serve-bf16rerun/attempts/002/logs/process.log) 11-01T09:02Z
+bf16rerun stopped vllm=976530 11-01T09:02Z
+bf16rerun launcher=986013 gpu=0 port=18203 11-01T09:03Z
+bf16rerun: emulation not active (/workspace/workspace/mingdong/repo/oal-tsasr-latency/runs/tsasr-latency-20261031/tasks/07-fp8-h20-emu/serve-bf16rerun/attempts/003/logs/process.log) 11-01T09:07Z
+bf16rerun stopped vllm=986067 11-01T09:07Z
+bf16rerun launcher=993320 gpu=0 port=18203 11-01T09:08Z
+bf16rerun: emulation not active (/workspace/workspace/mingdong/repo/oal-tsasr-latency/runs/tsasr-latency-20261031/tasks/07-fp8-h20-emu/serve-bf16rerun/attempts/004/logs/process.log) 11-01T09:11Z
+bf16rerun stopped vllm=993336 11-01T09:11Z
+bf16rerun launcher=998551 gpu=0 port=18203 11-01T09:12Z
+bf16rerun: emulation not active (/workspace/workspace/mingdong/repo/oal-tsasr-latency/runs/tsasr-latency-20261031/tasks/07-fp8-h20-emu/serve-bf16rerun/attempts/005/logs/process.log) 11-01T09:15Z
+bf16rerun stopped vllm=998574 11-01T09:15Z
+bf16rerun launcher=1005295 gpu=0 port=18203 11-01T09:16Z
+bf16rerun: emulation not active (/workspace/workspace/mingdong/repo/oal-tsasr-latency/runs/tsasr-latency-20261031/tasks/07-fp8-h20-emu/serve-bf16rerun/attempts/006/logs/process.log) 11-01T09:19Z
+bf16rerun stopped vllm=1005330 11-01T09:19Z
+hotfull eval exit=0 11-01T09:47Z
+asr stopped vllm=782995 11-01T09:47Z
+asrfull-shard2 eval exit=2 11-01T10:07Z
+asrc stopped vllm=943255 11-01T10:07Z
+--- bf16 rerun 11-01T10:33Z
+bf16rerun launcher=1218159 gpu=7 port=18203 11-01T10:33Z
+bf16rerun ready without FP8, /workspace/workspace/mingdong/repo/oal-tsasr-latency/runs/tsasr-latency-20261031/tasks/07-fp8-h20-emu/serve-bf16rerun/attempts/007/logs/process.log 11-01T10:35Z
+rerun-police eval exit=0 11-01T10:49Z
+rerun-police-single eval exit=0 11-01T10:50Z
+rerun-babble eval exit=0 11-01T10:53Z
+rerun-chime4 eval exit=0 11-01T10:54Z
+bf16rerun stopped vllm=1218174 11-01T10:54Z
+bf16 rerun done 11-01T10:54Z
+asrfull-shard1 eval exit=0 11-01T11:06Z
+asrb stopped vllm=927799 11-01T11:06Z
+rest done 11-01T11:06Z

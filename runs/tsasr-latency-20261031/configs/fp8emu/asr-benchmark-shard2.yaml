@@ -1,0 +1,177 @@
+# FP8 H20 模拟评测用：ts-robust-acp-20261015/configs/eval-ckpt15000/asr-benchmark-data.yaml 的第 2/2 份，
+# 按数据源整份切分（每个数据源仍是全部条目），两份合起来等于原配置的 26 个测试集。126798 条。
+task: asr
+groups:
+- name: 中文
+  section: 公开测试集
+  description: 常用普通话公开测试集
+  labels:
+  - wenetspeech_test_net
+  - aishell
+  - magicdata
+  - thchs30
+  - common_voice_zh
+  aggregate: macro
+- name: 英文
+  section: 公开测试集
+  description: 常用英文公开测试集
+  labels:
+  - mls
+  - gigaspeech
+  aggregate: macro
+- name: 中英混合
+  section: 公开测试集
+  description: 一句话里中英文混着说
+  labels:
+  - talcs
+  aggregate: macro
+- name: 四川话
+  section: 方言
+  description: 四川话及西南官话口音
+  labels:
+  - wenetspeech_chuan_test_easy
+  - kespeech_southwestern
+  aggregate: macro
+- name: 术语与业务
+  section: 警务业务
+  description: 警务术语和业务用语
+  labels:
+  - police_terms_v5_test
+  aggregate: macro
+- name: 口音合成
+  section: 警务业务
+  description: 带口音的普通话合成语音
+  labels:
+  - police_synthetic_zh_accent_test
+  - police_synthetic_zh_accent_test_cosyvoice3
+  aggregate: macro
+sampling_rate: 16000
+evaluation:
+- dataset_id: wenetspeech
+  version: icefall-20260908
+  split: test_net
+  task: asr
+  label: wenetspeech_test_net
+  tags:
+  - zh
+  display: WenetSpeech 网络
+  description: 互联网音视频中的普通话
+- dataset_id: aishell
+  version: icefall-20260908
+  split: test
+  task: asr
+  label: aishell
+  tags:
+  - zh
+  display: AISHELL-1
+  description: 安静环境下的普通话朗读
+- dataset_id: magicdata
+  version: icefall-20260908
+  split: test
+  task: asr
+  label: magicdata
+  tags:
+  - zh
+  display: MagicData
+  description: 手机录制的普通话对话与朗读
+- dataset_id: thchs30
+  version: icefall-20260908
+  split: test
+  task: asr
+  label: thchs30
+  tags:
+  - zh
+  display: THCHS-30
+  description: 清华大学普通话朗读语料
+- dataset_id: common_voice_zh
+  version: icefall-20260908
+  split: test
+  task: asr
+  label: common_voice_zh
+  tags:
+  - zh
+  display: Common Voice 中文
+  description: 众包志愿者录制的普通话
+- dataset_id: mls
+  version: icefall-20260908
+  split: test
+  task: asr
+  label: mls
+  tags:
+  - en
+  display: MLS 英文
+  description: 多语种有声书中的英文部分
+- dataset_id: gigaspeech
+  version: icefall-20260908
+  split: test
+  min_duration: 0.1
+  task: asr
+  label: gigaspeech
+  tags:
+  - en
+  display: GigaSpeech
+  description: 播客和视频中的英文
+- dataset_id: talcs
+  version: icefall-20260908
+  split: test
+  task: asr
+  label: talcs
+  tags:
+  - code-switch
+  - en
+  - zh
+  display: TAL-CS 中英混说
+  description: 课堂场景中英文混着说
+- dataset_id: wenetspeech_chuan
+  version: eval-20261012
+  split: test_easy
+  task: asr
+  label: wenetspeech_chuan_test_easy
+  tags:
+  - zh
+  display: WSC 四川话·朗读
+  description: WenetSpeech-Chuan 官方测试集 Easy：四川话有声书和朗读，人工校验文本
+- dataset_id: kespeech
+  version: eval-southwestern-20261012
+  split: test
+  task: asr
+  label: kespeech_southwestern
+  tags:
+  - zh
+  display: KeSpeech 西南官话
+  description: KeSpeech 测试集中川渝滇黔口音的朗读，参考文本为普通话用字
+- dataset_id: police_terms_v5_test
+  version: icefall-20260908
+  split: test
+  task: asr
+  label: police_terms_v5_test
+  tags:
+  - police
+  - synthetic
+  - zh
+  display: 警务术语 V5
+  description: 警务术语的合成语音
+- dataset_id: police_synthetic_zh_accent
+  version: icefall-20260908
+  split: test
+  task: asr
+  label: police_synthetic_zh_accent_test
+  tags:
+  - police
+  - synthetic
+  - zh
+  display: 口音合成·总集
+  description: 带口音的普通话合成语音（两种合成引擎合计）
+- dataset_id: police_synthetic_zh_accent
+  version: icefall-20260908
+  split: test_cosyvoice3
+  task: asr
+  label: police_synthetic_zh_accent_test_cosyvoice3
+  tags:
+  - police
+  - synthetic
+  - zh
+  display: 口音合成·CosyVoice3
+  description: 由 CosyVoice3 合成的部分
+catalog: /workspace/data/registry/catalog
+roots: /workspace/data/registry/roots.json
