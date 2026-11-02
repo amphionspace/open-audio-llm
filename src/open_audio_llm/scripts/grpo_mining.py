@@ -108,8 +108,9 @@ def main():
     # A run stopped early then still covers every source in proportion.
     rng.shuffle(entries)
     output = Path(args.output)
-    # Forked workers share the record index; forkserver would pickle all 46M records into each worker.
-    loader = DataLoader(Candidates(dataset, entries), batch_size=None, num_workers=args.workers)
+    # Not fork: this process has used Lance, and forked workers deadlock inside Lance's take().
+    loader = DataLoader(Candidates(dataset, entries), batch_size=None, num_workers=args.workers,
+                        multiprocessing_context="forkserver")
     kept = total = 0
     with requests.Session() as session, ThreadPoolExecutor(args.concurrency) as pool, \
             output.open("w") as kept_file, output.with_suffix(".all.jsonl").open("w") as all_file:

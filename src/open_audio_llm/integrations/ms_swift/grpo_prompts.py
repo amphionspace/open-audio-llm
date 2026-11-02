@@ -43,6 +43,8 @@ class GRPOPromptPlan(Dataset):
         ranges = {source_key(s): r for s, r in zip(dataset.sources, dataset.source_ranges)}
         skipped = [ranges[key] for key in mined_only or []]
         plans, total_share = [], 0.0
+        # Record ids are checked when read in a worker: a Lance read here would make forked workers crash or hang.
+        self.mined_ids = {}
         for item in mined or []:
             entries = read_mined(item["plan"])
             share = float(item["share"])
@@ -53,8 +55,7 @@ class GRPOPromptPlan(Dataset):
                 _, index, _ = entry["index"]
                 if index not in ranges.get(entry["source"], ()):
                     raise ValueError(f"{item['plan']}: record {index} is not in source {entry['source']}")
-                if self.dataset.records[index].record.id != entry["record_id"]:
-                    raise ValueError(f"{item['plan']}: record {index} is not {entry['record_id']}")
+                self.mined_ids[index] = entry["record_id"]
             plans.append((entries, share))
             total_share += share
         if total_share >= 1:
@@ -77,6 +78,10 @@ class GRPOPromptPlan(Dataset):
         return len(self.plan)
 
     def __getitem__(self, index: int) -> dict:
+        _, record, _ = self.plan[index]
+        expected = self.mined_ids.get(record)
+        if expected is not None and self.dataset.records[record].record.id != expected:
+            raise ValueError(f"record {record} is not the mined record {expected}")
         sample = self.dataset[tuple(self.plan[index])]
         # ms-swift forwards only chat_template_kwargs from dataset columns to rollout and loss encoding.
         mix = sample.pop("mix_wav", None)

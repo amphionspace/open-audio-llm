@@ -44,8 +44,23 @@ def test_without_mined_plans_the_replay_draw_is_unchanged():
 def test_mined_entries_must_index_the_same_records(tmp_path):
     ds = recipe()
     wrong = [{"source": "hard@v:all", "index": [20, 85, 0], "record_id": "84"}]
-    with pytest.raises(ValueError, match="is not 84"):
-        GRPOPromptPlan(ds, prompts=40, epoch=3, mined=[{"plan": write_plan(tmp_path / "m.jsonl", wrong), "share": 0.2}])
+    plan = GRPOPromptPlan(ds, prompts=40, epoch=3, mined=[{"plan": write_plan(tmp_path / "m.jsonl", wrong), "share": 0.2}])
+    with pytest.raises(ValueError, match="not the mined record 84"):
+        plan[len(plan) - 1]
     outside = [{"source": "a@v:train", "index": [20, 85, 0], "record_id": "85"}]
     with pytest.raises(ValueError, match="not in source"):
         GRPOPromptPlan(ds, prompts=40, epoch=3, mined=[{"plan": write_plan(tmp_path / "m.jsonl", outside), "share": 0.2}])
+
+
+def test_building_a_mined_plan_reads_no_mined_record(tmp_path):
+    # A Lance read before the DataLoader forks crashes or hangs its workers.
+    ds = recipe()
+    mined = [{"source": "hard@v:all", "index": [20, 85, 0], "record_id": "85"}]
+    path = write_plan(tmp_path / "m.jsonl", mined)
+
+    class Unread(list):
+        def __getitem__(self, index):
+            raise AssertionError(f"read record {index}")
+
+    ds.records = Unread(ds.records)
+    GRPOPromptPlan(ds, prompts=40, epoch=3, mined_only=["hard@v:all"], mined=[{"plan": path, "share": 0.25}])
