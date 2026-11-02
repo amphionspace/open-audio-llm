@@ -26,7 +26,7 @@ env -u PYTHONPATH /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/op
 
 - 每个 checkpoint：`model.safetensors`（只含草稿头 `mtp_draft.*`，fp32，约 235 MB，续训用）、`optimizer.pt`、`eagle/`（vLLM 草稿目录：Llama 配置 + `fc`/`layers.0.*` bf16 权重 + `draft_info.json` 记录骨干路径与步数）。
 - 上线：交付包 runtime 需要 `shared/pack-eagle` 里目标模型类的两处改动（`config.image_token_index` 一行、基类 `SupportsEagle3`，已合入 `src/open_audio_llm/tsasr/vllm_backend.py`），服务参数加
-  `--speculative-config '{"method": "eagle3", "model": "<checkpoint>/eagle", "num_speculative_tokens": 3}'`。k=3 是按接受率的暂定值，k=2 与 k=3 的取舍等 02 的 015–018 测速。
+  `--speculative-config '{"method": "eagle3", "model": "<checkpoint>/eagle", "num_speculative_tokens": 3}'`。k=3 由 02 的 015–018 测速选定：各档不差于 k=2，48 路也没有变慢。
 
 ## 骨干更换
 

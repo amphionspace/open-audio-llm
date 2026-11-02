@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Run one bench command per lane at once on the ACP dev node (GPUs 4-7), W&B through the dev-pod forwarder.
+# Run one bench command per lane at once on the ACP dev node (GPU list set below), W&B through the dev-pod forwarder.
 # Usage: run_lanes.sh ATTEMPT_DIR spec CONFIG LANE... | run_lanes.sh ATTEMPT_DIR stream CONFIG...
 set -uo pipefail
 umask 000
-export CUDA_VISIBLE_DEVICES=4,5,6,7
+export CUDA_VISIBLE_DEVICES=0,1,2,3
 EXP=/workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031
 PY=/workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
 ATTEMPT=$1; KIND=$2; shift 2

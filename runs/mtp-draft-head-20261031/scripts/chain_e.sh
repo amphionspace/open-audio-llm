@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Speed protocol on the 10000-step heads. NOT RUN: needs four otherwise idle A800s (the configs name GPUs 4-7), about 80 minutes.
+# Speed protocol on the 10000-step heads. needs four otherwise idle A800s (the configs name GPUs 0-3), about 80 minutes.
 RUN=/workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/scripts/run_lanes.sh
 A=/workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/tasks/02-serve-bench/attempts
 for n in 015 016 017 018; do mkdir -p $A/$n; done
