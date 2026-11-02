@@ -1,0 +1,41 @@
+# 用 vLLM 自带 torch profiler 剖析单请求 prefill（max_tokens=1）：新音频（编码器要跑）vs 重复音频（编码器输出命中缓存），
+# 两张 CUDA 时间表之差就是每个请求的音频侧开销。04 里单路新音频 242 ms、重复音频 50 ms。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: []
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/profile_prefill.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  profile_dir: {path: '{attempt}/artifacts/profile-raw'}
+  pack: {path: /workspace/data/packages/amphionasr-1.7b-v3-tsrobust-054avg3}
+  gpu: 4
+  port: 18197
+  gpu_util: 0.15
+  max_model_len: 8192
+  model_name: tsasr-bench
+  server_arguments: [--max-num-seqs, '48', --max-num-batched-tokens, '4096']
+  server_startup_timeout_s: 1800
+  variant: {name: base, python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python}
+  samples: /workspace/data/ae-runs/pack-054avg3-check/runs/run-20261028T184730Z-524b4f4b/samples.jsonl
+  datasets_root: /workspace/data/datasets
+  split_prefixes: [real-]
+  seed: 20261031
+  enroll_s: 5
+  prefill_window_s: 6.5
+  requests: 20
+  system: "The clip starts with a 5-second enrollment of the target speaker, then the mixture. Transcribe only the enrolled speaker from the mixture. If the enrolled speaker is not present, output nothing."
+recording:
+  attempts_dir: {path: ../tasks/05-profile-prefill/attempts}
+  result: {path: '{attempt}/artifacts/summary.json'}
+tracking:
+  enabled: false

@@ -1,0 +1,26 @@
+# bf16 重跑 babble（噪声参照），与 after-training-babble.yaml 同评测集同参数，只换服务和 model_name；不发榜。
+suite_id: asr-regression-native@1
+model_name: amphionasr-054avg3-bf16-rerun
+evaluator: ts-asr
+eval_set: open-audio-llm/asr-babble-bench@v3-20261023
+server_url: http://127.0.0.1:18203
+served_model: 054-avg3-bf16rerun-asr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/tsasr-latency-20261031
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false
+  model_info:
+    origin: ours
+    mode: offline
+    params: 1.7B
+    license: internal
+reuse: false
