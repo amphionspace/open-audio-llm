@@ -19,7 +19,7 @@ TRAIN_KEYS = (
     "reward", "reward_std", "kl", "frac_reward_zero_std",
 )
 # GRPO logs one entry per reward function and completion statistic under these prefixes.
-TRAIN_PREFIXES = ("rewards/", "completions/", "clip_ratio/")
+TRAIN_PREFIXES = ("rewards/", "completions/", "clip_ratio/", "presence_contrast/", "rollout_correction/")
 CONFIG_KEYS = (
     "max_steps", "learning_rate", "vit_lr", "aligner_lr", "warmup_steps",
     "lr_scheduler_type", "gradient_accumulation_steps", "per_device_train_batch_size",
