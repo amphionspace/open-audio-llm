@@ -133,6 +133,10 @@ class CatalogTrainingMixin:
             message_format=message_format,
             collect_metrics=getattr(self.args, "performance_logging", False),
         )
+        if grpo and config.get("grpo") is not None:
+            from .grpo_prompts import GRPOPromptPlan
+
+            train = GRPOPromptPlan(train, **config["grpo"])
         validation = None
         if config.get("validation"):
             raw_eval = grpo or getattr(self.args, "predict_with_generate", False)
@@ -172,17 +176,27 @@ class CatalogTrainingMixin:
         original_create_optimizer = None
         if getattr(self.args, "rlhf_type", None) == "grpo":
             config = self.args._catalog_config
-            if config.get("batching") or config.get("replay") is not None or any(
-                any(
-                    key in source
-                    for key in ("weight", "samples", "reps", "shard_rotation")
-                )
+            # A grpo prompt plan draws replay-weighted prompts once; GRPO's sampler then repeats them.
+            mixed = config.get("grpo") is None and (config.get("replay") is not None or any(
+                "weight" in source for source in config["train"]))
+            if config.get("batching") or mixed or any(
+                any(key in source for key in ("samples", "reps", "shard_rotation"))
                 for source in config["train"]
             ):
                 raise ValueError(
                     "Catalog mux/duration batching is SFT-only; GRPO uses its generation-group sampler"
+                    " (replay-weighted prompts need a grpo section)"
                 )
-            trainer.add_callback(DatasetEpochCallback(trainer.train_dataset))
+            if config.get("grpo") is None:
+                trainer.add_callback(DatasetEpochCallback(trainer.train_dataset))
+            if config.get("objective", {}).get("presence_contrast"):
+                from .grpo_contrast import install_presence_contrast
+
+                install_presence_contrast(trainer)
+            if config.get("rollout"):
+                from .grpo_vllm_rollout import install_vllm_rollout
+
+                install_vllm_rollout(trainer, config["rollout"])
             if trainer.args.deepspeed and trainer.args.optimizer in (None, "default"):
                 # DeepSpeed removes empty LoRA parameter groups. Do this before
                 # each scheduler creation, including DeepSpeed re-initialization.
