@@ -1,0 +1,56 @@
+# 普通 ASR 的并发吞吐复测：spec-check.yaml 的 c16/c48 阶段每阶段只有 3–6 s，噪声约 ±10%；这里同一批 306 条在 c16 重放 8 遍、c48 重放 16 遍（各约 30–45 s）。
+# 只测没有跨请求状态的变体（无投机、eagle），suffix 会记住重放过的输出，不放进来。其余参数同 spec-check.yaml。
+# 草稿头 = 01-validate-draft/002 的 checkpoint-2500（10.28 版本权重上短训）；目标模型与服务入口 = 交付包（shared/pack-eagle 只多一行 image_token_index，见 README）。
+# suffix 对照与 tsasr-latency-20261031 相同：vllm-serving-spec（arctic-inference 0.1.1）。各变体的 runtime 都是原交付包的（不含编码器去同步修复）。
+version: 1
+parameters:
+  output: /workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/tasks/02-serve-bench/attempts/006/artifacts
+  pack: /workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/shared/pack-eagle
+  gpu_util: 0.30
+  max_model_len: 8192
+  model_name: spec-check
+  # 与 Focus 部署及 tsasr-latency 流式回放相同。
+  server_arguments: [--max-num-seqs, '48', --max-num-batched-tokens, '4096']
+  server_startup_timeout_s: 1800
+  enroll_s: 5
+  # 与 stream_bench 的整段解码请求一致：27 s final 窗口减去 5 s 注册。
+  ts_max_mix_s: 22
+  catalog: /workspace/data/registry/catalog
+  roots: /workspace/data/registry/roots.json
+  # 10.28 版本（054 avg3）通用 ASR 评测的 34 个数据源，每源随机 9 条，共 306 条。
+  asr_samples: /workspace/data/ae-runs/ts-robust-054-avg3/runs/run-20261028T035924Z-0142dad8/samples.jsonl
+  asr_per_source: 9
+  # TS-ASR 评测 v12（全部 226 个子集）随机 300 条，用样本自带的指令。
+  ts_samples: /workspace/data/ae-runs/pack-054avg3-check/runs/run-20261028T184730Z-524b4f4b/samples.jsonl
+  ts_count: 300
+  seed: 20261031
+  max_tokens: 256
+  request_timeout_s: 300
+  # 预热请求与测量请求不重叠（另抽 16 条）。
+  warmup_requests: 16
+  modes: [asr]
+  concurrency: [16, 48]
+  phase_repeats: {16: 8, 48: 16}
+  variants:
+  - {name: base, python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python}
+  - name: eagle-k1
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+    arguments: [--speculative-config, '{"method": "eagle", "model": "/workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/tasks/01-validate-draft/attempts/002/artifacts/training/checkpoint-2500/eagle", "num_speculative_tokens": 1}']
+  - name: eagle-k2
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+    arguments: [--speculative-config, '{"method": "eagle", "model": "/workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/tasks/01-validate-draft/attempts/002/artifacts/training/checkpoint-2500/eagle", "num_speculative_tokens": 2}']
+  - name: eagle-k3
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+    arguments: [--speculative-config, '{"method": "eagle", "model": "/workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/tasks/01-validate-draft/attempts/002/artifacts/training/checkpoint-2500/eagle", "num_speculative_tokens": 3}']
+  # suffix 把以往请求的输出存进跨请求的后缀树：同一批请求换并发重放会命中它（002 的 c16/c48 接受长度虚高到 3.4–4.8），所以每个并发阶段重启服务。
+  - name: suffix
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving-spec/bin/python
+    arguments: [--speculative-config, '{"method": "suffix"}']
+    fresh_server_per_phase: true
+  lanes:
+  - {gpu: 4, port: 18310, variants: [base]}
+  - {gpu: 5, port: 18320, variants: [eagle-k3]}
+  - {gpu: 6, port: 18330, variants: [eagle-k2]}
+  - {gpu: 7, port: 18340, variants: [eagle-k1]}
+  # W&B 出口被封（2026-10-30 起）：离线记录，代理恢复后 wandb sync 补录。
+  wandb: {enabled: true, mode: offline, entity: 1016097967-amphion, project: open-audio-llm, name: mtp-draft-head-20261031-asr-load}
