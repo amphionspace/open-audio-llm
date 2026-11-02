@@ -189,6 +189,10 @@ class CatalogTrainingMixin:
                 )
             if config.get("grpo") is None:
                 trainer.add_callback(DatasetEpochCallback(trainer.train_dataset))
+            if config.get("objective", {}).get("presence_contrast"):
+                from .grpo_contrast import install_presence_contrast
+
+                install_presence_contrast(trainer)
             if trainer.args.deepspeed and trainer.args.optimizer in (None, "default"):
                 # DeepSpeed removes empty LoRA parameter groups. Do this before
                 # each scheduler creation, including DeepSpeed re-initialization.
