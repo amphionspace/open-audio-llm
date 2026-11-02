@@ -17,6 +17,25 @@ open-audio-llm rollout --config examples/configs/rollout/vllm.yaml
 open-audio-llm model --config examples/configs/model/merge-lora.yaml
 ```
 
+### Qwen3-ASR GRPO
+
+Qwen3-ASR（`--model_type amphion_asr_1.7b`）用 `--reward_funcs qwen3_asr_accuracy qwen3_asr_presence qwen3_asr_hotword qwen3_asr_format`，奖励按模型原生输出 `language X<asr_text>文本` 计算。数据配置里有三项相关设置：
+
+- `grpo` 一节：按 SFT 回放配方的来源比例抽 `prompts` 条 prompt。
+  - `mined` 列出挖掘计划，格式为 `{plan, share}`，由 `python -m open_audio_llm.scripts.grpo_mining` 生成，按 `share` 混入。
+  - `mined_only` 中的来源只经挖掘计划进入训练。
+- `objective.presence_contrast: true`：一组采样全部判错“该不该出字”时，组内最后一条换成参考答案。否则这组优势全为 0，得不到梯度。
+- `rollout: {engine: vllm, gpu_memory_utilization: 0.25, max_model_len: 4096}`：rollout 改由训练进程内的 vLLM 解码。
+  - 策略模型自己的音频塔按训练模板算出音频 embedding，vLLM（`Qwen3ASRTargetSOTForVLLM`）只解码文本；每次优化器步后同步文本权重。
+  - 训练环境须装 `vllm==0.18.0`，torch 和 Transformers 版本与训练环境一致。
+  - `--use_vllm` 保持 `false`。
+  - 建议加 `--log_rollout_offpolicy_metrics true`，记录 rollout 与策略的偏离。
+  - 默认的 transformers rollout 在 Qwen3-ASR 上以 `use_cache=False` 生成，因为模型配置里 `text_config.use_cache=false`。
+  - 2026-11-02 的检查：
+    - 同一权重下贪心输出 77/80 条与 transformers 逐 token 相同，不同的 3 条都是 TS 长输出。
+    - 采样 token 的 logprob 与策略 teacher forcing 平均绝对差 0.003。
+    - 4 卡训练每步从约 75 s 降到 7–10 s。
+
 新执行自动分配 `attempts/编号`。恢复失败执行必须显式指定已有记录，且任务声明支持恢复；完成记录不会默认重跑。训练的模型/优化器恢复路径写在 YAML 的 `--resume_from_checkpoint` 中，不接受环境或 CLI 覆盖。只保存模型时，须作为新训练初始化，不能宣称恢复优化器。
 
 每次训练和评测同步启动 CPU W&B 记录器。只有远端 run URL 和启动指标核验通过后，才启动任务；退出后再次核验上传指标和远端结束状态。默认 entity 为 `1016097967-amphion`，project 为 `open-audio-llm`。

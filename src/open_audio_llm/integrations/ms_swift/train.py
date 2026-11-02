@@ -193,6 +193,10 @@ class CatalogTrainingMixin:
                 from .grpo_contrast import install_presence_contrast
 
                 install_presence_contrast(trainer)
+            if config.get("rollout"):
+                from .grpo_vllm_rollout import install_vllm_rollout
+
+                install_vllm_rollout(trainer, config["rollout"])
             if trainer.args.deepspeed and trainer.args.optimizer in (None, "default"):
                 # DeepSpeed removes empty LoRA parameter groups. Do this before
                 # each scheduler creation, including DeepSpeed re-initialization.
