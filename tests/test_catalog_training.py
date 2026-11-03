@@ -352,7 +352,8 @@ def test_offline_window_activity_labels_come_from_its_annotation(catalog_config,
         CatalogSwiftDataset({**labelled, "augmentation": {"speed_prob": 0.5}}, message_format="qwen3_asr")
 
 
-def test_plain_asr_nonspeech_source_trains_on_an_empty_transcript(catalog_config, tmp_path):
+def _add_nonspeech_source(catalog_config, tmp_path):
+    """Register an empty-transcript plain-ASR source; return its train entry (level -52 dBFS)."""
     import gzip
 
     row = {"cut_id": "speech", "root_alias": "data", "relative_path": "speech.wav",
@@ -370,8 +371,11 @@ def test_plain_asr_nonspeech_source_trains_on_an_empty_transcript(catalog_config
     )
     with Path(catalog_config["catalog"]).open("a") as stream:
         stream.write("\n" + json.dumps(spec.to_dict()))
-    catalog_config["train"] = [{"dataset_id": "nonspeech", "version": "1", "split": "train",
-                                "nonspeech": {"level_dbfs": [-52, -52]}}]
+    return {"dataset_id": "nonspeech", "version": "1", "split": "train", "nonspeech": {"level_dbfs": [-52, -52]}}
+
+
+def test_plain_asr_nonspeech_source_trains_on_an_empty_transcript(catalog_config, tmp_path):
+    catalog_config["train"] = [_add_nonspeech_source(catalog_config, tmp_path)]
     catalog_config["augmentation"] = {}
     sample = CatalogSwiftDataset(catalog_config, message_format="qwen3_asr")[0]
     assert sample["solution"] == "language None<asr_text>"
@@ -591,6 +595,31 @@ def test_preflight_uses_real_quotas_before_decoding(catalog_config, monkeypatch)
     assert [s['quota'] for s in report['sources']] == [9999, 1]
     assert report['sampler_state']['consumed'] == 0
     assert {s['selection'] for s in report['decoded_examples']} == {'train', 'validation'}
+
+
+def test_preflight_reports_level_by_target_presence(catalog_config, tmp_path):
+    from open_audio_llm.data.catalog_preflight import check_data, clip_levels
+
+    # A steady tone reads the same as RMS and as its loud frames; a burst after silence does not.
+    tone = (np.sin(np.arange(16000) * 0.07) * 0.2).astype(np.float32)
+    assert clip_levels(tone, 16000) == pytest.approx((-17.0, -17.0), abs=0.1)
+    burst = np.concatenate([np.zeros(12000, np.float32), tone[:4000]])
+    rms, loud = clip_levels(burst, 16000)
+    assert loud - rms == pytest.approx(6.0, abs=0.1)
+    assert clip_levels(tone[:100], 16000) is None
+
+    catalog_config["augmentation"] = {}
+    catalog_config["train"] = [catalog_config["train"][0], _add_nonspeech_source(catalog_config, tmp_path)]
+    levels = check_data(catalog_config)["levels"]
+    asr = levels["by_task"]["asr"]
+    assert asr["text"]["rms_dbfs"]["p50"] == pytest.approx(-17.0, abs=0.2)
+    assert asr["empty"]["rms_dbfs"]["p50"] == pytest.approx(-52.0, abs=0.2)
+    assert asr["empty_below_text_p10"] == 1.0  # every empty clip is quieter than the text clips
+    assert [s["samples"] for s in levels["by_source"]] == [2, 1]
+    # Text clips at the empty-target level: the level no longer tells them apart.
+    catalog_config["augmentation"] = {"level_prob": 1, "level_dbfs": [-55, -55]}
+    assert check_data(catalog_config)["levels"]["by_task"]["asr"]["empty_below_text_p10"] == 0.0
+    assert check_data(catalog_config, level_samples=0)["levels"] is None
 
 
 def test_preflight_reports_resolved_full_coverage_budget(catalog_config):

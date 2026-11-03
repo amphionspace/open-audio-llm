@@ -250,6 +250,15 @@ SpecAugment 默认每条样本只遮 1 段时间、1 段频带，不随长度变
 数据预检报告（`data-preflight.json`）的每个来源都带 `augmentation`，列出该来源扣除逐条规则（时间戳格式、`noise_exclude_datasets`、自带电平的非人声窗口）之后实际生效的变速、加噪、混响、随机电平和 SpecAugment 概率；在线混音来源只标 `online_mix`。
 启动训练前要核对：配置里写了某项增强，不等于它对每个来源都生效。
 
+预检报告的 `levels` 是输入电平报告：按各来源在一轮里的占比，共抽 1000 条训练样本，按训练时的方式渲染
+（含增强、在线混音和随机电平），按"任务 × 目标有无文字"汇总电平分位数。TS 样本量混合音，其余量最后一个音频槽位。
+- `loud_dbfs`：25 ms 帧能量的第 95 百分位，接近听感；`rms_dbfs`：整段 RMS，也就是 `level_dbfs` 和非人声 `level_dbfs` 设定的量。
+  两者的差距取决于内容：有停顿的语音差得多，平稳噪声差得少。比较两类样本以 `loud_dbfs` 为准。
+- `empty_below_text_p10`：空目标样本中，比有文字样本 p10 还轻（按 `loud_dbfs`）的比例。比例越高，"声音小"越像"没人说话"的信号。
+- `by_source` 列出每个来源的抽样数和两类样本的 `loud_dbfs` 中位数，用来找出偏差来自哪个来源。
+
+报告只列数据，不设通过线，怎么调整由配方负责人决定。预检模块 `open_audio_llm.data.catalog_cache` 的 `--level-samples` 可改抽样数，设为 0 跳过。
+
 训练随机性包含 seed、epoch、样本索引及重复位置，同样的采样位置可复现，不同
 reps 可以获得不同增强。索引自带 epoch，不受 persistent workers 预取跨 epoch 影响。
 
