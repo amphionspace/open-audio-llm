@@ -1,0 +1,83 @@
+# 警务术语单说训练集：每条录音只说一个术语（2026-10-23 合成，10-24 听审后导出），用于训练。
+- schema_version: dataset-catalog/2.0
+  dataset_id: police_terms_single_train
+  version: v1-20261023
+  languages:
+    - zh
+  tasks:
+    - asr
+  aliases: []
+  artifacts:
+    - name: train_recordings
+      kind: lhotse-recordings
+      root_alias: aidc_data
+      relative_path: datasets/police_terms_single_train/versions/v1-20261023/manifests/police_terms_single_train_recordings_train.jsonl.gz
+      expected_bytes: 373471
+      sha256: 25af1420f7cfb45f6b271ebab87881012967567521014993cff01c2922d0a2fd
+      metadata:
+        record_count: 21760
+    - name: train_supervisions
+      kind: lhotse-supervisions
+      root_alias: aidc_data
+      relative_path: datasets/police_terms_single_train/versions/v1-20261023/manifests/police_terms_single_train_supervisions_train.jsonl.gz
+      expected_bytes: 720504
+      sha256: f8bffd0e7aa48b51eed30a3faacc0bf7bc2cff40e29a5c2cad05e431c19e3380
+      metadata:
+        record_count: 21760
+    - name: report
+      kind: json-metadata
+      root_alias: aidc_data
+      relative_path: datasets/police_terms_single_train/versions/v1-20261023/report.json
+      expected_bytes: 471
+      sha256: 4a9ec937a448da51b6f2a268945943f3bd679db29ce5a034aef62634ade8e262
+  splits:
+    train:
+      artifacts:
+        recordings:
+          - train_recordings
+        supervisions:
+          - train_supervisions
+      statistics:
+        records: 21760
+        duration_hours: 11.685
+        duration_basis: sum_of_recording_durations
+        terms: 1088
+        utterances_per_term: 20
+        speakers: 348
+        utterances_per_speaker: {min: 1, median: 64, max: 82}
+        speaker_dataset: {KeSpeech: 18373, WenetSpeech-Chuan: 1504, WenetSpeech-Wu: 1883}
+        term_split: {train: 17440, dev: 2160, test: 2160}
+  provenance:
+    preparation_status: prepared
+    owner: mingdong
+    description: >-
+      警务术语单说训练集：每条录音只说一个警务术语，不带句子；文本就是术语，supervision 的 custom.target_terms 为该术语。
+      术语取自警言警语 V6.0 术语表（police_synthetic_zh_accent@legacy-rebalance-100k-20260916 source_entries 中
+      term/app 两类，共 1,088 个，全部使用，不按旧的术语划分留出），每个术语 20 个不同说话人。
+      Qwen3-TTS-12Hz-1.7B-Base 克隆原警务数据的 train 口音说话人（不含粤语、不用 dev/test 说话人；参考音频为本机找回的原片段，
+      参考文本用 Qwen3-ASR 重新转写），全部是带口音的普通话。起因：实测单说术语时命中率很低，
+      police_asr_unified@v1-20261009 train 里单说术语只有 2,065 条、1.11 h。
+    source: police_synthetic_zh_accent@legacy-rebalance-100k-20260916 source_entries
+    run_dir: /workspace/workspace/mingdong/data/amphiondata/police-terms-single-train-20261023
+    code: amphiondata feat/police-terms-single-train, scripts/synthetic/run_police_terms_single.py --split train
+    qc: >-
+      与测试集 police_terms_single@v1-20261022 相同：共享 Qwen3-ASR-1.7B 转写，与术语按不带声调的拼音对齐，
+      多出或缺少音节、生成到码字上限的录音丢弃，只有替换（口音、同音）的保留。合成 25,398 条（每个术语 22 条 + 补合成 1,462 条），
+      通过 23,738 条，每个术语按轮次取前 20 条。抽查多出音节 25 条约 1–2 条误杀、生成到上限 25 条 3 条 ASR 文字正确；
+      缺少音节 51 条多半是识别错（输出成外文等），只占 0.2%，由补合成补足。按来源通过率 KeSpeech 96.5%、吴语 83.2%、四川话 72.1%。
+    human_review: >-
+      2026-10-24 人工听审 10 条（run_dir/listen-review/review-20261023/answers.json）：从通过率 < 50% 和 50%–80% 的参考里
+      各随机抽 5 人、每人 1 条“通过”的录音，10/10 只有术语、前后无多余声音，因此不整人排除低通过率参考，只按逐条检查丢弃。
+    known_issues:
+      - 全部为合成语音，只抽听 10 条；只有替换而保留的 1,911 条中可能有少量合成换词（测试集听审约 1/8）
+      - 术语与测试集 police_terms_single@v1-20261022 完全相同（说话人不重叠），用这份数据训练后，该测试集的术语命中率只反映新说话人说已见过的术语
+      - 低通过率参考的录音少（每人最少 1 条）
+  recipe_parameters:
+    tts_provider: qwen3_tts
+    tts_model: Qwen3-TTS-12Hz-1.7B-Base
+    max_new_tokens: min(360, max(64, 5 × 字数))
+    takes_per_term: 22
+    utterances_per_term: 20
+    speaker_split: train (nationwide_v2_480 384/48/48)，不含粤语
+    sample_rate: 16000
+    channels: 1

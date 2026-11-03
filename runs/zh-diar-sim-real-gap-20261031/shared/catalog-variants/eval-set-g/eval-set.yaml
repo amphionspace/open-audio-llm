@@ -1,0 +1,27 @@
+task: diarization
+tags:
+- meeting
+- multi-speaker
+- timestamps
+sampling_rate: 16000
+groups:
+- name: read_realtime
+  section: 声学对照
+  labels:
+  - read_realtime
+  aggregate: macro
+  description: 真实时间轴不变，>2 字的句子换成时长最接近的 AISHELL-1 朗读句（未见说话人，音量对齐原句），附和保留原声
+evaluation:
+- dataset_id: meeting_simreal_probe
+  version: v1-20261031
+  split: read_realtime
+  task: speaker_attributed_asr
+  label: read_realtime
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: 真实时间轴不变，>2 字的句子换成时长最接近的 AISHELL-1 朗读句（未见说话人，音量对齐原句），附和保留原声
+  description: AliMeeting 官方 Eval 8 场 138 个选模窗口：真实时间轴不变，>2 字的句子换成时长最接近的 AISHELL-1
+    朗读句（未见说话人，音量对齐原句），附和保留原声

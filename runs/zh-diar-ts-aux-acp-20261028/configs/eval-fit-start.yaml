@@ -1,0 +1,50 @@
+# 训练集拟合诊断：起点 Emilia2 6000 步在真实会议训练窗口上的 cpER，与它在 AliMeeting dev / test、AISHELL-4 test 上的结果对比。
+# 每个来源按固定种子抽 150 条（与 dev 138 条、test 120 条同量级）；这是训练集诊断，不是评测集，所以不跑全量（各约 4,000 条）。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/amphion-eval/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: []
+  gpus: []
+  threads: {omp: 4, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+    AUDIO_DATA_CATALOG: /workspace/data/registry/catalog/zh_meeting_v2.yaml
+    AUDIO_DATA_ROOTS_FILE: /workspace/data/registry/roots.json
+task:
+  kind: eval
+  backend: vllm
+  server_url: http://127.0.0.1:9031
+  module: amphion_eval.cli
+  positional: [open-audio-llm, meeting]
+  arguments:
+    --model: {path: /workspace/data/ae-runs/zh-emilia2-dialogue-6000/checkpoint-6000}
+    --data_config: {path: data/train-fit.yaml}
+    --split_group: evaluation
+    --samples_per_source: 150
+    --seed: 42
+    --batch_size: 16
+    --max_new_tokens: 4096
+    --worker-timeout: 3600
+    --server-url: http://127.0.0.1:9031
+    --served-model: step6000
+    --server-api: chat
+    --output-format: open_audio_llm
+    --output_dir: {path: '{attempt}/artifacts/evaluation'}
+recording:
+  attempts_dir: {path: ../tasks/05-train-fit/start/attempts}
+  result: {path: '{attempt}/artifacts/evaluation/summary.json'}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: AmphionASR-zh-diar-restart-train-fit-start-step6000
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file: {path: '{attempt}/artifacts/evaluation/summary.json'}
+    prefix: evaluation

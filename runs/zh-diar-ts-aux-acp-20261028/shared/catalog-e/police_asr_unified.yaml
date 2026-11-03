@@ -1,0 +1,279 @@
+  - schema_version: dataset-catalog/2.0
+    dataset_id: police_asr_unified
+    version: v1-20261009
+    languages:
+      - zh
+    tasks:
+      - asr
+    artifacts:
+      - name: train_recordings
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/police_asr_unified/versions/v1-20261009/manifests/police_asr_unified_recordings_train.jsonl.gz
+        expected_bytes: 6870628
+        sha256: 175f7162a1ad415adf61dd44902c8c8b7fed42e68eaceb5d6f784bc9f983b970
+        metadata:
+          record_count: 365341
+      - name: train_supervisions
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/police_asr_unified/versions/v1-20261009/manifests/police_asr_unified_supervisions_train.jsonl.gz
+        expected_bytes: 93792143
+        sha256: 10458d64f4ab5eae8cf99dc7ad99171a51af6b45404c22f255318547d6f75cdc
+        metadata:
+          record_count: 365341
+      - name: dev_recordings
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/police_asr_unified/versions/v1-20261009/manifests/police_asr_unified_recordings_dev.jsonl.gz
+        expected_bytes: 688832
+        sha256: 6c2b249ec75187c6fa5c220768ec954c5ff4b99be7e190a16fb85961f23359a7
+        metadata:
+          record_count: 36086
+      - name: dev_supervisions
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/police_asr_unified/versions/v1-20261009/manifests/police_asr_unified_supervisions_dev.jsonl.gz
+        expected_bytes: 8498110
+        sha256: f4806e30ef999a92d748c9f53ae2a8beead910fde19c645658ed91f38b4b74ec
+        metadata:
+          record_count: 36086
+      - name: test_recordings
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/police_asr_unified/versions/v1-20261009/manifests/police_asr_unified_recordings_test.jsonl.gz
+        expected_bytes: 908676
+        sha256: e780c1e97e145f30db8320861d7b5432964761b60cad78537e94e5d1d95991b7
+        metadata:
+          record_count: 47006
+      - name: test_supervisions
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/police_asr_unified/versions/v1-20261009/manifests/police_asr_unified_supervisions_test.jsonl.gz
+        expected_bytes: 11170231
+        sha256: eebd0d9906cf45a620ee4640e0df07521a19286e5210af31d6f87bb72bd1f10c
+        metadata:
+          record_count: 47006
+      - name: build_report
+        kind: json-metadata
+        root_alias: aidc_data
+        relative_path: datasets/police_asr_unified/versions/v1-20261009/build_report.json
+        expected_bytes: 11417
+        sha256: b12eb109059f1623f932c58e9b11e2c8f8d125f5701275a906ada6982ffb8981
+      - expected_bytes: 1456
+        kind: lance-record-index
+        metadata:
+          snapshot_version: 13
+          rows: 448433
+          schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+        name: record_index
+        relative_path: datasets/police_asr_unified/versions/v1-20261009/record_index/index.json
+        root_alias: aidc_data
+        sha256: 118471959a053eb7b14e33b1a4b6398297772658a847513a77bfcc3507aa6a8c
+    splits:
+      train:
+        artifacts:
+          recordings:
+            - train_recordings
+          supervisions:
+            - train_supervisions
+          records_lance:
+            - record_index
+        statistics:
+          recordings: 365341
+          supervisions: 365341
+          duration_hours: 657.918233
+          duration_basis: sum_of_recording_durations
+          unique_texts: 62570
+          speakers: 384
+          sources:
+            police_synthetic_zh_accent@legacy-rebalance-100k-20260916: 80000
+            police_synthetic_zh_accent@v1-20260817: 15974
+            police_synthetic_zh_accent@v3-20260820: 11283
+            police_synthetic_zh_accent@v5-20260830-qc: 3119
+            police_terms_v5@v5-20260830-qwen75-cosy25-split80-10-10: 7875
+            police_v6_8h@v6-8h-20260915: 231090
+            police_v6_expanded@v6-expanded-20260915: 16000
+      dev:
+        artifacts:
+          recordings:
+            - dev_recordings
+          supervisions:
+            - dev_supervisions
+          records_lance:
+            - record_index
+        statistics:
+          recordings: 36086
+          supervisions: 36086
+          duration_hours: 65.304044
+          duration_basis: sum_of_recording_durations
+          unique_texts: 4463
+          speakers: 48
+          sources:
+            police_synthetic_zh_accent@legacy-rebalance-100k-20260916: 10000
+            police_terms_v5@v5-20260830-qwen75-cosy25-split80-10-10: 658
+            police_v6_8h@v6-8h-20260915: 23428
+            police_v6_expanded@v6-expanded-20260915: 2000
+      test:
+        artifacts:
+          recordings:
+            - test_recordings
+          supervisions:
+            - test_supervisions
+          records_lance:
+            - record_index
+        statistics:
+          recordings: 47006
+          supervisions: 47006
+          duration_hours: 82.388533
+          duration_basis: sum_of_recording_durations
+          unique_texts: 7093
+          speakers: 158
+          sources:
+            police_synthetic_zh_accent@legacy-rebalance-100k-20260916: 10000
+            police_synthetic_zh_accent@v2-20260818: 2000
+            police_terms_v5@v5-20260830-qwen75-cosy25-split80-10-10: 585
+            police_v6_8h@v6-8h-20260915: 28648
+            police_v6_acceptance_205@v6-acceptance-20260921: 3773
+            police_v6_expanded@v6-expanded-20260915: 2000
+    recipe_parameters:
+      sample_rate: 16000
+      channels: 1
+      text_normalization_for_overlap: remove punctuation, symbols and whitespace
+    provenance:
+      source: Merged from registered police synthetic releases on aidc-dev
+      status: ready
+      description: 警务合成语音统合版：V1-V6 全部批次合并为 train/dev/test 三个集合，不复制音频。
+      sources:
+        - split: train
+          source_dataset: police_terms_v5
+          source_version: v5-20260830-qwen75-cosy25-split80-10-10
+          source_split: train
+          manifests:
+            recordings: migration/aidc-v5-20261009/manifests/v5-20260830-qwen75-cosy25-split80-10-10/police_terms_v5_recordings_train.jsonl.gz
+            supervisions: migration/aidc-v5-20261009/manifests/v5-20260830-qwen75-cosy25-split80-10-10/police_terms_v5_supervisions_train.jsonl.gz
+        - split: train
+          source_dataset: police_synthetic_zh_accent
+          source_version: legacy-rebalance-100k-20260916
+          source_split: train
+          manifests:
+            recordings: datasets/police_synthetic_zh_accent/versions/legacy-rebalance-100k-20260916/train_recordings/police_synthetic_recordings_train.jsonl.gz
+            supervisions: datasets/police_synthetic_zh_accent/versions/legacy-rebalance-100k-20260916/train_supervisions/police_synthetic_supervisions_train.jsonl.gz
+        - split: train
+          source_dataset: police_v6_expanded
+          source_version: v6-expanded-20260915
+          source_split: train
+          manifests:
+            recordings: datasets/police_v6_expanded/versions/v6-expanded-20260915/train_recordings/police_synthetic_recordings_train.jsonl.gz
+            supervisions: datasets/police_v6_expanded/versions/v6-expanded-20260915/train_supervisions/police_synthetic_supervisions_train.jsonl.gz
+        - split: train
+          source_dataset: police_v6_8h
+          source_version: v6-8h-20260915
+          source_split: train
+          manifests:
+            recordings: datasets/police_v6_8h/versions/v6-8h-20260915/train_recordings/police_synthetic_recordings_train.jsonl.gz
+            supervisions: datasets/police_v6_8h/versions/v6-8h-20260915/train_supervisions/police_synthetic_supervisions_train.jsonl.gz
+        - split: train
+          source_dataset: police_synthetic_zh_accent
+          source_version: v1-20260817
+          source_split: train
+          manifests:
+            recordings: datasets/police_synthetic_zh_accent/versions/v1-20260817/train_recordings/police_synthetic_zh_accent_recordings_train.jsonl.gz
+            supervisions: datasets/police_synthetic_zh_accent/versions/v1-20260817/train_supervisions/police_synthetic_zh_accent_supervisions_train.jsonl.gz
+        - split: train
+          source_dataset: police_synthetic_zh_accent
+          source_version: v3-20260820
+          source_split: train
+          manifests:
+            recordings: datasets/police_synthetic_zh_accent/versions/icefall-20260908/train_rec_0/police_synthetic_recordings_train.jsonl.gz
+            supervisions: datasets/police_synthetic_zh_accent/versions/icefall-20260908/train_sup_0/police_synthetic_supervisions_train.jsonl.gz
+        - split: train
+          source_dataset: police_synthetic_zh_accent
+          source_version: v5-20260830-qc
+          source_split: train
+          manifests:
+            recordings: migration/aidc-v5-20261009/manifests/v5-20260830-qc/police_synthetic_recordings_train.jsonl.gz
+            supervisions: migration/aidc-v5-20261009/manifests/v5-20260830-qc/police_synthetic_supervisions_train.jsonl.gz
+        - split: dev
+          source_dataset: police_terms_v5
+          source_version: v5-20260830-qwen75-cosy25-split80-10-10
+          source_split: dev
+          manifests:
+            recordings: migration/aidc-v5-20261009/manifests/v5-20260830-qwen75-cosy25-split80-10-10/police_terms_v5_recordings_dev.jsonl.gz
+            supervisions: migration/aidc-v5-20261009/manifests/v5-20260830-qwen75-cosy25-split80-10-10/police_terms_v5_supervisions_dev.jsonl.gz
+        - split: dev
+          source_dataset: police_synthetic_zh_accent
+          source_version: legacy-rebalance-100k-20260916
+          source_split: dev
+          manifests:
+            recordings: datasets/police_synthetic_zh_accent/versions/legacy-rebalance-100k-20260916/dev_recordings/police_synthetic_recordings_dev.jsonl.gz
+            supervisions: datasets/police_synthetic_zh_accent/versions/legacy-rebalance-100k-20260916/dev_supervisions/police_synthetic_supervisions_dev.jsonl.gz
+        - split: dev
+          source_dataset: police_v6_expanded
+          source_version: v6-expanded-20260915
+          source_split: dev
+          manifests:
+            recordings: datasets/police_v6_expanded/versions/v6-expanded-20260915/dev_recordings/police_synthetic_recordings_dev.jsonl.gz
+            supervisions: datasets/police_v6_expanded/versions/v6-expanded-20260915/dev_supervisions/police_synthetic_supervisions_dev.jsonl.gz
+        - split: dev
+          source_dataset: police_v6_8h
+          source_version: v6-8h-20260915
+          source_split: dev
+          manifests:
+            recordings: datasets/police_v6_8h/versions/v6-8h-20260915/dev_recordings/police_synthetic_recordings_dev.jsonl.gz
+            supervisions: datasets/police_v6_8h/versions/v6-8h-20260915/dev_supervisions/police_synthetic_supervisions_dev.jsonl.gz
+        - split: test
+          source_dataset: police_terms_v5
+          source_version: v5-20260830-qwen75-cosy25-split80-10-10
+          source_split: test
+          manifests:
+            recordings: migration/aidc-v5-20261009/manifests/v5-20260830-qwen75-cosy25-split80-10-10/police_terms_v5_recordings_test.jsonl.gz
+            supervisions: migration/aidc-v5-20261009/manifests/v5-20260830-qwen75-cosy25-split80-10-10/police_terms_v5_supervisions_test.jsonl.gz
+        - split: test
+          source_dataset: police_synthetic_zh_accent
+          source_version: legacy-rebalance-100k-20260916
+          source_split: test
+          manifests:
+            recordings: datasets/police_synthetic_zh_accent/versions/legacy-rebalance-100k-20260916/test_recordings/police_synthetic_recordings_test.jsonl.gz
+            supervisions: datasets/police_synthetic_zh_accent/versions/legacy-rebalance-100k-20260916/test_supervisions/police_synthetic_supervisions_test.jsonl.gz
+        - split: test
+          source_dataset: police_v6_expanded
+          source_version: v6-expanded-20260915
+          source_split: test
+          manifests:
+            recordings: datasets/police_v6_expanded/versions/v6-expanded-20260915/test_recordings/police_synthetic_recordings_test.jsonl.gz
+            supervisions: datasets/police_v6_expanded/versions/v6-expanded-20260915/test_supervisions/police_synthetic_supervisions_test.jsonl.gz
+        - split: test
+          source_dataset: police_v6_8h
+          source_version: v6-8h-20260915
+          source_split: test
+          manifests:
+            recordings: datasets/police_v6_8h/versions/v6-8h-20260915/test_recordings/police_synthetic_recordings_test.jsonl.gz
+            supervisions: datasets/police_v6_8h/versions/v6-8h-20260915/test_supervisions/police_synthetic_supervisions_test.jsonl.gz
+        - split: test
+          source_dataset: police_synthetic_zh_accent
+          source_version: v2-20260818
+          source_split: test
+          manifests:
+            recordings: datasets/police_synthetic_zh_accent/versions/icefall-20260908/test_rec_0/police_synthetic_zh_accent_recordings_test.jsonl.gz
+            supervisions: datasets/police_synthetic_zh_accent/versions/icefall-20260908/test_sup_0/police_synthetic_zh_accent_supervisions_test.jsonl.gz
+        - split: test
+          source_dataset: police_v6_acceptance_205
+          source_version: v6-acceptance-20260921
+          source_split: test
+          manifests:
+            recordings: datasets/police_v6_acceptance_205/versions/v6-acceptance-20260921/test_recordings/police_synthetic_recordings_test.jsonl.gz
+            supervisions: datasets/police_v6_acceptance_205/versions/v6-acceptance-20260921/test_supervisions/police_synthetic_supervisions_test.jsonl.gz
+      split_policy: 'Released splits are kept: dev/test use the shared nationwide_v2_480 384/48/48 speaker assignment plus the separate nationwide_test_v1_110 pool for v2 test and V6 acceptance. Every train source, chiefly the early unsplit batches (v1, v3, v5-qc), drops held-out recording IDs, speakers and normalized texts, and IDs already taken by an earlier source (v5-qc repeats police_terms_v5). Recording IDs, speakers and normalized texts are disjoint across train/dev/test.'
+      excluded:
+        police_robust_monitor: augmented copies of 60 v2 test utterances, monitoring only
+        per_tts_provider_splits: duplicates of the combined splits
+        v5-20260830-qwen75-cosy25: subset of v5-20260830-qc
+        icefall-20260908 views: same files as their source versions
+      source_tagging: supervision custom.source_dataset, source_version and source_split identify the original release for per-subset scoring
+      evaluation_limitations: All audio is synthetic with automatic QC and no human listening review. V6 acceptance texts are original commands and reading variants; this is not an unseen-semantics test.
+      audio_location_policy: Manifests reference existing audio under aidc_data; no audio was copied or moved.
+      verification:
+        cross_split_ids_speakers_texts: disjoint
+        audio_paths_exist: true
+        sample_rate_16k: true

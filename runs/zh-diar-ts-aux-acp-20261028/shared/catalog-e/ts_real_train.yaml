@@ -1,0 +1,682 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_real_train
+  version: v1-20261017
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: alimeeting-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v1-20261017/records_alimeeting.jsonl.gz
+    sha256: b208c4461de48e286111b320ef52aedb6cd9fc330edd422a9a5f8b642d60400d
+    metadata:
+      record_count: 24750
+  - name: alimeeting-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v1-20261017/audio_index_alimeeting.jsonl.gz
+    sha256: 81b0a754f708ec876f648c31638fca44e1fd7e2159a4ac6cf088d538e021513e
+    metadata:
+      record_count: 209
+  - name: aishell4-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v1-20261017/records_aishell4.jsonl.gz
+    sha256: 635635717c10f333f3ddafd1d14529c06e68e26a9f9099cf7d498843209206ea
+    metadata:
+      record_count: 30012
+  - name: aishell4-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v1-20261017/audio_index_aishell4.jsonl.gz
+    sha256: 96f80e74c26af128a7450a5bb07e24fb3b5e1d87d2620330522d0ebac2513108
+    metadata:
+      record_count: 189
+  - name: ramc-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v1-20261017/records_ramc.jsonl.gz
+    sha256: 9f488880aba1b45fcb97482ed89374b0d39e5437b8e29ef7b85fd0059debca9c
+    metadata:
+      record_count: 36648
+  - name: ramc-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v1-20261017/audio_index_ramc.jsonl.gz
+    sha256: 14470e8d8b0a683817fd665e2d1b113ef9f6cc5f810f8e5616ca7f62afc50c76
+    metadata:
+      record_count: 289
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v1-20261017/record_index/index.json
+    expected_bytes: 1431
+    sha256: 64bf6b104006e729c4fee3eb734f5456bdf05c39518c3e7e1419f3591246c054
+    metadata:
+      snapshot_version: 13
+      rows: 91410
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    alimeeting:
+      artifacts:
+        records:
+        - alimeeting-records
+        audio_index:
+        - alimeeting-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 24750
+        duration_hours: 33.07
+        duration_basis: clip duration (segment span, or the whole file)
+    aishell4:
+      artifacts:
+        records:
+        - aishell4-records
+        audio_index:
+        - aishell4-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 30012
+        duration_hours: 42.99
+        duration_basis: clip duration (segment span, or the whole file)
+    ramc:
+      artifacts:
+        records:
+        - ramc-records
+        audio_index:
+        - ramc-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 36648
+        duration_hours: 47.57
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-17'
+    description: '真实会议的目标说话人窗口（训练划分）：AliMeeting 远场、AISHELL-4、MagicData-RAMC 的 train 划分，按 ts_asr_real 的方法切 8–22 秒、由完整语句组成的窗口，说话人数分
+      1 / 2 / 3+ 三档；每个窗口一对样本，同一段音频：目标在场（注册取窗口外同一录音的另一句）和目标缺席（同一录音里没在窗口说话的另一人，没有则取其他录音）。音频是原始长录音的片段，记录里写 channel: 0，读第 0 声道，与评测一致（现有
+      turn-taking 训练集读 8 个声道的平均）。脚本 scripts/ts_robust/build_ts_real_train.py。'
+    sources:
+    - alimeeting_sdm:icefall-20260908
+    - aishell4:icefall-20260908
+    - magicdata_ramc:icefall-20260908
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_real_train
+  version: v2-20261018
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: alimeeting-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v2-20261018/records_alimeeting.jsonl.gz
+    sha256: 426249c453da07d6883a3fd4579779ed15ebd2824819e7a500aef262c8e1f799
+    metadata:
+      record_count: 42000
+  - name: alimeeting-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v2-20261018/audio_index_alimeeting.jsonl.gz
+    sha256: 032894b7d750f928a4d02452fdb2fd4b3228490166fb748ce20ff4dfb0be5fcc
+    metadata:
+      record_count: 209
+  - name: aishell4-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v2-20261018/records_aishell4.jsonl.gz
+    sha256: 345477049cd8ed02bc387cf6a5ab822e7fe241d689c420c91ca7c669a2d7f2fd
+    metadata:
+      record_count: 29918
+  - name: aishell4-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v2-20261018/audio_index_aishell4.jsonl.gz
+    sha256: 2a8776718293092411402b1df915917b8e3d59c63178c14453700234efd16836
+    metadata:
+      record_count: 189
+  - name: ramc-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v2-20261018/records_ramc.jsonl.gz
+    sha256: a1bb09678eb10deb2aca1da2d7660223e6452f59996d2339f33fb4c127e0805c
+    metadata:
+      record_count: 12000
+  - name: ramc-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v2-20261018/audio_index_ramc.jsonl.gz
+    sha256: f1d19c3f85de360a6bc8bbebbe75e8de8b03f67aba9ebd43f3c0279e330aa21e
+    metadata:
+      record_count: 275
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v2-20261018/record_index/index.json
+    expected_bytes: 1431
+    sha256: 5b04a294f0fdf3b07a53932ff72df65d1624346b37889dd26208276a87f30696
+    metadata:
+      snapshot_version: 13
+      rows: 83918
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    alimeeting:
+      artifacts:
+        records:
+        - alimeeting-records
+        audio_index:
+        - alimeeting-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 42000
+        duration_hours: 58.19
+        duration_basis: clip duration (segment span, or the whole file)
+    aishell4:
+      artifacts:
+        records:
+        - aishell4-records
+        audio_index:
+        - aishell4-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 29918
+        duration_hours: 42.93
+        duration_basis: clip duration (segment span, or the whole file)
+    ramc:
+      artifacts:
+        records:
+        - ramc-records
+        audio_index:
+        - ramc-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 12000
+        duration_hours: 15.44
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-18'
+    description: '真实会议的目标说话人重叠窗口（训练划分）：AliMeeting 远场、AISHELL-4、MagicData-RAMC 的 train 划分，按 ts_asr_real overlap 版的方法以目标说话人为锚切
+      8–26 秒窗口（目标的语句完整，别人的语句截到窗口边界，记录 metadata.window_utts 给出窗口内每句的起止和说话人，截断的标 clipped），按目标语音被别人重叠的比例分 o0（≤5%）/ o20（5–20%）/
+      o50（20–50%）/ o100（>50%）四档（RAMC 标注没有重叠，只有 o0）；每个窗口一对样本，同一段音频：目标在场（注册取窗口外同一录音的另一句）和目标缺席（同一录音里没在窗口说话的另一人，没有则取其他录音）。去掉含
+      dev / test 说话人的录音（RAMC 14 段）。音频是原始长录音的片段，记录里写 channel: 0，读第 0 声道，与评测一致。脚本 scripts/ts_robust/build_ts_real_train.py --recipe
+      v2。'
+    sources:
+    - alimeeting_sdm:icefall-20260908
+    - aishell4:icefall-20260908
+    - magicdata_ramc:icefall-20260908
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_real_train
+  version: v3-20261020
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: emilia2_1spk-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v3-20261020/records_emilia2_1spk.jsonl.gz
+    sha256: 4accc1f937d5e65db60b55b276f543d1f2234ac81ca83d6dc6030e844a5d3c22
+    metadata:
+      record_count: 29550
+  - name: emilia2_1spk-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v3-20261020/audio_index_emilia2_1spk.jsonl.gz
+    sha256: 0c5f2d309ef3bf8f79fa99fd297c90211777204d514247fafdb6acc6e329f71b
+    metadata:
+      record_count: 11149
+  - name: alimeeting_en_mn-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v3-20261020/records_alimeeting_en_mn.jsonl.gz
+    sha256: 6d3aac9cd065771fa60517022d8aaeaa090e6b8141ae9ae1f2623635bf52bc25
+    metadata:
+      record_count: 24762
+  - name: alimeeting_en_mn-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v3-20261020/audio_index_alimeeting_en_mn.jsonl.gz
+    sha256: 39b64c33171e882c69cdc2a5346c9fa3fc181094fe7bfd509a0c29cca9772a96
+    metadata:
+      record_count: 639
+  - name: alimeeting_en_mf-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v3-20261020/records_alimeeting_en_mf.jsonl.gz
+    sha256: b49542536499890906f2981bf626fa6d0d1fd113c843be8723b85bea069b2e0a
+    metadata:
+      record_count: 24840
+  - name: alimeeting_en_mf-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v3-20261020/audio_index_alimeeting_en_mf.jsonl.gz
+    sha256: 8d4560f14c9dee9ce61e91b40682b1287f14e5a00d817d05749e36be07c02fef
+    metadata:
+      record_count: 848
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v3-20261020/record_index/index.json
+    expected_bytes: 1497
+    sha256: afa3e93040546846385bd5656200daa2610eaaf374be59c8833e0d458264be31
+    metadata:
+      snapshot_version: 13
+      rows: 79152
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    emilia2_1spk:
+      artifacts:
+        records:
+        - emilia2_1spk-records
+        audio_index:
+        - emilia2_1spk-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 29550
+        duration_hours: 38.77
+        duration_basis: clip duration (segment span, or the whole file)
+    alimeeting_en_mn:
+      artifacts:
+        records:
+        - alimeeting_en_mn-records
+        audio_index:
+        - alimeeting_en_mn-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 24762
+        duration_hours: 33.06
+        duration_basis: clip duration (segment span, or the whole file)
+    alimeeting_en_mf:
+      artifacts:
+        records:
+        - alimeeting_en_mf-records
+        audio_index:
+        - alimeeting_en_mf-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 24840
+        duration_hours: 33.19
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-20'
+    description: 真实录音的目标说话人训练窗口第三版，补 v1 / v2 没有的两类（只生成记录，引用原始录音片段，不复制、不混音）：emilia2_1spk——Emilia2 中文网络对话（emilia2_zh_dialogue_diarize
+      的 MOSS 伪标签，窗口文本已过 Qwen3-ASR 核对）里只有一个人说话的 8–22 秒整句窗口，每个窗口一对：目标在场（注册取此人窗外另一句）与目标缺席（注册取同一诊断窗口里的另一位说话人），对应评测 real-emilia2-1spk-neg；排除评测留出视频（ts_asr_real
+      v2 的 excluded-recordings）与说话人合并错误窗口；每对用 ERes2NetV2 声纹核对，按对内分布取阈值（同人下限 0.746、异人上限 0.493）剔除 225 对。alimeeting_en_mn / alimeeting_en_mf——AliMeeting
+      train 窗口（窗口切法同 v1，远场人工标注），注册一律取注册人的近场头戴麦，混合取窗口内某位说话人的头戴麦（en_mn，设备离说话人近）或远场第 0 声道（en_mf），在场 / 缺席成对，补评测 nearfar-*-en-mn-neg（近场注册
+      + 近场混合）的缺席。生成脚本 scripts/ts_robust/build_ts_real_train_v3.py、qc_ts_real_train_v3.py。
+    sources:
+    - emilia2_zh_dialogue_diarize@moss-transcribe-diarize-0.9B train_120s
+    - alimeeting_sdm@icefall-20260908 train
+    - alimeeting@openslr-119-local-20260826 Train_Ali_near
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_real_train
+  version: v1-20261017-utts
+  derived_from: ts_real_train@v1-20261017
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: alimeeting-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v1-20261017-utts/records_alimeeting.jsonl.gz
+    sha256: 99576ff6e831134840f03d294fffffe2b3b3432b79d8e73f9e94c25579f78616
+    metadata:
+      record_count: 24750
+  - name: alimeeting-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v1-20261017-utts/audio_index_alimeeting.jsonl.gz
+    sha256: 8331ba8e83f46c3a4dff8449c2959401f45a4981b0e52dde0e3fc61d9d10b6b1
+    metadata:
+      record_count: 209
+  - name: aishell4-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v1-20261017-utts/records_aishell4.jsonl.gz
+    sha256: 81e0dbcb49f55aa8eccbe3dd57204fedf55a5df6e18dc125b35cc5982a60ac27
+    metadata:
+      record_count: 30012
+  - name: aishell4-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v1-20261017-utts/audio_index_aishell4.jsonl.gz
+    sha256: f674cc794536ff797b3a5394278c6b94f33af434bb1f580f8086526fbac9a68b
+    metadata:
+      record_count: 189
+  - name: ramc-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v1-20261017-utts/records_ramc.jsonl.gz
+    sha256: e5024c8eaf5c4873350e5f1dfd635d7bb18aacd469a15515a891460d3d55b908
+    metadata:
+      record_count: 36648
+  - name: ramc-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v1-20261017-utts/audio_index_ramc.jsonl.gz
+    sha256: 464a198c6dee91326e75281474288e2df6546714cd090b20f7663af50e157e2d
+    metadata:
+      record_count: 289
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v1-20261017-utts/record_index/index.json
+    expected_bytes: 1436
+    sha256: f9b193137f493fb5c7e5bafd9f6881c0cfb9ba00a60ed66f8941b9bca0cd2078
+    metadata:
+      snapshot_version: 13
+      rows: 91410
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    alimeeting:
+      artifacts:
+        records:
+        - alimeeting-records
+        audio_index:
+        - alimeeting-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 24750
+        duration_hours: 33.07
+        duration_basis: clip duration (segment span, or the whole file)
+    aishell4:
+      artifacts:
+        records:
+        - aishell4-records
+        audio_index:
+        - aishell4-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 30012
+        duration_hours: 42.99
+        duration_basis: clip duration (segment span, or the whole file)
+    ramc:
+      artifacts:
+        records:
+        - ramc-records
+        audio_index:
+        - ramc-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 36648
+        duration_hours: 47.57
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-21'
+    description: ts_real_train@v1-20261017 的同一批记录，时间线取自 AliMeeting 远场、AISHELL-4、RAMC 的 icefall-20260908 train 人工标注。加 metadata.window_utts（窗口内每句的说话人与相对混合起点的起止，取自来源标注并截到窗口，截断的标
+      clipped）与同一命名空间的 metadata.target_speaker，供 open-audio-llm 帧级说话人活动标签（objective.ts_activity_weight）；其余字段不变，音频引用改指本版本，音频索引与原版逐行相同。正样本的目标语句与转写逐字一致（忽略空白和标点；窗口边缘截断的句子允许只转写一部分）才写时间线，负样本只有注册人确实不在窗口里说话才写；其余记录不写时间线（不出帧级标签）。负样本中注册人按标注其实在窗口内说话的记录
+      ID 列在 excluded-records-<split>.txt，训练配方用 exclude_records 排除。生成脚本 audio-data-contract scripts/ts_robust/add_window_utts.py，逐划分统计见
+      report.json。
+    sources:
+    - ts_real_train@v1-20261017
+    - alimeeting_sdm@icefall-20260908
+    - aishell4@icefall-20260908
+    - magicdata_ramc@icefall-20260908
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_real_train
+  version: v3-20261020-utts
+  derived_from: ts_real_train@v3-20261020
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: alimeeting_en_mn-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v3-20261020-utts/records_alimeeting_en_mn.jsonl.gz
+    sha256: 8ca9eca7f36eb8f5343c5f7675803e625a900a7d955f522651887a74a6a4435c
+    metadata:
+      record_count: 24762
+  - name: alimeeting_en_mn-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v3-20261020-utts/audio_index_alimeeting_en_mn.jsonl.gz
+    sha256: 80e094458557d92cb8c9a801c965338fd581f4b5200f6b0ed136247325a2db0c
+    metadata:
+      record_count: 639
+  - name: alimeeting_en_mf-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v3-20261020-utts/records_alimeeting_en_mf.jsonl.gz
+    sha256: bc623463b768fd9ee8ba5ecfef7bd3df1ae9c86b46403b10e08835a42a1a682b
+    metadata:
+      record_count: 24840
+  - name: alimeeting_en_mf-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v3-20261020-utts/audio_index_alimeeting_en_mf.jsonl.gz
+    sha256: c85eba2de105b41b418b60eb7c9adb8ddf2b55736e4855cb821ff220e429eb71
+    metadata:
+      record_count: 848
+  - name: emilia2_1spk-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v3-20261020-utts/records_emilia2_1spk.jsonl.gz
+    sha256: 378baee75dfebf902071f3021ee8c8be9030d6ceed5fcb6d72ab2b021e0f871e
+    metadata:
+      record_count: 29550
+  - name: emilia2_1spk-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v3-20261020-utts/audio_index_emilia2_1spk.jsonl.gz
+    sha256: 6f826c6decfbe87a712afab7dce4fe3cacebf546a5d9e82d6101041cd14f886c
+    metadata:
+      record_count: 11149
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v3-20261020-utts/record_index/index.json
+    expected_bytes: 1502
+    sha256: 44698d99ec4cc2c684cb608b93c13bb5656ebfff2bfc810312b2e8e6e68114d0
+    metadata:
+      snapshot_version: 13
+      rows: 79152
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    alimeeting_en_mn:
+      artifacts:
+        records:
+        - alimeeting_en_mn-records
+        audio_index:
+        - alimeeting_en_mn-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 24762
+        duration_hours: 33.06
+        duration_basis: clip duration (segment span, or the whole file)
+    alimeeting_en_mf:
+      artifacts:
+        records:
+        - alimeeting_en_mf-records
+        audio_index:
+        - alimeeting_en_mf-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 24840
+        duration_hours: 33.19
+        duration_basis: clip duration (segment span, or the whole file)
+    emilia2_1spk:
+      artifacts:
+        records:
+        - emilia2_1spk-records
+        audio_index:
+        - emilia2_1spk-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 29550
+        duration_hours: 38.77
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-21'
+    description: ts_real_train@v3-20261020 的同一批记录：alimeeting_en_mn / en_mf 的时间线取自 AliMeeting 远场 icefall-20260908 train 人工标注（近讲与远场文件对齐在
+      0.07 秒内），emilia2_1spk 取自记录所引用的 MOSS 日志窗口。加 metadata.window_utts（窗口内每句的说话人与相对混合起点的起止，取自来源标注并截到窗口，截断的标 clipped）与同一命名空间的
+      metadata.target_speaker，供 open-audio-llm 帧级说话人活动标签（objective.ts_activity_weight）；其余字段不变，音频引用改指本版本，音频索引与原版逐行相同。正样本的目标语句与转写逐字一致（忽略空白和标点；窗口边缘截断的句子允许只转写一部分）才写时间线，负样本只有注册人确实不在窗口里说话才写；其余记录不写时间线（不出帧级标签）。负样本中注册人按标注其实在窗口内说话的记录
+      ID 列在 excluded-records-<split>.txt，训练配方用 exclude_records 排除。生成脚本 audio-data-contract scripts/ts_robust/add_window_utts.py，逐划分统计见
+      report.json。
+    sources:
+    - ts_real_train@v3-20261020
+    - alimeeting_sdm@icefall-20260908
+    - emilia2_zh_dialogue_diarize@moss-transcribe-diarize-0.9B
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_real_train
+  version: v2-20261018-utts
+  derived_from: ts_real_train@v2-20261018
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: alimeeting-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v2-20261018-utts/records_alimeeting.jsonl.gz
+    sha256: 33fd70f3946d309b573a8caec16c2abe5381e12393d1b93a19f91da9672a9fba
+    metadata:
+      record_count: 42000
+  - name: alimeeting-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v2-20261018-utts/audio_index_alimeeting.jsonl.gz
+    sha256: 4c0cd59413a466db35c577a65acd3d2488328454ab7c8fb3bbc6e50088abd2e8
+    metadata:
+      record_count: 209
+  - name: aishell4-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v2-20261018-utts/records_aishell4.jsonl.gz
+    sha256: 86bbefc177f57d57fe7da0d57bc36d306f3f3bfc3fdd9eb515dae94e2eb019ef
+    metadata:
+      record_count: 29918
+  - name: aishell4-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v2-20261018-utts/audio_index_aishell4.jsonl.gz
+    sha256: bf72248e8bb698d6563237617d3f0b4344e5c48a302f315a3f1ab366bd9bdb74
+    metadata:
+      record_count: 189
+  - name: ramc-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v2-20261018-utts/records_ramc.jsonl.gz
+    sha256: a16db538c7ebe409cc6f774a7a37323251a89e1832d6a78f87931734a867a975
+    metadata:
+      record_count: 12000
+  - name: ramc-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v2-20261018-utts/audio_index_ramc.jsonl.gz
+    sha256: c13e1d7459b0ca40b1d403d5f78adf8c7bfccbc8e6c8cbf8b06f68b69c3e106c
+    metadata:
+      record_count: 275
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_real_train/versions/v2-20261018-utts/record_index/index.json
+    expected_bytes: 1436
+    sha256: 45b2bc643ad32afb731c5249549d82e9beb45c51834e2a5632bb28425b2d754f
+    metadata:
+      snapshot_version: 13
+      rows: 83918
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    alimeeting:
+      artifacts:
+        records:
+        - alimeeting-records
+        audio_index:
+        - alimeeting-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 42000
+        duration_hours: 58.19
+        duration_basis: clip duration (segment span, or the whole file)
+    aishell4:
+      artifacts:
+        records:
+        - aishell4-records
+        audio_index:
+        - aishell4-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 29918
+        duration_hours: 42.93
+        duration_basis: clip duration (segment span, or the whole file)
+    ramc:
+      artifacts:
+        records:
+        - ramc-records
+        audio_index:
+        - ramc-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 12000
+        duration_hours: 15.44
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-22'
+    description: ts_real_train@v2-20261018 的同一批记录，v2 自带的 metadata.window_utts / target_speaker 按与其他 -utts 版本相同的规则复核：正样本的目标语句与转写逐字一致（忽略空白和标点；窗口边缘截断的句子允许只转写一部分）才保留时间线，负样本只有注册人确实不在窗口里说话才保留；不满足的记录去掉
+      window_utts（保留 target_speaker），不出帧级标签。正样本全部通过；45 条负样本（alimeeting 43、ramc 2，都是 other_recording）的注册人与窗口里的说话人是同一人（同一说话人出现在多场录音里），转写为空属于错标，ID
+      列在 excluded-records-<split>.txt，训练配方用 exclude_records 排除。其余字段不变，音频引用改指本版本，音频索引与原版逐行相同。生成脚本 audio-data-contract scripts/ts_robust/add_window_utts.py（keep），逐划分统计见
+      report.json。
+    sources:
+    - ts_real_train@v2-20261018

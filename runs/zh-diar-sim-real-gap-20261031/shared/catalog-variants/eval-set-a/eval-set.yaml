@@ -1,0 +1,80 @@
+task: diarization
+tags:
+- meeting
+- multi-speaker
+- timestamps
+sampling_rate: 16000
+groups:
+- name: far_mean
+  section: 声学对照
+  labels:
+  - far_mean
+  aggregate: macro
+  description: 真实远场 8 通道均值（= 选模面板音频）
+- name: far_ch0
+  section: 声学对照
+  labels:
+  - far_ch0
+  aggregate: macro
+  description: 真实远场第 0 通道
+- name: near_gated
+  section: 声学对照
+  labels:
+  - near_gated
+  aggregate: macro
+  description: 近讲耳机按各自标注区间门控后直接相加（无混响无噪声）
+- name: near_raw
+  section: 声学对照
+  labels:
+  - near_raw
+  aggregate: macro
+  description: 近讲耳机原样相加（保留串音与未标注声音）
+evaluation:
+- dataset_id: meeting_simreal_probe
+  version: v1-20261031
+  split: far_mean
+  task: speaker_attributed_asr
+  label: far_mean
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: 真实远场 8 通道均值（= 选模面板音频）
+  description: AliMeeting 官方 Eval 8 场 138 个选模窗口：真实远场 8 通道均值（= 选模面板音频）
+- dataset_id: meeting_simreal_probe
+  version: v1-20261031
+  split: far_ch0
+  task: speaker_attributed_asr
+  label: far_ch0
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: 真实远场第 0 通道
+  description: AliMeeting 官方 Eval 8 场 138 个选模窗口：真实远场第 0 通道
+- dataset_id: meeting_simreal_probe
+  version: v1-20261031
+  split: near_gated
+  task: speaker_attributed_asr
+  label: near_gated
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: 近讲耳机按各自标注区间门控后直接相加（无混响无噪声）
+  description: AliMeeting 官方 Eval 8 场 138 个选模窗口：近讲耳机按各自标注区间门控后直接相加（无混响无噪声）
+- dataset_id: meeting_simreal_probe
+  version: v1-20261031
+  split: near_raw
+  task: speaker_attributed_asr
+  label: near_raw
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: 近讲耳机原样相加（保留串音与未标注声音）
+  description: AliMeeting 官方 Eval 8 场 138 个选模窗口：近讲耳机原样相加（保留串音与未标注声音）

@@ -1,0 +1,99 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: icsi
+  version: modelscope-argmaxinc-20261025
+  languages:
+  - en
+  tasks:
+  - speaker_diarization
+  - asr
+  aliases:
+  - icsi-meetings
+  - icsi_meeting_corpus
+  artifacts:
+  - name: parquet_dir
+    kind: hf-dataset-directory
+    root_alias: icsi
+    relative_path: source/modelscope-argmaxinc-20261025/data
+    metadata:
+      file_count: 18
+      expected_bytes: 8175540109
+      tree_sha256: 2a6bed6698c938e8c7a41f9921a0bfff15fb41326f553399d1ebe22429efe2be
+      rows: 75
+      source_url: https://www.modelscope.cn/datasets/argmaxinc/icsi-meetings
+      upstream_revision: 27a0bbf6e927ea6e3a4bb35c7c988333b921a899
+      fields: audio (16 kHz mono WAV bytes; path is <meeting>.interaction.wav), timestamps_start, timestamps_end, speakers
+  - name: transcripts_archive
+    kind: source-archive
+    root_alias: icsi
+    relative_path: source/edinburgh-annotations-20261025/ICSI_original_transcripts.zip
+    expected_bytes: 3720243
+    sha256: 9db98ebdd61a085b4f45f24f46e9c9f6c6f26c3c9cd41643a3b9e74362c85de7
+    metadata:
+      source_url: https://groups.inf.ed.ac.uk/ami/ICSICorpusAnnotations/ICSI_original_transcripts.zip
+  - name: transcripts_dir
+    kind: source-directory
+    root_alias: icsi
+    relative_path: source/edinburgh-annotations-20261025/extracted/ICSI_original_transcripts
+    metadata:
+      file_count: 88
+      expected_bytes: 19510986
+      tree_sha256: 013a0475cc1712fd613036cd68ec54e6a968fad0ade4b88d4f762d8975edd939
+      layout: transcripts/<meeting>.mrt (original MRT transcripts with times, speaker and channel); doc/
+  - name: nxt_archive
+    kind: source-archive
+    root_alias: icsi
+    relative_path: source/edinburgh-annotations-20261025/ICSI_core_NXT.zip
+    expected_bytes: 19488722
+    sha256: cf4860245b9ca9c9ed11a66e5a74cfea2a99a686a52f7580aa0a6bc2225895a9
+    metadata:
+      source_url: https://groups.inf.ed.ac.uk/ami/ICSICorpusAnnotations/ICSI_core_NXT.zip
+  - name: nxt_dir
+    kind: source-directory
+    root_alias: icsi
+    relative_path: source/edinburgh-annotations-20261025/extracted/ICSI_core_NXT
+    metadata:
+      file_count: 1951
+      expected_bytes: 154160185
+      tree_sha256: 37fff7fa19920731889c00e910728ceb84d57dec70ee0718a9a25d844da4669f
+      layout: ICSI/{Words,Segments,DialogueActs,SpeechQuality}/<meeting>.<channel>.*.xml, ICSI/ICSI-metadata.xml, ICSI/speakers.xml
+  splits:
+    test:
+      artifacts:
+        records:
+        - parquet_dir
+        transcriptions:
+        - transcripts_dir
+        - nxt_dir
+        source_archive:
+        - transcripts_archive
+        - nxt_archive
+      statistics:
+        meetings: 75
+        speakers: 60
+        speakers_basis: distinct speaker codes in the segments; 53 enrolled speakers plus 7 9xx codes for unenrolled or unknown voices
+        speaker_segments: 128983
+        transcript_segments: 129813
+        duration_hours: 71.6865
+        duration_basis: length of the headset-mix recording of each meeting
+      provenance:
+        source_split: all 75 ICSI meetings (the mirror calls the split test)
+        audio: official headset mix (<meeting>.interaction.wav), one channel per meeting
+  provenance:
+    source: ICSI Meeting Corpus (International Computer Science Institute, Berkeley), distributed by the University of Edinburgh. Audio
+      and speaker segments from the argmaxinc/icsi-meetings mirror on ModelScope; transcripts and NXT annotations from Edinburgh.
+    url: https://groups.inf.ed.ac.uk/ami/icsi/
+    snapshot_date: '2026-10-25'
+    license: CC BY 4.0
+    description: ICSI 会议语料：伯克利 ICSI 研究所 2000–2002 年录的 75 场真实英文工作会议（每场 3–10 人，共 53 位登记说话人），71.7 小时。这一版的音频是官方的近讲混合音轨（把所有人的头戴麦叠成一路，16
+      kHz 单声道），每场带说话人分段（12.9 万段），适合做说话人日志评测；另附官方 MRT 原始转写（含时间、说话人）和 NXT 标注（词、分段、对话行为），可做多人会议 ASR。不含远场桌面麦通道。
+    acquisition: Downloaded every file of the ModelScope repo at revision 27a0bbf6 (each parquet's sha256 equals the ModelScope LFS
+      sha256, modelscope-snapshot.json). Downloaded the two annotation zips from Edinburgh; their sizes match the server's Content-Length
+      and both pass the zip CRC test. Both zips were extracted under extracted/ with Python zipfile; no member path leaves the archive
+      root.
+    known_issues:
+    - The audio is the headset mix, not a far-field channel. The desk PZM channels (chan6, chan7, chanE, chanF) exist only on the Edinburgh
+      server, which serves about 80 KB/s in total to this host.
+    - data/train-00000-of-00001.parquet is not audio. It is the uploader's local file list (997 paths under /Users/...), and the mirror's
+      README does not declare it as a split.
+    - transcripts/preambles.mrt is a shared preamble file, not a meeting.
+    integrity: local_sha256_recorded

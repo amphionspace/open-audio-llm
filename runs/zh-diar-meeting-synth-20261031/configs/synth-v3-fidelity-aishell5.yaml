@@ -1,0 +1,75 @@
+# 保真度检查专用（scripts/build_dev_fidelity.py，AISHELL-5 素材的复查）：synth-v1.yaml 的在线会议合成配置，声学范围换成 AliMeeting 训练集
+# 的测量值，因为被对照的 dev 窗口是 AliMeeting。其余字段与 synth-v1.yaml 相同。
+catalog: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/shared/catalog
+roots: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/shared/roots.json
+online_meeting:
+  material: {dataset_id: meeting_synth_zh, version: v1-20261031, split: material}
+  rir_sources:
+  - {dataset_id: real_rir_slr28, version: prepared-20260908, split: all}
+  noise_sources:
+  - {dataset_id: meeting_room_noise, version: v2-20261014, split: train}
+  corpus_weights: {alimeeting: 1.0, aishell5: 1.0}
+  whole_conversations: true
+  exclude_meetings:
+  - R0004_M0022
+  - R0004_M0027
+  - R0008_M0075
+  - R0008_M0076
+  - R1019_M1971
+  - R1019_M4056
+  - aishell5-train-015
+  - aishell5-train-016
+  - aishell5-train-025
+  - aishell5-train-043
+  - aishell5-train-055
+  - aishell5-train-075
+  - aishell5-train-086
+  - aishell5-train-099
+  - aishell5-train-101
+  - aishell5-train-115
+  - aishell5-train-119
+  - aishell5-train-122
+  - aishell5-train-124
+  - aishell5-train-128
+  - aishell5-train-162
+  - aishell5-train-187
+  - aishell5-train-191
+  - aishell5-train-223
+  - aishell5-train-249
+  - aishell5-train-259
+  - aishell5-train-266
+  - aishell5-train-291
+  - aishell5-train-292
+  - aishell5-train-293
+  - aishell5-train-294
+  - aishell5-train-295
+  - aishell5-train-330
+  - aishell5-train-363
+  - aishell5-train-387
+  - aishell5-train-406
+  - aishell5-train-410
+  - aishell5-train-422
+  - aishell5-train-424
+  - aishell5-train-450
+  - aishell5-train-458
+  - aishell5-train-462
+  - aishell5-train-472
+  - aishell5-train-474
+  - aishell5-train-495
+  - aishell5-train-526
+  - aishell5-train-543
+  - aishell5-train-549
+  - aishell5-train-555
+  # 不限素材重叠比例（默认 max_overlap 1.0）：试过 0，AliMeeting 只填满 54.8% 语音、重叠时间减半，且串音并非多数说话人的原因
+  # （tasks/05-fidelity-check-clean/README.md）。
+  # 声学范围取自 tracking/far-acoustics-train.json（scripts/fit_far_acoustics.py，AliMeeting + AISHELL-4 训练集各 60 场
+  # 远场阵列均值，120 场合并的 p10-p90）：
+  # - snr_db：测得的是相对噪声底（100 ms 帧功率第 5 百分位）的信噪比 8.0-26.2 dB；合成器按噪声片段平均功率配比，
+  #   meeting_room_noise@v2 train 的平均功率比自身噪声底高 4.4 dB（209 段中位，p10-p90 1.9-6.3），故减 4.4。
+  # - level_db_std：测得各人相对本场均值的电平差 std 2.29 dB（496 人）；每场约 4.1 人、高斯截断在 ±2σ，
+  #   2.29 / (0.880 * sqrt(1 - 1/4.1)) = 3.0。
+  # - speech_dbfs：说话时段的语音电平 -42.8 至 -30.4 dBFS。
+  # AliMeeting 60 场：底噪信噪比 p10-p90 17.6-27.0 dB，减 4.4；语音电平 -43.5 至 -28.7 dBFS。
+  snr_db: [13.2, 22.6]
+  level_db_std: 3.0
+  speech_dbfs: [-43.5, -28.7]

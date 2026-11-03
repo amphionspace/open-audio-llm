@@ -1,0 +1,62 @@
+# 测量修复第一步：同一保存点重复解码的噪声，以及 vLLM 批次不变模式能否消掉它。
+# 起点模型（Emilia2 6000）在选模面板（AliMeeting dev 138 窗 + NOTSOFAR dev 146 窗）上：默认解码 3 次、批次不变解码 2 次，
+# 各次是独立的评测执行（各自一个 W&B run），同一服务上并发跑；打分与第二轮选模器完全相同（select_checkpoints.evaluate_model）。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../shared/code/src}]
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+    # api.wandb.ai 对本机出口 IP 返回 403（../zh-diar-aug-acp-20261030/tracking/wandb-egress-probe.txt），W&B 流量走本地中转。
+    WANDB_HTTP_PROXY: http://127.0.0.1:17910
+    WANDB_HTTPS_PROXY: http://127.0.0.1:17910
+task:
+  kind: prepare
+  script: {path: ../scripts/probe_panels.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  tracking_prefix: AmphionASR-zh-diar-simreal-noise
+  serve_template: {path: serve.yaml}
+  # Two servers at once (default and batch-invariant); cards picked from gpu_pool under the shared eval GPU lock.
+  parallel: 2
+  port_base: 9061
+  gpu_pool: [1, 2, 3, 4, 6, 7]
+  gpu_free_mib: 26000
+  server_startup_timeout: 1800
+  delete_request_audio: true
+  voice_similarity:
+    alimeeting_dev: {path: ../shared/alimeeting-dev-voice-similarity.json}
+  jobs:
+  - name: start-default
+    model: {path: /workspace/data/ae-runs/zh-emilia2-dialogue-6000/checkpoint-6000}
+    repeats: 3
+    panels:
+      selection: {template: {path: eval-panel.yaml}, turn_diagnostics: [alimeeting_dev]}
+  - name: start-batchinv
+    model: {path: /workspace/data/ae-runs/zh-emilia2-dialogue-6000/checkpoint-6000}
+    serve_template: {path: serve-bi.yaml}
+    repeats: 2
+    panels:
+      selection: {template: {path: eval-panel.yaml}, turn_diagnostics: [alimeeting_dev]}
+recording:
+  attempts_dir: {path: ../tasks/01-decode-noise/attempts}
+  result: {path: '{attempt}/artifacts/probe-results.json'}
+tracking:
+  pythonpath: [{path: ../shared/code/src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: AmphionASR-zh-diar-simreal-noise
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file: {path: '{attempt}/artifacts/probe-results.json'}
+    prefix: probe

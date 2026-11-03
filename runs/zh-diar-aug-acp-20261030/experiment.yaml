@@ -1,0 +1,18 @@
+version: 1
+name: zh-diar-aug-acp-20261030
+purpose: Diarization 第二轮：第一轮诊断发现起点模型背熟了真实会议训练窗口（训过 6–7、没训过 18–24），且 81% 的训练样本没有任何波形增强。H 组让增强真正生效（带时间戳的转写也变速并换算时间戳、SpecAugment 按时长遮挡），I 组再把真实会议的重复遍数降到约三分之一；选模面板加入训过数据的固定集，报告背数据的程度
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training_coverage: all_eligible_records
+  training_steps: 12000
+inputs:
+  init_model: /workspace/data/ae-runs/zh-emilia2-dialogue-6000/checkpoint-6000
+  round1: ../zh-diar-ts-aux-acp-20261028
+tasks:
+- {id: recipes, name: 两组数据配置（scripts/make_recipes.py 由第一轮 E 组配方生成 configs/train-data-h.yaml、train-data-i.yaml）, config: scripts/make_recipes.py, depends_on: []}
+- {id: train-fit-set, name: 训过数据的固定集 catalog（scripts/make_train_fit_catalog.py）, config: scripts/make_train_fit_catalog.py, depends_on: []}
+- {id: train-h, name: H 组 ACP 单机 8 卡全参数 12000 步, config: configs/train-h.yaml, depends_on: [recipes]}
+- {id: train-i, name: I 组 ACP 单机 8 卡全参数 12000 步, config: configs/train-i.yaml, depends_on: [recipes]}
+- {id: select-h, name: H 组开发机异步选模与结束评测, config: configs/select-h.yaml, depends_on: [train-fit-set]}
+- {id: select-i, name: I 组开发机异步选模与结束评测, config: configs/select-i.yaml, depends_on: [train-fit-set]}

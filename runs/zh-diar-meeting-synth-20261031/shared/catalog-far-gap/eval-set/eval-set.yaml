@@ -1,0 +1,44 @@
+task: diarization
+tags:
+- meeting
+- multi-speaker
+- timestamps
+sampling_rate: 16000
+groups:
+- name: shuffled_far
+  section: 远场文字差距排查
+  labels:
+  - shuffled_far
+  aggregate: macro
+  description: shuffled_far
+- name: unseen_far
+  section: 远场文字差距排查
+  labels:
+  - unseen_far
+  aggregate: macro
+  description: unseen_far
+evaluation:
+- dataset_id: meeting_synth_fidelity
+  version: v4-20261101
+  split: shuffled_far
+  task: speaker_attributed_asr
+  label: shuffled_far
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: shuffled_far
+  description: shuffled_far
+- dataset_id: meeting_synth_fidelity
+  version: v4-20261101
+  split: unseen_far
+  task: speaker_attributed_asr
+  label: unseen_far
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: unseen_far
+  description: unseen_far

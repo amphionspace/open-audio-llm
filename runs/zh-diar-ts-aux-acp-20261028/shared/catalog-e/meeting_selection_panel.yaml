@@ -1,0 +1,83 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: meeting_selection_panel
+  version: v1-20261008
+  languages:
+  - en
+  - zh
+  tasks:
+  - speaker_attributed_asr
+  artifacts:
+  - name: audio-index
+    kind: audio-index
+    root_alias: meeting_selection_panel
+    relative_path: versions/v1-20261008/audio-index.jsonl.gz
+    sha256: e7aff1c3a94fa859dea45d21f2871ba978ac7b656148937bd2a34dedb1476b14
+    metadata:
+      record_count: 434
+  - name: alimeeting_dev-records
+    kind: audio-records
+    root_alias: meeting_selection_panel
+    relative_path: versions/v1-20261008/records/alimeeting_dev.jsonl.gz
+    sha256: 981ce4619c777a1c4fc727729136d81a7c65ffd12783f7f15947b797ff928084
+    metadata:
+      record_count: 138
+  - name: notsofar_dev-records
+    kind: audio-records
+    root_alias: meeting_selection_panel
+    relative_path: versions/v1-20261008/records/notsofar_dev.jsonl.gz
+    sha256: 8bc452d0e838a7d019829c7d829be7a05f8752fac2ecc507d1ec41cc7a27249b
+    metadata:
+      record_count: 146
+  - name: chime6_dev-records
+    kind: audio-records
+    root_alias: meeting_selection_panel
+    relative_path: versions/v1-20261008/records/chime6_dev.jsonl.gz
+    sha256: fd1793ffd853a92e7d34a14c82030bf2aff008f83b588b90bded30ca590c4d92
+    metadata:
+      record_count: 150
+  splits:
+    alimeeting_dev:
+      artifacts:
+        records:
+        - alimeeting_dev-records
+        audio_index:
+        - audio-index
+      statistics:
+        records: 138
+        duration_hours: 4.2051
+        duration_basis: Clip audio duration
+    notsofar_dev:
+      artifacts:
+        records:
+        - notsofar_dev-records
+        audio_index:
+        - audio-index
+      statistics:
+        records: 146
+        duration_hours: 3.7311
+        duration_basis: Clip audio duration
+    chime6_dev:
+      artifacts:
+        records:
+        - chime6_dev-records
+        audio_index:
+        - audio-index
+      statistics:
+        records: 150
+        duration_hours: 4.4636
+        duration_basis: Clip audio duration
+  provenance:
+    status: complete
+    synthetic: none
+    description: 独立会议选模面板：AliMeeting 官方 Eval 8 场全部 120 秒窗口（中文）、NOTSOFAR 官方 dev 36
+      场每场一台设备的全部 120 秒窗口（英文 3–7 人）、CHiME-6 官方 dev 2 场全部 120 秒窗口（英文晚宴，仅报告）。不进训练，不按难度筛选。
+    windowing: 沿用 meeting-long-v1-20260920（AliMeeting）与 real-meetings-v1-20261008（NOTSOFAR、CHiME-6）的
+      120 秒视图，在说话空隙处切、不切断句子；远场通道取均值。
+    references: 沿用源视图的目标与 turns：说话人按首次发言排序为 S1、S2…，时间相对窗口起点，原始人工标注。
+    sources:
+    - alimeeting_sdm_meeting_sot@meeting-long-v1-20260920:dev_120s（alimeeting_sdm@icefall-20260908:dev）
+    - notsofar_sdm_meeting_sot@real-meetings-v1-20261008:dev_120s（notsofar_sdm@icefall-20260908:dev）
+    - chime6_meeting_sot@real-meetings-v1-20261008:dev_120s（chime6@speaker-records-v1-20260912:dev）
+    limitations: 窗口约 120 秒，短于部署的 180 秒；NOTSOFAR dev 12 位说话人中 10 位也出现在 NOTSOFAR train；CHiME-6
+      dev 只有 2 场会议；无 8 人以上真实会议。
+    builder: open-audio-llm runs/amphion-eval-selection-20261008 configs/build-panel.yaml

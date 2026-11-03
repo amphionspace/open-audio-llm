@@ -1,0 +1,54 @@
+# 多数人原因排查：起点模型解码 build_dev_split_probe.py 的 6 个干预变体（2-3 人窗口），每个 3 次。
+# 判定依据是说话人数多出的比例，见 tasks/06-split-probe/README.md。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../shared/code/src}]
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+    # api.wandb.ai 对本机出口 IP 返回 403（../zh-diar-aug-acp-20261030/tracking/wandb-egress-probe.txt），W&B 流量走本地中转。
+    WANDB_HTTP_PROXY: http://127.0.0.1:17910
+    WANDB_HTTPS_PROXY: http://127.0.0.1:17910
+task:
+  kind: prepare
+  script: {path: ../scripts/probe_panels.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  tracking_prefix: AmphionASR-zh-diar-synth-split-probe
+  serve_template: {path: serve.yaml}
+  parallel: 1
+  port_base: 9111
+  gpu_pool: [3, 5, 7]
+  gpu_free_mib: 26000
+  server_startup_timeout: 1800
+  delete_request_audio: true
+  jobs:
+  - name: start-split
+    model: {path: /workspace/data/ae-runs/zh-emilia2-dialogue-6000/checkpoint-6000}
+    repeats: 3
+    panels:
+      fidelity:
+        template: {path: eval-split.yaml}
+        turn_diagnostics: [no_foreign, thinned, unseen_src4, unseen_src2, real_gated, real_plus_leak]
+recording:
+  attempts_dir: {path: ../tasks/06-split-probe/attempts}
+  result: {path: '{attempt}/artifacts/probe-results.json'}
+tracking:
+  pythonpath: [{path: ../shared/code/src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: AmphionASR-zh-diar-synth-split-probe
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file: {path: '{attempt}/artifacts/probe-results.json'}
+    prefix: probe

@@ -1,0 +1,132 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_asr_singing
+  version: v1-20261017
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  artifacts:
+  - name: audio-index
+    kind: audio-index
+    root_alias: ts_asr_singing
+    relative_path: versions/v1-20261017/audio-index.jsonl.gz
+    sha256: 3988444d03103367dfd1beab9e76dfc7ba5230cd3ca3a1f8138030f3eb798feb
+    metadata:
+      record_count: 480
+  - name: nonspeech-song-records
+    kind: audio-records
+    root_alias: ts_asr_singing
+    relative_path: versions/v1-20261017/records/nonspeech-song.jsonl.gz
+    sha256: fda3c1b58c0d34a937c6bfbb72b689bb69b62c87717e2b74afe38727b1a49cc6
+    metadata:
+      record_count: 120
+  - name: realreg2-song-records
+    kind: audio-records
+    root_alias: ts_asr_singing
+    relative_path: versions/v1-20261017/records/realreg2-song.jsonl.gz
+    sha256: c68ebfd49c2b149a31b09fb6b17779e48456adbb7afcc6e91ab99fa324fd8dc3
+    metadata:
+      record_count: 120
+  splits:
+    nonspeech-song:
+      artifacts:
+        records:
+        - nonspeech-song-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 120
+        duration_hours: 0.1684
+        duration_basis: Mixture duration
+      provenance:
+        description: 'singing: {"kind": "nonspeech", "duration": [1.5, 8.0], "noise": {"kind": "mir1k_song", "level_dbfs": [-30, -15]}, "noise_floor": {"dbfs": [-65, -35], "kinds": {"white": 0.15, "pink": 0.15, "real": 0.7}, "real_pools": ["wham", "dns5_audioset", "dns5_freesound"]}}'
+    realreg2-song:
+      artifacts:
+        records:
+        - realreg2-song-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 120
+        duration_hours: 0.1634
+        duration_basis: Mixture duration
+      provenance:
+        description: 'singing: {"kind": "nonspeech", "duration": [1.5, 8.0], "enroll_file": "realreg2", "noise": {"kind": "mir1k_song", "level_dbfs": [-30, -15]}, "noise_floor": {"dbfs": [-65, -35], "kinds": {"white": 0.15, "pink": 0.15, "real": 0.7}, "real_pools": ["wham", "dns5_audioset", "dns5_freesound"]}}'
+  provenance:
+    status: complete
+    synthetic: full
+    description: 目标说话人 ASR 评测集：由 AISHELL-3、KeSpeech、MagicData、AISHELL-2、AISHELL-1 的官方 test 划分合成，覆盖注册音频劣化、目标说话人进场离场与缺席、纯噪声、环境与设备。只用于评测，不进训练。场景见 scripts/ts_benchmark/recipe.yaml。
+    sources:
+    - aishell3@legacy-20260804:test
+    - kespeech@legacy-20260804:test
+    - magicdata@legacy-20260804:test
+    - aishell2@legacy-20260804:test
+    - aishell@legacy-20260804:test
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_asr_singing
+  version: v2-20261022
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  artifacts:
+  - name: audio-index
+    kind: audio-index
+    root_alias: ts_asr_singing
+    relative_path: versions/v2-20261022/audio-index.jsonl.gz
+    sha256: 3000c1cd80c37581817b8b8e01fb711b0786c3cf4373f879430909448c7214c8
+    metadata:
+      record_count: 480
+  - name: nonspeech-song-records
+    kind: audio-records
+    root_alias: ts_asr_singing
+    relative_path: versions/v2-20261022/records/nonspeech-song.jsonl.gz
+    sha256: 22c9d2b2d43964c22722fbb5fe0f0700a4dea28e29091c434138d83851e7f826
+    metadata:
+      record_count: 120
+  - name: realreg2-song-records
+    kind: audio-records
+    root_alias: ts_asr_singing
+    relative_path: versions/v2-20261022/records/realreg2-song.jsonl.gz
+    sha256: ca5af4221e428057bb5ab7c6f2ec23d59391d159b806e73036da954c68db5952
+    metadata:
+      record_count: 120
+  splits:
+    nonspeech-song:
+      artifacts:
+        records:
+        - nonspeech-song-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 120
+        duration_hours: 0.1684
+        duration_basis: Mixture duration
+      provenance:
+        description: 'singing: {"kind": "nonspeech", "duration": [1.5, 8.0], "noise": {"kind": "mir1k_song", "level_dbfs": [-30, -15]}, "noise_floor": {"dbfs": [-65, -35], "kinds": {"white": 0.15, "pink": 0.15, "real": 0.7}, "real_pools": ["wham", "dns5_audioset", "dns5_freesound"]}, "enroll_store_seconds": 10}'
+    realreg2-song:
+      artifacts:
+        records:
+        - realreg2-song-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 120
+        duration_hours: 0.1634
+        duration_basis: Mixture duration
+      provenance:
+        description: 'singing: {"kind": "nonspeech", "duration": [1.5, 8.0], "enroll_file": "realreg2", "noise": {"kind": "mir1k_song", "level_dbfs": [-30, -15]}, "noise_floor": {"dbfs": [-65, -35], "kinds": {"white": 0.15, "pink": 0.15, "real": 0.7}, "real_pools": ["wham", "dns5_audioset", "dns5_freesound"]}, "enroll_store_seconds": 10}'
+  provenance:
+    status: complete
+    synthetic: full
+    description: 目标说话人 ASR 评测集：由 AISHELL-3、KeSpeech、MagicData、AISHELL-2、AISHELL-1 的官方 test 划分合成，覆盖注册音频劣化、目标说话人进场离场与缺席、纯噪声、环境与设备。只用于评测，不进训练。场景见 scripts/ts_benchmark/recipe.yaml。
+    sources:
+    - aishell3@legacy-20260804:test
+    - kespeech@legacy-20260804:test
+    - magicdata@legacy-20260804:test
+    - aishell2@legacy-20260804:test
+    - aishell@legacy-20260804:test

@@ -1,0 +1,392 @@
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_chuan
+    version: legacy-20260804
+    languages:
+      - zh
+    tasks:
+      - asr
+    aliases: []
+    artifacts:
+      - name: train_cuts_0
+        kind: lhotse-cuts
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech_dialects/source/data-tts-relocated-20261011/WenetSpeech-Chuan/data/manifests/wenetspeech_chuan_cuts_train.jsonl.gz
+        expected_bytes: 543304376
+        sha256: 86cd686290cb835b6d9ad249b4af7333511c5569c37a7cbfd94a657f9bcb73af
+    splits:
+      train:
+        artifacts:
+          cuts:
+            - train_cuts_0
+        statistics:
+          duration_hours: 10259.5651865625
+          duration_basis: 'sum of cuts durations; overlapping segments may count speech more than once; sources: aidc_data:DATA-TTS/WenetSpeech-Chuan/data/manifests/wenetspeech_chuan_cuts_train.jsonl.gz'
+    provenance:
+      source: icefall pre-migration registry
+      snapshot_date: '2026-08-04'
+      upstream_version: unknown
+      relocated_from: aidc_data:DATA-TTS/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_wu
+    version: legacy-20260804
+    languages:
+      - zh
+    tasks:
+      - asr
+    aliases: []
+    artifacts:
+      - name: train_cuts_0
+        kind: lhotse-cuts
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech_dialects/source/data-tts-relocated-20261011/WenetSpeech-Wu/data/manifests/wenetspeech_wu_cuts_train.jsonl.gz
+        expected_bytes: 1021240707
+        sha256: 562457e083b3a1b75d380e6940d11ec8fdecc63cde216cf2fcafb7a4b2b52eb8
+    splits:
+      train:
+        artifacts:
+          cuts:
+            - train_cuts_0
+        statistics:
+          duration_hours: 8740.69795
+          duration_basis: 'sum of cuts durations; overlapping segments may count speech more than once; sources: aidc_data:DATA-TTS/WenetSpeech-Wu/data/manifests/wenetspeech_wu_cuts_train.jsonl.gz'
+    provenance:
+      source: icefall pre-migration registry
+      snapshot_date: '2026-08-04'
+      upstream_version: unknown
+      relocated_from: aidc_data:DATA-TTS/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_yue
+    version: legacy-20260804
+    languages:
+      - yue
+    tasks:
+      - asr
+    aliases: []
+    artifacts:
+      - name: train_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech_dialects/source/data-tts-relocated-20261011/WenetSpeech-Yue/data/manifests/wenetspeech_yue_recordings_clean.jsonl.gz
+        expected_bytes: 43167922
+        sha256: 799da834c970c7ac7690995b643c3add5e9896a5ca7d330974b88d38c26e2bed
+      - name: train_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: DATA-TTS/WenetSpeech-Yue/data/manifests/wenetspeech_yue_supervisions_clean.jsonl.gz
+        expected_bytes: 306504867
+        sha256: c2001b96ba6d73618b749c494f36ad5a93dae0e9c1deab738826493439d2eee4
+      - name: test_long_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech_dialects/source/data-tts-relocated-20261011/WenetSpeech-Yue/data/manifests/wsyue_asr_eval_long_recordings.jsonl.gz
+        expected_bytes: 6777
+        sha256: fda84470eaf225518698678ac1abe91d07103ee538533bbdaea8cbf7ef702438
+      - name: test_long_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: DATA-TTS/WenetSpeech-Yue/data/manifests/wsyue_asr_eval_long_supervisions.jsonl.gz
+        expected_bytes: 135158
+        sha256: 063ff9bfe9093ee56f8ef81bc0e8f009e7b471d98b03e83b35f5ccc6bd6484aa
+      - name: test_short_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech_dialects/source/data-tts-relocated-20261011/WenetSpeech-Yue/data/manifests/wsyue_asr_eval_short_recordings.jsonl.gz
+        expected_bytes: 120549
+        sha256: 5a4b92c78ff34a74a3d94501c4f0f96b1e5abf8df30208e10c92cbb7e433b341
+      - name: test_short_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: DATA-TTS/WenetSpeech-Yue/data/manifests/wsyue_asr_eval_short_supervisions.jsonl.gz
+        expected_bytes: 547878
+        sha256: 7250e4107a112f2684293c71e54089cbe81a1b8cbb4ab455c377912e75f4d678
+    splits:
+      train:
+        artifacts:
+          recordings:
+            - train_rec_0
+          supervisions:
+            - train_sup_0
+      test_long:
+        artifacts:
+          recordings:
+            - test_long_rec_0
+          supervisions:
+            - test_long_sup_0
+        group: test
+      test_short:
+        artifacts:
+          recordings:
+            - test_short_rec_0
+          supervisions:
+            - test_short_sup_0
+        group: test
+    provenance:
+      source: icefall pre-migration registry
+      snapshot_date: '2026-08-04'
+      upstream_version: unknown
+      relocated_from: aidc_data:DATA-TTS/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_yue_all
+    version: legacy-20260804
+    languages:
+      - yue
+    tasks:
+      - asr
+    aliases: []
+    artifacts:
+      - name: train_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech_dialects/source/data-tts-relocated-20261011/WenetSpeech-Yue/data/manifests/wenetspeech_yue_recordings_all.jsonl.gz
+        expected_bytes: 231563264
+        sha256: b96e63d970c1914f59b1448ef4f1fb4d77e40cd4d184d2ba283bc46a6533e8db
+      - name: train_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: DATA-TTS/WenetSpeech-Yue/data/manifests/wenetspeech_yue_supervisions_all.jsonl.gz
+        expected_bytes: 1607233584
+        sha256: f6b6fd2b71228cd0cbdc0f9a6375df52fc979d4843014aa0ad333afab0b8e471
+      - name: test_long_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech_dialects/source/data-tts-relocated-20261011/WenetSpeech-Yue/data/manifests/wsyue_asr_eval_long_recordings.jsonl.gz
+        expected_bytes: 6777
+        sha256: fda84470eaf225518698678ac1abe91d07103ee538533bbdaea8cbf7ef702438
+      - name: test_long_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: DATA-TTS/WenetSpeech-Yue/data/manifests/wsyue_asr_eval_long_supervisions.jsonl.gz
+        expected_bytes: 135158
+        sha256: 063ff9bfe9093ee56f8ef81bc0e8f009e7b471d98b03e83b35f5ccc6bd6484aa
+      - name: test_short_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech_dialects/source/data-tts-relocated-20261011/WenetSpeech-Yue/data/manifests/wsyue_asr_eval_short_recordings.jsonl.gz
+        expected_bytes: 120549
+        sha256: 5a4b92c78ff34a74a3d94501c4f0f96b1e5abf8df30208e10c92cbb7e433b341
+      - name: test_short_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: DATA-TTS/WenetSpeech-Yue/data/manifests/wsyue_asr_eval_short_supervisions.jsonl.gz
+        expected_bytes: 547878
+        sha256: 7250e4107a112f2684293c71e54089cbe81a1b8cbb4ab455c377912e75f4d678
+    splits:
+      train:
+        artifacts:
+          recordings:
+            - train_rec_0
+          supervisions:
+            - train_sup_0
+      test_long:
+        artifacts:
+          recordings:
+            - test_long_rec_0
+          supervisions:
+            - test_long_sup_0
+        group: test
+      test_short:
+        artifacts:
+          recordings:
+            - test_short_rec_0
+          supervisions:
+            - test_short_sup_0
+        group: test
+    provenance:
+      source: icefall pre-migration registry
+      snapshot_date: '2026-08-04'
+      upstream_version: unknown
+      relocated_from: aidc_data:DATA-TTS/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_chuan
+    version: icefall-20260908
+    languages:
+      - zh
+    tasks:
+      - asr
+    derived_from: wenetspeech_chuan@legacy-20260804
+    artifacts:
+      - name: train_cuts_0
+        kind: lhotse-cuts
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech_dialects/source/data-tts-relocated-20261011/WenetSpeech-Chuan/data/manifests/wenetspeech_chuan_cuts_train.jsonl.gz
+        expected_bytes: 543304376
+        sha256: 86cd686290cb835b6d9ad249b4af7333511c5569c37a7cbfd94a657f9bcb73af
+    splits:
+      train:
+        artifacts:
+          cuts:
+            - train_cuts_0
+        statistics:
+          duration_hours: 10259.5651865625
+          duration_basis: 'sum of cuts durations; overlapping segments may count speech more than once; sources: aidc_data:DATA-TTS/WenetSpeech-Chuan/data/manifests/wenetspeech_chuan_cuts_train.jsonl.gz'
+    provenance:
+      source: icefall runtime manifest snapshot
+      snapshot_date: '2026-09-08'
+      relocated_from: aidc_data:DATA-TTS/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_wu
+    version: icefall-20260908
+    languages:
+      - zh
+    tasks:
+      - asr
+    derived_from: wenetspeech_wu@legacy-20260804
+    artifacts:
+      - name: train_cuts_0
+        kind: lhotse-cuts
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech_dialects/source/data-tts-relocated-20261011/WenetSpeech-Wu/data/manifests/wenetspeech_wu_cuts_train.jsonl.gz
+        expected_bytes: 1021240707
+        sha256: 562457e083b3a1b75d380e6940d11ec8fdecc63cde216cf2fcafb7a4b2b52eb8
+    splits:
+      train:
+        artifacts:
+          cuts:
+            - train_cuts_0
+        statistics:
+          duration_hours: 8740.69795
+          duration_basis: 'sum of cuts durations; overlapping segments may count speech more than once; sources: aidc_data:DATA-TTS/WenetSpeech-Wu/data/manifests/wenetspeech_wu_cuts_train.jsonl.gz'
+    provenance:
+      source: icefall runtime manifest snapshot
+      snapshot_date: '2026-09-08'
+      relocated_from: aidc_data:DATA-TTS/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_yue
+    version: icefall-20260908
+    languages:
+      - yue
+    tasks:
+      - asr
+    derived_from: wenetspeech_yue@legacy-20260804
+    artifacts:
+      - name: train_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech_dialects/source/data-tts-relocated-20261011/WenetSpeech-Yue/data/manifests/wenetspeech_yue_recordings_clean.jsonl.gz
+        expected_bytes: 43167922
+        sha256: 799da834c970c7ac7690995b643c3add5e9896a5ca7d330974b88d38c26e2bed
+      - name: train_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: DATA-TTS/WenetSpeech-Yue/data/manifests/wenetspeech_yue_supervisions_clean.jsonl.gz
+        expected_bytes: 306504867
+        sha256: c2001b96ba6d73618b749c494f36ad5a93dae0e9c1deab738826493439d2eee4
+      - name: test_long_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech_dialects/source/data-tts-relocated-20261011/WenetSpeech-Yue/data/manifests/wsyue_asr_eval_long_recordings.jsonl.gz
+        expected_bytes: 6777
+        sha256: fda84470eaf225518698678ac1abe91d07103ee538533bbdaea8cbf7ef702438
+      - name: test_long_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: DATA-TTS/WenetSpeech-Yue/data/manifests/wsyue_asr_eval_long_supervisions.jsonl.gz
+        expected_bytes: 135158
+        sha256: 063ff9bfe9093ee56f8ef81bc0e8f009e7b471d98b03e83b35f5ccc6bd6484aa
+      - name: test_short_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech_dialects/source/data-tts-relocated-20261011/WenetSpeech-Yue/data/manifests/wsyue_asr_eval_short_recordings.jsonl.gz
+        expected_bytes: 120549
+        sha256: 5a4b92c78ff34a74a3d94501c4f0f96b1e5abf8df30208e10c92cbb7e433b341
+      - name: test_short_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: DATA-TTS/WenetSpeech-Yue/data/manifests/wsyue_asr_eval_short_supervisions.jsonl.gz
+        expected_bytes: 547878
+        sha256: 7250e4107a112f2684293c71e54089cbe81a1b8cbb4ab455c377912e75f4d678
+    splits:
+      train:
+        artifacts:
+          recordings:
+            - train_rec_0
+          supervisions:
+            - train_sup_0
+      test_long:
+        artifacts:
+          recordings:
+            - test_long_rec_0
+          supervisions:
+            - test_long_sup_0
+        group: test
+      test_short:
+        artifacts:
+          recordings:
+            - test_short_rec_0
+          supervisions:
+            - test_short_sup_0
+        group: test
+    provenance:
+      source: icefall runtime manifest snapshot
+      snapshot_date: '2026-09-08'
+      relocated_from: aidc_data:DATA-TTS/
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_yue_all
+    version: icefall-20260908
+    languages:
+      - yue
+    tasks:
+      - asr
+    derived_from: wenetspeech_yue_all@legacy-20260804
+    artifacts:
+      - name: train_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech_dialects/source/data-tts-relocated-20261011/WenetSpeech-Yue/data/manifests/wenetspeech_yue_recordings_all.jsonl.gz
+        expected_bytes: 231563264
+        sha256: b96e63d970c1914f59b1448ef4f1fb4d77e40cd4d184d2ba283bc46a6533e8db
+      - name: train_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: DATA-TTS/WenetSpeech-Yue/data/manifests/wenetspeech_yue_supervisions_all.jsonl.gz
+        expected_bytes: 1607233584
+        sha256: f6b6fd2b71228cd0cbdc0f9a6375df52fc979d4843014aa0ad333afab0b8e471
+      - name: test_long_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech_dialects/source/data-tts-relocated-20261011/WenetSpeech-Yue/data/manifests/wsyue_asr_eval_long_recordings.jsonl.gz
+        expected_bytes: 6777
+        sha256: fda84470eaf225518698678ac1abe91d07103ee538533bbdaea8cbf7ef702438
+      - name: test_long_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: DATA-TTS/WenetSpeech-Yue/data/manifests/wsyue_asr_eval_long_supervisions.jsonl.gz
+        expected_bytes: 135158
+        sha256: 063ff9bfe9093ee56f8ef81bc0e8f009e7b471d98b03e83b35f5ccc6bd6484aa
+      - name: test_short_rec_0
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech_dialects/source/data-tts-relocated-20261011/WenetSpeech-Yue/data/manifests/wsyue_asr_eval_short_recordings.jsonl.gz
+        expected_bytes: 120549
+        sha256: 5a4b92c78ff34a74a3d94501c4f0f96b1e5abf8df30208e10c92cbb7e433b341
+      - name: test_short_sup_0
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: DATA-TTS/WenetSpeech-Yue/data/manifests/wsyue_asr_eval_short_supervisions.jsonl.gz
+        expected_bytes: 547878
+        sha256: 7250e4107a112f2684293c71e54089cbe81a1b8cbb4ab455c377912e75f4d678
+    splits:
+      train:
+        artifacts:
+          recordings:
+            - train_rec_0
+          supervisions:
+            - train_sup_0
+      test_long:
+        artifacts:
+          recordings:
+            - test_long_rec_0
+          supervisions:
+            - test_long_sup_0
+        group: test
+      test_short:
+        artifacts:
+          recordings:
+            - test_short_rec_0
+          supervisions:
+            - test_short_sup_0
+        group: test
+    provenance:
+      source: icefall runtime manifest snapshot
+      snapshot_date: '2026-09-08'
+      relocated_from: aidc_data:DATA-TTS/

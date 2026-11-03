@@ -1,0 +1,65 @@
+# 重叠排布对照：dev 真实句子按合成器方式重排重叠（scripts/build_dev_retimed.py），与 near_gated 按重叠档位比较。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../shared/code/src}]
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+    # api.wandb.ai 对本机出口 IP 返回 403（../zh-diar-aug-acp-20261030/tracking/wandb-egress-probe.txt），W&B 流量走本地中转。
+    WANDB_HTTP_PROXY: http://127.0.0.1:17910
+    WANDB_HTTPS_PROXY: http://127.0.0.1:17910
+task:
+  kind: prepare
+  script: {path: ../scripts/probe_panels.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  tracking_prefix: AmphionASR-zh-diar-simreal-retimed
+  serve_template: {path: serve.yaml}
+  # Two servers at once (default and batch-invariant); cards picked from gpu_pool under the shared eval GPU lock.
+  parallel: 1
+  port_base: 9089
+  gpu_pool: [1, 2, 3, 4, 6, 7]
+  gpu_free_mib: 26000
+  server_startup_timeout: 1800
+  delete_request_audio: true
+  # Same 138 windows as the panel; record ids are "<variant>/<panel id>" (AmphionEval needs unique ids), similarity copied per variant.
+  voice_similarity:
+    far_mean: {path: ../shared/voice-similarity-variants.json}
+    far_ch0: {path: ../shared/voice-similarity-variants.json}
+    near_gated: {path: ../shared/voice-similarity-variants.json}
+    near_raw: {path: ../shared/voice-similarity-variants.json}
+    sim_train: {path: ../shared/voice-similarity-variants.json}
+    sim_quiet: {path: ../shared/voice-similarity-variants.json}
+    sim_reallevel: {path: ../shared/voice-similarity-variants.json}
+    sim_roomnoise: {path: ../shared/voice-similarity-variants.json}
+    sim_real: {path: ../shared/voice-similarity-variants.json}
+  # Default decoding (batch-invariant is ~2.3x slower on these shared GPUs); one decode of the same weights moves the
+  # loop-free cpER by ~0.2 (4 decodes of the start model: 20.42-20.81, tracking/noise-default.json), far below the
+  # variant differences this probe looks for. Two servers, one per variant group.
+  jobs:
+  - name: start-retimed
+    model: {path: /workspace/data/ae-runs/zh-emilia2-dialogue-6000/checkpoint-6000}
+    panels:
+      variants: {template: {path: eval-variants-f.yaml}, turn_diagnostics: [near_retimed]}
+recording:
+  attempts_dir: {path: ../tasks/06-retimed-eval/attempts}
+  result: {path: '{attempt}/artifacts/probe-results.json'}
+tracking:
+  pythonpath: [{path: ../shared/code/src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: AmphionASR-zh-diar-simreal-retimed
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file: {path: '{attempt}/artifacts/probe-results.json'}
+    prefix: probe

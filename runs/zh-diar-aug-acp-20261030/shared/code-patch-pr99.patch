@@ -1,0 +1,287 @@
+diff --git a/src/open_audio_llm/data/augment.py b/src/open_audio_llm/data/augment.py
+index 918317a..2797cfc 100644
+--- a/src/open_audio_llm/data/augment.py
++++ b/src/open_audio_llm/data/augment.py
+@@ -16,6 +16,8 @@ import numpy as np
+ LATE_REVERB_S = 0.05
+ # Direct-path window for DRR: +-2.5 ms around the peak is the common convention.
+ DIRECT_PATH_S = 0.0025
++# Mel frames per second of the audio front end (16 kHz, 160-sample hop).
++MEL_FRAMES_PER_SECOND = 100
+ 
+ 
+ @dataclass
+@@ -44,6 +46,10 @@ class AugmentConfig:
+     far_level_dbfs: tuple[float, float] | None = None
+     time_mask_width: int = 30
+     frequency_mask_width: int = 16
++    # Time masks per second of audio (at least one); 0 keeps one mask per sample whatever its
++    # length, which leaves a 120-600 s window almost untouched.
++    time_masks_per_second: float = 0.0
++    frequency_masks: int = 1
+ 
+     def __post_init__(self):
+         for name in ("speed_prob", "rir_prob", "far_rir_prob", "noise_prob", "spec_aug_prob"):
+@@ -71,6 +77,15 @@ class AugmentConfig:
+             raise ValueError("far_level_dbfs must be an ordered pair <= 0 dBFS")
+         if self.time_mask_width < 0 or self.frequency_mask_width < 0:
+             raise ValueError("SpecAugment mask widths must be non-negative")
++        if self.time_masks_per_second < 0 or self.frequency_masks < 0:
++            raise ValueError("SpecAugment mask counts must be non-negative")
++
++
++def speed_ratio(factor):
++    """Length ratio of audio played at `factor` speed, as the resampler realizes it."""
++    from fractions import Fraction
++
++    return Fraction(1 / factor).limit_denominator(1000)
+ 
+ 
+ def for_slot(config, slot_name):
+@@ -95,14 +110,11 @@ def augment_waveform(
+     audio, sampling_rate, rng, config, noise_loader=None, rir_loader=None
+ ):
+     """Apply waveform transforms in memory using only the sample's RNG."""
+-    from fractions import Fraction
+-
+     from scipy.signal import fftconvolve, resample_poly
+ 
+     audio = np.asarray(audio, dtype=np.float32).copy()
+     if rng.random() < config.speed_prob:
+-        factor = rng.choice(config.speed_factors)
+-        ratio = Fraction(1 / factor).limit_denominator(1000)
++        ratio = speed_ratio(rng.choice(config.speed_factors))
+         audio = resample_poly(audio, ratio.numerator, ratio.denominator)
+     roll = rng.random()
+     if roll < config.far_rir_prob:
+@@ -165,9 +177,12 @@ def augment_features(features, lengths, policy):
+     features = features.clone()
+     for index, length in enumerate(lengths):
+         frames = min(int(length), features.shape[-1])
++        time_masks = 1
++        if config.time_masks_per_second:
++            time_masks = max(1, round(frames / MEL_FRAMES_PER_SECOND * config.time_masks_per_second))
+         for axis, size, maximum in (
+-            (-1, frames, config.time_mask_width),
+-            (-2, features.shape[-2], config.frequency_mask_width),
++            *[(-1, frames, config.time_mask_width)] * time_masks,
++            *[(-2, features.shape[-2], config.frequency_mask_width)] * config.frequency_masks,
+         ):
+             width = rng.randint(0, min(size, maximum))
+             start = rng.randint(0, size - width)
+diff --git a/src/open_audio_llm/data/catalog_cache.py b/src/open_audio_llm/data/catalog_cache.py
+index 215d087..f17a381 100644
+--- a/src/open_audio_llm/data/catalog_cache.py
++++ b/src/open_audio_llm/data/catalog_cache.py
+@@ -190,6 +190,8 @@ def _legacy_source_identity(dataset, source):
+         "message_format": dataset.message_format,
+         "speed_prob": dataset.augmentation.speed_prob,
+         "speed_factors": dataset.augmentation.speed_factors,
++        # Indexes built before 2026-10-30 budgeted timestamped SOT at 1x speed (it was never warped).
++        **({"timestamped_speed": True} if dataset.augmentation.speed_prob else {}),
+     }
+ 
+ 
+@@ -262,8 +264,6 @@ def reuse_indexes(config, previous_config, root, message_format="qwen3_asr"):
+ def sampling_cost(row, dataset):
+     speed = dataset.augmentation
+     slowest = min(1.0, *speed.speed_factors) if speed.speed_prob else 1.0
+-    if row.record.metadata.get("sot_output_format") == TIMESTAMP_FORMAT:
+-        slowest = 1.0
+     native_ts = (
+         getattr(dataset, "message_format", None) == "qwen3_asr"
+         and row.record.task == "ts_asr"
+diff --git a/src/open_audio_llm/data/catalog_dataset.py b/src/open_audio_llm/data/catalog_dataset.py
+index 2164e62..caddf03 100644
+--- a/src/open_audio_llm/data/catalog_dataset.py
++++ b/src/open_audio_llm/data/catalog_dataset.py
+@@ -2,6 +2,7 @@
+ 
+ from __future__ import annotations
+ 
++import random
+ import time
+ import hashlib
+ from dataclasses import asdict, replace
+@@ -19,14 +20,14 @@ from audio_data_contract import (
+     resolve_split,
+ )
+ 
+-from .augment import AugmentConfig, augment_waveform, direct_to_reverberant_db, for_slot
++from .augment import AugmentConfig, augment_waveform, direct_to_reverberant_db, for_slot, speed_ratio
+ from .catalog_resolver import LhotseCatalogAudioResolver
+ from .interference_pool import PoolClip, pool_clips
+ from .lance_source import SAMPLES_ROLE, lance_records, open_lance_release, read_lance_audio
+ from .online_dataset import TASK_TEMPLATES, OnlineAudioDataset
+ from .m4a_backend import install_m4a_backend
+ from .records import ResolvedAudioRecord
+-from .sot import TIMESTAMP_FORMAT, with_sot_timestamps
++from .sot import TIMESTAMP_FORMAT, scale_timestamps, with_sot_timestamps
+ from .sot_alignment import AlignmentIndex
+ from .target_sot import EnrollmentConfig, TARGET_FORMAT, eligible_candidates
+ from .ts_online import (
+@@ -739,6 +740,39 @@ class CatalogSwiftDataset(OnlineAudioDataset):
+                 cuts={name: cut} if self.metadata_cache else None,
+             )
+ 
++    def _prepare_record(self, resolved, seed):
++        """Draw the speed of a timestamped SOT sample and retime its target to match."""
++        record = resolved.record
++        if (not self.training or not self.augmentation.speed_prob
++                or record.metadata.get("sot_output_format") != TIMESTAMP_FORMAT
++                or record.metadata.get("online_mix") is not None):
++            return resolved
++        # Own stream: the waveform transforms keep the draws they had before.
++        rng = random.Random(f"{seed}:speed")
++        if rng.random() >= self.augmentation.speed_prob:
++            return resolved
++        factor = rng.choice(self.augmentation.speed_factors)
++        if factor == 1:
++            return resolved
++        return replace(resolved, record=replace(
++            record, target=scale_timestamps(record.target, float(speed_ratio(factor))),
++            metadata={**record.metadata, "speed_factor": factor}))
++
++    def record_augmentation(self, augmentation, record, dataset_id, slot_name):
++        """The waveform augmentation one slot of a record gets (also reported by the data preflight)."""
++        factor = record.metadata.get("speed_factor")
++        if factor is not None:
++            # _prepare_record drew this speed and retimed the target for it.
++            augmentation = replace(augmentation, speed_prob=1.0, speed_factors=(factor,))
++        elif record.metadata.get("sot_output_format") in {TIMESTAMP_FORMAT, TARGET_FORMAT}:
++            # Without a retimed target, time warping would invalidate the aligned times; RIRs
++            # start at the direct path, so reverberation keeps them.
++            augmentation = replace(augmentation, speed_prob=0.0)
++        augmentation = for_slot(augmentation, slot_name)
++        if dataset_id in augmentation.noise_exclude_datasets:
++            augmentation = replace(augmentation, noise_prob=0.0)
++        return augmentation
++
+     def _resolve_audio(self, resolved, rng):
+         import soundfile as sf
+ 
+@@ -769,14 +803,8 @@ class CatalogSwiftDataset(OnlineAudioDataset):
+             if online:
+                 audio, augmentation = self._online_slot(resolved.record, slot.name, audio, rng)
+             if self.training:
+-                augmentation = augmentation if online else self.augmentation
+-                if resolved.record.metadata.get("sot_output_format") in {TIMESTAMP_FORMAT, TARGET_FORMAT}:
+-                    # Aligned times are fixed and time warping invalidates them; RIRs start
+-                    # at the direct path, so reverberation keeps them.
+-                    augmentation = replace(augmentation, speed_prob=0.0)
+-                augmentation = for_slot(augmentation, slot.name)
+-                if resolved.dataset_id in augmentation.noise_exclude_datasets:
+-                    augmentation = replace(augmentation, noise_prob=0.0)
++                augmentation = self.record_augmentation(
++                    augmentation if online else self.augmentation, resolved.record, resolved.dataset_id, slot.name)
+                 metadata = resolved.record.metadata
+                 if (not online and slot.name == "mixture" and self.activity_labels
+                         and "window_utts" in metadata and "target_speaker" in metadata):
+diff --git a/src/open_audio_llm/data/catalog_preflight.py b/src/open_audio_llm/data/catalog_preflight.py
+index 885e820..4225771 100644
+--- a/src/open_audio_llm/data/catalog_preflight.py
++++ b/src/open_audio_llm/data/catalog_preflight.py
+@@ -6,9 +6,23 @@ import json
+ 
+ import numpy as np
+ 
++from .augment import speed_ratio
+ from .catalog_dataset import CatalogSwiftDataset
+ from .catalog_sampler import CatalogBatchSampler
+-from .sot import TIMESTAMP_FORMAT
++from .sot import TIMESTAMP_FORMAT, scale_timestamps
++
++
++def augmentation_in_force(dataset, row, dataset_id):
++    """Waveform augmentation probabilities a source's records actually get, after the per-record overrides."""
++    if row.record.metadata.get("online_mix") is not None:
++        return {"online_mix": True}
++    config = dataset.record_augmentation(dataset.augmentation, row.record, dataset_id, "mixture")
++    speed = config.speed_prob
++    if row.record.metadata.get("sot_output_format") == TIMESTAMP_FORMAT:
++        # Drawn per sample by _prepare_record, which retimes the target.
++        speed = dataset.augmentation.speed_prob
++    return {"speed_prob": speed, "noise_prob": config.noise_prob, "rir_prob": config.rir_prob,
++            "far_rir_prob": config.far_rir_prob, "spec_aug_prob": dataset.augmentation.spec_aug_prob}
+ 
+ 
+ def check_data(config, *, message_format="qwen3_asr", batch_size=8, world_size=2):
+@@ -25,7 +39,9 @@ def check_data(config, *, message_format="qwen3_asr", batch_size=8, world_size=2
+                         "weight": source.get("weight"), "quota": quota,
+                         "samples_per_epoch": (quota * sampler.replay["epoch_samples"]
+                                               // sampler.replay["window_samples"]
+-                                              if quota is not None else None)})
++                                              if quota is not None else None),
++                        "augmentation": augmentation_in_force(
++                            dataset, dataset.records[indices.start], source["dataset_id"]) if len(indices) else None})
+     # Construct the sampler before decoding: a zero quota must fail preflight.
+     datasets = [("train", dataset)]
+     if config.get("validation"):
+@@ -45,9 +61,15 @@ def check_data(config, *, message_format="qwen3_asr", batch_size=8, world_size=2
+                 if not sample["audios"] or sample["duration"] <= 0:
+                     raise ValueError(f"Unreadable audio: {row.record.id}")
+                 if row.record.metadata.get("sot_output_format") == TIMESTAMP_FORMAT:
+-                    if abs(sample["duration"] - row.duration) > 1 / selected.sampling_rate:
++                    # Speed perturbation stretches the audio; the target must be retimed by the same ratio.
++                    ratio, target = 1, row.record.target
++                    if selected.training and selected.augmentation.speed_prob:
++                        ratio = min((speed_ratio(f) for f in selected.augmentation.speed_factors),
++                                    key=lambda r: abs(row.duration * r - sample["duration"]))
++                        target = scale_timestamps(target, float(ratio))
++                    if abs(sample["duration"] - row.duration * ratio) > 2 / selected.sampling_rate:
+                         raise ValueError(f"Timestamped audio duration changed: {row.record.id}")
+-                    if not sample.get("enrollment_view") and row.record.target not in sample["solution"]:
++                    if not sample.get("enrollment_view") and target not in sample["solution"]:
+                         raise ValueError(f"Timestamp target changed: {row.record.id}")
+                 examples.append({"selection": split, "dataset_id": source["dataset_id"],
+                                  "split": source["split"], "id": row.record.id,
+diff --git a/src/open_audio_llm/data/online_dataset.py b/src/open_audio_llm/data/online_dataset.py
+index fa93640..80929fa 100644
+--- a/src/open_audio_llm/data/online_dataset.py
++++ b/src/open_audio_llm/data/online_dataset.py
+@@ -182,6 +182,10 @@ class OnlineAudioDataset(Dataset):
+     def _resolve_audio(self, resolved, rng):
+         raise NotImplementedError("The Catalog dataset resolves audio slots on demand")
+ 
++    def _prepare_record(self, resolved, seed):
++        """Per-sample record changes that must reach the transcript too (e.g. retimed targets)."""
++        return resolved
++
+     def __len__(self) -> int:
+         return len(self.records)
+ 
+@@ -221,6 +225,8 @@ class OnlineAudioDataset(Dataset):
+                                  metadata={**record.metadata, "online_absent": True,
+                                            **({"online_nonspeech": True} if nonspeech else {})})
+                 resolved = replace(resolved, record=record)
++        resolved = self._prepare_record(resolved, seed)
++        record = resolved.record
+         if record.metadata.get("enrollment_view"):
+             from .qwen3_asr import native_messages
+ 
+diff --git a/src/open_audio_llm/data/sot.py b/src/open_audio_llm/data/sot.py
+index 6cdfb95..7c7e11a 100644
+--- a/src/open_audio_llm/data/sot.py
++++ b/src/open_audio_llm/data/sot.py
+@@ -14,6 +14,21 @@ TIMESTAMP_SYSTEM = (
+     "word as the utterance boundaries, excluding leading and trailing silence."
+ )
+ 
++# Some annotated turns carry no text ("[S2][18.06-19.87] "); they are retimed like the others.
++_TIMED_LINE = re.compile(r"\[(S[1-9]\d*)\]\[(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\] (.*)")
++
++
++def scale_timestamps(target, ratio):
++    """Times of a TIMESTAMP_FORMAT target after its audio is stretched `ratio` times longer."""
++    lines = []
++    for line in target.split("\n") if target else []:
++        match = _TIMED_LINE.fullmatch(line)
++        if match is None:
++            raise ValueError(f"Not a timestamped SOT line: {line!r}")
++        label, start, end, text = match.groups()
++        lines.append(f"[{label}][{float(start) * ratio:.2f}-{float(end) * ratio:.2f}] {text}")
++    return "\n".join(lines)
++
+ 
+ def with_sot_timestamps(record, alignments):
+     """Join by exact source identity; fail instead of dropping or relabeling audio."""

@@ -1,0 +1,84 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: emilia
+  version: refined-metadata-20261010
+  languages:
+  - de
+  - en
+  - fr
+  - ja
+  - ko
+  - zh
+  tasks:
+  - tts
+  - asr
+  derived_from: emilia@tts-unified-v0.1
+  artifacts:
+  - name: final
+    kind: json-metadata-directory
+    root_alias: aidc_data
+    relative_path: datasets/emilia/source/refined-metadata-20261010/emili_1.0_final
+    metadata:
+      file_count: 2360
+      expected_bytes: 93579908987
+      tree_sha256: 238df1af017911c945d9a9734b66cd54410a5f408eafac3b39a37018605819fa
+      record_count: 31275879
+      duration_hours: 78091.0
+      layout: <LANG>/<LANG>-B<NNNNNN>.json，每个文件对应 DATA-TTS/Emilia/<LANG>/<LANG>-B<NNNNNN>.tar，内容为 JSON 数组
+      description: 精修文本最终集：emilia_monolang 中筛选保留的样本（wer 均 ≤ 0.25，完整筛选规则未随数据提供），字段 id/wav/text/language/duration/timestamps（词级），text 等于 qwen3_text
+  - name: refined_full
+    kind: json-metadata-directory
+    root_alias: aidc_data
+    relative_path: datasets/emilia/source/refined-metadata-20261010/emilia_1.0
+    metadata:
+      file_count: 2360
+      expected_bytes: 120605700870
+      tree_sha256: ef087372ff86921144bd68f55d9f8137da8f9083e5c624d46dd87db7e422258a
+      record_count: 40264231
+      duration_hours: 101655.6
+      layout: <LANG>/<LANG>-B<NNNNNN>.json，每个文件对应 DATA-TTS/Emilia/<LANG>/<LANG>-B<NNNNNN>.tar，内容为 JSON 数组
+      description: 全部 40264231 条样本的精修文本和词级时间戳，与 emilia@tts-unified-v0.1 一一对应；未经质量筛选
+  - name: qc_monolang
+    kind: json-metadata-directory
+    root_alias: aidc_data
+    relative_path: datasets/emilia/source/refined-metadata-20261010/emilia_monolang
+    metadata:
+      file_count: 2358
+      expected_bytes: 14804536232
+      tree_sha256: 3138767cfc30a1a0d5f95dfc1b0b35fff236f45de6f03c2ded6f2e6ae08954a2
+      record_count: 34947009
+      duration_hours: 88746.5
+      layout: <LANG>/<LANG>-B<NNNNNN>.json，每个文件对应 DATA-TTS/Emilia/<LANG>/<LANG>-B<NNNNNN>.tar，内容为 JSON 数组
+      description: 单语样本的质量分数：qwen3_text（精修文本）、raw_text（原转写）、wer（两者差异）、ttps；ZH 缺 2 个 tar 的文件
+  - name: qc_multilang
+    kind: json-metadata-directory
+    root_alias: aidc_data
+    relative_path: datasets/emilia/source/refined-metadata-20261010/emilia_multilang
+    metadata:
+      file_count: 1542
+      expected_bytes: 996581790
+      tree_sha256: 1020d353388d8ae5bbb328fd71af7b2fe6ad83cd228c6ecdf15312daabaae48a
+      record_count: 2390658
+      duration_hours: 6266.9
+      layout: <LANG>/<LANG>-B<NNNNNN>.json，每个文件对应 DATA-TTS/Emilia/<LANG>/<LANG>-B<NNNNNN>.tar，内容为 JSON 数组
+      description: 判为语种混杂的样本的质量分数，字段同 qc_monolang；未进入 final
+  splits:
+    train:
+      artifacts:
+        metadata:
+        - final
+        refined_text:
+        - refined_full
+        quality_scores:
+        - qc_monolang
+        - qc_multilang
+      statistics:
+        rows: 31275879
+        duration_hours: 78091.0
+  provenance:
+    source: amphion-tts-data:Emilia-Refined-Metadata/
+    downloaded_at: 2026-10-10
+    download_tool: AmphionBucket 0.7.1（逐文件校验 ETag）
+    join_key: 记录的 id 等于 emilia@tts-unified-v0.1 的 source_key；四个目录的 id 均 100% 命中
+    excluded_source_files:
+    - emilia_1.0/EN/tmpbx6815ge.tmp（上传残留的临时文件）
+    description: TTS 团队对 Emilia 的文本精修元数据，只含文本、时间戳和质量分数，不含音频；音频按 id 从 emilia@tts-unified-v0.1 读取。统计值取 final（31275879 条、78091.0 小时）；refined_full 覆盖全部 101655.6 小时。

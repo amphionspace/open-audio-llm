@@ -1,0 +1,88 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: asr_babble_speech_pool
+  version: v1-20261024
+  languages:
+  - zh
+  - en
+  tasks:
+  - asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/asr_babble_speech_pool/versions/v1-20261024/records_zh.jsonl.gz
+    sha256: eb880fb32b3f2688bd1db7c5d8f6bfbc4007f511a2ab0660ee76bc488c834fea
+    metadata:
+      record_count: 12000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/asr_babble_speech_pool/versions/v1-20261024/audio_index_zh.jsonl.gz
+    sha256: 44534b20d8e980b6c086c42d078992344ce72b58c626c1e86b49ffa60d9d0e42
+    metadata:
+      record_count: 12000
+  - name: en-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/asr_babble_speech_pool/versions/v1-20261024/records_en.jsonl.gz
+    sha256: dcbb7c1b6331a0e2ee560c25d7713b54f29be557a945fc5b9d8c5fbc776a9b40
+    metadata:
+      record_count: 12000
+  - name: en-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/asr_babble_speech_pool/versions/v1-20261024/audio_index_en.jsonl.gz
+    sha256: 78e9d6676d49f5e41c3694ca4d09e555a4cc7b1ecd92e1c68fbebf42a08b7acf
+    metadata:
+      record_count: 12000
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/asr_babble_speech_pool/versions/v1-20261024/record_index/index.json
+    expected_bytes: 1063
+    sha256: 6673afef6abe2229e847a3f3c332317808e2fc0267380eb507fda0f2531ff600
+    metadata:
+      snapshot_version: 13
+      rows: 24000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: asr
+      statistics:
+        records: 12000
+        duration_hours: 31.83
+        duration_basis: clip duration (segment span, or the whole file)
+    en:
+      artifacts:
+        records:
+        - en-records
+        audio_index:
+        - en-audio-index
+        records_lance:
+        - record_index
+      task: asr
+      statistics:
+        records: 12000
+        duration_hours: 53.65
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: full
+    snapshot_date: '2026-10-24'
+    description: 普通 ASR 语音前后和说话时都有房间背景人声（babble）：每条是一句训练划分的话（中文 AISHELL-2、KeSpeech train，英文 LibriSpeech train；1–15 秒，剔除与 asr_babble_bench
+      目标句同文本的句子），前后各 0–5 秒背景人声，说话时背景人声信噪比 0–20 dB（在说话区间内计算），语音电平 −35 到 −18 dBFS，加 −65 到 −55 dBFS 的白/粉红噪声底；背景人声取自 babble_noise_train@v2-20261024（80%
+      同语言，不用该说话人在其中说话的片段）。目标为该句原文。与 ts_nonspeech_pool@babble-20261024（只有背景人声、目标为空）配对使用，教模型背景人声中间的话照常转写。中英文各 12,000 条。脚本 scripts/ts_robust/build_babble_speech_pool.py。
+    sources:
+    - aishell2@legacy-20260804:train
+    - kespeech@legacy-20260804:train
+    - librispeech@legacy-20260804:train
+    - babble_noise_train@v2-20261024:zh
+    - babble_noise_train@v2-20261024:en

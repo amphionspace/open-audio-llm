@@ -1,0 +1,82 @@
+task: diarization
+tags:
+- meeting
+- multi-speaker
+- timestamps
+sampling_rate: 16000
+groups:
+- name: syn_fill_near_alimeeting
+  section: 合成保真度
+  labels:
+  - syn_fill_near_alimeeting
+  aggregate: macro
+  description: dev 真实时间轴，用 AliMeeting 训练集近讲素材重新配音，近讲无噪声；新参考，对照 near_gated
+- name: syn_fill_far_alimeeting
+  section: 合成保真度
+  labels:
+  - syn_fill_far_alimeeting
+  aggregate: macro
+  description: 同上配音再经合成器声学；新参考，对照真实远场 far_mean
+- name: syn_fill_near_aishell5
+  section: 合成保真度
+  labels:
+  - syn_fill_near_aishell5
+  aggregate: macro
+  description: dev 真实时间轴，用 AISHELL-5 训练集近讲素材重新配音，近讲无噪声；新参考，对照 near_gated
+- name: syn_fill_far_aishell5
+  section: 合成保真度
+  labels:
+  - syn_fill_far_aishell5
+  aggregate: macro
+  description: 同上配音再经合成器声学；新参考，对照真实远场 far_mean
+evaluation:
+- dataset_id: meeting_synth_fidelity
+  version: v2-20261101
+  split: syn_fill_near_alimeeting
+  task: speaker_attributed_asr
+  label: syn_fill_near_alimeeting
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: dev 真实时间轴，用 AliMeeting 训练集近讲素材重新配音，近讲无噪声；新参考，对照 near_gated
+  description: AliMeeting 官方 Eval 8 场 138 个选模窗口：dev 真实时间轴，用 AliMeeting 训练集近讲素材（max_overlap
+    0）重新配音，近讲无噪声；新参考，对照 near_gated
+- dataset_id: meeting_synth_fidelity
+  version: v2-20261101
+  split: syn_fill_far_alimeeting
+  task: speaker_attributed_asr
+  label: syn_fill_far_alimeeting
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: 同上配音再经合成器声学；新参考，对照真实远场 far_mean
+  description: AliMeeting 官方 Eval 8 场 138 个选模窗口：同上配音再经合成器声学；新参考，对照真实远场 far_mean
+- dataset_id: meeting_synth_fidelity
+  version: v2-20261101
+  split: syn_fill_near_aishell5
+  task: speaker_attributed_asr
+  label: syn_fill_near_aishell5
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: dev 真实时间轴，用 AISHELL-5 训练集近讲素材重新配音，近讲无噪声；新参考，对照 near_gated
+  description: AliMeeting 官方 Eval 8 场 138 个选模窗口：dev 真实时间轴，用 AISHELL-5 训练集近讲素材（max_overlap
+    0）重新配音，近讲无噪声；新参考，对照 near_gated
+- dataset_id: meeting_synth_fidelity
+  version: v2-20261101
+  split: syn_fill_far_aishell5
+  task: speaker_attributed_asr
+  label: syn_fill_far_aishell5
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: 同上配音再经合成器声学；新参考，对照真实远场 far_mean
+  description: AliMeeting 官方 Eval 8 场 138 个选模窗口：同上配音再经合成器声学；新参考，对照真实远场 far_mean

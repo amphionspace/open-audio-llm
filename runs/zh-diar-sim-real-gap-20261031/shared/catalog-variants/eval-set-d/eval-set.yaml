@@ -1,0 +1,26 @@
+task: diarization
+tags:
+- meeting
+- multi-speaker
+- timestamps
+sampling_rate: 16000
+groups:
+- name: near_shuffled
+  section: 声学对照
+  labels:
+  - near_shuffled
+  aggregate: macro
+  description: 每句换成同一说话人在本场会议别处、时长最接近的另一句，放在原句起点（声音、音量、重叠位置不变，打断对话连贯）
+evaluation:
+- dataset_id: meeting_simreal_probe
+  version: v1-20261031
+  split: near_shuffled
+  task: speaker_attributed_asr
+  label: near_shuffled
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: 每句换成同一说话人在本场会议别处、时长最接近的另一句，放在原句起点（声音、音量、重叠位置不变，打断对话连贯）
+  description: AliMeeting 官方 Eval 8 场 138 个选模窗口：每句换成同一说话人在本场会议别处、时长最接近的另一句，放在原句起点（声音、音量、重叠位置不变，打断对话连贯）

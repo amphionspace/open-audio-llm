@@ -190,6 +190,8 @@ def _legacy_source_identity(dataset, source):
         "message_format": dataset.message_format,
         "speed_prob": dataset.augmentation.speed_prob,
         "speed_factors": dataset.augmentation.speed_factors,
+        # Indexes built before 2026-10-30 budgeted timestamped SOT at 1x speed (it was never warped).
+        **({"timestamped_speed": True} if dataset.augmentation.speed_prob else {}),
     }
 
 
@@ -262,8 +264,6 @@ def reuse_indexes(config, previous_config, root, message_format="qwen3_asr"):
 def sampling_cost(row, dataset):
     speed = dataset.augmentation
     slowest = min(1.0, *speed.speed_factors) if speed.speed_prob else 1.0
-    if row.record.metadata.get("sot_output_format") == TIMESTAMP_FORMAT:
-        slowest = 1.0
     native_ts = (
         getattr(dataset, "message_format", None) == "qwen3_asr"
         and row.record.task == "ts_asr"
@@ -525,6 +525,8 @@ def main():
                         help="Also check the real sampler and decode duration extremes before reporting success")
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--world-size", type=int, default=2)
+    parser.add_argument("--level-samples", type=int, default=None,
+                        help="Training clips rendered for the input-level report (0 skips it)")
     args = parser.parse_args()
     config = read_data_config(args.data_config)
     if not config.get("metadata_cache"):
@@ -533,6 +535,8 @@ def main():
         parser.error("workers must be positive")
     if args.batch_size <= 0 or args.world_size <= 0:
         parser.error("batch-size and world-size must be positive")
+    if args.level_samples is not None and args.level_samples < 0:
+        parser.error("level-samples must be non-negative")
     reused = []
     if args.reuse_config:
         previous = read_data_config(args.reuse_config)
@@ -554,8 +558,9 @@ def main():
     if args.preflight_report:
         from .catalog_preflight import check_data
 
+        levels = {} if args.level_samples is None else {"level_samples": args.level_samples}
         report = check_data(config, message_format=args.message_format,
-                            batch_size=args.batch_size, world_size=args.world_size)
+                            batch_size=args.batch_size, world_size=args.world_size, **levels)
         report["verified_reused_indexes"] = reused
         args.preflight_report.parent.mkdir(parents=True, exist_ok=True)
         temporary = args.preflight_report.with_suffix(".tmp")

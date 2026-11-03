@@ -1,0 +1,55 @@
+# AISHELL-5 素材（已排除音轨有问题的会议，用齐整场会的人）的复查：起点模型解码 v6 的近讲与远场重配音（138 窗），每个 3 次。
+# 判定见 tasks/12-aishell5-material/README.md。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../shared/code/src}]
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+    NUMPY_MADVISE_HUGEPAGE: '0'
+    # api.wandb.ai 对本机出口 IP 返回 403（../zh-diar-aug-acp-20261030/tracking/wandb-egress-probe.txt），W&B 流量走本地中转。
+    WANDB_HTTP_PROXY: http://127.0.0.1:17910
+    WANDB_HTTPS_PROXY: http://127.0.0.1:17910
+task:
+  kind: prepare
+  script: {path: ../scripts/probe_panels.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  tracking_prefix: AmphionASR-zh-diar-synth-aishell5-material
+  serve_template: {path: serve.yaml}
+  parallel: 1
+  port_base: 9141
+  gpu_pool: [0, 1, 2, 3, 4, 5, 6, 7]
+  gpu_free_mib: 26000
+  server_startup_timeout: 1800
+  delete_request_audio: true
+  jobs:
+  - name: start-aishell5
+    model: {path: /workspace/data/ae-runs/zh-emilia2-dialogue-6000/checkpoint-6000}
+    repeats: 3
+    panels:
+      fidelity:
+        template: {path: eval-aishell5.yaml}
+        turn_diagnostics: [syn_fill_near_aishell5, syn_fill_far_aishell5]
+recording:
+  attempts_dir: {path: ../tasks/12-aishell5-material/attempts}
+  result: {path: '{attempt}/artifacts/probe-results.json'}
+tracking:
+  pythonpath: [{path: ../shared/code/src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: AmphionASR-zh-diar-synth-aishell5-material
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file: {path: '{attempt}/artifacts/probe-results.json'}
+    prefix: probe

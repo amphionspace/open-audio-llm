@@ -1,0 +1,49 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: mir1k
+  version: modelscope-20261017
+  languages:
+  - zh
+  tasks:
+  - noise
+  artifacts:
+  - name: archive
+    kind: source-archive
+    root_alias: mir1k
+    relative_path: source/modelscope-20261017/MIR-1K.zip
+    expected_bytes: 1022400042
+    sha256: 9bd8610b4ca255fc6c8c5099fff915a12e8a21164310860e469efd43d09dadc1
+    metadata:
+      source_url: https://www.modelscope.cn/datasets/OpenDataLab/MIR-1K
+  - name: wavfile_dir
+    kind: source-directory
+    root_alias: mir1k
+    relative_path: source/modelscope-20261017/MIR-1K/Wavfile
+    metadata:
+      audio_files: 1000
+      audio_bytes: 512402392
+  - name: extracted_dir
+    kind: source-directory
+    root_alias: mir1k
+    relative_path: source/modelscope-20261017/MIR-1K
+    metadata: {}
+  splits:
+    all:
+      artifacts:
+        source_archive:
+        - archive
+        source_directory:
+        - wavfile_dir
+      statistics:
+        duration_hours: 2.22
+        num_clips: 1000
+  provenance:
+    source: MIR-1K (Multimedia Information Retrieval lab, National Tsing Hua University)
+    url: http://mirlab.org/dataset/public/MIR-1K.zip
+    snapshot_date: '2026-10-17'
+    license: research use as distributed by MIR Lab; the ModelScope mirror lists the license as unknown. Evaluation only, not for
+      training or commercial use.
+    description: MIR-1K：1000 段中文流行歌卡拉 OK 片段（3–12 秒，共 2.22 小时），16 kHz 双声道 16 bit，左声道伴奏、右声道人声；`Wavfile/` 是切好的片段，`Lyrics/`
+      是 Big5 编码的歌词。两个声道相加即带伴奏的歌（近似外放的歌曲），只用于评测里「只有歌声、没有人说话」的场景。
+    acquisition: Downloaded raw/MIR-1K.zip from the ModelScope mirror OpenDataLab/MIR-1K and unzipped in place; no path outside the
+      archive root.
+    integrity: local_sha256_recorded

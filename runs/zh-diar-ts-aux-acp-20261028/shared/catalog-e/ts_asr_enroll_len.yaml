@@ -1,0 +1,106 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_asr_enroll_len
+  version: v1-20261020
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  artifacts:
+  - name: audio-index
+    kind: audio-index
+    root_alias: ts_asr_enroll_len
+    relative_path: versions/v1-20261020/audio-index.jsonl.gz
+    sha256: c1041ce6f53548b93c4fd9e8dac90c42c949fc5843036d513a1869add9e76dcf
+    metadata:
+      record_count: 1500
+  - name: enrolllen-pos-records
+    kind: audio-records
+    root_alias: ts_asr_enroll_len
+    relative_path: versions/v1-20261020/records/enrolllen-pos.jsonl.gz
+    sha256: 9e36a34fe5e61237e22f0a96c1bb2db2647685cf29e2a90f34e312035ee6dbd4
+    metadata:
+      record_count: 200
+  - name: enrolllen-solo-pos-records
+    kind: audio-records
+    root_alias: ts_asr_enroll_len
+    relative_path: versions/v1-20261020/records/enrolllen-solo-pos.jsonl.gz
+    sha256: 30489642d21e9edc76a0172f2c9a0322b06f5ba2b9d790fc0e305a93e082d1ad
+    metadata:
+      record_count: 150
+  - name: enrolllen-neg-records
+    kind: audio-records
+    root_alias: ts_asr_enroll_len
+    relative_path: versions/v1-20261020/records/enrolllen-neg.jsonl.gz
+    sha256: 8549772cd4cee2701cad17ada03d39ab690e2149f3e1d61c6c2c406b641df89c
+    metadata:
+      record_count: 200
+  - name: enrolllen-hard-neg-records
+    kind: audio-records
+    root_alias: ts_asr_enroll_len
+    relative_path: versions/v1-20261020/records/enrolllen-hard-neg.jsonl.gz
+    sha256: a1e10f18b82dcd5eedc833f75aa3894f97f9c2379d1f4dfc92b5ec8e854d5892
+    metadata:
+      record_count: 200
+  splits:
+    enrolllen-pos:
+      artifacts:
+        records:
+        - enrolllen-pos-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 200
+        duration_hours: 0.4421
+        duration_basis: Mixture duration
+      provenance:
+        description: 'enroll_len: {"kind": "pos", "schedule": "full", "k": [1, 2], "duration": [6, 10], "sir_db": [-3, 3], "enroll": "long", "enroll_long_seconds": 20, "noise_floor": {"dbfs": [-65, -35], "kinds": {"white": 0.15, "pink": 0.15, "real": 0.7}, "real_pools": ["wham", "dns5_audioset", "dns5_freesound"]}}'
+    enrolllen-solo-pos:
+      artifacts:
+        records:
+        - enrolllen-solo-pos-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 150
+        duration_hours: 0.1892
+        duration_basis: Mixture duration
+      provenance:
+        description: 'enroll_len: {"kind": "pos", "schedule": "full", "k": 0, "duration": [2, 6], "enroll": "long", "enroll_long_seconds": 20, "noise_floor": {"dbfs": [-65, -35], "kinds": {"white": 0.15, "pink": 0.15, "real": 0.7}, "real_pools": ["wham", "dns5_audioset", "dns5_freesound"]}}'
+    enrolllen-neg:
+      artifacts:
+        records:
+        - enrolllen-neg-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 200
+        duration_hours: 0.4571
+        duration_basis: Mixture duration
+      provenance:
+        description: 'enroll_len: {"kind": "neg", "k": [1, 2], "duration": [6, 10], "enroll": "long", "enroll_long_seconds": 20, "pair": "elneg", "noise_floor": {"dbfs": [-65, -35], "kinds": {"white": 0.15, "pink": 0.15, "real": 0.7}, "real_pools": ["wham", "dns5_audioset", "dns5_freesound"]}}'
+    enrolllen-hard-neg:
+      artifacts:
+        records:
+        - enrolllen-hard-neg-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 200
+        duration_hours: 0.4571
+        duration_basis: Mixture duration
+      provenance:
+        description: 'enroll_len: {"kind": "neg", "k": [1, 2], "duration": [6, 10], "hard": true, "enroll": "long", "enroll_long_seconds": 20, "pair": "elneg", "noise_floor": {"dbfs": [-65, -35], "kinds": {"white": 0.15, "pink": 0.15, "real": 0.7}, "real_pools": ["wham", "dns5_audioset", "dns5_freesound"]}}'
+  provenance:
+    status: complete
+    synthetic: full
+    description: 目标说话人 ASR 评测集：由 AISHELL-3、KeSpeech、MagicData、AISHELL-2、AISHELL-1 的官方 test 划分合成，覆盖注册音频劣化、目标说话人进场离场与缺席、纯噪声、环境与设备。只用于评测，不进训练。场景见 scripts/ts_benchmark/recipe.yaml。
+    sources:
+    - aishell3@legacy-20260804:test
+    - kespeech@legacy-20260804:test
+    - magicdata@legacy-20260804:test
+    - aishell2@legacy-20260804:test
+    - aishell@legacy-20260804:test

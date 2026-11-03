@@ -1,0 +1,22 @@
+version: 1
+name: zh-diar-sim-real-gap-20261031
+purpose: 第二轮结束后的两件事：修好选模测量（解码噪声、批次不变解码、平滑配对判定）；在固定的 AliMeeting dev 138 窗上拆开合成与真实会议的差异（声学逐因素对照 + 对话结构统计 + 模型行为），为后续尽量用合成数据定方向
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+inputs:
+  start_model: /workspace/data/ae-runs/zh-emilia2-dialogue-6000/checkpoint-6000
+  round1: ../zh-diar-ts-aux-acp-20261028
+  round2: ../zh-diar-aug-acp-20261030
+  panel: meeting_selection_panel@v1-20261008:alimeeting_dev
+tasks:
+- {id: decode-noise, name: 起点模型选模面板重复解码（默认 3 次、批次不变 2 次）, config: configs/probe-noise.yaml, depends_on: []}
+- {id: replay-decisions, name: 前两轮选模按平滑配对规则回放（scripts/replay_decisions.py）, config: scripts/replay_decisions.py, depends_on: []}
+- {id: label-stats, name: 训练来源与真实会议的对话结构统计（scripts/label_stats.py）, config: scripts/label_stats.py, depends_on: []}
+- {id: dev-variants, name: dev 138 窗的 9 个受控声学变体（scripts/build_dev_variants.py）, config: scripts/build_dev_variants.py, depends_on: []}
+- {id: variant-eval, name: 起点模型在 9 个变体上评测, config: configs/probe-variants.yaml, depends_on: [dev-variants]}
+- {id: sequential, name: 去重叠对照（scripts/build_dev_sequential.py + configs/probe-sequential.yaml）, config: configs/probe-sequential.yaml, depends_on: [dev-variants]}
+- {id: shuffled, name: 对话连贯对照（scripts/build_dev_shuffled.py + configs/probe-shuffled.yaml）, config: configs/probe-shuffled.yaml, depends_on: [dev-variants]}
+- {id: channel, name: 录音通道对照（scripts/build_dev_channel.py + configs/probe-channel.yaml）, config: configs/probe-channel.yaml, depends_on: [dev-variants]}
+- {id: retimed, name: 重叠排布对照（scripts/build_dev_retimed.py + configs/probe-retimed.yaml）, config: configs/probe-retimed.yaml, depends_on: [dev-variants]}
+- {id: readswap, name: 说话方式对照（scripts/build_dev_readswap.py + configs/probe-readswap.yaml；attempt 001 作废，见 README 4d）, config: configs/probe-readswap.yaml, depends_on: [dev-variants]}

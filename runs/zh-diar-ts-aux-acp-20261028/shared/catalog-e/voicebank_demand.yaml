@@ -1,0 +1,58 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: voicebank_demand
+  version: hf-jacoblincool-16k-20261023
+  languages:
+  - en
+  tasks:
+  - speech_enhancement
+  aliases:
+  - voicebank-demand
+  - vctk-demand
+  artifacts:
+  - name: parquet_dir
+    kind: hf-dataset-directory
+    root_alias: voicebank_demand
+    relative_path: source/hf-jacoblincool-16k-20261023/data
+    metadata:
+      file_count: 6
+      expected_bytes: 2283241065
+      tree_sha256: 37c7be9edf0992dbf115eaa09e39e47244cbbaf86d4b43153a86d43e2ca9704c
+      rows: 12396
+      source_url: https://huggingface.co/datasets/JacobLinCool/VoiceBank-DEMAND-16k
+      upstream_commit: 4497db342d7312978c45690591fda86117831940
+      fields: id, clean (16 kHz WAV bytes), noisy (16 kHz WAV bytes, same length as clean)
+  - name: license
+    kind: license
+    root_alias: voicebank_demand
+    relative_path: source/hf-jacoblincool-16k-20261023/license.txt
+    expected_bytes: 17416
+    sha256: b34e17103bfb246f2549fc82a279e6ba28834e0cb42f76a92efc14b72e3a3723
+  splits:
+    train:
+      artifacts:
+        records:
+        - parquet_dir
+      statistics:
+        pairs: 11572
+        speakers: 28
+        duration_hours: 9.391
+        duration_basis: sum of noisy clip lengths (each clip also has a clean twin of the same length)
+    test:
+      artifacts:
+        records:
+        - parquet_dir
+      statistics:
+        pairs: 824
+        speakers: 2
+        duration_hours: 0.576
+        duration_basis: sum of noisy clip lengths (each clip also has a clean twin of the same length)
+  provenance:
+    source: Noisy speech database for training speech enhancement algorithms and TTS models (Valentini-Botinhao, University of
+      Edinburgh), 28-speaker version, resampled to 16 kHz in the Hugging Face mirror JacobLinCool/VoiceBank-DEMAND-16k
+    url: https://datashare.ed.ac.uk/handle/10283/2791
+    snapshot_date: '2026-10-23'
+    license: CC BY 4.0
+    description: VoiceBank-DEMAND 语音增强标准集：VCTK 朗读句子加 DEMAND 等噪声，每条有带噪和干净两份等长音频，英文。原始 48 kHz，这份镜像降到 16 kHz。train 28 个说话人 11572
+      对 9.4 小时，test 2 个说话人 824 对 0.6 小时。只有音频 ID，没有转写；用于增强、去噪评测（PESQ、STOI 等），不用于 ASR。
+    acquisition: Downloaded the pinned Hugging Face snapshot from hf-mirror.com; each parquet's sha256 equals its LFS oid.
+    integrity: local_sha256_recorded
