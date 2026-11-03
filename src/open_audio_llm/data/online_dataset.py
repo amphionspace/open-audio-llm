@@ -16,7 +16,7 @@ from audio_data_contract import (
 )
 from torch.utils.data import Dataset
 
-from .hotwords import build_hotword_pool, sample_hotwords
+from .hotwords import build_hotword_pool, sample_hotwords, sample_ts_hotwords
 from .records import ResolvedAudioRecord, to_swift_record
 
 TASK_TEMPLATES = {
@@ -154,6 +154,8 @@ class OnlineAudioDataset(Dataset):
         max_hotwords: int = 30,
         hotword_prompt_prob: float = 0.8,
         hotword_miss_prob: float = 0.0,
+        ts_hotword_prompt_prob: float = 0.0,
+        hotword_confusable_prob: float = 0.0,
         training: bool = True,
         message_format: str = "generic",
     ):
@@ -167,6 +169,11 @@ class OnlineAudioDataset(Dataset):
         self.max_hotwords = max_hotwords
         self.hotword_prompt_prob = hotword_prompt_prob
         self.hotword_miss_prob = hotword_miss_prob
+        # Share of TS-ASR training samples that carry a hotword list (0 keeps the fixed TS prompt everywhere).
+        self.ts_hotword_prompt_prob = ts_hotword_prompt_prob
+        # Share of listed samples whose record names sound-alike words (metadata.confusable_hotwords) that join the
+        # list as distractors (0 keeps every list as before).
+        self.hotword_confusable_prob = hotword_confusable_prob
         self.hotword_pool = (
             records.hotword_pool if hasattr(records, "hotword_pool")
             else build_hotword_pool(self.records)
@@ -239,6 +246,13 @@ class OnlineAudioDataset(Dataset):
                         candidate_hotwords="N/A", audio_slot_count=1,
                         duration=resolved.duration, dataset_id=record.slot("mixture").ref.dataset_id,
                         enrollment_view=record.metadata["enrollment_view"])
+        confusable_rng = random.Random(f"{seed}:confusables")
+        confusables = (
+            list(record.metadata.get("confusable_hotwords", ()))
+            if self.training and self.hotword_confusable_prob > 0
+            and confusable_rng.random() < self.hotword_confusable_prob
+            else []
+        )
         hotwords = (
             sample_hotwords(
                 list(record.hotwords),
@@ -247,10 +261,29 @@ class OnlineAudioDataset(Dataset):
                 prompt_prob=self.hotword_prompt_prob,
                 miss_prob=self.hotword_miss_prob,
                 rng=rng,
+                confusables=confusables,
+                confusable_rng=confusable_rng,
             )
             if self.training
             else (",".join(record.hotwords) or "N/A")
         )
+        if record.task == "ts_asr":
+            # TS records keep the plain-ASR draw above so the RNG stream (and augmentation) is unchanged when
+            # TS hotwords are off; their list is drawn separately. Words of an absent target are only distractors.
+            hotwords = (
+                sample_ts_hotwords(
+                    list(record.hotwords) if record.target.strip() else [],
+                    list(record.metadata.get("interferer_hotwords", ())),
+                    self.hotword_pool,
+                    max_hotwords=self.max_hotwords,
+                    prompt_prob=self.ts_hotword_prompt_prob,
+                    miss_prob=self.hotword_miss_prob,
+                    rng=random.Random(f"{seed}:ts-hotwords"),
+                    confusables=confusables,
+                )
+                if self.training and self.ts_hotword_prompt_prob > 0
+                else "N/A"
+            )
         example, answer = _render(
             resolved,
             hotwords=hotwords,

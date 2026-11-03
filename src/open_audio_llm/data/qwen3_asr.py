@@ -2,7 +2,7 @@
 
 from audio_data_contract import AudioRecord
 
-from open_audio_llm.tsasr.ts_prompt import TS_CONCAT_SYSTEM
+from open_audio_llm.tsasr.ts_prompt import TS_CONCAT_SYSTEM, ts_system  # noqa: F401 - TS_CONCAT_SYSTEM is re-exported
 
 from .sot import TIMESTAMP_FORMAT, TIMESTAMP_SYSTEM
 from .target_sot import TARGET_FORMAT, target_prompt
@@ -108,7 +108,7 @@ def native_messages(record: AudioRecord, hotwords: str) -> list[dict[str, str]]:
         validate_language(language)
     else:
         language = "None"
-    context = TS_CONCAT_SYSTEM if record.task == "ts_asr" else ""
+    context = ts_system(hotwords) if record.task == "ts_asr" else ""
     if record.task == "speaker_attributed_asr":
         context = (TIMESTAMP_SYSTEM if record.metadata.get("sot_output_format") == TIMESTAMP_FORMAT
                    else SOT_SYSTEM)

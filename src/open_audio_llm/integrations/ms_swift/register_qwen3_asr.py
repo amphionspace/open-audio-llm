@@ -244,6 +244,10 @@ class Qwen3ASRLoader(ModelLoader):
                 return self.thinker.set_input_embeddings(value)
 
             def _forward(self, *args, **kwargs):
+                # GRPO's log-prob forward skips the Trainer's cast of float inputs to the DeepSpeed dtype.
+                features = kwargs.get('input_features')
+                if torch.is_tensor(features) and features.is_floating_point():
+                    kwargs['input_features'] = features.to(self.dtype)
                 return self.thinker.forward(*args, **kwargs)
 
             _Cls.get_input_embeddings = _get_input_embeddings
@@ -344,6 +348,13 @@ class Qwen3ASRTemplate(Template):
     def feature_extractor(self):
         return getattr(self, '_feature_extractor', None) or self.processor.feature_extractor
 
+    def generate(self, model, *args, **kwargs):
+        # Training casts float inputs to the DeepSpeed dtype; GRPO rollouts call generate directly.
+        features = kwargs.get('input_features')
+        if torch.is_tensor(features) and features.is_floating_point():
+            kwargs['input_features'] = features.to(model.dtype)
+        return super().generate(model, *args, **kwargs)
+
     def _mix_source(self, inputs):
         cached = getattr(inputs, '_ts_mix_wav', None)
         if cached is not None:
@@ -351,18 +362,25 @@ class Qwen3ASRTemplate(Template):
         extra = getattr(inputs, 'extra_kwargs', None) or {}
         mix = extra.get('mix_wav')
         if mix is None:
-            nested = extra.get('chat_template_kwargs') or {}
-            if isinstance(nested, dict):
-                mix = nested.get('mix_wav')
+            # GRPO passes dataset columns to rollout and loss encoding only through
+            # chat_template_kwargs, which ms-swift 4.5 keeps as an input attribute.
+            for nested in (extra.get('chat_template_kwargs'), getattr(inputs, 'chat_template_kwargs', None)):
+                if isinstance(nested, dict) and nested.get('mix_wav') is not None:
+                    return nested['mix_wav']
         return mix
 
     def _drop_mix_source(self, inputs) -> None:
         extra = getattr(inputs, 'extra_kwargs', None) or {}
         extra.pop('mix_wav', None)
         extra.pop('ts_activity', None)
+        # Rebind instead of popping: GRPO encodes the same sample for rollout and for the loss,
+        # and these dicts are shared with the sample.
         nested = extra.get('chat_template_kwargs')
         if isinstance(nested, dict):
-            nested.pop('mix_wav', None)
+            extra['chat_template_kwargs'] = {k: v for k, v in nested.items() if k != 'mix_wav'}
+        nested = getattr(inputs, 'chat_template_kwargs', None)
+        if isinstance(nested, dict):
+            inputs.chat_template_kwargs = {k: v for k, v in nested.items() if k != 'mix_wav'}
 
     def _waveform(self, value, *, enroll: bool):
         from io import BytesIO
@@ -374,6 +392,11 @@ class Qwen3ASRTemplate(Template):
 
         if isinstance(value, np.ndarray):
             return np.ascontiguousarray(value, dtype=np.float32).reshape(-1)
+        if isinstance(value, str) and not os.path.exists(value):
+            # GRPO rollout requests carry decoded clips as base64 WAV strings.
+            import base64
+
+            value = base64.b64decode(value)
         if isinstance(value, (bytes, bytearray)):
             wav, rate = sf.read(BytesIO(value), dtype='float32', always_2d=False)
             wav = np.asarray(wav, dtype=np.float32)

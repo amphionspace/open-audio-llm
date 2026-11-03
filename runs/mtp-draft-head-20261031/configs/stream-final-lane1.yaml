@@ -1,0 +1,60 @@
+# 流式回放（参数同 stream-bench-lane0.yaml / tsasr-latency-20261031），02 的 017，lane 1：suffix，交付包 shared/pack-eagle。
+version: 1
+parameters:
+  output: /workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/tasks/02-serve-bench/attempts/017/artifacts/lane1
+  pack: /workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/shared/pack-eagle
+  gpu: 1
+  port: 18610
+  gpu_util: 0.3
+  max_model_len: 8192
+  model_name: tsasr-bench
+  server_arguments:
+  - --max-num-seqs
+  - '48'
+  - --max-num-batched-tokens
+  - '4096'
+  server_startup_timeout_s: 1800
+  variants:
+  - name: suffix
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving-spec/bin/python
+    arguments:
+    - --speculative-config
+    - '{"method": "suffix"}'
+  samples: /workspace/data/ae-runs/pack-054avg3-check/runs/run-20261028T184730Z-524b4f4b/samples.jsonl
+  datasets_root: /workspace/data/datasets
+  split_prefixes:
+  - real-
+  seed: 20261031
+  enroll_s: 5
+  first_partial_s: 0.2
+  partial_interval_s: 0.6
+  min_new_audio_s: 1.5
+  stable_s: 6
+  max_window_s: 7
+  preview_silence_s: 0.5
+  final_window_s: 27
+  final_empty_retry_s: 0.5
+  max_tokens: 128
+  endpoint_delay_s: 0.9
+  request_timeout_s: 30
+  stream_prompts:
+  - name: runtime5s
+    system: The clip starts with a 5-second enrollment of the target speaker, then the mixture. Transcribe only the enrolled speaker from the mixture. If the enrolled speaker is not present, output nothing.
+  prompts:
+  - name: runtime5s
+    system: The clip starts with a 5-second enrollment of the target speaker, then the mixture. Transcribe only the enrolled speaker from the mixture. If the enrolled speaker is not present, output nothing.
+  prefill_window_s: 6.5
+  prefill_concurrency: []
+  prefill_requests: 400
+  stream_concurrency:
+  - 1
+  - 16
+  - 48
+  stream_seconds: 300
+  wandb:
+    enabled: true
+    mode: online
+    entity: 1016097967-amphion
+    project: open-audio-llm
+    name: mtp-draft-head-20261031-a017-stream
+  identity_requests: 0

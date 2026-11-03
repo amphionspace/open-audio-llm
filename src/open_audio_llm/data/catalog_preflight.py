@@ -22,7 +22,8 @@ def augmentation_in_force(dataset, row, dataset_id):
         # Drawn per sample by _prepare_record, which retimes the target.
         speed = dataset.augmentation.speed_prob
     return {"speed_prob": speed, "noise_prob": config.noise_prob, "rir_prob": config.rir_prob,
-            "far_rir_prob": config.far_rir_prob, "spec_aug_prob": dataset.augmentation.spec_aug_prob}
+            "far_rir_prob": config.far_rir_prob, "level_prob": config.level_prob,
+            "spec_aug_prob": dataset.augmentation.spec_aug_prob}
 
 
 def check_data(config, *, message_format="qwen3_asr", batch_size=8, world_size=2):

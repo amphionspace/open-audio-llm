@@ -30,6 +30,7 @@ from open_audio_llm.data.augment import (
     AugmentConfig,
     augment_features,
     augment_waveform,
+    for_slot,
 )
 from open_audio_llm.data.catalog_dataset import (
     CatalogSwiftDataset,
@@ -912,10 +913,12 @@ def test_preflight_reports_augmentation_after_record_overrides(catalog_config):
     from open_audio_llm.data.catalog_preflight import check_data
 
     catalog_config['augmentation'] = {'speed_prob': .25, 'speed_factors': [.9, 1., 1.1], 'noise_prob': .5,
-                                      'spec_aug_prob': .1, 'noise_exclude_datasets': ['speech']}
+                                      'spec_aug_prob': .1, 'noise_exclude_datasets': ['speech'],
+                                      'level_prob': .3, 'level_dbfs': [-50, -20]}
     report = check_data(catalog_config)
     assert report['sources'][0]['augmentation'] == {
-        'speed_prob': .25, 'noise_prob': 0., 'rir_prob': 0., 'far_rir_prob': 0., 'spec_aug_prob': .1}
+        'speed_prob': .25, 'noise_prob': 0., 'rir_prob': 0., 'far_rir_prob': 0., 'level_prob': .3,
+        'spec_aug_prob': .1}
 
 
 def test_noise_source_weight_selects_wham_thirty_percent():
@@ -1054,6 +1057,63 @@ def test_far_level_applies_only_to_reverberated_clips():
     np.testing.assert_array_equal(near, audio)
     with pytest.raises(ValueError, match="far_level_dbfs"):
         AugmentConfig(far_level_dbfs=(-30, 3))
+
+
+def test_level_prob_sets_clips_without_a_level_of_their_own():
+    import random
+    from dataclasses import replace
+
+    audio = np.random.default_rng(0).normal(0, 0.05, 4000).astype(np.float32)
+    config = AugmentConfig(level_prob=1, level_dbfs=(-35, -35))
+    leveled = augment_waveform(audio, 16000, random.Random(0), config)
+    assert 10 * np.log10(np.mean(leveled**2)) == pytest.approx(-35, abs=1e-3)
+    # A reverberated clip keeps the far-field level.
+    impulse = np.array([1, 0, 0.5], dtype=np.float32)
+    far = augment_waveform(audio, 16000, random.Random(0), replace(config, rir_prob=1, far_level_dbfs=(-45, -45)),
+                           rir_loader=lambda rng, sr, mode: impulse)
+    assert 10 * np.log10(np.mean(far**2)) == pytest.approx(-45, abs=1e-3)
+    # Off, it draws nothing: the rest of the sample's random stream is unchanged.
+    off_rng, default_rng = random.Random(0), random.Random(0)
+    off = augment_waveform(audio, 16000, off_rng, replace(config, level_prob=0))
+    augment_waveform(audio, 16000, default_rng, AugmentConfig())
+    np.testing.assert_array_equal(off, audio)
+    assert off_rng.random() == default_rng.random()
+    assert for_slot(config, "enrollment").level_prob == 0
+    assert for_slot(config, "mixture").level_prob == 1
+    with pytest.raises(ValueError, match="level_prob requires level_dbfs"):
+        AugmentConfig(level_prob=0.5)
+    with pytest.raises(ValueError, match="level_dbfs"):
+        AugmentConfig(level_prob=0.5, level_dbfs=(-30, 3))
+
+
+def test_level_prob_reaches_plain_clips_but_not_online_mixes(catalog_config, tmp_path):
+    level = {"level_prob": 1, "level_dbfs": [-20, -20]}
+    plain = sf.read(BytesIO(CatalogSwiftDataset({**catalog_config, "augmentation": level})[0]["audios"][0]))[0]
+    assert 20 * np.log10(np.sqrt(np.mean(plain**2))) == pytest.approx(-20, abs=0.1)
+    # An online mix left at its own level (level_dbfs None) is not moved by level_prob.
+    config = _online_ts_config(catalog_config, tmp_path, {
+        "absent_prob": 0.0, "enrollment_seconds": [0.2, 0.3], "level_dbfs": None,
+        "interferer_probs": [0, 1], "speaker_rir_prob": 0.0,
+    })
+    base = CatalogSwiftDataset(config, message_format="qwen3_asr")[0]
+    leveled = CatalogSwiftDataset({**config, "augmentation": {**config["augmentation"], **level}},
+                                  message_format="qwen3_asr")[0]
+    # Compare samples: libsndfile stamps the write time into the WAV header.
+    for key in ("mix_wav", "audios"):
+        wavs = (base[key], leveled[key]) if key == "mix_wav" else (base[key][0], leveled[key][0])
+        np.testing.assert_array_equal(*(sf.read(BytesIO(wav))[0] for wav in wavs))
+
+
+def test_training_audio_never_exceeds_full_scale(catalog_config, monkeypatch):
+    import open_audio_llm.data.catalog_dataset as module
+
+    monkeypatch.setattr(module, "augment_waveform", lambda audio, *args, **kwargs: audio * 10)
+    loud = sf.read(BytesIO(CatalogSwiftDataset(catalog_config)[0]["audios"][0]))[0]
+    monkeypatch.setattr(module, "augment_waveform", lambda audio, *args, **kwargs: audio)
+    kept = sf.read(BytesIO(CatalogSwiftDataset(catalog_config)[0]["audios"][0]))[0]
+    assert np.max(np.abs(kept)) < 1  # within full scale: unchanged
+    assert np.max(np.abs(loud)) == pytest.approx(1.0)
+    np.testing.assert_allclose(loud, kept / np.max(np.abs(kept)), atol=1e-6)
 
 
 def test_rir_drr_range_selects_microphones(catalog_config):
