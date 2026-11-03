@@ -1,0 +1,48 @@
+# 用当前最好模型与 MOSS 评测 Emilia2 重叠远场重排试跑窗口，与 AliMeeting dev 对照难度（run_benchmark.py 复制自 farfield-gap-diagnosis-20261013）。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../../../src}]
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/run_benchmark.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  tracking_prefix: emilia2-overlap-pilot-eval-20261013
+  # 共享机器，不用 GPU 0；2026-10-13 GPU 3 上他人约 40 GB 常驻，MOSS 服务占 0.4 显存、其余占 0.3。
+  gpu: 3
+  port: 8905
+  server_startup_timeout: 1800
+  serve_template: {path: serve.yaml}
+  delete_request_audio: true
+  models:
+    # Emilia2 对话伪标签轮选中的 6000 步（下一轮起点）。
+    zh-emilia2-6000:
+      weights: {path: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/models/checkpoint-6000}
+    moss-transcribe-diarize:
+      weights: {path: /workspace/model/MOSS-Transcribe-Diarize}
+      serve_template: {path: serve-moss.yaml}
+      arguments: {--server-api: transcriptions, --output-format: moss_transcribe_diarize}
+  panels:
+    pilot: {template: {path: eval-pilot.yaml}}
+recording:
+  attempts_dir: {path: ../tasks/01-eval/attempts}
+  result: {path: '{attempt}/artifacts/results.json'}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: emilia2-overlap-pilot-eval-20261013-eval
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
