@@ -19,7 +19,7 @@ from audio_data_contract import (
     resolve_split,
 )
 
-from .augment import AugmentConfig, augment_waveform, direct_to_reverberant_db, for_slot
+from .augment import AugmentConfig, augment_waveform, direct_to_reverberant_db, for_slot, limit_peak
 from .catalog_resolver import LhotseCatalogAudioResolver
 from .interference_pool import PoolClip, pool_clips
 from .lance_source import SAMPLES_ROLE, lance_records, open_lance_release, read_lance_audio
@@ -775,6 +775,9 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                     # at the direct path, so reverberation keeps them.
                     augmentation = replace(augmentation, speed_prob=0.0)
                 augmentation = for_slot(augmentation, slot.name)
+                if online or resolved.record.metadata.get("nonspeech"):
+                    # These slots draw their own level after augmentation.
+                    augmentation = replace(augmentation, level_prob=0.0)
                 if resolved.dataset_id in augmentation.noise_exclude_datasets:
                     augmentation = replace(augmentation, noise_prob=0.0)
                 metadata = resolved.record.metadata
@@ -809,6 +812,8 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             # the waveform: the template reads it directly, so eval does not
             # encode a WAV and decode it again inside the dataloader worker.
             if self.training:
+                # FLOAT WAV would keep samples past full scale, which PCM16 input never has.
+                audio = limit_peak(audio)
                 buffer = BytesIO()
                 sf.write(buffer, audio, self.sampling_rate, format="WAV", subtype="FLOAT")
                 result[slot.name] = buffer.getvalue()
