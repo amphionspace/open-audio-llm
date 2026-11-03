@@ -1,0 +1,153 @@
+config:
+  version: 1
+  runtime:
+    python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+    cwd: /workspace/workspace/mingdong/repo/oal-diar-restart
+    pythonpath:
+    - /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/shared/code-control-v3/src
+    gpus: []
+    threads:
+      omp: 2
+      openblas: 1
+    environment:
+      PYTHONUNBUFFERED: '1'
+      WANDB_HTTP_PROXY: http://127.0.0.1:17910
+      WANDB_HTTPS_PROXY: http://127.0.0.1:17910
+  task:
+    kind: prepare
+    script: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/scripts/select_checkpoints.py
+    accepts_config: true
+    arguments: {}
+  parameters:
+    output: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/tasks/11-select-control/attempts/001/artifacts
+    tracking_prefix: AmphionASR-zh-diar-synth-control-select
+    baseline: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/shared/baseline-step0.json
+    base_model: /workspace/data/ae-runs/zh-emilia2-dialogue-6000/checkpoint-6000
+    training_attempts:
+    - /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/tasks/10-train-control/attempts/001
+    interval: 1000
+    max_steps: 12000
+    poll_seconds: 60
+    gpus:
+    - 3
+    port_base: 9051
+    gpu_pool:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 6
+    - 7
+    gpu_free_mib: 26000
+    server_startup_timeout: 1800
+    readable_timeout: 1800
+    serve_template: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-aug-acp-20261030/configs/serve-step8000.yaml
+    delete_request_audio: true
+    stop_request: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/tasks/11-select-control/control/stop-request.json
+    storage:
+      executable: /workspace/workspace/mingdong/.local/share/amphion-bucket/cluster-venv/bin/ab
+      remote: whai:open-audio-llm
+      local_root: /workspace/workspace/mingdong/repo/oal-diar-restart
+    panels:
+      selection:
+        template: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-aug-acp-20261030/configs/eval-step8000-panel.yaml
+      many_speaker:
+        template: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-aug-acp-20261030/configs/eval-step8000-many70.yaml
+      asr:
+        template: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-aug-acp-20261030/configs/eval-asr-dev.yaml
+      train_fit:
+        template: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-aug-acp-20261030/configs/eval-train-fit.yaml
+    report_panels:
+    - train_fit
+    fit_gaps:
+      alimeeting:
+        unseen:
+          panel: selection
+          label: alimeeting_dev
+          field: cp_error_rate_without_loops
+        trained:
+          panel: train_fit
+          label: alimeeting_train
+          field: cp_error_rate_without_loops
+    target:
+      panel: selection
+      label: alimeeting_dev
+      field: cp_error_rate_without_loops
+    turn_diagnostics:
+      selection:
+      - alimeeting_dev
+    voice_similarity:
+      alimeeting_dev: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-aug-acp-20261030/shared/alimeeting-dev-voice-similarity.json
+    retention:
+      many_speaker:
+        panel: many_speaker
+        group: many_speaker
+        tolerance: 0.05
+      wenetspeech_dev:
+        panel: asr
+        source: wenetspeech@icefall-20260908:dev
+        tolerance: 0.01
+      kespeech_dev:
+        panel: asr
+        source: kespeech@icefall-20260908:dev
+        tolerance: 0.01
+    loops:
+      max_increase: 6
+      stop: false
+    patience: 3
+    smoothing: 3
+    final_panels:
+      meeting180:
+        template: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-aug-acp-20261030/configs/eval-step8000-meeting180.yaml
+      chime6:
+        template: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-aug-acp-20261030/configs/eval-step8000-chime6.yaml
+      fixed338:
+        template: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-aug-acp-20261030/configs/eval-step8000-fixed.yaml
+      aishell5_dev:
+        template: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-aug-acp-20261030/configs/eval-final-aishell5-dev.yaml
+      cs_dialogue_test:
+        template: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-aug-acp-20261030/configs/eval-final-cs-dialogue-test.yaml
+    final_baseline:
+      meeting180: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/final/checkpoints/step-6000/meeting180/attempts/001/artifacts/evaluation/summary.json
+      chime6: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/final/checkpoints/step-6000/chime6/attempts/001/artifacts/evaluation/summary.json
+      fixed338: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/final/checkpoints/step-6000/fixed338/attempts/001/artifacts/evaluation/summary.json
+      aishell5_dev: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/final/checkpoints/step-6000/aishell5_dev/attempts/001/artifacts/evaluation/summary.json
+      cs_dialogue_test: /workspace/workspace/mingdong/repo/open-audio-llm/runs/zh-emilia2-dialogue-acp-20261012/tasks/03-select/attempts/004/artifacts/final/checkpoints/step-6000/cs_dialogue_test/attempts/001/artifacts/evaluation/summary.json
+    final_tolerance: 0.01
+  recording:
+    attempts_dir: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/tasks/11-select-control/attempts
+    result: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/tasks/11-select-control/attempts/001/artifacts/final-results.json
+  tracking:
+    pythonpath:
+    - /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/shared/code-control-v3/src
+    enabled: true
+    python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+    credentials_file: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh
+    entity: 1016097967-amphion
+    project: open-audio-llm
+    name: AmphionASR-zh-diar-synth-control-select
+    interval: 30
+    startup_timeout: 180
+    finish_timeout: 300
+    metrics:
+    - file: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/tasks/11-select-control/attempts/001/artifacts/selection-decision.json
+      prefix: selection
+  config_file: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/configs/select-control.yaml
+command:
+- /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+- /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/scripts/select_checkpoints.py
+- --config
+- /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/tasks/11-select-control/attempts/001/effective.yaml
+shell_command: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/scripts/select_checkpoints.py
+  --config /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/tasks/11-select-control/attempts/001/effective.yaml
+runtime_settings:
+  PYTHONUNBUFFERED: '1'
+  WANDB_HTTP_PROXY: http://127.0.0.1:17910
+  WANDB_HTTPS_PROXY: http://127.0.0.1:17910
+  CUDA_VISIBLE_DEVICES: ''
+  PYTHONPATH: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/shared/code-control-v3/src
+  OMP_NUM_THREADS: '2'
+  OPENBLAS_NUM_THREADS: '1'
+preflight_commands: []
+

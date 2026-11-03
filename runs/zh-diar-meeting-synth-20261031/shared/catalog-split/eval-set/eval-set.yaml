@@ -1,0 +1,116 @@
+task: diarization
+tags:
+- meeting
+- multi-speaker
+- timestamps
+sampling_rate: 16000
+groups:
+- name: no_foreign
+  section: 多数人排查
+  labels:
+  - no_foreign
+  aggregate: macro
+  description: no_foreign
+- name: thinned
+  section: 多数人排查
+  labels:
+  - thinned
+  aggregate: macro
+  description: thinned
+- name: unseen_src4
+  section: 多数人排查
+  labels:
+  - unseen_src4
+  aggregate: macro
+  description: unseen_src4
+- name: real_gated
+  section: 多数人排查
+  labels:
+  - real_gated
+  aggregate: macro
+  description: real_gated
+- name: real_plus_leak
+  section: 多数人排查
+  labels:
+  - real_plus_leak
+  aggregate: macro
+  description: real_plus_leak
+- name: unseen_src2
+  section: 多数人排查
+  labels:
+  - unseen_src2
+  aggregate: macro
+  description: unseen_src2
+evaluation:
+- dataset_id: meeting_synth_fidelity
+  version: v3-20261101
+  split: no_foreign
+  task: speaker_attributed_asr
+  label: no_foreign
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: no_foreign
+  description: no_foreign
+- dataset_id: meeting_synth_fidelity
+  version: v3-20261101
+  split: thinned
+  task: speaker_attributed_asr
+  label: thinned
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: thinned
+  description: thinned
+- dataset_id: meeting_synth_fidelity
+  version: v3-20261101
+  split: unseen_src4
+  task: speaker_attributed_asr
+  label: unseen_src4
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: unseen_src4
+  description: unseen_src4
+- dataset_id: meeting_synth_fidelity
+  version: v3-20261101
+  split: real_gated
+  task: speaker_attributed_asr
+  label: real_gated
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: real_gated
+  description: real_gated
+- dataset_id: meeting_synth_fidelity
+  version: v3-20261101
+  split: real_plus_leak
+  task: speaker_attributed_asr
+  label: real_plus_leak
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: real_plus_leak
+  description: real_plus_leak
+- dataset_id: meeting_synth_fidelity
+  version: v3-20261101
+  split: unseen_src2
+  task: speaker_attributed_asr
+  label: unseen_src2
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: unseen_src2
+  description: unseen_src2

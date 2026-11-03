@@ -191,8 +191,9 @@ def main():
              "splits": splits, "provenance": {"builder": "runs/zh-diar-meeting-synth-20261031/scripts/build_dev_fidelity.py",
                                               "usage": "evaluation_only", "online_meeting": data["online_meeting"]}}
     (cat / "catalog.yaml").write_text(yaml.safe_dump([entry], sort_keys=False, allow_unicode=True))
-    (cat / "roots.json").write_text(json.dumps({"meeting_synth_fidelity": str(args.output),
-                                                "meeting_synth_fidelity_catalog": str(cat)}, indent=1) + "\n")
+    # AmphionEval accepts absolute roots only.
+    (cat / "roots.json").write_text(json.dumps({"meeting_synth_fidelity": str(args.output.resolve()),
+                                                "meeting_synth_fidelity_catalog": str(cat.resolve())}, indent=1) + "\n")
     summary = {}
     for key, rows in stats.items():
         if key.startswith("fill_"):

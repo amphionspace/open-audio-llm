@@ -1,0 +1,44 @@
+task: diarization
+tags:
+- meeting
+- multi-speaker
+- timestamps
+sampling_rate: 16000
+groups:
+- name: syn_fill_near_alimeeting
+  section: 用齐整场会的人
+  labels:
+  - syn_fill_near_alimeeting
+  aggregate: macro
+  description: syn_fill_near_alimeeting
+- name: syn_fill_far_alimeeting
+  section: 用齐整场会的人
+  labels:
+  - syn_fill_far_alimeeting
+  aggregate: macro
+  description: syn_fill_far_alimeeting
+evaluation:
+- dataset_id: meeting_synth_fidelity
+  version: v5-20261101
+  split: syn_fill_near_alimeeting
+  task: speaker_attributed_asr
+  label: syn_fill_near_alimeeting
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: syn_fill_near_alimeeting
+  description: syn_fill_near_alimeeting
+- dataset_id: meeting_synth_fidelity
+  version: v5-20261101
+  split: syn_fill_far_alimeeting
+  task: speaker_attributed_asr
+  label: syn_fill_far_alimeeting
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: syn_fill_far_alimeeting
+  description: syn_fill_far_alimeeting

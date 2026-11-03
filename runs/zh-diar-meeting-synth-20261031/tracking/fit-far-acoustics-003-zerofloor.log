@@ -1,0 +1,38 @@
+concurrent.futures.process._RemoteTraceback: 
+"""
+Traceback (most recent call last):
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/concurrent/futures/process.py", line 264, in _process_worker
+    r = call_item.fn(*call_item.args, **call_item.kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/concurrent/futures/process.py", line 213, in _process_chunk
+    return [fn(*args) for args in chunk]
+            ^^^^^^^^^
+  File "/workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/scripts/fit_far_acoustics.py", line 77, in measure
+    "snr_db": 10 * np.log10(max(speech, 1e-12) / noise), "noise_dbfs": 10 * np.log10(noise),
+                            ~~~~~~~~~~~~~~~~~~~^~~~~~~
+ZeroDivisionError: float division by zero
+"""
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/scripts/fit_far_acoustics.py", line 126, in <module>
+    main()
+  File "/workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-meeting-synth-20261031/scripts/fit_far_acoustics.py", line 110, in main
+    measured = list(pool.map(measure, jobs))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/concurrent/futures/process.py", line 636, in _chain_from_iterable_of_lists
+    for element in iterable:
+                   ^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/concurrent/futures/_base.py", line 619, in result_iterator
+    yield _result_or_cancel(fs.pop())
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/concurrent/futures/_base.py", line 317, in _result_or_cancel
+    return fut.result(timeout)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/concurrent/futures/_base.py", line 456, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+ZeroDivisionError: float division by zero

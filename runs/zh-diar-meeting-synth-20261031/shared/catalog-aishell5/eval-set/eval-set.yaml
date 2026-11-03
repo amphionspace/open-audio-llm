@@ -1,0 +1,44 @@
+task: diarization
+tags:
+- meeting
+- multi-speaker
+- timestamps
+sampling_rate: 16000
+groups:
+- name: syn_fill_near_aishell5
+  section: AISHELL-5 素材
+  labels:
+  - syn_fill_near_aishell5
+  aggregate: macro
+  description: syn_fill_near_aishell5
+- name: syn_fill_far_aishell5
+  section: AISHELL-5 素材
+  labels:
+  - syn_fill_far_aishell5
+  aggregate: macro
+  description: syn_fill_far_aishell5
+evaluation:
+- dataset_id: meeting_synth_fidelity
+  version: v6-20261101
+  split: syn_fill_near_aishell5
+  task: speaker_attributed_asr
+  label: syn_fill_near_aishell5
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: syn_fill_near_aishell5
+  description: syn_fill_near_aishell5
+- dataset_id: meeting_synth_fidelity
+  version: v6-20261101
+  split: syn_fill_far_aishell5
+  task: speaker_attributed_asr
+  label: syn_fill_far_aishell5
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: syn_fill_far_aishell5
+  description: syn_fill_far_aishell5

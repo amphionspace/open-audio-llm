@@ -5,7 +5,7 @@ meetings, never from the dev set the fidelity check scores. Audio is the mean of
 meeting training and evaluation windows.
 
 Noise is the recording's floor: the FLOOR_PERCENTILE-th percentile of its FRAME s frame powers (minimum
-statistics). Annotation gaps do not work as noise on these meetings: attempts 001 (mean of gap chunks up to 3 dB
+statistics), over frames above digital silence. Annotation gaps do not work as noise on these meetings: attempts 001 (mean of gap chunks up to 3 dB
 above their median) and 002 (median gap chunk) put AliMeeting train noise 15-25 dB above the ASR-verified room-noise
 floors of meeting_room_noise@v2-20261014, often at speech level -- the gaps hold unannotated talk. The gap median is
 kept as ``gap_noise_dbfs`` for comparison. A speaker's level is measured on at least 5 s of exclusive speech that
@@ -24,6 +24,9 @@ import soundfile as sf
 RATE = 16000
 CHUNK, GUARD = 0.5, 0.5
 FRAME, FLOOR_PERCENTILE = 0.1, 5
+# Frame power below -120 dBFS is digital silence (zero padding, dropouts), under any 16-bit quantization floor (about
+# -101 dBFS); attempt 003 crashed when such frames made up 5% of a recording and put its floor at zero.
+DIGITAL_SILENCE = 1e-12
 INDEXES = {
     "alimeeting": "alimeeting_sdm_meeting_sot/versions/real-meetings-v2-20261010/alimeeting_sdm-train-audio-index.jsonl.gz",
     "aishell4": "aishell4_meeting_sot/versions/real-meetings-v2-20261010/aishell4-train-audio-index.jsonl.gz",
@@ -60,7 +63,8 @@ def measure(job):
     gap = float(np.median([np.mean(c**2) for c in chunks])) if chunks else float("nan")
     frame = round(FRAME * RATE)
     frames = (signal[: n // frame * frame].reshape(-1, frame) ** 2).mean(axis=1)
-    noise = float(np.percentile(frames, FLOOR_PERCENTILE))
+    live = frames > DIGITAL_SILENCE
+    noise = float(np.percentile(frames[live], FLOOR_PERCENTILE))
     speech = float(np.mean(signal[active] ** 2)) - noise
     counts = np.zeros(n, dtype=np.int8)
     masks = {s: mask(spans, n) for s, spans in by_speaker.items()}
@@ -77,7 +81,8 @@ def measure(job):
             "snr_db": 10 * np.log10(max(speech, 1e-12) / noise), "noise_dbfs": 10 * np.log10(noise),
             "speech_dbfs": 10 * np.log10(max(speech, 1e-12)),
             "level_offsets_db": {s: round(v - mean_level, 2) for s, v in levels.items()},
-            "gap_noise_dbfs": 10 * np.log10(gap) if chunks else None, "gap_chunks": len(chunks)}
+            "gap_noise_dbfs": 10 * np.log10(gap) if chunks else None, "gap_chunks": len(chunks),
+            "silent_frame_fraction": round(1 - float(live.mean()), 4)}
 
 
 def summary(values):

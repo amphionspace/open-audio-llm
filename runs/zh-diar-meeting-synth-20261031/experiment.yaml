@@ -16,3 +16,13 @@ tasks:
 - {id: fidelity-variants, name: dev 138 窗的合成保真度变体（scripts/build_dev_fidelity.py，训练代码同一路径）, config: scripts/build_dev_fidelity.py, depends_on: [fit-acoustics]}
 - {id: fidelity-check, name: 起点模型在保真度变体上评测（3 次解码合并）, config: configs/probe-fidelity.yaml, depends_on: [fidelity-variants]}
 - {id: synth-stats, name: 合成窗口的对话统计对照真实会议（scripts/synth_label_stats.py）, config: scripts/synth_label_stats.py, depends_on: [build-pool]}
+- {id: data-check, name: 训练路径数据核查：泄漏、静音/格式/时间、标注处有语音、串音（scripts/check_synth_training_data.py）, config: scripts/check_synth_training_data.py, depends_on: [build-pool]}
+- {id: fidelity-variants-clean, name: 作废——素材 max_overlap 0 的重配音变体（meeting_synth_fidelity@v2-20261101）, config: scripts/build_dev_fidelity.py, depends_on: [fidelity-check]}
+- {id: fidelity-check-clean, name: 作废——起点模型在 max_overlap 0 重配音变体上评测, config: configs/probe-fidelity-clean.yaml, depends_on: [fidelity-variants-clean]}
+- {id: split-probe, name: 重配音多报说话人的干预解码（meeting_synth_fidelity@v3-20261101）, config: configs/probe-split.yaml, depends_on: [fidelity-check]}
+- {id: far-gap-probe, name: 远场文字差距：只打断上下文、没见过的语音（meeting_synth_fidelity@v4-20261101）, config: configs/probe-far-gap.yaml, depends_on: [fidelity-check]}
+- {id: whole-conversations, name: 用齐来源会议所有人的复查（meeting_synth_fidelity@v5-20261101）, config: configs/probe-whole.yaml, depends_on: [split-probe]}
+- {id: material-audit, name: 全部素材音轨的串音与本人电平，生成排除名单（scripts/headset_leak_all.py、select_excluded_meetings.py）, config: scripts/select_excluded_meetings.py, depends_on: [whole-conversations]}
+- {id: aishell5-material, name: AISHELL-5 素材用齐并排除后的复查（meeting_synth_fidelity@v6-20261101）, config: configs/probe-aishell5.yaml, depends_on: [material-audit]}
+- {id: aishell5-listening, name: AISHELL-5 漏报说话人的 A/B 盲听（用户听审，12 题含对照）, config: scripts/make_listening_pairs.py, depends_on: [aishell5-material]}
+- {id: control-smoke, name: 对照训练单卡 40 步小试（合并 main 后的代码快照 code-control-v2）, config: configs/train-control-smoke.yaml, depends_on: [aishell5-listening]}
