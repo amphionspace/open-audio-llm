@@ -1,0 +1,28 @@
+# 10.28 版本 + FP8（H20 数值模拟），ASR 全量第 2/2 份（asr-benchmark-shard2.yaml，按数据源整份切分）。
+# 与 after-training-asrfull.yaml 相同，只是数据分片、服务端口不同，batch_size 64（基线 32）：共享卡被分时占用时，
+# 每步主要在等时间片，客户端并发越高吞吐越高；只影响批处理组成（与重跑抖动同性质），不改请求和打分。
+suite_id: asr-regression-native@1
+evaluator: ts-asr
+data_config: /workspace/workspace/mingdong/repo/oal-tsasr-latency/runs/tsasr-latency-20261031/configs/fp8emu/asr-benchmark-shard2.yaml
+model_name: amphionasr-054avg3-fp8h20-emu
+server_url: http://127.0.0.1:18202
+served_model: 054-avg3-fp8h20-asr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/tsasr-latency-20261031
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 64
+  max_new_tokens: 512
+  seed: 42
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false
+  model_info:
+    origin: ours
+    mode: offline
+    params: 1.7B
+    license: internal
+reuse: false

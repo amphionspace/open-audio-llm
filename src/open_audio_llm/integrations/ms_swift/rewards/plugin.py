@@ -12,6 +12,7 @@ from open_audio_llm.integrations.ms_swift.rewards.base import (
     parse_hotwords_from_instruction,
     parse_structured_answer,
 )
+from open_audio_llm.integrations.ms_swift.rewards import qwen3_asr
 
 try:
     from swift.rewards import ORM, orms
@@ -88,7 +89,37 @@ class HotwordReward(ORM):
         return None
 
 
+class Qwen3ASRFormatReward(ORM):
+    """1 when the output keeps the native ``language X<asr_text>`` header."""
+
+    def __call__(self, completions, **kwargs):
+        return [float(qwen3_asr.well_formed(c)) for c in completions]
+
+
+class Qwen3ASRAccuracyReward(ORM):
+    def __call__(self, completions, solution, **kwargs):
+        return [qwen3_asr.accuracy(c, s) for c, s in zip(completions, solution)]
+
+
+class Qwen3ASRPresenceReward(ORM):
+    def __call__(self, completions, solution, **kwargs):
+        return [qwen3_asr.presence(c, s) for c, s in zip(completions, solution)]
+
+
+class Qwen3ASRHotwordReward(ORM):
+    """Scores only prompts that showed a list; the dataset's candidate_hotwords column exists for every
+    sample but reaches the prompt only for hotword tasks."""
+
+    def __call__(self, completions, solution, messages, **kwargs):
+        lists = [qwen3_asr.prompt_hotwords(m) for m in messages]
+        return [qwen3_asr.hotword(c, s, h) for c, s, h in zip(completions, solution, lists)]
+
+
 if hasattr(orms, "__setitem__"):
     orms["asr_format_reward"] = ASRFormatReward
     orms["asr_accuracy_reward"] = ASRAccuracyReward
     orms["hotword_reward"] = HotwordReward
+    orms["qwen3_asr_format"] = Qwen3ASRFormatReward
+    orms["qwen3_asr_accuracy"] = Qwen3ASRAccuracyReward
+    orms["qwen3_asr_presence"] = Qwen3ASRPresenceReward
+    orms["qwen3_asr_hotword"] = Qwen3ASRHotwordReward

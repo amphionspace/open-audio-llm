@@ -1,0 +1,277 @@
+# confidence_gate 插件 · AmphionEval 全量对照（054 avg3，部署推理栈，阈值 -0.831）
+# 基线 = 同一服务配置不挂中间件；两边都按 AmphionEval v2 从 predictions.jsonl 重算。
+# 「只算插件」= 基线预测里只把被拒样本置空，排除重跑的批处理抖动。只有汇总数字，没有转写。
+# 生成：probes/compare_gate.py（各集合）、probes/compare_hotword.py（热词官方指标，含抖动）
+
+
+## scene-asr-asronly-data.yaml  baseline run-20261030T075409Z-1901e066  gate run-20261031T172050Z-3f780e54  n=4600
+   拒识 22 条（0.48%）：其中有参考文本的 22 条，它们在 baseline 的 CER/WER 119.4%（参考 868 单位）；无参考（应为空）的 0 条
+   未拒识但输出变了 204 条（4.43%，批处理抖动）
+   保留的输出里仍含复读 0 条
+   46 个切片：加权 13.175 → 13.255 (+0.080)，宏平均 6.059 → 6.037 (-0.021)，变差 13 / 变好 12（含重跑抖动）
+   只算插件（baseline 预测里把被拒样本置空）：加权 13.175 → 13.115 (-0.060)，宏平均 6.059 → 6.005 (-0.053)
+     police_scene_bench@v1-20261028:asr-quiet-dictation/asr/zh          18.98 →   21.23 (+2.25)  拒识 0/100
+     police_scene_bench@v1-20261028:term-heavy-pdt-link/asr/zh          24.81 →   26.63 (+1.82)  拒识 15/100
+     police_scene_bench@v1-20261028:num-extreme-emergency/asr/zh        12.28 →   13.12 (+0.83)  拒识 3/100
+     police_scene_bench@v1-20261028:asr-quiet-reception/asr/zh          38.87 →   39.30 (+0.43)  拒识 0/100
+     police_scene_bench@v1-20261028:term-heavy-pdt-local/asr/zh          2.41 →    2.62 (+0.21)  拒识 0/100
+     police_scene_bench@v1-20261028:ctx-extreme-emergency/asr/zh        10.32 →   10.42 (+0.10)  拒识 0/100
+     police_scene_bench@v1-20261028:asr-medium-shop-record/asr/zh        1.27 →    1.33 (+0.06)  拒识 0/100
+     police_scene_bench@v1-20261028:ctx-quiet-reception/asr/zh           2.92 →    2.98 (+0.06)  拒识 0/100
+     police_scene_bench@v1-20261028:num-medium-ebike-plate/asr/zh        1.00 →    1.05 (+0.06)  拒识 0/100
+     police_scene_bench@v1-20261028:asr-medium-street-idcheck/asr/zh     0.33 →    0.38 (+0.04)  拒识 0/100
+     police_scene_bench@v1-20261028:num-heavy-main-road/asr/zh           1.20 →    1.22 (+0.02)  拒识 0/100
+     police_scene_bench@v1-20261028:asr-heavy-construction-wind/asr/z    0.69 →    0.71 (+0.02)  拒识 0/100
+     police_scene_bench@v1-20261028:ctx-medium-street/asr/zh             3.15 →    3.16 (+0.01)  拒识 0/100
+     police_scene_bench@v1-20261028:ctx-quiet-record/asr/zh              2.78 →    2.76 (-0.01)  拒识 0/100
+     police_scene_bench@v1-20261028:dev-asr-heavy-crowd/asr/zh           0.92 →    0.90 (-0.02)  拒识 0/100
+     police_scene_bench@v1-20261028:num-light-mediation/asr/zh           0.31 →    0.28 (-0.03)  拒识 0/100
+     police_scene_bench@v1-20261028:term-light-car/asr/zh                0.42 →    0.37 (-0.04)  拒识 0/100
+     police_scene_bench@v1-20261028:term-light-community/asr/zh          0.31 →    0.26 (-0.04)  拒识 0/100
+     police_scene_bench@v1-20261028:num-quiet-plate/asr/zh               1.10 →    1.05 (-0.04)  拒识 0/100
+     police_scene_bench@v1-20261028:asr-quiet-discussion/asr/zh         55.28 →   55.17 (-0.10)  拒识 0/100
+     police_scene_bench@v1-20261028:num-medium-multi-plate/asr/zh        7.49 →    7.03 (-0.45)  拒识 0/100
+     police_scene_bench@v1-20261028:asr-extreme-emergency/asr/zh         7.05 →    6.52 (-0.52)  拒识 1/100
+     police_scene_bench@v1-20261028:asr-quiet-interview/asr/zh          47.63 →   46.49 (-1.14)  拒识 0/100
+     police_scene_bench@v1-20261028:term-extreme-emergency/asr/zh       12.87 →   10.65 (-2.22)  拒识 2/100
+     police_scene_bench@v1-20261028:ctx-heavy-pdt-link/asr/zh           11.38 →    9.12 (-2.26)  拒识 1/100
+
+## open-audio-llm/asr-babble-bench@v3-20261023  baseline run-20261028T035321Z-0c224b6b  gate run-20261031T171217Z-d58850e6  n=3200
+   拒识 16 条（0.50%）：其中有参考文本的 4 条，它们在 baseline 的 CER/WER 63.2%（参考 19 单位）；无参考（应为空）的 12 条
+   未拒识但输出变了 17 条（0.53%，批处理抖动）
+   保留的输出里仍含复读 0 条
+     asr_babble_bench@v2-20261023:crowd-fsd/asr/en                    误输出率   7.50% →   3.50%  (n=200)
+     asr_babble_bench@v2-20261023:crowd-wham/asr/en                   误输出率   3.50% →   1.50%  (n=200)
+     asr_babble_bench@v2-20261023:en-babble-far/asr/en                误输出率   0.50% →   0.50%  (n=200)
+     asr_babble_bench@v2-20261023:en-babble-mid/asr/en                误输出率   0.50% →   0.50%  (n=200)
+     asr_babble_bench@v2-20261023:zh-babble-far/asr/zh                误输出率   0.50% →   0.50%  (n=200)
+     asr_babble_bench@v2-20261023:zh-babble-mid/asr/zh                误输出率   0.50% →   0.50%  (n=200)
+   10 个切片：加权 2.111 → 2.130 (+0.019)，宏平均 2.076 → 2.095 (+0.019)，变差 5 / 变好 1（含重跑抖动）
+   只算插件（baseline 预测里把被拒样本置空）：加权 2.111 → 2.138 (+0.027)，宏平均 2.076 → 2.106 (+0.030)
+   只算插件的误输出率：crowd-fsd 7.50%→3.50%；zh-babble-far 0.50%→0.50%；en-babble-far 0.50%→0.50%；crowd-wham 3.50%→1.50%；zh-babble-mid 0.50%→0.50%；en-babble-mid 0.50%→0.50%
+     asr_babble_bench@v2-20261023:en-clean/asr/en                        1.83 →    1.90 (+0.06)  拒识 1/200
+     asr_babble_bench@v2-20261023:zh-babble5/asr/zh                      3.33 →    3.38 (+0.05)  拒识 3/200
+     asr_babble_bench@v2-20261023:zh-babble10-tight/asr/zh               1.90 →    1.95 (+0.05)  拒识 0/200
+     asr_babble_bench@v2-20261023:zh-babble10/asr/zh                     1.76 →    1.81 (+0.05)  拒识 0/200
+     asr_babble_bench@v2-20261023:en-babble5/asr/en                      3.38 →    3.41 (+0.03)  拒识 0/200
+     asr_babble_bench@v2-20261023:zh-babble20/asr/zh                     1.29 →    1.24 (-0.05)  拒识 0/200
+
+## chime4-et05-real-data.yaml  baseline run-20261028T043232Z-1b4ec0c0  gate run-20261031T171845Z-ee6bf8fe  n=1320
+   拒识 2 条（0.15%）：其中有参考文本的 2 条，它们在 baseline 的 CER/WER 91.7%（参考 12 单位）；无参考（应为空）的 0 条
+   未拒识但输出变了 55 条（4.17%，批处理抖动）
+   保留的输出里仍含复读 0 条
+   1 个切片：加权 7.166 → 6.959 (-0.207)，宏平均 7.166 → 6.959 (-0.207)，变差 0 / 变好 1（含重跑抖动）
+   只算插件（baseline 预测里把被拒样本置空）：加权 7.166 → 7.171 (+0.005)，宏平均 7.166 → 7.171 (+0.005)
+     chime4@isolated-1ch-20261026:et05_real/asr/en                       7.17 →    6.96 (-0.21)  拒识 2/1320
+
+## police-terms-single-data.yaml  baseline run-20261028T043027Z-9a4c014f  gate run-20261031T171636Z-8ee59064  n=3264
+   拒识 0 条（0.00%）：其中有参考文本的 0 条，它们在 baseline 的 CER/WER 0.0%（参考 0 单位）；无参考（应为空）的 0 条
+   未拒识但输出变了 2 条（0.06%，批处理抖动）
+   保留的输出里仍含复读 0 条
+   1 个切片：加权 0.313 → 0.321 (+0.008)，宏平均 0.313 → 0.321 (+0.008)，变差 1 / 变好 0（含重跑抖动）
+   只算插件（baseline 预测里把被拒样本置空）：加权 0.313 → 0.313 (+0.000)，宏平均 0.313 → 0.313 (+0.000)
+     police_terms_single@v1-20261022:test/asr/zh                         0.31 →    0.32 (+0.01)  拒识 0/3264
+
+## asr-benchmark-data.yaml  baseline run  gate run-20261031T171507Z-e553f015  n=253415
+   拒识 1611 条（0.64%）：其中有参考文本的 1077 条，它们在 baseline 的 CER/WER 82.8%（参考 6690 单位）；无参考（应为空）的 534 条
+   未拒识但输出变了 4306 条（1.70%，批处理抖动）
+   保留的输出里仍含复读 15 条，有参考的 CER 10.4%
+   34 个切片：加权 4.292 → 4.315 (+0.023)，宏平均 4.920 → 4.964 (+0.044)，变差 20 / 变好 13（含重跑抖动）
+   只算插件（baseline 预测里把被拒样本置空）：加权 4.292 → 4.318 (+0.026)，宏平均 4.920 → 4.966 (+0.046)
+     wenetspeech_chuan@eval-20261012:test_hard/asr/Sichuanese           27.21 →   27.63 (+0.42)  拒识 137/1392
+     wenetspeech_chuan@eval-20261012:test_easy/asr/Sichuanese           14.66 →   14.96 (+0.30)  拒识 248/6981
+     kespeech@icefall-20260908:test/asr/Jiang-Huai                       9.16 →    9.43 (+0.27)  拒识 20/2271
+     police_synthetic_zh_accent@icefall-20260908:test_cosyvoice3/asr/    2.65 →    2.78 (+0.13)  拒识 2/1023
+     kespeech@icefall-20260908:test/asr/Southwestern                     5.78 →    5.89 (+0.11)  拒识 12/2693
+     kespeech@eval-southwestern-20261012:test/asr/Southwestern           5.82 →    5.90 (+0.08)  拒识 12/2693
+     kespeech@icefall-20260908:test/asr/Ji-Lu                            5.98 →    6.05 (+0.07)  拒识 13/2809
+     talcs@icefall-20260908:test/asr/Chinese                             7.85 →    7.91 (+0.06)  拒识 62/15000
+     kespeech@icefall-20260908:test/asr/Beijing                          5.31 →    5.36 (+0.05)  拒识 1/265
+     wenetspeech@icefall-20260908:test_net/asr/Chinese                   5.49 →    5.54 (+0.05)  拒识 284/24774
+     common_voice_zh@icefall-20260908:test/asr/zh-CN                     5.02 →    5.05 (+0.03)  拒识 47/10647
+     kespeech@icefall-20260908:test/asr/Northeastern                     5.99 →    6.01 (+0.02)  拒识 2/351
+     aishell2@icefall-20260908:test/asr/Chinese                          2.53 →    2.55 (+0.02)  拒识 1/5000
+     kespeech@icefall-20260908:test/asr/Zhongyuan                        4.64 →    4.66 (+0.02)  拒识 6/3239
+     magicdata@icefall-20260908:test/asr/Chinese                         1.66 →    1.67 (+0.02)  拒识 26/24279
+     police_synthetic_zh_accent@icefall-20260908:test_qwen3_tts/asr/z    0.68 →    0.70 (+0.01)  拒识 0/977
+     wenetspeech@icefall-20260908:test_meeting/asr/Chinese               5.51 →    5.51 (+0.00)  拒识 3/8370
+     aishell3@icefall-20260908:test/asr/Chinese                          0.76 →    0.76 (-0.00)  拒识 6/24773
+     police_synthetic_zh_accent@icefall-20260908:test/asr/zh             1.76 →    1.76 (-0.00)  拒识 2/2000
+     kespeech@icefall-20260908:test/asr/Mandarin                         2.32 →    2.31 (-0.01)  拒识 2/5000
+     common_voice_en@icefall-20260908:test/asr/en                        8.17 →    8.16 (-0.01)  拒识 92/16402
+     gigaspeech@icefall-20260908:test/asr/English                        9.09 →    9.08 (-0.02)  拒识 623/25376
+     mls@icefall-20260908:test/asr/english                               5.91 →    5.90 (-0.02)  拒识 0/3769
+     thchs30@icefall-20260908:test/asr/Chinese                           3.81 →    3.79 (-0.02)  拒识 0/2495
+     librispeech@icefall-20260908:test_clean/asr/English                 1.69 →    1.67 (-0.03)  拒识 0/2620
+     kespeech@icefall-20260908:test/asr/Jiao-Liao                        6.42 →    6.39 (-0.03)  拒识 3/1443
+     kespeech@icefall-20260908:test/asr/Lan-Yin                          5.99 →    5.96 (-0.03)  拒识 7/1652
+
+### 普通 ASR 全量：被拒且有参考的样本，按来源（>=5 条）：条数、平均参考长度、原 CER、原 CER<10%/<30%/>=100% 的条数
+source                                                         n refunits    cer  <10%  <30% >=100%
+wenetspeech@icefall-20260908:test_net/asr/Chinese            284      4.0   81.6    15    20    157
+wenetspeech_chuan@eval-20261012:test_easy/asr/Sichuanese     248      5.8   74.8    10    18     81
+wenetspeech_chuan@eval-20261012:test_hard/asr/Sichuanese     137      5.4   91.0     8    14     61
+common_voice_en@icefall-20260908:test/asr/en                  92      7.8   92.1     0     1     54
+gigaspeech@icefall-20260908:test/asr/English                  89      3.2   86.3    10    10     69
+talcs@icefall-20260908:test/asr/Chinese                       62     10.2   75.2     5    11     15
+common_voice_zh@icefall-20260908:test/asr/zh-CN               47     16.4  100.9     4     4     22
+magicdata@icefall-20260908:test/asr/Chinese                   26      2.6   49.3     7     7      6
+kespeech@icefall-20260908:test/asr/Jiang-Huai                 20     12.8   67.5     0     1      2
+kespeech@icefall-20260908:test/asr/Ji-Lu                      13     11.2   78.6     1     1      3
+kespeech@icefall-20260908:test/asr/Southwestern               12      8.5   67.6     0     1      1
+kespeech@eval-southwestern-20261012:test/asr/Southwestern     12      8.9   72.9     0     1      1
+kespeech@icefall-20260908:test/asr/Lan-Yin                     7      6.3   84.1     0     1      3
+kespeech@icefall-20260908:test/asr/Zhongyuan                   6     12.8   70.1     0     0      0
+aishell3@icefall-20260908:test/asr/Chinese                     6      2.3  100.0     0     0      6
+
+
+## open-audio-llm/hotword-bench@v3-20261020  baseline run-20261030T080213Z-8bdce554  gate run-20261031T172551Z-364c6d16  n=264681
+   拒识 15374 条（5.81%）：其中有参考文本的 3351 条，它们在 baseline 的 CER/WER 96.4%（参考 73780 单位）；无参考（应为空）的 12023 条
+   未拒识但输出变了 15646 条（5.91%，批处理抖动）
+   保留的输出里仍含复读 18 条，有参考的 CER 8.3%
+   11 个切片：加权 4.697 → 4.710 (+0.013)，宏平均 4.533 → 4.538 (+0.005)，变差 7 / 变好 4（含重跑抖动）
+   只算插件（baseline 预测里把被拒样本置空）：加权 4.697 → 4.715 (+0.019)，宏平均 4.533 → 4.548 (+0.014)
+     hotword_bench@v3-20261020:gigaspeech_test                          12.65 →   12.70 (+0.05)  拒识 15331/115106
+     hotword_bench@v3-20261020:kespeech                                  6.34 →    6.37 (+0.03)  拒识 9/8000
+     hotword_bench@v3-20261020:contextasr_speech_zh                      3.38 →    3.39 (+0.01)  拒识 1/61992
+     hotword_bench@v3-20261020:librispeech_test_clean                    1.67 →    1.68 (+0.01)  拒识 0/11820
+     hotword_bench@v3-20261020:aishell3                                  1.76 →    1.76 (+0.00)  拒识 3/8000
+     hotword_bench@v3-20261020:real_zh                                   4.16 →    4.16 (+0.00)  拒识 21/21948
+     hotword_bench@v3-20261020:cv_zh                                     4.22 →    4.21 (-0.00)  拒识 2/8000
+     hotword_bench@v3-20261020:librispeech_test_other                    3.57 →    3.56 (-0.01)  拒识 1/13099
+     hotword_bench@v3-20261020:aishell2                                  3.45 →    3.43 (-0.02)  拒识 0/4676
+     hotword_bench@v3-20261020:cv_en                                     7.95 →    7.92 (-0.03)  拒识 6/8000
+
+### 热词 v3：被拒且有参考的样本，按来源
+source                                                         n refunits    cer  <10%  <30% >=100%
+hotword_bench@v3-20261020:gigaspeech_test                   3308     22.0   96.5   159   193   1383
+hotword_bench@v3-20261020:real_zh                             21     24.3   96.3     0     0      9
+hotword_bench@v3-20261020:kespeech                             9     11.9   75.7     0     0      1
+hotword_bench@v3-20261020:cv_en                                6      6.8   95.1     0     0      4
+
+### 热词 v3 GigaSpeech：按列表条件，说话段被拒比例；非语音段（参考为空）基线/插件的出字比例
+cond           speech n   rej% | nonspeech n base out% gate out%   rej%
+gold               6807   0.13 |           0      0.00      0.00   0.00
+l100              19930   6.35 |        5443     96.56     25.96  70.60
+l20               19930   2.95 |        5443     94.53     24.64  69.89
+l50               19930   5.15 |        5443     96.97     26.42  70.57
+l50_no_gold        6807   4.85 |           0      0.00      0.00   0.00
+none              19930   0.44 |        5443     33.75     23.98   9.83
+
+### 热词 v3 官方指标（summary.json，含重跑抖动）
+共同切片 49（baseline 49 / rp 49）
+口径                             总错误率              热词处错误率(B)                  热词命中率
+全部条件          5.828→ 5.050 (-0.778)   6.598→ 6.604 (+0.007)   81.84→ 81.84 (-0.00)
+无热词 none      4.064→ 4.002 (-0.061)   6.889→ 6.850 (-0.039)   81.08→ 81.10 (+0.02)
+gold 列表       2.775→ 2.866 (+0.091)   2.226→ 2.263 (+0.038)   96.43→ 96.38 (-0.04)
+pool50        4.173→ 4.143 (-0.030)   8.006→ 8.020 (+0.014)   72.79→ 72.80 (+0.02)
+
+变差 22/49 个切片
+  gigaspeech/l50_no_gold                                14.935 →  15.119 (+0.184)   热词召回  67.6 →  67.5
+  kespeech/none                                          7.478 →   7.598 (+0.119)   热词召回  73.7 →  73.7
+  contextasr-speech-zh/gold                              2.508 →   2.618 (+0.110)   热词召回  96.9 →  96.8
+  contextasr-speech-zh/pool50                            3.590 →   3.647 (+0.057)   热词召回  81.4 →  81.4
+  librispeech-other/gold                                 2.422 →   2.461 (+0.039)   热词召回  94.9 →  94.8
+  cv-zh/gold                                             1.466 →   1.501 (+0.035)   热词召回  98.8 →  98.8
+  real-zh/pool50_no_gold                                 5.791 →   5.814 (+0.023)   热词召回  61.6 →  61.6
+  aishell1-ne/pool50_no_gold                             1.584 →   1.607 (+0.023)   热词召回  83.6 →  83.6
+  aishell2/pool50                                        3.260 →   3.283 (+0.023)   热词召回  80.6 →  80.4
+  librispeech-clean/n1000                                2.110 →   2.133 (+0.023)   热词召回  92.3 →  92.2
+  cv-en/none                                            11.222 →  11.242 (+0.020)   热词召回  59.3 →  59.2
+  aishell3/pool50                                        1.678 →   1.697 (+0.019)   热词召回  87.9 →  87.8
+  kespeech/pool50_no_gold                                8.222 →   8.239 (+0.017)   热词召回  56.2 →  56.4
+  cv-zh/pool50_no_gold                                   6.693 →   6.709 (+0.016)   热词召回  58.2 →  58.4
+  aishell1-ne/official                                   0.466 →   0.481 (+0.016)   热词召回  98.0 →  97.9
+  librispeech-other/none                                 3.640 →   3.653 (+0.013)   热词召回  84.0 →  84.1
+  librispeech-clean/n100_no_gold                         1.979 →   1.992 (+0.013)   热词召回  92.6 →  92.6
+  librispeech-clean/n100                                 1.461 →   1.475 (+0.013)   热词召回  95.9 →  95.8
+  kespeech/pool50                                        6.034 →   6.041 (+0.007)   热词召回  76.8 →  76.9
+  real-zh/gold                                           2.549 →   2.555 (+0.006)   热词召回  97.8 →  97.8
+  aishell3/pool50_no_gold                                3.974 →   3.979 (+0.005)   热词召回  70.0 →  70.0
+  librispeech-other/n100_no_gold                         4.260 →   4.263 (+0.002)   热词召回  83.6 →  83.6
+  librispeech-clean/none                                 1.680 →   1.680 (+0.000)   热词召回  93.0 →  93.1
+  aishell3/none                                          1.108 →   1.108 (+0.000)   热词召回  95.0 →  94.9
+  aishell1-ne/none                                       0.512 →   0.512 (+0.000)   热词召回  97.4 →  97.4
+  real-zh/none                                           3.768 →   3.767 (-0.001)   热词召回  83.2 →  83.3
+  kespeech/gold                                          3.618 →   3.614 (-0.003)   热词召回  97.4 →  97.4
+  aishell2/gold                                          1.159 →   1.151 (-0.008)   热词召回  98.8 →  98.7
+  aishell1-ne/gold                                       0.287 →   0.279 (-0.008)   热词召回  99.7 →  99.7
+  aishell1-ne/pool50                                     0.761 →   0.753 (-0.008)   热词召回  94.4 →  94.3
+  aishell3/gold                                          0.271 →   0.261 (-0.010)   热词召回  99.8 →  99.8
+  contextasr-speech-zh/none                              2.836 →   2.826 (-0.010)   热词召回  81.5 →  81.6
+  librispeech-clean/gold                                 1.075 →   1.062 (-0.013)   热词召回  97.4 →  97.4
+  gigaspeech/gold                                        8.401 →   8.387 (-0.014)   热词召回  88.8 →  88.8
+  aishell2/none                                          3.569 →   3.553 (-0.015)   热词召回  82.5 →  82.6
+  cv-zh/none                                             5.039 →   5.020 (-0.019)   热词召回  77.1 →  77.3
+  real-zh/pool50                                         4.539 →   4.520 (-0.020)   热词召回  79.6 →  79.5
+  cv-en/k50_no_gold                                     12.724 →  12.704 (-0.020)   热词召回  56.0 →  56.0
+  cv-en/gold                                             3.775 →   3.741 (-0.034)   热词召回  97.6 →  97.6
+  librispeech-other/n100                                 3.037 →   2.999 (-0.038)   热词召回  91.2 →  91.3
+  cv-zh/pool50                                           3.671 →   3.627 (-0.045)   热词召回  80.8 →  80.9
+  librispeech-other/n1000                                4.393 →   4.336 (-0.057)   热词召回  83.2 →  83.2
+  aishell2/pool50_no_gold                                5.809 →   5.747 (-0.062)   热词召回  58.5 →  59.0
+  cv-en/k50                                              4.083 →   3.995 (-0.088)   热词召回  97.2 →  97.3
+  contextasr-speech-zh/pool50_no_gold                    4.595 →   4.472 (-0.123)   热词召回  64.6 →  64.6
+  gigaspeech/none                                       12.219 →  11.754 (-0.465)   热词召回  71.7 →  71.6
+  gigaspeech/l20                                        23.054 →  14.757 (-8.297)   热词召回  87.2 →  87.0
+  gigaspeech/l50                                        26.957 →  17.858 (-9.100)   热词召回  83.8 →  83.7
+  gigaspeech/l100                                       29.035 →  19.199 (-9.835)   热词召回  80.5 →  80.6
+
+### 热词 v3 只算插件（基线逐条分数里只把被拒样本按空输出重算；基线重算与存档 summary.json 逐切片一致）
+共同切片 49（baseline 49 / rp 49）
+口径                             总错误率              热词处错误率(B)                  热词命中率
+全部条件          5.828→ 5.053 (-0.775)   6.598→ 6.602 (+0.004)   81.84→ 81.83 (-0.01)
+无热词 none      4.064→ 4.013 (-0.051)   6.889→ 6.895 (+0.006)   81.08→ 81.07 (-0.01)
+gold 列表       2.775→ 2.776 (+0.001)   2.226→ 2.226 (+0.001)   96.43→ 96.42 (-0.00)
+pool50        4.173→ 4.173 (+0.000)   8.006→ 8.007 (+0.001)   72.79→ 72.79 (-0.00)
+
+变差 9/49 个切片
+  gigaspeech/l50_no_gold                                14.935 →  15.209 (+0.275)   热词召回  67.6 →  67.5
+  kespeech/none                                          7.478 →   7.560 (+0.082)   热词召回  73.7 →  73.7
+  gigaspeech/gold                                        8.401 →   8.416 (+0.016)   热词召回  88.8 →  88.8
+  cv-en/none                                            11.222 →  11.232 (+0.010)   热词召回  59.3 →  59.2
+  real-zh/pool50_no_gold                                 5.791 →   5.799 (+0.008)   热词召回  61.6 →  61.6
+  kespeech/pool50                                        6.034 →   6.041 (+0.007)   热词召回  76.8 →  76.8
+  real-zh/pool50                                         4.539 →   4.544 (+0.004)   热词召回  79.6 →  79.6
+  librispeech-other/none                                 3.640 →   3.642 (+0.002)   热词召回  84.0 →  84.0
+  contextasr-speech-zh/none                              2.836 →   2.837 (+0.002)   热词召回  81.5 →  81.5
+  real-zh/none                                           3.768 →   3.768 (+0.000)   热词召回  83.2 →  83.2
+  real-zh/gold                                           2.549 →   2.549 (+0.000)   热词召回  97.8 →  97.8
+  librispeech-other/n100_no_gold                         4.260 →   4.260 (+0.000)   热词召回  83.6 →  83.6
+  librispeech-other/n1000                                4.393 →   4.393 (+0.000)   热词召回  83.2 →  83.2
+  librispeech-other/n100                                 3.037 →   3.037 (+0.000)   热词召回  91.2 →  91.2
+  librispeech-other/gold                                 2.422 →   2.422 (+0.000)   热词召回  94.9 →  94.9
+  librispeech-clean/none                                 1.680 →   1.680 (+0.000)   热词召回  93.0 →  93.0
+  librispeech-clean/n100_no_gold                         1.979 →   1.979 (+0.000)   热词召回  92.6 →  92.6
+  librispeech-clean/n1000                                2.110 →   2.110 (+0.000)   热词召回  92.3 →  92.3
+  librispeech-clean/n100                                 1.461 →   1.461 (+0.000)   热词召回  95.9 →  95.9
+  librispeech-clean/gold                                 1.075 →   1.075 (+0.000)   热词召回  97.4 →  97.4
+  kespeech/pool50_no_gold                                8.222 →   8.222 (+0.000)   热词召回  56.2 →  56.2
+  kespeech/gold                                          3.618 →   3.618 (+0.000)   热词召回  97.4 →  97.4
+  cv-zh/pool50_no_gold                                   6.693 →   6.693 (+0.000)   热词召回  58.2 →  58.2
+  cv-zh/pool50                                           3.671 →   3.671 (+0.000)   热词召回  80.8 →  80.8
+  cv-zh/none                                             5.039 →   5.039 (+0.000)   热词召回  77.1 →  77.1
+  cv-zh/gold                                             1.466 →   1.466 (+0.000)   热词召回  98.8 →  98.8
+  cv-en/k50_no_gold                                     12.724 →  12.724 (+0.000)   热词召回  56.0 →  56.0
+  cv-en/k50                                              4.083 →   4.083 (+0.000)   热词召回  97.2 →  97.2
+  cv-en/gold                                             3.775 →   3.775 (+0.000)   热词召回  97.6 →  97.6
+  contextasr-speech-zh/pool50_no_gold                    4.595 →   4.595 (+0.000)   热词召回  64.6 →  64.6
+  contextasr-speech-zh/pool50                            3.590 →   3.590 (+0.000)   热词召回  81.4 →  81.4
+  contextasr-speech-zh/gold                              2.508 →   2.508 (+0.000)   热词召回  96.9 →  96.9
+  aishell3/pool50_no_gold                                3.974 →   3.974 (+0.000)   热词召回  70.0 →  70.0
+  aishell3/pool50                                        1.678 →   1.678 (+0.000)   热词召回  87.9 →  87.9
+  aishell3/none                                          1.108 →   1.108 (+0.000)   热词召回  95.0 →  94.9
+  aishell3/gold                                          0.271 →   0.271 (+0.000)   热词召回  99.8 →  99.8
+  aishell2/pool50_no_gold                                5.809 →   5.809 (+0.000)   热词召回  58.5 →  58.5
+  aishell2/pool50                                        3.260 →   3.260 (+0.000)   热词召回  80.6 →  80.6
+  aishell2/none                                          3.569 →   3.569 (+0.000)   热词召回  82.5 →  82.5
+  aishell2/gold                                          1.159 →   1.159 (+0.000)   热词召回  98.8 →  98.8
+  aishell1-ne/pool50_no_gold                             1.584 →   1.584 (+0.000)   热词召回  83.6 →  83.6
+  aishell1-ne/pool50                                     0.761 →   0.761 (+0.000)   热词召回  94.4 →  94.4
+  aishell1-ne/official                                   0.466 →   0.466 (+0.000)   热词召回  98.0 →  98.0
+  aishell1-ne/none                                       0.512 →   0.512 (+0.000)   热词召回  97.4 →  97.4
+  aishell1-ne/gold                                       0.287 →   0.287 (+0.000)   热词召回  99.7 →  99.7
+  gigaspeech/none                                       12.219 →  11.767 (-0.453)   热词召回  71.7 →  71.7
+  gigaspeech/l20                                        23.054 →  14.786 (-8.268)   热词召回  87.2 →  87.0
+  gigaspeech/l50                                        26.957 →  17.994 (-8.963)   热词召回  83.8 →  83.6
+  gigaspeech/l100                                       29.035 →  19.284 (-9.751)   热词召回  80.5 →  80.4

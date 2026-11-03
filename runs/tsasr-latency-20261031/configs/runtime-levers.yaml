@@ -1,0 +1,80 @@
+# runtime 侧手段（同一 base 服务内按条目配对）：final 复用预览稳定窗口、静音期提前开始 final，对照 main 现状。
+# 服务与节奏参数同 stream-bench.yaml；不改模型、不改服务，只改 final 的时机与窗口。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: []
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+task:
+  kind: prepare
+  script: {path: ../scripts/stream_bench.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  # 10.28 版本交付包（054 avg3）；服务由包内 serve.sh tsasr 启动。
+  pack: {path: /workspace/data/packages/amphionasr-1.7b-v3-tsrobust-054avg3}
+  # 显存最空的卡；本机各卡都被他人任务占到 100% 利用率，只比较同一张卡上的相对差值。
+  gpu: 6
+  port: 18195
+  # Focus 用 32 GiB 卡的 0.35；A800 80 GB 上 0.30 足够容纳 48 路 768 上下文。
+  gpu_util: 0.15
+  # Focus 是 768（start_tsasr.py），但交付包 runtime 在 768 下启动探测的假音频超长、占位符被截断而启动失败；
+  # 改用包默认的 8192。只影响 KV 预留，48 路时 KV 不是瓶颈。
+  max_model_len: 8192
+  model_name: tsasr-bench
+  # Focus 另有 --mm-processor-cache-gb 0；交付包 runtime 加它会在编码器预算的假输入处理时报"占位符为 0"而启动失败，
+  # 故不加（预处理缓存按音频哈希命中，线上每个请求音频都不同，对延迟影响可忽略）。
+  server_arguments: [--max-num-seqs, '48', --max-num-batched-tokens, '4096']
+  server_startup_timeout_s: 1800
+  variants:
+  - {name: base, python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python}
+  # 输入：pack-054avg3-check 的 v12 全量样本里真实会议四个来源（AISHELL-4/AliMeeting/Emilia2/RAMC，含在场与缺席）。
+  samples: /workspace/data/ae-runs/pack-054avg3-check/runs/run-20261028T184730Z-524b4f4b/samples.jsonl
+  # 音频按样本里的 dataset_id/version 经各数据集 audio-index 定位（真实会议条目在 ts_asr_real）。
+  datasets_root: /workspace/data/datasets
+  split_prefixes: [real-]
+  seed: 20261031
+  # 以下节奏常量取自 audiollm-go main：注册 5 s（amphionv6/client.go:24），首个快照 200 ms、间隔 600 ms
+  # （vadconfig/config.go），目标人预览需新增 1.5 s（pseudo_partial.go），6 s 稳定窗口 / 7 s 上限 / 0.5 s 虚拟静音
+  # （target_incremental.go），final 窗口 27 s 含注册、空结果补 0.5 s 重试（target_recovery.go），输出上限 128（runtime.go）。
+  enroll_s: 5
+  first_partial_s: 0.2
+  partial_interval_s: 0.6
+  min_new_audio_s: 1.5
+  stable_s: 6
+  max_window_s: 7
+  preview_silence_s: 0.5
+  final_window_s: 27
+  final_empty_retry_s: 0.5
+  max_tokens: 128
+  # Smart Turn：静音 400 ms 出候选、决策最长 500 ms（test-focus-gateway.yaml:76-77），按上限计；断句到 final 含这段等待。
+  endpoint_delay_s: 0.9
+  request_timeout_s: 30
+  # 四个对照臂都用线上指令（audiollm-go targetasr/service.go:34）。
+  # main：断句判定后（endpoint_delay_s）才开始 final，整段一次解码（target_recovery.go）。
+  # prepare：静音约 300 ms 时提前开始 final（docs/asr-endpoint-latency.md 的静音期预计算；main 对 target 会话关闭），
+  #   结果仍要等断句判定后发布；回放里句子总在此处结束，所以这是预计算全部命中的上限，没计入说话人继续说时白算的 GPU。
+  # windowed：final 复用预览已解好的 6 s 稳定窗口，只解剩余尾段（无虚拟静音、空结果补尾重试）。
+  stream_arms:
+  - {name: main, system: "The clip starts with a 5-second enrollment of the target speaker, then the mixture. Transcribe only the enrolled speaker from the mixture. If the enrolled speaker is not present, output nothing.", final_mode: full}
+  - {name: prepare, system: "The clip starts with a 5-second enrollment of the target speaker, then the mixture. Transcribe only the enrolled speaker from the mixture. If the enrolled speaker is not present, output nothing.", final_mode: full, final_start_s: 0.3}
+  - {name: windowed, system: "The clip starts with a 5-second enrollment of the target speaker, then the mixture. Transcribe only the enrolled speaker from the mixture. If the enrolled speaker is not present, output nothing.", final_mode: windowed}
+  - {name: windowed-prepare, system: "The clip starts with a 5-second enrollment of the target speaker, then the mixture. Transcribe only the enrolled speaker from the mixture. If the enrolled speaker is not present, output nothing.", final_mode: windowed, final_start_s: 0.3}
+  prompts: []
+  prefill_window_s: 6.5
+  prefill_concurrency: []
+  prefill_requests: 400
+  stream_concurrency: [1, 16, 48]
+  stream_seconds: 300
+  # W&B 出口 10-30 起被封、10-31 代理入口断开：先离线记录，恢复后 wandb sync 补录。
+  wandb: {enabled: true, mode: offline, entity: 1016097967-amphion, project: open-audio-llm, name: tsasr-latency-20261031-runtime}
+recording:
+  attempts_dir: {path: ../tasks/03-runtime-levers/attempts}
+  result: {path: '{attempt}/artifacts/summary.json'}
+tracking:
+  enabled: false

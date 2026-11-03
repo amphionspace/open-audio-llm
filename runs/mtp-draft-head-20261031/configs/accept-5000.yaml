@@ -1,0 +1,87 @@
+# 02 的 012：只测接受率（单路、同一批 306 + 300 条请求，协议同 spec-check.yaml）。
+version: 1
+parameters:
+  output: /workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/tasks/02-serve-bench/attempts/012/artifacts
+  pack: /workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/shared/pack-eagle
+  gpu_util: 0.3
+  max_model_len: 8192
+  model_name: spec-check
+  server_arguments:
+  - --max-num-seqs
+  - '48'
+  - --max-num-batched-tokens
+  - '4096'
+  server_startup_timeout_s: 1800
+  enroll_s: 5
+  ts_max_mix_s: 22
+  catalog: /workspace/data/registry/catalog
+  roots: /workspace/data/registry/roots.json
+  asr_samples: /workspace/data/ae-runs/ts-robust-054-avg3/runs/run-20261028T035924Z-0142dad8/samples.jsonl
+  asr_per_source: 9
+  ts_samples: /workspace/data/ae-runs/pack-054avg3-check/runs/run-20261028T184730Z-524b4f4b/samples.jsonl
+  ts_count: 300
+  seed: 20261031
+  max_tokens: 256
+  request_timeout_s: 300
+  warmup_requests: 16
+  modes:
+  - asr
+  - tsasr
+  concurrency:
+  - 1
+  variants:
+  - name: e1-5000-k2
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+    arguments:
+    - --speculative-config
+    - '{"method": "eagle", "model": "/workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/tasks/01-validate-draft/attempts/006/artifacts/training/checkpoint-5000/eagle", "num_speculative_tokens": 2}'
+  - name: e3-5000-k2
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+    arguments:
+    - --speculative-config
+    - '{"method": "eagle3", "model": "/workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/tasks/01-validate-draft/attempts/007/artifacts/training/checkpoint-5000/eagle", "num_speculative_tokens": 2}'
+  - name: e1-5000-k3
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+    arguments:
+    - --speculative-config
+    - '{"method": "eagle", "model": "/workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/tasks/01-validate-draft/attempts/006/artifacts/training/checkpoint-5000/eagle", "num_speculative_tokens": 3}'
+  - name: e3-5000-k3
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+    arguments:
+    - --speculative-config
+    - '{"method": "eagle3", "model": "/workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/tasks/01-validate-draft/attempts/007/artifacts/training/checkpoint-5000/eagle", "num_speculative_tokens": 3}'
+  - name: e1-5000-k1
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+    arguments:
+    - --speculative-config
+    - '{"method": "eagle", "model": "/workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/tasks/01-validate-draft/attempts/006/artifacts/training/checkpoint-5000/eagle", "num_speculative_tokens": 1}'
+  - name: e3-5000-k1
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+    arguments:
+    - --speculative-config
+    - '{"method": "eagle3", "model": "/workspace/workspace/mingdong/repo/oal-mtp/runs/mtp-draft-head-20261031/tasks/01-validate-draft/attempts/007/artifacts/training/checkpoint-5000/eagle", "num_speculative_tokens": 1}'
+  lanes:
+  - gpu: 4
+    port: 18700
+    variants:
+    - e1-5000-k2
+    - e1-5000-k1
+  - gpu: 5
+    port: 18710
+    variants:
+    - e3-5000-k2
+    - e3-5000-k1
+  - gpu: 6
+    port: 18720
+    variants:
+    - e1-5000-k3
+  - gpu: 7
+    port: 18730
+    variants:
+    - e3-5000-k3
+  wandb:
+    enabled: true
+    mode: online
+    entity: 1016097967-amphion
+    project: open-audio-llm
+    name: mtp-draft-head-20261031-a012-accept
