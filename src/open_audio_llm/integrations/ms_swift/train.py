@@ -222,6 +222,10 @@ class CatalogTrainingMixin:
                 from .grpo_vllm_rollout import install_vllm_rollout
 
                 install_vllm_rollout(trainer, config["rollout"])
+            if os.environ.get("GRPO_EFFICIENT_LOGPS") == "1":
+                from .grpo_shared_prefix import install_efficient_logps
+
+                install_efficient_logps(trainer)
             if trainer.args.deepspeed and trainer.args.optimizer in (None, "default"):
                 # DeepSpeed removes empty LoRA parameter groups. Do this before
                 # each scheduler creation, including DeepSpeed re-initialization.
