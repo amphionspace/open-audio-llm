@@ -36,6 +36,23 @@ Qwen3-ASR（`--model_type amphion_asr_1.7b`）用 `--reward_funcs qwen3_asr_accu
     - 采样 token 的 logprob 与策略 teacher forcing 平均绝对差 0.003。
     - 4 卡训练每步从约 75 s 降到 7–10 s。
 
+### 投机解码草稿头（MTP）
+
+`--draft_head_steps N`（N>0）冻结 Qwen3-ASR，只训一层 EAGLE 草稿头，供 vLLM 投机解码使用。草稿头按 N 步展开，第 k 步的损失权重为 `--draft_head_step_decay` 的 k−1 次方（默认 0.8）。只支持 SFT 数据配置，不能与 `supervised_head_loss` 或数据 objective 同用。
+
+- 架构 `--draft_head_arch`：
+  - `eagle1` 读最终 norm 输出，对应 vLLM 的 `eagle`。
+  - `eagle3` 融合第 2 / 14 / 25 层隐状态，对应 vLLM 的 `eagle3`。
+- 训练目标 `--draft_head_targets`：
+  - `reference` 用数据标注。
+  - `greedy` 先用冻结模型贪心重写目标，每步慢数倍。
+- 从已有草稿头续训：`--draft_head_init <model.safetensors>`。
+- 产物：每个 checkpoint 下的 `eagle/` 是 vLLM 草稿目录。服务加 `--speculative-config '{"method": "eagle3", "model": "<checkpoint>/eagle", "num_speculative_tokens": 3}'`。
+- 校验是贪心的，主模型输出不变。草稿头读的是骨干隐状态，换骨干要重训，否则接受率下降。
+- 实验记录：`runs/mtp-draft-head-20261031/`。
+  - 选定 EAGLE-3、k=3。
+  - 10000 步草稿头：普通 ASR 单路均值 100→67 ms，TS 83→64 ms。
+
 新执行自动分配 `attempts/编号`。恢复失败执行必须显式指定已有记录，且任务声明支持恢复；完成记录不会默认重跑。训练的模型/优化器恢复路径写在 YAML 的 `--resume_from_checkpoint` 中，不接受环境或 CLI 覆盖。只保存模型时，须作为新训练初始化，不能宣称恢复优化器。
 
 每次训练和评测同步启动 CPU W&B 记录器。只有远端 run URL 和启动指标核验通过后，才启动任务；退出后再次核验上传指标和远端结束状态。默认 entity 为 `1016097967-amphion`，project 为 `open-audio-llm`。

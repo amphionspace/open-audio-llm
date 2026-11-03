@@ -52,6 +52,7 @@ from vllm.model_executor.layers.linear import (
 from vllm.model_executor.model_loader.weight_utils import default_weight_loader
 from vllm.model_executor.models.interfaces import (
     MultiModalEmbeddings,
+    SupportsEagle3,
     SupportsMRoPE,
     SupportsMultiModal,
     SupportsPP,
@@ -723,6 +724,10 @@ class Qwen3ASRForConditionalGeneration(
     SupportsPP,
     SupportsMRoPE,
     SupportsTranscription,
+    # EAGLE-3 drafts read hidden states of chosen decoder layers. The default
+    # set_aux_hidden_state_layers selects them on get_language_model().model (Qwen3Model),
+    # which then returns (hidden_states, aux_hidden_states) from forward below.
+    SupportsEagle3,
 ):
     supported_languages = ISO639_1_SUPPORTED_LANGS
 
@@ -750,6 +755,9 @@ class Qwen3ASRForConditionalGeneration(
         quant_config = vllm_config.quant_config
         multimodal_config = vllm_config.model_config.multimodal_config
         self.config = thinker_config
+        # vLLM 0.18's EAGLE proposer copies the target's config.image_token_index into the draft
+        # config when loading a draft for any multimodal target; the text-only draft never reads it.
+        self.config.image_token_index = thinker_config.audio_token_id
         self.multimodal_config = multimodal_config
 
         self.audio_tower = Qwen3ASRAudioEncoder(
