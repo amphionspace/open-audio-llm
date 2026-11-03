@@ -243,12 +243,14 @@ class Qwen3ASRLoader(ModelLoader):
             def _set_input_embeddings(self, value):
                 return self.thinker.set_input_embeddings(value)
 
-            def _forward(self, *args, **kwargs):
+            def _forward(self, *args, position_ids=None, **kwargs):
+                # position_ids is named: ms-swift's pre_forward_hook drops inputs that the base model's
+                # forward signature does not list, and the thinker does take explicit positions.
                 # GRPO's log-prob forward skips the Trainer's cast of float inputs to the DeepSpeed dtype.
                 features = kwargs.get('input_features')
                 if torch.is_tensor(features) and features.is_floating_point():
                     kwargs['input_features'] = features.to(self.dtype)
-                return self.thinker.forward(*args, **kwargs)
+                return self.thinker.forward(*args, position_ids=position_ids, **kwargs)
 
             _Cls.get_input_embeddings = _get_input_embeddings
             _Cls.set_input_embeddings = _set_input_embeddings
