@@ -94,7 +94,8 @@ def install_efficient_logps(trainer) -> None:
     """Shared-prefix scoring and no redundant old-policy forward (env GRPO_EFFICIENT_LOGPS=1).
 
     GRPO_EFFICIENT_LOGPS_VERIFY=N also runs ms-swift's own path for the first N gradient-free packed
-    forwards and logs the difference as ``efficient_logps/max_abs_diff`` and ``mean_abs_diff``.
+    forwards and logs the difference as ``efficient_logps/max_abs_diff`` and ``mean_abs_diff``, next to
+    ``noise_*``: the same ms-swift path run one row at a time against the whole batch.
     """
     original_local = trainer._get_logps_via_local_forward
     original_logps = trainer._get_per_token_logps_and_entropies
@@ -128,10 +129,20 @@ def install_efficient_logps(trainer) -> None:
         if verify[0] > 0 and not torch.is_grad_enabled():
             verify[0] -= 1
             reference, _ = original_local(model, dict(model_inputs), logits_to_keep, input_ids)
+            # Noise floor: the same ms-swift path one row at a time differs from the whole batch by BF16
+            # kernel and padding choices alone.
+            single = torch.cat([
+                original_local(model, {k: v[row:row + 1] if torch.is_tensor(v) and v.dim() else v
+                                       for k, v in model_inputs.items()},
+                               logits_to_keep, input_ids[row:row + 1])[0]
+                for row in range(len(input_ids))])
             tail = model_inputs["attention_mask"][:, -logits_to_keep:].bool()
             diff = (logps - reference).abs()[tail]
+            noise = (single - reference).abs()[tail]
             log("max_abs_diff", diff.max().item())
             log("mean_abs_diff", diff.mean().item())
+            log("noise_max_abs_diff", noise.max().item())
+            log("noise_mean_abs_diff", noise.mean().item())
         return logps, entropies
 
     trainer._get_per_token_logps_and_entropies = per_token_logps
