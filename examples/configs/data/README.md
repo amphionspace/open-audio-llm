@@ -103,6 +103,8 @@ replay 模式使用 window_samples 作为分桶窗口，覆盖 batching.buffer_s
 | `noise_snr_db` | 均匀采样的信噪比范围，单位 dB；越低噪声越强。 |
 | `rir_prob` | 普通混响概率；从每个混响源等概率抽一条，卷积一次。与 `far_rir_prob` 互斥，两者之和不能超过 1。 |
 | `far_rir_prob` | 远场冲激响应概率；换成远场响应后再卷积一次，不再叠加普通混响。启用前同样填写 rir_sources。 |
+| `level_prob` | 随机电平概率；混噪后把整段 RMS 设为 `level_dbfs` 内的随机值。在线混音、非人声窗口和 TS 注册音保持各自的电平。 |
+| `level_dbfs` | 随机电平范围，单位 dBFS，上限不超过 0；`level_prob` 大于 0 时必填，宜与空目标来源的电平范围一致；`level_prob` 为 0 时不起作用。 |
 
 顶层 `noise_sources` 和 `rir_sources` 分别提供噪声、RIR 来源，关闭对应增强时可为空。
 每个来源先按 `weight` 抽中，未写权重时等概率；再在该来源内部均匀抽一条。来源可以是 Lhotse recordings、cuts，或带 audio-index 的 audio-record。例如：

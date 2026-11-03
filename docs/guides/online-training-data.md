@@ -198,6 +198,20 @@ RIR 麦克风，训练启动时逐通道计算一次。`[-6, -1]` 是 2026-10-14
 模型输入的 log-mel 特征不做音量归一化，所以远场音量也要与真实场景一致。
 `far_level_dbfs` 只作用于已加混响的样本：混噪后把整段 RMS 设为该范围内的随机值。
 
+`level_prob` 与 `level_dbfs` 用来给其余样本随机电平：没有按 `far_level_dbfs` 定过电平的样本，
+以 `level_prob` 的概率在混噪后把整段 RMS 设为 `level_dbfs` 范围内的随机值，峰值不超过 0.99。
+已有自己电平的槽位不受影响：在线混音（`online_mix`）、非人声窗口（`nonspeech`）和 TS 注册音。
+需要它的原因是：空目标来源都按随机电平混入，有文字的样本却保持录音原电平，模型会学到"声音小就是没人说话"。
+2026-11-03 的 CHiME-4 探针（et05_real 1320 句）在原电平、+6 dB、+12 dB 下的空输出条数：
+10.28 版本为 27 / 11 / 2，GRPO 第四轮为 95 / 30 / 11。
+`level_dbfs` 宜与本配方空目标来源的电平范围一致。默认关闭；关闭时不额外抽随机数，已有配方的随机序列不变。
+
+训练音频写成 FLOAT WAV 之前，峰值超过满幅（1.0）的整段按比例缩回满幅，未超过的不变。
+FLOAT WAV 能保存超过满幅的值，但部署和评测输入都是 PCM16，不会超过满幅。
+这一项总是生效，不需要配置。2026-11-03 按 v4 配方的增强设置（加噪 0.5、SNR 5–20 dB，普通与远场混响各 0.25）
+每个语料抽 300 条实测，越过满幅的比例为：Emilia2 中文 24%（最高 3.5 倍）、KeSpeech 9.7%、AISHELL-2 0.3%。
+按旧代码挖掘的 GRPO 计划（按 epoch、记录和重复位置复现抽样），索引仍然有效，但这些样本的音频会被缩小，与当时不再逐字节一致，复用前需要重新挖掘。
+
 噪声使用真实会议室底噪 `meeting_room_noise`：AliMeeting Train 与 AISHELL-4 train 远场
 阵列中无人说话的片段（标注空隙，再逐 4 s 用 Qwen3-ASR 剔除识别出文字的片段），
 共 2.48 h、209 条（registry `catalog/meeting_room_noise.yaml`，生产见 amphiondata
@@ -233,8 +247,17 @@ noise_sources:
 SpecAugment 默认每条样本只遮 1 段时间、1 段频带，不随长度变化，120–600 秒的长窗口几乎不受影响。
 `time_masks_per_second` 设为正数时，时间遮挡的段数按音频秒数增加（至少 1 段，mel 帧率为每秒 100 帧）；`frequency_masks` 控制频带遮挡的段数。
 
-数据预检报告（`data-preflight.json`）的每个来源都带 `augmentation`，列出该来源扣除逐条规则（时间戳格式、`noise_exclude_datasets`）之后实际生效的变速、加噪、混响和 SpecAugment 概率。
+数据预检报告（`data-preflight.json`）的每个来源都带 `augmentation`，列出该来源扣除逐条规则（时间戳格式、`noise_exclude_datasets`、自带电平的非人声窗口）之后实际生效的变速、加噪、混响、随机电平和 SpecAugment 概率；在线混音来源只标 `online_mix`。
 启动训练前要核对：配置里写了某项增强，不等于它对每个来源都生效。
+
+预检报告的 `levels` 是输入电平报告：按各来源在一轮里的占比，共抽 1000 条训练样本，按训练时的方式渲染
+（含增强、在线混音和随机电平），按"任务 × 目标有无文字"汇总电平分位数。TS 样本量混合音，其余量最后一个音频槽位。
+- `loud_dbfs`：25 ms 帧能量的第 95 百分位，接近听感；`rms_dbfs`：整段 RMS，也就是 `level_dbfs` 和非人声 `level_dbfs` 设定的量。
+  两者的差距取决于内容：有停顿的语音差得多，平稳噪声差得少。比较两类样本以 `loud_dbfs` 为准。
+- `empty_below_text_p10`：空目标样本中，比有文字样本 p10 还轻（按 `loud_dbfs`）的比例。比例越高，"声音小"越像"没人说话"的信号。
+- `by_source` 列出每个来源的抽样数和两类样本的 `loud_dbfs` 中位数，用来找出偏差来自哪个来源。
+
+报告只列数据，不设通过线，怎么调整由配方负责人决定。预检模块 `open_audio_llm.data.catalog_cache` 的 `--level-samples` 可改抽样数，设为 0 跳过。
 
 训练随机性包含 seed、epoch、样本索引及重复位置，同样的采样位置可复现，不同
 reps 可以获得不同增强。索引自带 epoch，不受 persistent workers 预取跨 epoch 影响。

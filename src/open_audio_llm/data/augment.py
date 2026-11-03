@@ -12,12 +12,16 @@ from dataclasses import dataclass, replace
 
 import numpy as np
 
+from .ts_online import set_level
+
 # Early reflections end ~50 ms after the direct path (the usual C50/D50 boundary).
 LATE_REVERB_S = 0.05
 # Direct-path window for DRR: +-2.5 ms around the peak is the common convention.
 DIRECT_PATH_S = 0.0025
 # Mel frames per second of the audio front end (16 kHz, 160-sample hop).
 MEL_FRAMES_PER_SECOND = 100
+# Deployed and evaluated audio arrives as PCM16, which cannot exceed full scale.
+FULL_SCALE = 1.0
 
 
 @dataclass
@@ -44,6 +48,12 @@ class AugmentConfig:
     # Whole-clip RMS (dBFS) drawn for reverberated clips, after noise; None keeps the
     # input level. Real far-field arrays record far quieter than close-talk speech.
     far_level_dbfs: tuple[float, float] | None = None
+    # Share of the remaining clips given a whole-clip RMS (dBFS) drawn from level_dbfs, after
+    # noise. Slots with a level of their own (online mixes, nonspeech windows, the enrollment)
+    # keep it. Empty-target sources draw random levels, so text clips left at their recorded
+    # level teach the model that quiet means nobody speaks (CHiME-4 empties, 2026-11-03).
+    level_prob: float = 0.0
+    level_dbfs: tuple[float, float] | None = None
     time_mask_width: int = 30
     frequency_mask_width: int = 16
     # Time masks per second of audio (at least one); 0 keeps one mask per sample whatever its
@@ -52,7 +62,7 @@ class AugmentConfig:
     frequency_masks: int = 1
 
     def __post_init__(self):
-        for name in ("speed_prob", "rir_prob", "far_rir_prob", "noise_prob", "spec_aug_prob"):
+        for name in ("speed_prob", "rir_prob", "far_rir_prob", "noise_prob", "spec_aug_prob", "level_prob"):
             if not 0 <= getattr(self, name) <= 1:
                 raise ValueError(f"{name} must be between 0 and 1")
         if self.rir_prob + self.far_rir_prob > 1:
@@ -69,12 +79,12 @@ class AugmentConfig:
             len(self.rir_drr_db) != 2 or self.rir_drr_db[0] > self.rir_drr_db[1]
         ):
             raise ValueError("rir_drr_db must be an ordered pair")
-        if self.far_level_dbfs is not None and (
-            len(self.far_level_dbfs) != 2
-            or self.far_level_dbfs[0] > self.far_level_dbfs[1]
-            or self.far_level_dbfs[1] > 0
-        ):
-            raise ValueError("far_level_dbfs must be an ordered pair <= 0 dBFS")
+        for name in ("far_level_dbfs", "level_dbfs"):
+            pair = getattr(self, name)
+            if pair is not None and (len(pair) != 2 or pair[0] > pair[1] or pair[1] > 0):
+                raise ValueError(f"{name} must be an ordered pair <= 0 dBFS")
+        if self.level_prob and self.level_dbfs is None:
+            raise ValueError("level_prob requires level_dbfs")
         if self.time_mask_width < 0 or self.frequency_mask_width < 0:
             raise ValueError("SpecAugment mask widths must be non-negative")
         if self.time_masks_per_second < 0 or self.frequency_masks < 0:
@@ -89,10 +99,24 @@ def speed_ratio(factor):
 
 
 def for_slot(config, slot_name):
-    """The augmentation one slot gets: the enrollment may have its own noise level."""
-    if slot_name == "enrollment" and config.enrollment_noise_snr_db is not None:
-        return replace(config, noise_snr_db=tuple(config.enrollment_noise_snr_db))
-    return config
+    """The augmentation one slot gets: the enrollment may have its own noise level.
+
+    The enrollment level is part of the TS contract (enrollment_quiet_prob), so level_prob
+    never moves it.
+    """
+    if slot_name != "enrollment":
+        return config
+    if config.enrollment_noise_snr_db is not None:
+        config = replace(config, noise_snr_db=tuple(config.enrollment_noise_snr_db))
+    return replace(config, level_prob=0.0) if config.level_prob else config
+
+
+def limit_peak(audio):
+    """Scale a clip past full scale back to it; clips within full scale are unchanged."""
+    peak = float(np.max(np.abs(audio))) if audio.size else 0.0
+    if peak <= FULL_SCALE:
+        return audio
+    return (audio * (FULL_SCALE / peak)).astype(np.float32)
 
 
 def direct_to_reverberant_db(impulse, sampling_rate):
@@ -163,6 +187,9 @@ def augment_waveform(
         if power > 0:
             level = rng.uniform(*config.far_level_dbfs)
             audio = audio * (10 ** (level / 20) / np.sqrt(power))
+    # Draw only when enabled, so recipes without it keep their random stream.
+    elif config.level_prob and rng.random() < config.level_prob:
+        audio = set_level(rng, audio, config.level_dbfs)
     return np.asarray(audio, dtype=np.float32)
 
 
