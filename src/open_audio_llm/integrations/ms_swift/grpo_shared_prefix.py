@@ -99,7 +99,9 @@ def install_efficient_logps(trainer) -> None:
     original_local = trainer._get_logps_via_local_forward
     original_logps = trainer._get_per_token_logps_and_entropies
     verify = [int(os.environ.get("GRPO_EFFICIENT_LOGPS_VERIFY", "0"))]
-    metrics = trainer._metrics["train"]
+
+    def log(name, value):
+        trainer._metrics["train"][f"efficient_logps/{name}"].append(value)
     try:
         from trl.trainer.utils import entropy_from_logits
     except ImportError:  # pragma: no cover - older trl
@@ -109,7 +111,7 @@ def install_efficient_logps(trainer) -> None:
         on_policy = not trainer.old_policy() and not getattr(trainer, "kl_in_reward", False)
         if (on_policy and model is trainer.model and trainer.ref_model is not None
                 and not torch.is_grad_enabled() and trainer.model.training):
-            metrics["efficient_logps/old_policy_forward_skipped"].append(1.0)
+            log("old_policy_forward_skipped", 1.0)
             return None, None
         return original_logps(model, model_inputs, grpo_batch, compute_entropy=compute_entropy,
                               origin_data=origin_data)
@@ -118,9 +120,9 @@ def install_efficient_logps(trainer) -> None:
         dtype = next(model.parameters()).dtype
         packed = pack_shared_prefix(model_inputs, logits_to_keep, dtype)
         if packed is None:
-            metrics["efficient_logps/packed"].append(0.0)
+            log("packed", 0.0)
             return original_local(model, model_inputs, logits_to_keep, input_ids, compute_entropy=compute_entropy)
-        metrics["efficient_logps/packed"].append(1.0)
+        log("packed", 1.0)
         logps, entropies = shared_prefix_logps(model, *packed, logits_to_keep, trainer.temperature,
                                                compute_entropy, entropy_from_logits)
         if verify[0] > 0 and not torch.is_grad_enabled():
@@ -128,8 +130,8 @@ def install_efficient_logps(trainer) -> None:
             reference, _ = original_local(model, dict(model_inputs), logits_to_keep, input_ids)
             tail = model_inputs["attention_mask"][:, -logits_to_keep:].bool()
             diff = (logps - reference).abs()[tail]
-            metrics["efficient_logps/max_abs_diff"].append(diff.max().item())
-            metrics["efficient_logps/mean_abs_diff"].append(diff.mean().item())
+            log("max_abs_diff", diff.max().item())
+            log("mean_abs_diff", diff.mean().item())
         return logps, entropies
 
     trainer._get_per_token_logps_and_entropies = per_token_logps
