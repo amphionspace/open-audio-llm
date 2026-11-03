@@ -29,6 +29,23 @@ def contrast_indices(outputs: list[str], solutions: list[str], group_size: int) 
     return indices
 
 
+def presence_directions(outputs: list[str], solutions: list[str], group_size: int) -> tuple[int, int]:
+    """Groups whose samples disagree on writing text: (pushed toward empty output, pushed toward writing).
+
+    Only these groups move the presence decision; z-scored advantages give each about the same weight, so the
+    two counts show which way the step leans (round 5 leaned toward empty output 3.7 : 1 in plain ASR).
+    """
+    toward_empty = toward_speaking = 0
+    for start in range(0, len(outputs), group_size):
+        writes = {bool(qwen3_asr.units(qwen3_asr.transcript(o))) for o in outputs[start:start + group_size]}
+        if len(writes) == 2:
+            if qwen3_asr.units(qwen3_asr.transcript(solutions[start])):
+                toward_speaking += 1
+            else:
+                toward_empty += 1
+    return toward_empty, toward_speaking
+
+
 def replace_with_reference(group, sample, encode: Callable[[str], list[int]], special_ids) -> bool:
     """Rewrite ``sample`` as the reference, ending like a finished generation of its group."""
     finished = next((s for s in group if s.finish_reason == "stop" and s.response_token_ids), None)
@@ -63,6 +80,10 @@ def install_presence_contrast(trainer) -> None:
             group = samples[index - size + 1: index + 1]
             replaced += replace_with_reference(group, samples[index], encode, special_ids)
         trainer._metrics["train"]["presence_contrast/groups"].append(replaced)
+        outputs = [s.messages[-1]["content"] for s in samples]
+        toward_empty, toward_speaking = presence_directions(outputs, solutions, size)
+        trainer._metrics["train"]["presence_direction/toward_empty"].append(toward_empty)
+        trainer._metrics["train"]["presence_direction/toward_speaking"].append(toward_speaking)
         return samples
 
     trainer._rollout_samples = rollout_with_contrast
