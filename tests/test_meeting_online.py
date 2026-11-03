@@ -12,6 +12,7 @@ from lhotse import Recording, RecordingSet
 
 from open_audio_llm.data.meeting_online import (
     OnlineMeetingConfig,
+    choose_voices,
     fill_turns,
     load_material,
     meeting_target,
@@ -84,6 +85,48 @@ def test_plan_voices_each_template_speaker_and_the_target_is_timestamped():
     assert sorted(mapping.values()) == ["S1", "S2", "S3"]
     again = plan_meeting(random.Random(3), template, 8.0, material, config)[1]
     assert [(s, d, k) for s, d, k, _, _ in again] == [(s, d, k) for s, d, k, _, _ in placed]
+
+
+def test_excluded_meetings_leave_the_material():
+    config = _config(exclude_meetings=("bad",))
+    speakers = {"a": [1.0, 2.0], "b": [1.0, 2.0]}
+    material = _material(config, {"bad": speakers, "good": speakers})
+    assert [voice.key[1] for voice in material["c"][0]] == ["good", "good"] and len(material["c"]) == 1
+
+
+def test_whole_conversations_leave_nobody_out():
+    config = _config()
+    speakers = lambda *names: {name: [1.0, 2.0] for name in names}  # noqa: E731
+    conversations = {"alone": speakers("z")}
+    for number in range(4):
+        conversations[f"duo{number}"] = speakers(*(f"d{number}{k}" for k in range(2)))
+        conversations[f"trio{number}"] = speakers(*(f"t{number}{k}" for k in range(3)))
+        conversations[f"four{number}"] = speakers(*(f"f{number}{k}" for k in range(4)))
+    material = _material(config, conversations)
+    sizes = {meeting: len(names) for meeting, names in conversations.items()}
+    for seed in range(50):
+        rng = random.Random(seed)
+        for count in (2, 3, 4, 5, 6, 7):
+            _, voices = choose_voices(rng, material, count, {"c": 1.0}, whole_conversations=True)
+            assert len(voices) == count and len({voice.key for voice in voices}) == count
+            used = {voice.key[1] for voice in voices}
+            assert "alone" not in used
+            for meeting in used:
+                assert sum(voice.key[1] == meeting for voice in voices) == sizes[meeting]
+        # One speaker is no whole conversation: the smallest one leaves the fewest people out.
+        _, voices = choose_voices(rng, material, 1, {"c": 1.0}, whole_conversations=True)
+        assert len(voices) == 1 and voices[0].key[1].startswith("duo")
+
+
+def test_whole_conversations_fall_back_when_the_material_has_no_such_combination():
+    config = _config()
+    speakers = lambda *names: {name: [1.0, 2.0] for name in names}  # noqa: E731
+    material = _material(config, {"four": speakers("a", "b", "c", "d"), "five": speakers("e", "f", "g", "h", "i")})
+    _, voices = choose_voices(random.Random(0), material, 3, {"c": 1.0}, whole_conversations=True)
+    assert len(voices) == 3 and len({voice.key[1] for voice in voices}) == 1  # the 4-person one, smallest that fits
+    assert voices[0].key[1] == "four"
+    _, voices = choose_voices(random.Random(0), material, 6, {"c": 1.0}, whole_conversations=True)
+    assert len(voices) >= 6  # no 6 from whole ones: the old way, the plan takes what it needs
 
 
 def test_render_keeps_the_timeline_sets_the_snr_and_the_level():

@@ -58,6 +58,13 @@ class OnlineMeetingConfig:
     # the others' leakage through the headset. Back-channels are always allowed.
     max_overlap: float = 1.0
     teacher_material: bool = True
+    # Voice a window with all speakers of its source conversations, so nobody heard through the headsets goes without a
+    # label. Leaving people out (2 voices of a 4-person meeting) made the start model hear extra speakers in 73% of
+    # decodes against 22% from 2-person meetings (runs/zh-diar-meeting-synth-20261031/tasks/06-split-probe).
+    whole_conversations: bool = False
+    # Conversations left out of the material whole (a partner alone is no whole conversation): tracks whose owner is
+    # hardly audible or whose partner is nearly as loud, so the labels would not match what the track holds.
+    exclude_meetings: tuple[str, ...] = ()
     # Acoustics. dry_prob: no room at all (close-talk); otherwise one real room per meeting, a distinct measured
     # position per speaker (wrapping when the room has fewer), responses cut to rir_seconds after the direct path.
     dry_prob: float = 0.0
@@ -154,6 +161,8 @@ def load_material(rows, config, track_path):
             continue
         conversations = []
         for meeting, speakers in sorted(meetings.items()):
+            if meeting in config.exclude_meetings:
+                continue
             voices = [MaterialSpeaker((corpus, meeting, speaker), track_path(rows[0]),
                                       sorted(rows, key=lambda r: r["index"]), config)
                       for speaker, rows in sorted(speakers.items())]
@@ -175,13 +184,46 @@ def read_material_rows(paths):
                     yield json.loads(line)
 
 
-def choose_voices(rng, material, count, weights):
+def _whole_conversations(rng, conversations, order, count):
+    """``count`` voices that are all speakers of their conversations; None when no such combination exists.
+
+    A conversation left with one voice (its partner's track failed the material checks) is not whole. A window of too few
+    speakers for any whole conversation takes them from the smallest one, leaving the fewest people out.
+    """
+    order = [number for number in order if len(conversations[number]) >= 2]
+    sizes = {len(conversations[number]) for number in order}
+    reachable = {0}
+    for total in range(1, count + 1):
+        if any(total - size in reachable for size in sizes):
+            reachable.add(total)
+    if count not in reachable:
+        fitting = [number for number in order if len(conversations[number]) >= count]
+        if not fitting:
+            return None
+        number = min(fitting, key=lambda n: len(conversations[n]))
+        return rng.sample(conversations[number], count)
+    voices, left = [], count
+    for number in order:
+        size = len(conversations[number])
+        if size <= left and left - size in reachable:
+            voices += rng.sample(conversations[number], size)
+            left -= size
+            if not left:
+                return voices
+    return None
+
+
+def choose_voices(rng, material, count, weights, whole_conversations=False):
     """``count`` material speakers of one corpus: one conversation's, more conversations' when it has too few."""
     corpora = sorted(c for c in material if weights.get(c))
     corpus = rng.choices(corpora, weights=[weights[c] for c in corpora])[0]
     conversations = material[corpus]
     order = list(range(len(conversations)))
     rng.shuffle(order)
+    if whole_conversations:
+        voices = _whole_conversations(rng, conversations, order, count)
+        if voices:
+            return corpus, voices
     voices = []
     for number in order:
         # Which speakers of a larger conversation stay silent is random too.
@@ -248,7 +290,7 @@ def plan_meeting(rng, template, length, material, config):
         by_speaker.setdefault(str(speaker), []).append((float(start), float(end), int(characters)))
     for turns in by_speaker.values():
         turns.sort()
-    corpus, voices = choose_voices(rng, material, len(by_speaker), config.corpus_weights)
+    corpus, voices = choose_voices(rng, material, len(by_speaker), config.corpus_weights, config.whole_conversations)
     # The speaker who talks most gets the voice with the most speech, so nobody runs out of words.
     needs = sorted(by_speaker, key=lambda s: -sum(e - b for b, e, _ in by_speaker[s]))
     voices = sorted(voices[: len(needs)], key=lambda v: -v.seconds)
