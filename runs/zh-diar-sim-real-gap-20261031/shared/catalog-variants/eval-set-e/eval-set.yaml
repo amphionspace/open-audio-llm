@@ -1,0 +1,26 @@
+task: diarization
+tags:
+- meeting
+- multi-speaker
+- timestamps
+sampling_rate: 16000
+groups:
+- name: near_channel
+  section: 声学对照
+  labels:
+  - near_channel
+  aggregate: macro
+  description: 近讲耳机门控相加，但每个说话人加一种不同的"录音设备"滤波（模拟合成数据里各人来自不同语料和设备）
+evaluation:
+- dataset_id: meeting_simreal_probe
+  version: v1-20261031
+  split: near_channel
+  task: speaker_attributed_asr
+  label: near_channel
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: 近讲耳机门控相加，但每个说话人加一种不同的"录音设备"滤波（模拟合成数据里各人来自不同语料和设备）
+  description: AliMeeting 官方 Eval 8 场 138 个选模窗口：近讲耳机门控相加，但每个说话人加一种不同的"录音设备"滤波（模拟合成数据里各人来自不同语料和设备）

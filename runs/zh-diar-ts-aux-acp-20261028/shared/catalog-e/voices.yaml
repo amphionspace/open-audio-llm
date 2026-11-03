@@ -1,0 +1,206 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: voices
+  version: hf-prummn-20261023
+  languages:
+  - en
+  tasks:
+  - asr
+  aliases:
+  - voices-devkit-test
+  - voices_devkit
+  artifacts:
+  - name: test_archive
+    kind: source-archive
+    root_alias: voices
+    relative_path: source/hf-prummn-20261023/devkit_test/data.tar.gz
+    expected_bytes: 2726211414
+    sha256: 12bb13a8663dee7fce26a72a12eaf723e03346192981f67924a984bb5c3ca384
+    metadata:
+      source_url: https://huggingface.co/datasets/Prummn/VOICES_devkit_test
+      upstream_commit: 8849c644648f90fed7b1e93a5a87a8c9be77873b
+  - name: test_metadata
+    kind: jsonl-metadata
+    root_alias: voices
+    relative_path: source/hf-prummn-20261023/devkit_test/VOiCES_test_metadata.jsonl
+    expected_bytes: 3585933
+    sha256: 0acd96938b66dd6c92b1e9b44356b48e7c8b4581fb01cd5c67ec32aa38d25f50
+    metadata:
+      record_count: 6400
+      fields: audio_path (uploader's absolute path; the part after distant-16k/speech/test/ maps to the extracted data/ directory),
+        answer (lower-case transcript), subset (<room>_<distractor>_<clo|far>)
+  - name: test_audio_dir
+    kind: source-directory
+    root_alias: voices
+    relative_path: source/hf-prummn-20261023/devkit_test/extracted/data
+    metadata:
+      file_count: 6400
+      expected_bytes: 3219763264
+      tree_sha256: b70bdcee88aec64963f25ddf78da699208f95dc1cc70a7febd22131d7928739c
+  splits:
+    test:
+      artifacts:
+        source_directory:
+        - test_audio_dir
+        transcriptions:
+        - test_metadata
+      statistics:
+        utterances: 6400
+        speakers: 100
+        duration_hours: 27.9469
+        duration_basis: sum of audio file lengths; the same 200 source sentences are recorded in every room, distractor and microphone
+      provenance:
+        layout: data/<rm1-4>/<babb|musi|none|tele>/<speaker>/Lab41-SRI-VOiCES-<room>-<distractor>-<speaker>-<chapter>-<segment>-<mic>-dg<angle>.wav
+        balance: 4 rooms x 4 distractors (babble, music, TV, none) x 2 microphones (mc01 studio close, mc05 studio far) x 200 recordings
+  provenance:
+    source: VOiCES (Lab41 / SRI International), test subset of VOiCES_devkit distant-16k speech prepared by the uploader of the
+      Hugging Face mirror Prummn/VOICES_devkit_test
+    url: https://iqtlabs.github.io/voices/
+    snapshot_date: '2026-10-23'
+    license: VOiCES is CC BY 4.0 (the mirror's MIT label is the uploader's own and does not replace it).
+    description: VOiCES 远场评测子集：LibriSpeech 句子在 4 个真实房间里用扬声器外放、同时放干扰声（多人 babble、音乐、电视或无干扰），由近处（mc01）和远处（mc05）麦克风录下，英文
+      16 kHz 单声道。共 6400 条、27.9 小时、100 个说话人，每个“房间 × 干扰 × 麦克风”组合 200 条，带小写转写（metadata 的 answer 字段）。只是 devkit 测试集的抽样，不是全量。
+      句子来自 LibriSpeech，不要和 LibriSpeech 一起当训练数据。
+    acquisition: Downloaded the pinned Hugging Face snapshot from hf-mirror.com (sha256 equals each LFS oid) and extracted data.tar.gz
+      under devkit_test/extracted/; no member path leaves the archive root.
+    known_issues:
+    - The mirror is a sampled subset of the VOiCES devkit test partition chosen by the uploader; selection rules are not documented.
+    integrity: local_sha256_recorded
+- schema_version: dataset-catalog/2.0
+  dataset_id: voices_noise
+  version: hf-prummn-20261023
+  languages:
+  - und
+  tasks:
+  - noise
+  aliases:
+  - voices-distractors
+  artifacts:
+  - name: babble_archive
+    kind: source-archive
+    root_alias: voices
+    relative_path: source/hf-prummn-20261023/babble/data.tar.gz
+    expected_bytes: 5418247395
+    sha256: 0490f6d7a05f17308c97613ed552fdced122d30f25e9e6586340a5d3235a49e6
+    metadata:
+      source_url: https://huggingface.co/datasets/Prummn/VOICES_babble
+      upstream_commit: 0f77c755df1ea9ce6d6e8c28b5a244f6581dd44f
+  - name: none_archive
+    kind: source-archive
+    root_alias: voices
+    relative_path: source/hf-prummn-20261023/none/data.tar.gz
+    expected_bytes: 338403547
+    sha256: bbb61d7e94936cc054b122290fcd2a18c11600a9aeea99e4bd554dba0d1214a6
+    metadata:
+      source_url: https://huggingface.co/datasets/Prummn/VOICES_none
+      upstream_commit: 9afc35ea11de0c3df0c532b98d82eb65af816f7d
+  - name: distractors_close_archive
+    kind: source-archive
+    root_alias: voices
+    relative_path: source/hf-prummn-20261023/distractors/data.tar.gz
+    expected_bytes: 3127482670
+    sha256: bf4f01800d4e28c36b987c7c53c674d40900bea413a284c649fbf338d7fc2bb4
+    metadata:
+      source_url: https://huggingface.co/datasets/Prummn/VOICES_distractors
+      upstream_commit: 93c5fefd9efef3ac4a7a2c663a26146c3464f120
+  - name: distractors_far_archive
+    kind: source-archive
+    root_alias: voices
+    relative_path: source/hf-prummn-20261023/distractors_far/data.tar.gz
+    expected_bytes: 2694568071
+    sha256: b7f419a077ba0247357448556bdf30a854d1193e465d4e22f91c8f0daf6f6d00
+    metadata:
+      source_url: https://huggingface.co/datasets/Prummn/VOICES_distractors_far
+      upstream_commit: eaba475cf8297ce1e65b0a6cf56db43ff4903488
+  - name: babble_dir
+    kind: source-directory
+    root_alias: voices
+    relative_path: source/hf-prummn-20261023/babble/extracted/data
+    metadata:
+      file_count: 14080
+      expected_bytes: 6759019520
+      tree_sha256: f26ea94f0313ea876b45a853f5b8daeb3cfdfa788e2597fdd9ca6b60c4575ed4
+  - name: none_dir
+    kind: source-directory
+    root_alias: voices
+    relative_path: source/hf-prummn-20261023/none/extracted/data
+    metadata:
+      file_count: 880
+      expected_bytes: 422438720
+      tree_sha256: 31255fec0310703d45e0ff7cec9e51e06003d17df42259dd6863a7f16b597aca
+  - name: distractors_close_dir
+    kind: source-directory
+    root_alias: voices
+    relative_path: source/hf-prummn-20261023/distractors/extracted/distractors_clo_15s
+    metadata:
+      file_count: 8800
+      expected_bytes: 4224387200
+      tree_sha256: 7ead819f091b495a419539647546e9de397cd4d19880fdf8aafa5b7bb0d2d710
+  - name: distractors_far_dir
+    kind: source-directory
+    root_alias: voices
+    relative_path: source/hf-prummn-20261023/distractors_far/extracted/distractors_far_15s
+    metadata:
+      file_count: 7040
+      expected_bytes: 3379509760
+      tree_sha256: 37165e46acdef6058232c2f9befefc84bce893a555d3ec1e4e739f68a883626f
+  splits:
+    babble:
+      artifacts:
+        source_directory:
+        - babble_dir
+      statistics:
+        num_clips: 14080
+        duration_hours: 58.6667
+        duration_basis: 15 s clips
+      provenance:
+        layout: data/<rm1-4>/babb/Lab41-SRI-VOiCES-<room>-babb-<mic>_seg<k>.wav
+        microphones: every microphone of each room (12 in rm1/rm2, 20 in rm3/rm4), 220 clips per microphone
+    none:
+      artifacts:
+        source_directory:
+        - none_dir
+      statistics:
+        num_clips: 880
+        duration_hours: 3.6667
+        duration_basis: 15 s clips
+      provenance:
+        layout: data/<rm3|rm4>/none/Lab41-SRI-VOiCES-<room>-none-<mc05|mc06>_seg<k>.wav
+        content: room tone with no distractor played, far microphones only
+    distractors_close:
+      artifacts:
+        source_directory:
+        - distractors_close_dir
+      statistics:
+        num_clips: 8800
+        duration_hours: 36.6667
+        duration_basis: 15 s clips
+      provenance:
+        layout: distractors_clo_15s/<rm1-4>/<babb|musi|none|tele>/Lab41-SRI-VOiCES-<room>-<distractor>-<mic>_<id>.wav
+        microphones: close microphones (mc01, mc02; plus mc18 in rm3/rm4)
+    distractors_far:
+      artifacts:
+        source_directory:
+        - distractors_far_dir
+      statistics:
+        num_clips: 7040
+        duration_hours: 29.3333
+        duration_basis: 15 s clips
+      provenance:
+        layout: distractors_far_15s/<rm1-4>/<babb|musi|none|tele>/Lab41-SRI-VOiCES-<room>-<distractor>-<mic>_seg<k>.wav
+        microphones: far microphones (mc05, mc06)
+  provenance:
+    source: VOiCES (Lab41 / SRI International) distractor-only recordings, cut into 15 s clips by the uploader of the Hugging Face
+      mirrors Prummn/VOICES_babble, VOICES_none, VOICES_distractors and VOICES_distractors_far
+    url: https://iqtlabs.github.io/voices/
+    snapshot_date: '2026-10-23'
+    license: VOiCES is CC BY 4.0 (the mirrors' MIT label is the uploader's own and does not replace it).
+    description: VOiCES 真实房间噪声：4 个房间里只放干扰声、没有目标说话人时的录音，切成 15 秒一段，16 kHz 单声道。分四组：babble（多人说话背景，全部麦克风，58.7 小时）、none（不放干扰的房间底噪，远处麦克风，3.7
+      小时）、distractors_close（babble、音乐、电视、无干扰四种，近处麦克风，36.7 小时）、distractors_far（同四种，远处麦克风，29.3 小时）。都带真实房间混响，加噪时不要再叠混响。babble
+      和电视片段里含人声，做“无人说话”负样本前要先筛。
+    acquisition: Downloaded the pinned Hugging Face snapshots from hf-mirror.com (sha256 equals each LFS oid) and extracted each data.tar.gz
+      under <pack>/extracted/; no member path leaves the archive roots.
+    known_issues:
+    - The four groups were cut independently by the uploader and may share source recordings (for example babb clips of mc01/mc05
+      appear in babble and in distractors_close / distractors_far, and the none group overlaps distractors_far none); do not add
+      their durations together as distinct noise.
+    integrity: local_sha256_recorded

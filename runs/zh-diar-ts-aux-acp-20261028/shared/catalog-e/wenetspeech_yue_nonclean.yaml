@@ -1,0 +1,37 @@
+# 占位登记：WenetSpeech-Yue 粤语训练集非 clean 部分用 Qwen3-ASR 全量转写核对，进行中，进度见状态文件。
+- schema_version: dataset-catalog/2.0
+  dataset_id: wenetspeech_yue
+  version: nonclean-qwen3-asr-v1-20261025
+  languages:
+    - yue
+  tasks:
+    - asr
+  aliases: []
+  artifacts:
+    - name: preparation_state
+      kind: dataset-state
+      root_alias: aidc_data
+      relative_path: datasets/wenetspeech_yue/versions/nonclean-qwen3-asr-v1-20261025/state.json
+  splits:
+    train:
+      artifacts:
+        preparation_state:
+          - preparation_state
+      statistics:
+        source_records: 5592487
+        source_hours: 17373.9
+      provenance:
+        preparation_status: building
+  provenance:
+    preparation_status: building
+    owner: mingdong
+    description: >-
+      WenetSpeech-Yue 训练集里 clean 以外的部分（5,592,487 条 / 17,373.9 h），原标注是发布方多系统融合（ROVER）的机器标注，置信度 0.6–1.0。
+      用共享的 Qwen3-ASR-1.7B 逐条转写，按粤语版 SpeechIO TextNorm 算与原标注的字错误率；试跑 2,000 条整体 13.2%，置信度越低差异越大。
+      clean 部分见 clean-qwen3-asr-v1-20261024。目前只记录转写和错误率，不删数据；保留规则在看过被拒样本后再定。
+    source: wenetspeech_yue@icefall-20260908
+    run_dir: /workspace/workspace/mingdong/data/amphiondata/wenetspeech-yue-rest-qwen-20261025
+  recipe_parameters:
+    check_model: Qwen3-ASR-1.7B
+    check_unit: utterance
+    text_normalization: speechio-textnorm-yue

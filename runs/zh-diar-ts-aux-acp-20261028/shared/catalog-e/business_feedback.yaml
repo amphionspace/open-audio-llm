@@ -1,0 +1,352 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: business_feedback
+  version: ts-20261010
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  artifacts:
+  - name: audio-index
+    kind: audio-index
+    root_alias: business_feedback
+    relative_path: versions/ts-20261010/audio-index.jsonl.gz
+    sha256: 7c7d3107bd75c1d68923cfed15472556f6023e7ed69490fd9e24474c95d9972b
+    metadata:
+      record_count: 9
+  - name: pending_labels-records
+    kind: audio-records
+    root_alias: business_feedback
+    relative_path: versions/ts-20261010/records/pending_labels.jsonl.gz
+    sha256: b552641332c9f229f910f2a5bc1e14102b55a12154aabb10dacbeadc4c1fe011
+    metadata:
+      record_count: 4
+  - name: target_speaker-records
+    kind: audio-records
+    root_alias: business_feedback
+    relative_path: versions/ts-20261010/records/target_speaker.jsonl.gz
+    sha256: 367a6858dfcf727f2a49050ab090313417fda323847c187f747d067ca382bf22
+    metadata:
+      record_count: 4
+  splits:
+    pending_labels:
+      artifacts:
+        records:
+        - pending_labels-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 4
+        duration_hours: 0.0121
+        duration_basis: Mixture (recognition segment) duration
+      provenance:
+        description: 现象已记录但参考文本未确认，不参与打分。
+    target_speaker:
+      artifacts:
+        records:
+        - target_speaker-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 4
+        duration_hours: 0.0051
+        duration_basis: Mixture (recognition segment) duration
+      provenance:
+        description: 目标说话人未在场、期望输出为空的反馈（已由反馈人确认）。
+  provenance:
+    status: complete
+    synthetic: none
+    description: 业务反馈的目标说话人 bad case，每个批次一个版本，只用于评测，不进训练。测试人员在办公室注册一个人的声纹，同时用 pad 播放干扰声（歌曲、对白）时反馈的 7 个调试包（8 段输入）。 每段输入为 3 秒注册音频加一个识别片段；7 个包使用同一段注册音频。
+    sources:
+    - 'business feedback debug packages: 2026-10-10_amphionasr-target-speaker'
+- schema_version: dataset-catalog/2.0
+  dataset_id: business_feedback
+  version: ts-20261012
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  artifacts:
+  - name: audio-index
+    kind: audio-index
+    root_alias: business_feedback
+    relative_path: versions/ts-20261012/audio-index.jsonl.gz
+    sha256: e63d7bb4e6250fac58132cec3d3db77f3f47def588b049d9c99ca52ac3608b21
+    metadata:
+      record_count: 6
+  - name: pending_labels-records
+    kind: audio-records
+    root_alias: business_feedback
+    relative_path: versions/ts-20261012/records/pending_labels.jsonl.gz
+    sha256: d74b26e00a4b1edf20811abe37d48b11fb8308c2ac8c24580a3d9b941d61e717
+    metadata:
+      record_count: 4
+  - name: target_speaker-records
+    kind: audio-records
+    root_alias: business_feedback
+    relative_path: versions/ts-20261012/records/target_speaker.jsonl.gz
+    sha256: 9380975c6a1e84128f41d5afffbf4a1e88e9d8129484da4e15749d26c996f9fe
+    metadata:
+      record_count: 1
+  splits:
+    pending_labels:
+      artifacts:
+        records:
+        - pending_labels-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 4
+        duration_hours: 0.0073
+        duration_basis: Mixture (recognition segment) duration
+      provenance:
+        description: 现象已记录但参考文本未确认，不参与打分。
+    target_speaker:
+      artifacts:
+        records:
+        - target_speaker-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 1
+        duration_hours: 0.0053
+        duration_basis: Mixture (recognition segment) duration
+      provenance:
+        description: 目标说话人未在场、期望输出为空的反馈（已由反馈人确认）。
+  provenance:
+    status: complete
+    synthetic: none
+    description: 业务反馈的目标说话人 bad case，每个批次一个版本，只用于评测，不进训练。测试人员把设备放在一个环境里持续收音，定时查看结果，反馈的 5 个调试包（case-08 到 case-12）。 每段输入为 3 秒注册音频加一个识别片段；与第一批使用同一段注册音频。
+    sources:
+    - 'business feedback debug packages: 2026-10-10_amphionasr-target-speaker'
+- schema_version: dataset-catalog/2.0
+  dataset_id: business_feedback
+  version: ts-20261016
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  artifacts:
+  - name: audio-index
+    kind: audio-index
+    root_alias: business_feedback
+    relative_path: versions/ts-20261016/audio-index.jsonl.gz
+    sha256: f7500c4e093516d870cce2691c524a514c7b67a52fc75723732a15aa459e2f18
+    metadata:
+      record_count: 32
+  - name: pending_labels-records
+    kind: audio-records
+    root_alias: business_feedback
+    relative_path: versions/ts-20261016/records/pending_labels.jsonl.gz
+    sha256: 8555966e4636bef479ed1b27a40d340842949e522e8c3d3ddbc288ec1be66a62
+    metadata:
+      record_count: 1
+  - name: target_present-records
+    kind: audio-records
+    root_alias: business_feedback
+    relative_path: versions/ts-20261016/records/target_present.jsonl.gz
+    sha256: 4fc5aadf365607e5af7b354fa20dba5ff9ebba151d53d8b2586956085950d04f
+    metadata:
+      record_count: 2
+  - name: target_speaker-records
+    kind: audio-records
+    root_alias: business_feedback
+    relative_path: versions/ts-20261016/records/target_speaker.jsonl.gz
+    sha256: 4c7154ca349cdf926fdf3c8295c99a0e19ac4453910b614d37e51f3e5fc6fc73
+    metadata:
+      record_count: 28
+  splits:
+    pending_labels:
+      artifacts:
+        records:
+        - pending_labels-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 1
+        duration_hours: 0.0053
+        duration_basis: Mixture (recognition segment) duration
+      provenance:
+        description: 现象已记录但参考文本未确认，不参与打分。
+    target_present:
+      artifacts:
+        records:
+        - target_present-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 2
+        duration_hours: 0.0053
+        duration_basis: Mixture (recognition segment) duration
+      provenance:
+        description: 目标说话人在场、参考文本已由复核人听音确认的反馈。
+    target_speaker:
+      artifacts:
+        records:
+        - target_speaker-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 28
+        duration_hours: 0.0369
+        duration_basis: Mixture (recognition segment) duration
+      provenance:
+        description: 目标说话人未在场、期望输出为空的反馈（已由反馈人确认）。
+  provenance:
+    status: complete
+    synthetic: none
+    description: 业务反馈的目标说话人 bad case，每个批次一个版本，只用于评测，不进训练。测试人员持续收音时反馈的 31 个调试包（表格第 2–37 行，去掉与第二批重复的包），与第二批使用同一段注册音频。 每段输入为 3 秒注册音频加一个识别片段；目标是否在场与参考文本经复核人逐条听音确认。
+    sources:
+    - 'business feedback debug packages: 2026-10-16_amphionasr-owner-misrecognition'
+- schema_version: dataset-catalog/2.0
+  dataset_id: business_feedback
+  version: ts-20261019
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  artifacts:
+  - name: audio-index
+    kind: audio-index
+    root_alias: business_feedback
+    relative_path: versions/ts-20261019/audio-index.jsonl.gz
+    sha256: 2bac18ba264ad3b0b55ff904302b296842a6ace3368568c8ac258586eae3188a
+    metadata:
+      record_count: 3
+  - name: target_present-records
+    kind: audio-records
+    root_alias: business_feedback
+    relative_path: versions/ts-20261019/records/target_present.jsonl.gz
+    sha256: c035b1535a5d93e7b33a55dc561681091dbc30b8508d3d56d90169a30341c3ba
+    metadata:
+      record_count: 1
+  - name: target_speaker-records
+    kind: audio-records
+    root_alias: business_feedback
+    relative_path: versions/ts-20261019/records/target_speaker.jsonl.gz
+    sha256: 07f228226ebd52dc8ff33e17c1399f6c66fd586706290158236fb35111c85afe
+    metadata:
+      record_count: 1
+  splits:
+    target_present:
+      artifacts:
+        records:
+        - target_present-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 1
+        duration_hours: 0.0019
+        duration_basis: Mixture (recognition segment) duration
+      provenance:
+        description: 目标说话人在场（反馈人在表格中确认）、参考文本由自动复核确定（说话人相似度定位、两套转写一致），未经人工听审。
+    target_speaker:
+      artifacts:
+        records:
+        - target_speaker-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 1
+        duration_hours: 0.004
+        duration_basis: Mixture (recognition segment) duration
+      provenance:
+        description: 目标说话人未在场、期望输出为空的反馈（已由反馈人确认）。
+  provenance:
+    status: complete
+    synthetic: none
+    description: 业务反馈的目标说话人 bad case，每个批次一个版本，只用于评测，不进训练。测试人员持续收音时反馈的 2 个调试包（表格第 38、39 行），换了一段新的注册音频。 每段输入为 3 秒注册音频加一个识别片段；目标是否在场取自表格的错误类型，在场那条的参考文本由自动复核确定，未经人工听审。
+    sources:
+    - 'business feedback debug packages: 2026-10-19_amphionasr-owner-misrecognition'
+- schema_version: dataset-catalog/2.0
+  dataset_id: business_feedback
+  version: ts-20261021
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  artifacts:
+  - name: audio-index
+    kind: audio-index
+    root_alias: business_feedback
+    relative_path: versions/ts-20261021/audio-index.jsonl.gz
+    sha256: 0ce76eeec2a66276fb34e3931f2cf5a0f0f56b8889253e804d5afc53b1e0f813
+    metadata:
+      record_count: 3
+  - name: target_speaker-records
+    kind: audio-records
+    root_alias: business_feedback
+    relative_path: versions/ts-20261021/records/target_speaker.jsonl.gz
+    sha256: db8b327667e51f985c2bbeae42796f1c1eb23bb528729b455794d7306947143a
+    metadata:
+      record_count: 2
+  splits:
+    target_speaker:
+      artifacts:
+        records:
+        - target_speaker-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 2
+        duration_hours: 0.0012
+        duration_basis: Mixture (recognition segment) duration
+      provenance:
+        description: 目标说话人未在场、期望输出为空的反馈（已由反馈人确认）。
+  provenance:
+    status: complete
+    synthetic: none
+    description: 业务反馈的目标说话人 bad case，每个批次一个版本，只用于评测，不进训练。测试人员持续收音时反馈的 2 个调试包（表格第 40、41 行），换了一段新的注册音频。 每段输入为 3 秒注册音频加一个识别片段；两条都是机主未说话、另一个人说了一句约 1 秒的短话，模型输出了这句话。
+    sources:
+    - 'business feedback debug packages: 2026-10-21_amphionasr-owner-misrecognition'
+- schema_version: dataset-catalog/2.0
+  dataset_id: business_feedback
+  version: ts-20261022
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  artifacts:
+  - name: audio-index
+    kind: audio-index
+    root_alias: business_feedback
+    relative_path: versions/ts-20261022/audio-index.jsonl.gz
+    sha256: c230351c3e1e206a12675de9ced04e02ca98de633a081c38ccb2fa892a5b630a
+    metadata:
+      record_count: 11
+  - name: target_speaker-records
+    kind: audio-records
+    root_alias: business_feedback
+    relative_path: versions/ts-20261022/records/target_speaker.jsonl.gz
+    sha256: ac591fbbc9bd3b6afdc31d34464844d251ca6f376cd0b15b02f4c56b6fb754c1
+    metadata:
+      record_count: 10
+  splits:
+    target_speaker:
+      artifacts:
+        records:
+        - target_speaker-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 10
+        duration_hours: 0.0617
+        duration_basis: Mixture (recognition segment) duration
+      provenance:
+        description: 目标说话人未在场、期望输出为空的反馈（已由反馈人确认）。
+  provenance:
+    status: complete
+    synthetic: none
+    description: 业务反馈的目标说话人 bad case，每个批次一个版本，只用于评测，不进训练。用户直接提供的两段长录音（没有调试包），机主全程未说话，旁边外放电视剧对白，期望输出为空； 按 25 秒连续分窗，每窗一条，共 10 条；注册录音 8.28 秒整段保存，客户端取前 5 秒。
+    sources:
+    - 'business feedback recordings: 2026-10-22_amphionasr-tv-drama-absent'

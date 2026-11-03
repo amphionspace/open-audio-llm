@@ -1,0 +1,106 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: context_correction_zh
+  version: v1-20261018
+  languages:
+  - zh
+  tasks:
+  - asr
+  - ts_asr
+  artifacts:
+  - name: audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/context_correction_zh/versions/v1-20261018/audio-index.jsonl.gz
+    sha256: afbb011ae4643381b19f4bab29224ac8ea0fdd61f5c36534674d87314d185393
+    metadata:
+      record_count: 2202
+  - name: mined_real-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/context_correction_zh/versions/v1-20261018/records/mined_real.jsonl.gz
+    sha256: 720b8b6c52c9f97c9caf216aacfdf1472b2c8bf084f61f7d4d38e4838120786a
+    metadata:
+      record_count: 127
+  - name: quarantine-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/context_correction_zh/versions/v1-20261018/records/quarantine.jsonl.gz
+    sha256: 45b8c825fdf8274c3d93b7b6a3085b3ffc41e170f28a4dc869788dc59e9f37a0
+    metadata:
+      record_count: 425
+  - name: synthetic-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/context_correction_zh/versions/v1-20261018/records/synthetic.jsonl.gz
+    sha256: dd09700a12a1e4635fce1e1258205e0c06df4d1127d0248763b2d822aa0f927f
+    metadata:
+      record_count: 1590
+  - name: synthetic_ts-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/context_correction_zh/versions/v1-20261018/records/synthetic_ts.jsonl.gz
+    sha256: 92102e2407977d5f000ed89cd68ed77ac23c72836780e3fac5760078367a5477
+    metadata:
+      record_count: 1532
+  splits:
+    mined_real:
+      artifacts:
+        records:
+        - mined_real-records
+        audio_index:
+        - audio-index
+      task: asr
+      statistics:
+        records: 127
+        duration_hours: 0.6025
+        duration_basis: recognized clip (mixture for ts_asr)
+      provenance:
+        description: 从真实语料挖掘的录音：LLM 扫描、两个 LLM 各自写出按上下文修正的转写且一致、只改写法不改读音
+    quarantine:
+      artifacts:
+        records:
+        - quarantine-records
+        audio_index:
+        - audio-index
+      task: asr
+      statistics:
+        records: 425
+        duration_hours: 3.1364
+        duration_basis: recognized clip (mixture for ts_asr)
+      provenance:
+        description: 有音频但未通过质检的条目（读错、说明没听清、超长），保留原因，不参与打分
+    synthetic:
+      artifacts:
+        records:
+        - synthetic-records
+        audio_index:
+        - audio-index
+      task: asr
+      statistics:
+        records: 1590
+        duration_hours: 7.1714
+        duration_basis: recognized clip (mixture for ts_asr)
+      provenance:
+        description: 合成音频：成对题目（correct 指向少见写法，confirm 指向常用写法），两条都通过质检才收录
+    synthetic_ts:
+      artifacts:
+        records:
+        - synthetic_ts-records
+        audio_index:
+        - audio-index
+      task: ts_asr
+      statistics:
+        records: 1532
+        duration_hours: 6.7327
+        duration_basis: recognized clip (mixture for ts_asr)
+      provenance:
+        description: 同一批合成题目中不超过 TS 时长上限的部分，配被克隆说话人的另一条真实语句作注册音频
+  provenance:
+    status: complete
+    synthetic: partial
+    description: 上下文纠偏评测集，只用于评测，不进训练。说话人在同一段话里用说明或语境确定了某个同音词的写法 (显式说字、同名一致性、隐式语义)，识别结果应按上下文写。题目由 qwen3.6-plus 生成、 deepseek-v4-pro 独立复核，Qwen3-TTS 用测试划分说话人的声音合成，SenseVoiceSmall 拼音级质检； 另有从 WenetSpeech 播客挖掘的真实录音。生成脚本 scripts/context_correction/。
+    sources:
+    - LLM-generated scripts (Aliyun Bailian)
+    - aishell3@legacy-20260804 test voices
+    - kespeech@legacy-20260804 test voices
+    - wenetspeech_podcast@l-20261014 (mined)

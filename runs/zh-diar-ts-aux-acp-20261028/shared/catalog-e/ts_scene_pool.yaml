@@ -1,0 +1,1816 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: v2-20261016
+  languages:
+  - zh
+  - en
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/v2-20261016/records_zh.jsonl.gz
+    sha256: 919ee94b1a9eb2e0f5648cdd6a3f4ecb806f5103509f4a497a9760cc481b5258
+    metadata:
+      record_count: 150000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/v2-20261016/audio_index_zh.jsonl.gz
+    sha256: c243f6e44e5852bbda410deb53a6b55d2290976678463dbb984513c71b7b951a
+    metadata:
+      record_count: 843803
+  - name: en-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/v2-20261016/records_en.jsonl.gz
+    sha256: 25a8deb26b37af591ac4739ecb1a05b845f1bb5264b4ef0d6fc0c05d6ad2a8b8
+    metadata:
+      record_count: 100000
+  - name: en-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/v2-20261016/audio_index_en.jsonl.gz
+    sha256: c865d9b04bc2bd1e818a3b93c263e9e16b4572c7454e3c38beca8984b6fbdc43
+    metadata:
+      record_count: 205782
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/v2-20261016/record_index/index.json
+    expected_bytes: 1057
+    sha256: af7b2d11b4015604fd877c23f10542046c8576a8cfbdcf829ac76c4a3b11bd5d
+    metadata:
+      snapshot_version: 13
+      rows: 250000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 150000
+        duration_hours: 167.7
+        duration_basis: clip duration (segment span, or the whole file)
+    en:
+      artifacts:
+        records:
+        - en-records
+        audio_index:
+        - en-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 100000
+        duration_hours: 148.06
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-16'
+    description: Target-speaker scenes (alternate / burst / short, up to 6 other speakers, several utterances per speaker) named from AISHELL-2, KeSpeech, LibriSpeech and Common Voice by speaker label
+    sources:
+    - aishell2:legacy-20260804
+    - kespeech:legacy-20260804
+    - librispeech:legacy-20260804
+    - common_voice_en:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: hard-20261016
+  languages:
+  - zh
+  - en
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/hard-20261016/records_zh.jsonl.gz
+    sha256: f9e8282f83189229a8e942916fe8ad280584d08129ffa3e0c832039fc68c85d5
+    metadata:
+      record_count: 40000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/hard-20261016/audio_index_zh.jsonl.gz
+    sha256: cdd30e9e29cfae30935b14411fe180cb2d638011d7689798e861ffe6d2021a3e
+    metadata:
+      record_count: 299881
+  - name: en-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/hard-20261016/records_en.jsonl.gz
+    sha256: 20b8137ace73b4bd538a41d3450c2fbf526112fefad37b42cd959da604ffc8a4
+    metadata:
+      record_count: 25000
+  - name: en-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/hard-20261016/audio_index_en.jsonl.gz
+    sha256: c81511a9cd852419c4b66d7ab0d1c7bce472ac3ccef8896ddcf90b67323009c3
+    metadata:
+      record_count: 89560
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/hard-20261016/record_index/index.json
+    expected_bytes: 1056
+    sha256: cc72ff3b15ceceee68d217374a4491e248fb0516e814cb476b9b41bd7cf1c19d
+    metadata:
+      snapshot_version: 13
+      rows: 65000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 40000
+        duration_hours: 44.77
+        duration_basis: clip duration (segment span, or the whole file)
+    en:
+      artifacts:
+        records:
+        - en-records
+        audio_index:
+        - en-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 25000
+        duration_hours: 36.95
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-16'
+    description: 相近声音多句场景：目标缺席且相近声音在场（absent，转写为空）或目标与相近声音同时说话（present）。相近说话人取 ERes2NetV2 说话人向量余弦最近邻前 10 名之一（按排名，不设阈值），邻居表在 source/speaker-neighbors-20261016。
+    sources:
+    - aishell2:legacy-20260804
+    - kespeech:legacy-20260804
+    - librispeech:legacy-20260804
+    - common_voice_en:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: multi-20261017
+  languages:
+  - zh
+  - en
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/multi-20261017/records_zh.jsonl.gz
+    sha256: 2d16fbd65ba1da2770f2ba89a8a7b0267ebdd5e5ee62e8317322c89dba39d9a2
+    metadata:
+      record_count: 120000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/multi-20261017/audio_index_zh.jsonl.gz
+    sha256: e8272bd67db06c1d5bdb5258f2cdc01296e56236fdca1fae1efb099cc734dee0
+    metadata:
+      record_count: 697327
+  - name: en-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/multi-20261017/records_en.jsonl.gz
+    sha256: 97084645fd79b5ba8d8497f56577e3ca1a7c4e18fbecb3a2860aa023f302c0a0
+    metadata:
+      record_count: 40000
+  - name: en-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/multi-20261017/audio_index_en.jsonl.gz
+    sha256: 9ceee171b51664406b03633f593216e0e54f4d981be49562100f5773923b304c
+    metadata:
+      record_count: 115458
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/multi-20261017/record_index/index.json
+    expected_bytes: 1059
+    sha256: 0c59f6f28570ccbcb649d59295ff4705bd686c32b96eca8f809b044dc8391ada
+    metadata:
+      snapshot_version: 13
+      rows: 160000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 120000
+        duration_hours: 134.22
+        duration_basis: clip duration (segment span, or the whole file)
+    en:
+      artifacts:
+        records:
+        - en-records
+        audio_index:
+        - en-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 40000
+        duration_hours: 59.2
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-17'
+    description: 多句目标场景（full）：目标说 2–5 句，与 1–4 个其他说话人各自按自己的间隔并行说话（间隔范围写在记录里）；约 26% 的记录是缺席孪生——同一批语句和时间线，注册人换成场景外的另一个人（一半是目标的近邻声音），目标为空，同一对共用
+      labels.pair。对应 ts_asr_benchmark 的基础场景（目标几句被别人打断或盖住）。
+    sources:
+    - aishell2:legacy-20260804
+    - kespeech:legacy-20260804
+    - librispeech:legacy-20260804
+    - common_voice_en:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: multi-20261018
+  languages:
+  - zh
+  - en
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/multi-20261018/records_zh.jsonl.gz
+    sha256: 4cb3a23e099976ee3eac866c17dc13e64f646c83b77b36e982537034fc995a8c
+    metadata:
+      record_count: 240000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/multi-20261018/audio_index_zh.jsonl.gz
+    sha256: 56880aa17af198c1f0e034364f5354deecdcfff7270cd0fe6cff4ddc2e39e2c8
+    metadata:
+      record_count: 1089327
+  - name: en-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/multi-20261018/records_en.jsonl.gz
+    sha256: 05ef8d7bf64f942ebb9ef926563f336cd1379f7280a5c82edacfac3aee377570
+    metadata:
+      record_count: 80000
+  - name: en-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/multi-20261018/audio_index_en.jsonl.gz
+    sha256: 209b4c36352b31f6e70afa93065a86e037ea4e842dcf010d1e3a51b31b0ce4db
+    metadata:
+      record_count: 167478
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/multi-20261018/record_index/index.json
+    sha256: 69bcb0a774ebb59f53baab1d1bdd92bde66b0faa03928e48850cca67b118255d
+    expected_bytes: 1059
+    metadata:
+      snapshot_version: 13
+      rows: 320000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 240000
+        duration_hours: 268.11
+        duration_basis: clip duration (segment span, or the whole file)
+    en:
+      artifacts:
+        records:
+        - en-records
+        audio_index:
+        - en-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 80000
+        duration_hours: 118.07
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-17'
+    description: 多句目标场景（full）放大版：与 multi-20261017 同一生成方式，规模翻倍（zh 24 万、en 8 万）；目标说 2–5 句，与 1–4 个其他说话人各自按自己的间隔并行说话；约 26% 的记录是缺席孪生——同一批语句和时间线，注册人换成场景外的另一个人（一半是目标的近邻声音），目标为空，同一对共用
+      labels.pair。用于降低训练里同一批场景的重复次数。
+    sources:
+    - aishell2:legacy-20260804
+    - kespeech:legacy-20260804
+    - librispeech:legacy-20260804
+    - common_voice_en:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: solo-20261019
+  languages:
+  - zh
+  - en
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/solo-20261019/records_zh.jsonl.gz
+    sha256: 00d9c0efa7f9ca2f7f0ce51f78ae491c57fa32365c2000b7aa6922e04b22a80e
+    metadata:
+      record_count: 60000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/solo-20261019/audio_index_zh.jsonl.gz
+    sha256: 97b42ef1f4abc8a6be8d1d5f8b3e9b688992123a1c27e419b070cda7fc6738f1
+    metadata:
+      record_count: 95868
+  - name: en-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/solo-20261019/records_en.jsonl.gz
+    sha256: 0485bab230982ea3f5833690e63152f8ef98b6b7d5f7e18d505d629d9788612e
+    metadata:
+      record_count: 20000
+  - name: en-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/solo-20261019/audio_index_en.jsonl.gz
+    sha256: d56e1da2e04b832d7ada1bd61613db6fc639913556387c05b41e50592baebd04
+    metadata:
+      record_count: 19841
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/solo-20261019/record_index/index.json
+    sha256: 5cec5d8b91454a5f70ff763ac60e7697d50a230ce87212ecc03a61f303d50007
+    expected_bytes: 1056
+    metadata:
+      snapshot_version: 13
+      rows: 80000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 60000
+        duration_hours: 67.38
+        duration_basis: clip duration (segment span, or the whole file)
+    en:
+      artifacts:
+        records:
+        - en-records
+        audio_index:
+        - en-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 20000
+        duration_hours: 29.78
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-19'
+    description: 目标单独说一句短话（1–3.5 秒）的场景：没有其他说话人，约 30% 是缺席孪生——同一句话，注册人换成另一个人，转写为空。用来补 aishellmix / librimix 的 train_1spk 里几乎没有的
+      3 秒以内的短目标在场监督（v7 评测的 solo-mid 在场输出为空 11% 以上）。
+    sources:
+    - aishell2:legacy-20260804
+    - kespeech:legacy-20260804
+    - librispeech:legacy-20260804
+    - common_voice_en:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: solo-20261020
+  languages:
+  - zh
+  - en
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/solo-20261020/records_zh.jsonl.gz
+    sha256: edd3de0d9f4b0f2464e0de6ca7c7297f272531596134652a4f914a4feb33cc71
+    metadata:
+      record_count: 60000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/solo-20261020/audio_index_zh.jsonl.gz
+    sha256: c1ab4010e3ac25e3f087a1813be915ca5f58a1ee7ce86e5c2d58852e981b4308
+    metadata:
+      record_count: 95932
+  - name: en-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/solo-20261020/records_en.jsonl.gz
+    sha256: bfaad947bb58d846d46e9ea74417abec15cf77e323cb8b902974e7d2e849aed5
+    metadata:
+      record_count: 20000
+  - name: en-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/solo-20261020/audio_index_en.jsonl.gz
+    sha256: bda2a26891c5660ea51462ff91dcce75dc9cfc3c82cd4d4a4a104396db92dbf6
+    metadata:
+      record_count: 20160
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/solo-20261020/record_index/index.json
+    sha256: a4aa63030133b7062831bc23a03388af59f8e34b8ca67ce26cb440169f3347c6
+    expected_bytes: 1056
+    metadata:
+      snapshot_version: 13
+      rows: 80000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 60000
+        duration_hours: 67.34
+        duration_basis: clip duration (segment span, or the whole file)
+    en:
+      artifacts:
+        records:
+        - en-records
+        audio_index:
+        - en-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 20000
+        duration_hours: 29.86
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-20'
+    description: 短目标单独说话场景的难负例版：与 solo-20261019 同样的生成方式（目标单独说一句 1–3.5 秒的话，没有其他说话人，注册取同一说话人另一句 2.5–8 秒，约 30% 是缺席孪生——同一句话，注册人换成另一个人，转写为空），但孪生的注册人一半取目标的近邻声音（speaker-neighbors-20261016，ERes2NetV2
+      前 10 名，labels.twin_enrollment=near 并记 hard_cosine），一半随机，与 multi 池一致。用来补 solo-20261019 孪生全是随机注册人、负例太容易分的缺口。
+    sources:
+    - aishell2:legacy-20260804
+    - kespeech:legacy-20260804
+    - librispeech:legacy-20260804
+    - common_voice_en:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: handover-20261021
+  languages:
+  - zh
+  - en
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/handover-20261021/records_zh.jsonl.gz
+    sha256: 45b8cdc8df13cc697f7473fe29f014ddb4f57aae37760dd2458f6910dea862d5
+    metadata:
+      record_count: 40000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/handover-20261021/audio_index_zh.jsonl.gz
+    sha256: 13b3f6b0d3a61e664fe2cf77861d35ad91d4cb5b191830dd8547d4b1287f903b
+    metadata:
+      record_count: 91728
+  - name: en-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/handover-20261021/records_en.jsonl.gz
+    sha256: a3b6d79de68be4c45b0f763f8dd35e56ded1eda0bbaac5deb755539752411b37
+    metadata:
+      record_count: 12000
+  - name: en-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/handover-20261021/audio_index_en.jsonl.gz
+    sha256: 26c6aa76ed7508ed7123ee932ea06a3b820be4de16d1b30b42f3b9407a6d8cac
+    metadata:
+      record_count: 20213
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/handover-20261021/record_index/index.json
+    sha256: 4a4e06abb707b4ae09ac761e6edc251594056c531b2f682af6a16a1e0bec0ae9
+    expected_bytes: 1060
+    metadata:
+      snapshot_version: 13
+      rows: 52000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 40000
+        duration_hours: 44.89
+        duration_basis: clip duration (segment span, or the whole file)
+    en:
+      artifacts:
+        records:
+        - en-records
+        audio_index:
+        - en-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 12000
+        duration_hours: 17.99
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-21'
+    description: 交接场景：目标说一句、另一个说话人说一句，前后不重叠、先后随机（alternate，同一注册与转写口径），每句 1–6 秒，注册取同一说话人另一句 2.5–8 秒；另一个说话人一半取目标的近邻声音（speaker-neighbors-20261016，ERes2NetV2
+      前 10 名，labels.hard_cosine），一半随机。约 30% 是缺席孪生：同两句话，注册人换成另一个人（一半取目标近邻，labels.twin_enrollment），两句都成为干扰人、转写为空，同一对共用 labels.pair。用来补其他场景池缺的“目标
+      + 仅 1 个他人”轮流场景（alternate 至少 2 个他人，solo 没有他人）：ts-asr-benchmark@v9 的 handover-* 子集里模型约 15% 整条不出字。
+    sources:
+    - aishell2:legacy-20260804
+    - kespeech:legacy-20260804
+    - librispeech:legacy-20260804
+    - common_voice_en:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: xsession-20261023
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/xsession-20261023/records_zh.jsonl.gz
+    sha256: 02c67a77fc28eddea9ffac6c26edfb6320ca3fd644e1b20ed0ebced44eb722fd
+    metadata:
+      record_count: 80000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/xsession-20261023/audio_index_zh.jsonl.gz
+    sha256: 1db56a6e0b09d4371c9fc10f229c5b9a62099802961c9fcdbae420dbaf9bd965
+    metadata:
+      record_count: 499357
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/xsession-20261023/record_index/index.json
+    sha256: 1a370af014c08ede33f92f4af29f13015ef207d9da85baebc706095dc6e6210f
+    expected_bytes: 731
+    metadata:
+      snapshot_version: 13
+      rows: 80000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 80000
+        duration_hours: 116.12
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-23'
+    description: KeSpeech 跨场次多句场景（multi 同款 full 模式，目标说 2–5 句、1–4 个他人各有自己的轨道）：目标人取自 KeSpeech train 中同时有普通话（phase1）与方言（phase2）录音的
+      15457 人（实际用到 14406 人），场景里目标的话取自同一场次，注册（2.5–8 秒一句）一半取另一场次（labels.cross_session），一半取同一场次；他人一半 KeSpeech、一半 AISHELL-2。约 30% 是缺席孪生：同一场景，注册换成另一位
+      KeSpeech 说话人，目标的话成为干扰、转写为空，同一对共用 labels.pair。用来补训练里缺的“同一人、不同场次/口音”正例：其他 zh 场景池的目标几乎全是单场次的 AISHELL-2，ts-asr-benchmark@v12
+      上注册与目标跨普通话/方言时 10.21 版本漏识 33.9%（同口音 5.7%）。
+    sources:
+    - aishell2:legacy-20260804
+    - kespeech:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: magicdata-20261023
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/magicdata-20261023/records_zh.jsonl.gz
+    sha256: 11da10c11f110d5b7975ce7178e92ce4432f4dd3c267f5831194f97c1a55dc00
+    metadata:
+      record_count: 80000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/magicdata-20261023/audio_index_zh.jsonl.gz
+    sha256: 2f4ff4d4c5c35e35c0c7dfd95dd2970d81cbb7889dcdcd6bd844612f269fbb76
+    metadata:
+      record_count: 480734
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/magicdata-20261023/record_index/index.json
+    sha256: 0410cb890297ffb44b6d6349b53501e5fefb091b9d9868e2e8fdcca35fa89793
+    expected_bytes: 732
+    metadata:
+      snapshot_version: 13
+      rows: 80000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 80000
+        duration_hours: 96.25
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-23'
+    description: MagicData 多句场景（multi 同款 full 模式，目标说 2–5 句、1–4 个他人各有自己的轨道）：目标人取自 MagicData train（手机录制的朗读，1017 人，实际用到 1013
+      人），注册取同一人另一句 2.5–8 秒；他人一半 MagicData、一半 AISHELL-2。约 30% 是缺席孪生：同一场景，注册换成另一位 MagicData 说话人，目标的话成为干扰、转写为空，同一对共用 labels.pair。MagicData
+      测试集 73% 的句子在训练集里出现过，训练集中与测试集同文本的 49191 句已剔除。用来补训练里没有的 MagicData 目标人：ts-asr-benchmark@v12 上只留目标一人说话时，10.21 版本对 MagicData
+      目标的 TS 字错率 14.5%（同句普通识别 1.7%），AISHELL-1/2/3 目标与普通识别持平。
+    sources:
+    - aishell2:legacy-20260804
+    - magicdata:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: xsession-near-20261023
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/xsession-near-20261023/records_zh.jsonl.gz
+    sha256: 92540b2df3eabf2e6bd6ee0c2ec09d38981a5681cdf3292225bc9d214f891ad9
+    metadata:
+      record_count: 80000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/xsession-near-20261023/audio_index_zh.jsonl.gz
+    sha256: 3ec485e5568321320b09bc9ca9b8ee09ae7ee705b41a6e6f667d2778021cb1af
+    metadata:
+      record_count: 499837
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/xsession-near-20261023/record_index/index.json
+    sha256: 21962d843db8dca7995d586156e8720f35fc644169e5e0197f3638acd4957333
+    expected_bytes: 736
+    metadata:
+      snapshot_version: 13
+      rows: 80000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 80000
+        duration_hours: 115.99
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-23'
+    description: xsession-20261023 的相近声音版：同样的 KeSpeech 跨场次多句场景（目标人取自 KeSpeech train 中同时有普通话与方言录音的 15457 人，注册一半取另一场次 labels.cross_session，他人一半
+      KeSpeech、一半 AISHELL-2），约 30% 缺席孪生中一半的注册人取目标的相近声音（speaker-neighbors-20261023，ERes2NetV2 余弦最近邻前 10 名之一，候选限于 KeSpeech 与
+      AISHELL-2；labels.twin_enrollment=near），另一半随机。原版的孪生全是随机说话人，与目标差得很远（余弦中位数 0.09），040 在 ts-asr-benchmark@v12 上对 KeSpeech、MagicData
+      目标越来越多地把紧接着说话的另一个人也转写进来。
+    sources:
+    - aishell2:legacy-20260804
+    - kespeech:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: magicdata-near-20261023
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/magicdata-near-20261023/records_zh.jsonl.gz
+    sha256: 2430891d96524dda12d86751264b8bc79b69c2ba30d5467f0decec7093db4cc0
+    metadata:
+      record_count: 80000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/magicdata-near-20261023/audio_index_zh.jsonl.gz
+    sha256: 7f8354f34cd9286a1693eaa430c128dd474188b0cf231e611162f5071d66307a
+    metadata:
+      record_count: 483030
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/magicdata-near-20261023/record_index/index.json
+    sha256: c505a53720a3f1c334469b33397d521b66eff1ad69d8d6ec2a9590bbc285ca36
+    expected_bytes: 737
+    metadata:
+      snapshot_version: 13
+      rows: 80000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 80000
+        duration_hours: 96.02
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-23'
+    description: magicdata-20261023 的相近声音版：同样的 MagicData 多句场景（目标人取自 MagicData train 1017 人，他人一半 MagicData、一半 AISHELL-2，剔除与测试集同文本的句子），约
+      30% 缺席孪生中一半的注册人取目标的相近声音（speaker-neighbors-20261023，ERes2NetV2 余弦最近邻前 10 名之一，候选限于 MagicData 与 AISHELL-2；labels.twin_enrollment=near），另一半随机。原版的孪生全是随机说话人（余弦中位数
+      0.12），040 在 ts-asr-benchmark@v12 上对 MagicData 目标碰上 MagicData 插话人时连带转写的比例从 1.2% 升到 16.9%。
+    sources:
+    - aishell2:legacy-20260804
+    - magicdata:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: xsession-alt-20261023
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/xsession-alt-20261023/records_zh.jsonl.gz
+    sha256: 75fe8cb73af582d4b3ffbd87a11a901cb66c14fbf9668f747a2fb18862363376
+    metadata:
+      record_count: 60000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/xsession-alt-20261023/audio_index_zh.jsonl.gz
+    sha256: d474509d9899b66b4c34aad901e19c82a80086c6019f86a012e64417f8c41351
+    metadata:
+      record_count: 383721
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/xsession-alt-20261023/record_index/index.json
+    sha256: 42ca2b955120549541628b9de239773f34e714dd7396fac883c9532fd6ed6b29
+    expected_bytes: 735
+    metadata:
+      snapshot_version: 13
+      rows: 60000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 60000
+        duration_hours: 83.89
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-23'
+    description: v2-20261016 的 KeSpeech 跨场次版：alternate（轮流不重叠）、burst、short 三种场景，全部在场，目标人取自 KeSpeech train 中同时有普通话与方言录音的 15457
+      人，目标句取自一个场次、注册一半取另一场次（labels.cross_session），他人一半 KeSpeech、一半 AISHELL-2。041 在 ts-asr-benchmark@v12 上对 KeSpeech、MagicData
+      目标把前后紧挨着、不重叠的另一个人也转写进来（交接 15–28%、轮流 18%），而这两个语料库此前只有重叠的 full 场景池，AISHELL-2 目标另有 v2-20261016、hard-20261016、handover-20261021
+      三个轮流场景池。
+    sources:
+    - aishell2:legacy-20260804
+    - kespeech:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: xsession-handover-20261023
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/xsession-handover-20261023/records_zh.jsonl.gz
+    sha256: c70f0314c996506fb9d38816a6b579c191b5f90b0fd339b2b7b9d36cbcac92d0
+    metadata:
+      record_count: 40000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/xsession-handover-20261023/audio_index_zh.jsonl.gz
+    sha256: 5d646cb8271155e2a55c1a70524b257aa09582dc98260eeb4eec0ad591f90ba0
+    metadata:
+      record_count: 87993
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/xsession-handover-20261023/record_index/index.json
+    sha256: e567021eac2980603bd4d086fed17d93f8ab8f57fd6139bc10ad52362b424646
+    expected_bytes: 740
+    metadata:
+      snapshot_version: 13
+      rows: 40000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 40000
+        duration_hours: 58.55
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-23'
+    description: handover-20261021 的 KeSpeech 跨场次版：目标与另一人各说一句、先后不重叠，场次规则同 xsession-alt-20261023；一半插话人取目标的相近声音（speaker-neighbors-20261023，ERes2NetV2
+      最近邻前 10 名之一），约 30% 缺席孪生（同样两句、注册换人，一半取近邻）。041 在 ts-asr-benchmark@v12 上对 KeSpeech、MagicData 目标把前后紧挨着、不重叠的另一个人也转写进来（交接
+      15–28%、轮流 18%），而这两个语料库此前只有重叠的 full 场景池，AISHELL-2 目标另有 v2-20261016、hard-20261016、handover-20261021 三个轮流场景池。
+    sources:
+    - aishell2:legacy-20260804
+    - kespeech:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: magicdata-alt-20261023
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/magicdata-alt-20261023/records_zh.jsonl.gz
+    sha256: 5db2a3f500d124304464d730036d40a7edd63f74fd995afb9d759929d3d9bd6d
+    metadata:
+      record_count: 60000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/magicdata-alt-20261023/audio_index_zh.jsonl.gz
+    sha256: 850f5f4b54c0cc97a1dc66817bc5380e0d2ed1033ce32fbde1732f1d130f727b
+    metadata:
+      record_count: 401383
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/magicdata-alt-20261023/record_index/index.json
+    sha256: 7a8da58e35464ba40e1fc0f61680f1c997f333d8ac54ca8f316a77e9c64f23b0
+    expected_bytes: 736
+    metadata:
+      snapshot_version: 13
+      rows: 60000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 60000
+        duration_hours: 71.03
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-23'
+    description: v2-20261016 的 MagicData 版：alternate（轮流不重叠）、burst、short 三种场景，全部在场，目标人取自 MagicData train 1017 人，他人一半 MagicData、一半
+      AISHELL-2，剔除与测试集同文本的句子。041 在 ts-asr-benchmark@v12 上对 KeSpeech、MagicData 目标把前后紧挨着、不重叠的另一个人也转写进来（交接 15–28%、轮流 18%），而这两个语料库此前只有重叠的
+      full 场景池，AISHELL-2 目标另有 v2-20261016、hard-20261016、handover-20261021 三个轮流场景池。
+    sources:
+    - aishell2:legacy-20260804
+    - magicdata:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: magicdata-handover-20261023
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/magicdata-handover-20261023/records_zh.jsonl.gz
+    sha256: 8eeecf54667d0b9b980db68dbed8252dbfc7a8c666d6c727ec0743fb62df8142
+    metadata:
+      record_count: 40000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/magicdata-handover-20261023/audio_index_zh.jsonl.gz
+    sha256: 4fef4966d08bbed5adfb8275c6d664e59bccabf840b219035c0d36191457714f
+    metadata:
+      record_count: 87820
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/magicdata-handover-20261023/record_index/index.json
+    sha256: ff957f1d049dc07cff552f91dda213ef09c11e02552c6261fd762966ecd23f2b
+    expected_bytes: 741
+    metadata:
+      snapshot_version: 13
+      rows: 40000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 40000
+        duration_hours: 48.56
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-23'
+    description: handover-20261021 的 MagicData 版：目标与另一人各说一句、先后不重叠，剔除与测试集同文本的句子；一半插话人取目标的相近声音（speaker-neighbors-20261023，ERes2NetV2
+      最近邻前 10 名之一），约 30% 缺席孪生（同样两句、注册换人，一半取近邻）。041 在 ts-asr-benchmark@v12 上对 KeSpeech、MagicData 目标把前后紧挨着、不重叠的另一个人也转写进来（交接
+      15–28%、轮流 18%），而这两个语料库此前只有重叠的 full 场景池，AISHELL-2 目标另有 v2-20261016、hard-20261016、handover-20261021 三个轮流场景池。
+    sources:
+    - aishell2:legacy-20260804
+    - magicdata:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: xsession-hard-20261023
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/xsession-hard-20261023/records_zh.jsonl.gz
+    sha256: 77cdcf4c3bf5b3704e8e4f7af113930a0a5757d84e942d13acdb0d73c49ddb0b
+    metadata:
+      record_count: 40000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/xsession-hard-20261023/audio_index_zh.jsonl.gz
+    sha256: a3e47b2c93707e83d61496a507b929d96db77af6cafa281c070ea9781b6910b9
+    metadata:
+      record_count: 281244
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/xsession-hard-20261023/record_index/index.json
+    sha256: 76a85d2d3c970d56bd25fee984ddb941a3e4ad9635bfe33b5a5256eca52d8bd4
+    expected_bytes: 736
+    metadata:
+      snapshot_version: 13
+      rows: 40000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 40000
+        duration_hours: 57.43
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-23'
+    description: hard-20261016 的 KeSpeech 跨场次版：alternate/burst/short 场景，他人之一是目标的相近声音（speaker-neighbors-20261023，ERes2NetV2
+      最近邻前 10 名之一），55% 目标缺席（注册目标、场景里只有相近声音和他人，转写为空），在场时场次规则同 xsession-alt-20261023。042 加上 *-alt-20261023（全部在场）后，ts-asr-benchmark@v12
+      上注册 KeSpeech、MagicData 说话人的缺席样本误输出从 5.2% / 2.4%（041@10000）升到 13.0% / 7.6%（042@5000），多为转写了同语料库的他人；AISHELL-2 目标的轮流场景另有
+      hard-20261016（55% 缺席、近似声音在场）平衡，这两个语料库没有。
+    sources:
+    - aishell2:legacy-20260804
+    - kespeech:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: magicdata-hard-20261023
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/magicdata-hard-20261023/records_zh.jsonl.gz
+    sha256: dc20c8ae2be671b06f1ca7ceba13a9701c2f7ed6c231d57d42da95bfcddbf950
+    metadata:
+      record_count: 40000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/magicdata-hard-20261023/audio_index_zh.jsonl.gz
+    sha256: a545b51e84e9fd2bb817f2c1bebb57960a8a3bfa7441762cfdc855971fc9890c
+    metadata:
+      record_count: 296126
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/magicdata-hard-20261023/record_index/index.json
+    sha256: 261f515838ecf6dacd8fcc8b475153d00d33353fd68c26f3226846421405d7cb
+    expected_bytes: 737
+    metadata:
+      snapshot_version: 13
+      rows: 40000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 40000
+        duration_hours: 47.79
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-23'
+    description: hard-20261016 的 MagicData 版：alternate/burst/short 场景，他人之一是目标的相近声音（speaker-neighbors-20261023，ERes2NetV2 最近邻前
+      10 名之一），55% 目标缺席（转写为空），剔除与测试集同文本的句子。042 加上 *-alt-20261023（全部在场）后，ts-asr-benchmark@v12 上注册 KeSpeech、MagicData 说话人的缺席样本误输出从
+      5.2% / 2.4%（041@10000）升到 13.0% / 7.6%（042@5000），多为转写了同语料库的他人；AISHELL-2 目标的轮流场景另有 hard-20261016（55% 缺席、近似声音在场）平衡，这两个语料库没有。
+    sources:
+    - aishell2:legacy-20260804
+    - magicdata:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: alt-twins-20261024
+  languages:
+  - zh
+  - en
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/alt-twins-20261024/records_zh.jsonl.gz
+    sha256: efd3d31f26c12239f562f60606e1265868286857ca3017b42d8fcf37e5fefa30
+    metadata:
+      record_count: 150000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/alt-twins-20261024/audio_index_zh.jsonl.gz
+    sha256: 357f2b86cf7b0a07109c4c82bb3541c1039c6c4962585da9a174967c356d05ad
+    metadata:
+      record_count: 674194
+  - name: en-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/alt-twins-20261024/records_en.jsonl.gz
+    sha256: 4778e3a6c653213ed90f888849adbc0473f30abe062022979e8de55a254c646d
+    metadata:
+      record_count: 100000
+  - name: en-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/alt-twins-20261024/audio_index_en.jsonl.gz
+    sha256: 39304ba4f6be5e6246facd6fcd484215d4d74b5c3e89bdbc4a7ce76445ffb3bd
+    metadata:
+      record_count: 172419
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/alt-twins-20261024/record_index/index.json
+    sha256: 47a439ecf54925d5eba7cbd66d52bf7aa7fea7e33814f79cb008c74e62e135a7
+    expected_bytes: 1064
+    metadata:
+      snapshot_version: 13
+      rows: 250000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 150000
+        duration_hours: 168.11
+        duration_basis: clip duration (segment span, or the whole file)
+    en:
+      artifacts:
+        records:
+        - en-records
+        audio_index:
+        - en-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 100000
+        duration_hours: 148.3
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-24'
+    description: v2-20261016 的同配方带孪生版：alternate/burst/short 场景（AISHELL-2 / LibriSpeech 目标），30% 为孪生样本，即同一场景换成另一个人注册（一半是 speaker-neighbors-20261016
+      的相近声音），目标为空；注册音频不选与目标同一句的话。起因：轮流说话场景在训练里几乎只有在场（v2-20261016、xsession-alt-20261023、magicdata-alt-20261023 没有缺席样本，hard
+      池的缺席只有交替 / 插话、没有短句），模型学成“其中总有一个是目标”；换成同池另一个人注册后，044@5000 在 xsession-alt 场景仍转写 43%（短句 65%），10.21 版本在 v2 场景 17%，带孪生的多人重叠池
+      4–8%；ts-asr-benchmark@v12 上 KeSpeech 注册人缺席误输出 2.6% → 17.8%。
+    sources:
+    - aishell2:legacy-20260804
+    - kespeech:legacy-20260804
+    - librispeech:legacy-20260804
+    - common_voice_en:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: xsession-alt-twins-20261024
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/xsession-alt-twins-20261024/records_zh.jsonl.gz
+    sha256: 221dc4c30c9a5abf4227069ebd223728ec66046c99995e98ef60642d5b3d5429
+    metadata:
+      record_count: 60000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/xsession-alt-twins-20261024/audio_index_zh.jsonl.gz
+    sha256: da9a6cb9d48af254936d6ce4b0a5b8d24819736c7d5f782409f4b04f1fea4cc6
+    metadata:
+      record_count: 295060
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/xsession-alt-twins-20261024/record_index/index.json
+    sha256: 10fada8ac8430e52b19bf2d630437f0d29e1268bb17fa6fc6a2b6f4921a4d901
+    expected_bytes: 741
+    metadata:
+      snapshot_version: 13
+      rows: 60000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 60000
+        duration_hours: 85.14
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-24'
+    description: xsession-alt-20261023 的同配方带孪生版：KeSpeech 目标的 alternate/burst/short 场景，场次规则同 xsession-alt-20261023，30% 为孪生样本（换成另一个
+      KeSpeech 人注册，一半是 speaker-neighbors-20261023 的相近声音，目标为空）；注册音频不选与目标同一句的话（KeSpeech 两个场次念相同提示句，xsession-alt-20261023 有 1.5%
+      的在场样本注册音频与目标同句）。起因：轮流说话场景在训练里几乎只有在场（v2-20261016、xsession-alt-20261023、magicdata-alt-20261023 没有缺席样本，hard 池的缺席只有交替 /
+      插话、没有短句），模型学成“其中总有一个是目标”；换成同池另一个人注册后，044@5000 在 xsession-alt 场景仍转写 43%（短句 65%），10.21 版本在 v2 场景 17%，带孪生的多人重叠池 4–8%；ts-asr-benchmark@v12
+      上 KeSpeech 注册人缺席误输出 2.6% → 17.8%。
+    sources:
+    - aishell2:legacy-20260804
+    - kespeech:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: magicdata-alt-twins-20261024
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/magicdata-alt-twins-20261024/records_zh.jsonl.gz
+    sha256: 6c2005c5b52dfe5cb88a37f84195193110fffdd36a8423e3b87b32692460f45a
+    metadata:
+      record_count: 60000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/magicdata-alt-twins-20261024/audio_index_zh.jsonl.gz
+    sha256: 9104009deb878479c1534de6ba92ea21e7be63094c47c2e39c92be35cee75a11
+    metadata:
+      record_count: 308519
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/magicdata-alt-twins-20261024/record_index/index.json
+    sha256: aeccc4a6dedabdcdfde7105de5fd78b7aade8379ebcda77b8793252f562a531c
+    expected_bytes: 742
+    metadata:
+      snapshot_version: 13
+      rows: 60000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 60000
+        duration_hours: 71.52
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-24'
+    description: magicdata-alt-20261023 的同配方带孪生版：MagicData 目标的 alternate/burst/short 场景，30% 为孪生样本（换成另一个 MagicData 人注册，一半是
+      speaker-neighbors-20261023 的相近声音，目标为空）。起因：轮流说话场景在训练里几乎只有在场（v2-20261016、xsession-alt-20261023、magicdata-alt-20261023
+      没有缺席样本，hard 池的缺席只有交替 / 插话、没有短句），模型学成“其中总有一个是目标”；换成同池另一个人注册后，044@5000 在 xsession-alt 场景仍转写 43%（短句 65%），10.21 版本在 v2 场景
+      17%，带孪生的多人重叠池 4–8%；ts-asr-benchmark@v12 上 KeSpeech 注册人缺席误输出 2.6% → 17.8%。
+    sources:
+    - aishell2:legacy-20260804
+    - magicdata:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: xsession-hard-twins-20261026
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/xsession-hard-twins-20261026/records_zh.jsonl.gz
+    sha256: f47d6559877a427c24f33d183d94312b7eb02fe097f0c890bbe7a23d5238b639
+    metadata:
+      record_count: 40000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/xsession-hard-twins-20261026/audio_index_zh.jsonl.gz
+    sha256: a3e9279e4628f7ced3b3fc977bd2632912e77dfc2b701462b05328912223a5b8
+    metadata:
+      record_count: 154916
+  - expected_bytes: 742
+    kind: lance-record-index
+    metadata:
+      rows: 40000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+      snapshot_version: 13
+    name: record_index
+    relative_path: datasets/ts_scene_pool/versions/xsession-hard-twins-20261026/record_index/index.json
+    root_alias: aidc_data
+    sha256: 50a128a9f708335bea67425891ce25ec00b0f24fb8d453d37dff1dfa283bc194
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 40000
+        duration_hours: 57.22
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-26'
+    description: xsession-hard-20261023 的带孪生版：KeSpeech 目标的 alternate/burst/short 在场场景，他人之一是目标的相近声音（speaker-neighbors-20261023，ERes2NetV2
+      最近邻前 10 名之一），每个在场场景后跟一条孪生样本（同一场景换成另一个 KeSpeech 人注册，一半是目标的另一个相近声音，目标为空），缺席 50%；注册音频不选与目标同一句的话。起因：原 hard 池的缺席场景是单独的场景、没有短句，也不是某个在场场景的孪生，是最后一类没有孪生的场景；048
+      avg3 在带孪生的场景类别上都好于 10.21 版本，难缺席划分的误输出仍持平或偏高。
+    sources:
+    - aishell2:legacy-20260804
+    - kespeech:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: magicdata-hard-twins-20261026
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/magicdata-hard-twins-20261026/records_zh.jsonl.gz
+    sha256: acc7edaed8f28e12adbc4299de513c5041ac91c1655f2a17ad34060acde713e1
+    metadata:
+      record_count: 40000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/magicdata-hard-twins-20261026/audio_index_zh.jsonl.gz
+    sha256: aa8ea29ec80b06531d8ff07328128d1319c7040a4f07c69cb15c8dc389311ca0
+    metadata:
+      record_count: 166051
+  - expected_bytes: 743
+    kind: lance-record-index
+    metadata:
+      rows: 40000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+      snapshot_version: 13
+    name: record_index
+    relative_path: datasets/ts_scene_pool/versions/magicdata-hard-twins-20261026/record_index/index.json
+    root_alias: aidc_data
+    sha256: e8798d20315a40db76f2734043776d47c9c32b83e9b64ab20aec45e755e2f28c
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 40000
+        duration_hours: 47.88
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-26'
+    description: magicdata-hard-20261023 的带孪生版：MagicData 目标的 alternate/burst/short 在场场景，他人之一是目标的相近声音（speaker-neighbors-20261023，ERes2NetV2
+      最近邻前 10 名之一），每个在场场景后跟一条孪生样本（同一场景换成另一个 MagicData 人注册，一半是目标的另一个相近声音，目标为空），缺席 50%；剔除与测试集同文本的句子。起因同 xsession-hard-twins-20261026：原
+      hard 池的缺席场景不是在场场景的孪生、没有短句，是最后一类没有孪生的场景。
+    sources:
+    - aishell2:legacy-20260804
+    - magicdata:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: hard-twins-20261026
+  languages:
+  - zh
+  - en
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/hard-twins-20261026/records_zh.jsonl.gz
+    sha256: e590283a932ffca9904824d051b809f95e0fd071b4323e35488634238ccecec9
+    metadata:
+      record_count: 40000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/hard-twins-20261026/audio_index_zh.jsonl.gz
+    sha256: 360a04065144026ed92b1dc3371495c1d14c3e0945529ba5709870c59172faaf
+    metadata:
+      record_count: 167738
+  - name: en-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/hard-twins-20261026/records_en.jsonl.gz
+    sha256: 83126c385279c9560f516493777010b791dbdf65f431da7eba8c810983400510
+    metadata:
+      record_count: 25000
+  - name: en-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/hard-twins-20261026/audio_index_en.jsonl.gz
+    sha256: ccfc88cd8ece41a69a13a2566ba6310fb85e48a53b4f1cdda5764bee66118a1b
+    metadata:
+      record_count: 57716
+  - expected_bytes: 1062
+    kind: lance-record-index
+    metadata:
+      rows: 65000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+      snapshot_version: 13
+    name: record_index
+    relative_path: datasets/ts_scene_pool/versions/hard-twins-20261026/record_index/index.json
+    root_alias: aidc_data
+    sha256: dcab9a50d337930419c9861ce3d5e213330f970f410295df23b003ccbddcaef8
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 40000
+        duration_hours: 44.84
+        duration_basis: clip duration (segment span, or the whole file)
+    en:
+      artifacts:
+        records:
+        - en-records
+        audio_index:
+        - en-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 25000
+        duration_hours: 37.07
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-26'
+    description: hard-20261016 的带孪生版：AISHELL-2 / LibriSpeech 目标的 alternate/burst/short 在场场景，他人之一是目标的相近声音（speaker-neighbors-20261016，ERes2NetV2
+      最近邻前 10 名之一），每个在场场景后跟一条孪生样本（同一场景换成另一个人注册，一半是目标的另一个相近声音，目标为空），缺席 50%；注册音频不选与目标同一句的话。起因：原 hard 池的缺席场景是单独的场景、没有短句，也不是某个在场场景的孪生，是最后一类没有孪生的场景；048
+      avg3 在带孪生的场景类别上都好于 10.21 版本，难缺席划分的误输出仍持平或偏高（abs 3.4 对 3.0、realreg 1.6 对 0.8、短片段 11.1 对 10.5）。
+    sources:
+    - aishell2:legacy-20260804
+    - kespeech:legacy-20260804
+    - librispeech:legacy-20260804
+    - common_voice_en:legacy-20260804
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: ramc-near-20261028
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/ramc-near-20261028/records_zh.jsonl.gz
+    sha256: 515223fc8282bc355841dbfb54bebdf10c060a065d869515f619e082685587c3
+    metadata:
+      record_count: 40000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/ramc-near-20261028/audio_index_zh.jsonl.gz
+    sha256: f3447cc0c871f3051a4d4e794cc11781d4af57131783f531125156c2052a1f2b
+    metadata:
+      record_count: 174757
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/ramc-near-20261028/record_index/index.json
+    sha256: 8cc569874615f663e192f841161a3a5dfe48bf9998c207671735d19c5f48b246
+    expected_bytes: 732
+    metadata:
+      snapshot_version: 13
+      rows: 40000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 40000
+        duration_hours: 49.15
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-28'
+    description: magicdata-near-20261023 的 RAMC 版：多句场景（目标说 2–5 句、1–4 个他人各有自己的轨道），约 30% 缺席孪生（同一场景换另一个人注册，目标的话成为干扰、转写为空），孪生注册人一半取目标的相近声音。目标人取自
+      MagicData-RAMC 清洗版 train（magicdata_ramc@clean-dual-pass-20261027：真实手机电话对话，单声道，双模型转写都与人工标注一致的句子），注册取同一人另一句 2.5–8 秒；他人一半
+      RAMC、一半 AISHELL-2。RAMC 每段对话给说话人发新编号，同一个人会挂在几个编号下：声纹（ERes2NetV2，每个编号每段录音取 6 句平均）相似度 ≥ 0.60 的不同编号互斥（不在同一场景里分别当目标和他人/孪生注册人，也不互当相近声音），与
+      dev/test 说话人声纹 ≥ 0.60 的 113 个 train 编号和 17 个 dev/test 编号整体剔除（ramc-voice-identities-20261028）；相近声音取 speaker-neighbors-20261028（候选限于
+      RAMC 与 AISHELL-2）。用来补训练里没有的真实对话说话人：已有 TS 场景池的目标都是朗读语音（AISHELL-2、KeSpeech、MagicData）。
+    sources:
+    - aishell2:legacy-20260804
+    - magicdata_ramc:clean-dual-pass-20261027
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: ramc-alt-twins-20261028
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/ramc-alt-twins-20261028/records_zh.jsonl.gz
+    sha256: 58edbf7cea551f7d7cef8064c14b6f4d6ee01c709367a79e144d3d4e8e3f550c
+    metadata:
+      record_count: 30000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/ramc-alt-twins-20261028/audio_index_zh.jsonl.gz
+    sha256: b205e267d1b22b8976b5689bc15a43176a497ca18654dd67c8c59497ecd1ac5f
+    metadata:
+      record_count: 130951
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/ramc-alt-twins-20261028/record_index/index.json
+    sha256: 7d81cfa906d770452b82b950fcf72d02a3bb582ab68df11dc73b497dc650a32e
+    expected_bytes: 737
+    metadata:
+      snapshot_version: 13
+      rows: 30000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 30000
+        duration_hours: 37.13
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-28'
+    description: magicdata-alt-twins-20261024 的 RAMC 版：交替 / 插话 / 短句场景，约 30% 缺席孪生，孪生注册人一半取相近声音。目标人取自 MagicData-RAMC 清洗版 train（magicdata_ramc@clean-dual-pass-20261027：真实手机电话对话，单声道，双模型转写都与人工标注一致的句子），注册取同一人另一句
+      2.5–8 秒；他人一半 RAMC、一半 AISHELL-2。RAMC 每段对话给说话人发新编号，同一个人会挂在几个编号下：声纹（ERes2NetV2，每个编号每段录音取 6 句平均）相似度 ≥ 0.60 的不同编号互斥（不在同一场景里分别当目标和他人/孪生注册人，也不互当相近声音），与
+      dev/test 说话人声纹 ≥ 0.60 的 113 个 train 编号和 17 个 dev/test 编号整体剔除（ramc-voice-identities-20261028）；相近声音取 speaker-neighbors-20261028（候选限于
+      RAMC 与 AISHELL-2）。用来补训练里没有的真实对话说话人：已有 TS 场景池的目标都是朗读语音（AISHELL-2、KeSpeech、MagicData）。
+    sources:
+    - aishell2:legacy-20260804
+    - magicdata_ramc:clean-dual-pass-20261027
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: ramc-hard-20261028
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/ramc-hard-20261028/records_zh.jsonl.gz
+    sha256: 2a6e60be6ca9e6f7e77629e96a6bf73dcdf704f7af88e5baabff30f7ffa1f885
+    metadata:
+      record_count: 20000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/ramc-hard-20261028/audio_index_zh.jsonl.gz
+    sha256: dd5714acbc0115ec49b88c1c25a7dfc62b67837f221598adc4c2da33b994ab0a
+    metadata:
+      record_count: 127601
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/ramc-hard-20261028/record_index/index.json
+    sha256: 5f1735d8ffc512c15b134d97ae5f56e1e96cb0170052817e2d426fd6363f5023
+    expected_bytes: 732
+    metadata:
+      snapshot_version: 13
+      rows: 20000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 20000
+        duration_hours: 24.87
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-28'
+    description: magicdata-hard-20261023 的 RAMC 版：交替 / 插话 / 短句场景，他人之一是目标的相近声音，55% 目标缺席（转写为空）。目标人取自 MagicData-RAMC 清洗版 train（magicdata_ramc@clean-dual-pass-20261027：真实手机电话对话，单声道，双模型转写都与人工标注一致的句子），注册取同一人另一句
+      2.5–8 秒；他人一半 RAMC、一半 AISHELL-2。RAMC 每段对话给说话人发新编号，同一个人会挂在几个编号下：声纹（ERes2NetV2，每个编号每段录音取 6 句平均）相似度 ≥ 0.60 的不同编号互斥（不在同一场景里分别当目标和他人/孪生注册人，也不互当相近声音），与
+      dev/test 说话人声纹 ≥ 0.60 的 113 个 train 编号和 17 个 dev/test 编号整体剔除（ramc-voice-identities-20261028）；相近声音取 speaker-neighbors-20261028（候选限于
+      RAMC 与 AISHELL-2）。用来补训练里没有的真实对话说话人：已有 TS 场景池的目标都是朗读语音（AISHELL-2、KeSpeech、MagicData）。
+    sources:
+    - aishell2:legacy-20260804
+    - magicdata_ramc:clean-dual-pass-20261027
+- schema_version: dataset-catalog/2.0
+  dataset_id: ts_scene_pool
+  version: ramc-handover-20261028
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: zh-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/ramc-handover-20261028/records_zh.jsonl.gz
+    sha256: 5494317a2d2575b7e6d8e0152c7bcb2fe8755479cdb048d6412c094848feadc9
+    metadata:
+      record_count: 20000
+  - name: zh-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/ramc-handover-20261028/audio_index_zh.jsonl.gz
+    sha256: 21e27f20e0f2c1218a984a88888bcbdd920b9e45dbfff011bb11ecbd27383c53
+    metadata:
+      record_count: 37803
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ts_scene_pool/versions/ramc-handover-20261028/record_index/index.json
+    sha256: 7a0ef65ad7cf56e10e40fd1718ffa8393b2070af3c4a2bfd20e3f447948ea207
+    expected_bytes: 736
+    metadata:
+      snapshot_version: 13
+      rows: 20000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    zh:
+      artifacts:
+        records:
+        - zh-records
+        audio_index:
+        - zh-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 20000
+        duration_hours: 24.86
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-28'
+    description: magicdata-handover-20261023 的 RAMC 版：交接场景（目标与另一人各说一句、前后不重叠、先后随机），另一人一半取相近声音，约 30% 缺席孪生。目标人取自 MagicData-RAMC
+      清洗版 train（magicdata_ramc@clean-dual-pass-20261027：真实手机电话对话，单声道，双模型转写都与人工标注一致的句子），注册取同一人另一句 2.5–8 秒；他人一半 RAMC、一半 AISHELL-2。RAMC
+      每段对话给说话人发新编号，同一个人会挂在几个编号下：声纹（ERes2NetV2，每个编号每段录音取 6 句平均）相似度 ≥ 0.60 的不同编号互斥（不在同一场景里分别当目标和他人/孪生注册人，也不互当相近声音），与 dev/test
+      说话人声纹 ≥ 0.60 的 113 个 train 编号和 17 个 dev/test 编号整体剔除（ramc-voice-identities-20261028）；相近声音取 speaker-neighbors-20261028（候选限于
+      RAMC 与 AISHELL-2）。用来补训练里没有的真实对话说话人：已有 TS 场景池的目标都是朗读语音（AISHELL-2、KeSpeech、MagicData）。
+    sources:
+    - aishell2:legacy-20260804
+    - magicdata_ramc:clean-dual-pass-20261027

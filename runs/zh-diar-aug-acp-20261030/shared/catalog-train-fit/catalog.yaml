@@ -1,0 +1,80 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: aishell4_meeting_sot
+  version: real-meetings-v2-20261010
+  languages:
+  - zh
+  tasks:
+  - speaker_attributed_asr
+  artifacts:
+  - name: train-audio-index
+    kind: jsonl-metadata
+    root_alias: real_meetings_20261010_aishell4
+    relative_path: aishell4-train-audio-index.jsonl.gz
+    sha256: f510a6a2e734940c087b43f65281cfb00bb45c40cb78970b5ec81e083bd27825
+  - name: train_120s-records
+    kind: audio-records
+    root_alias: train_fit_set
+    relative_path: aishell4-train-fit_120s.jsonl.gz
+    sha256: 2961c7cbdddafc44fbefd2afb66ea04b5c823af752bb8a4965acfb84234042c5
+    metadata:
+      record_count: 126
+  splits:
+    train_120s:
+      artifacts:
+        records:
+        - train_120s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 126
+      provenance:
+        training_use: train
+  provenance:
+    source: aishell4
+    source_version: icefall-20260908
+    annotation: human_meeting_annotation+teacher_verified_supplement(moss+qwen3-asr,cer<=10)
+    window_rule: no window contains unverified speech or crosses an identity break
+    clean_pass_not_invented: true
+    training_exclusions: exclude_records zh-v2-train-excluded-records.txt (zh245 selection
+      holdout + empty-target windows) in this version directory
+- schema_version: dataset-catalog/2.0
+  dataset_id: alimeeting_sdm_meeting_sot
+  version: real-meetings-v2-20261010
+  languages:
+  - zh
+  tasks:
+  - speaker_attributed_asr
+  artifacts:
+  - name: train-audio-index
+    kind: jsonl-metadata
+    root_alias: real_meetings_20261010_alimeeting_sdm
+    relative_path: alimeeting_sdm-train-audio-index.jsonl.gz
+    sha256: 0e8fc83b4612c4815f43ea036ad735bf7e8760f8edfb027fc2f527d213907a35
+  - name: train_120s-records
+    kind: audio-records
+    root_alias: train_fit_set
+    relative_path: alimeeting_sdm-train-fit_120s.jsonl.gz
+    sha256: 8b75b5627e9f86ed832b079ef89d9e66bcc23c7ea0256ecf0936ab1bda21161e
+    metadata:
+      record_count: 143
+  splits:
+    train_120s:
+      artifacts:
+        records:
+        - train_120s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 143
+      provenance:
+        training_use: train
+  provenance:
+    source: alimeeting_sdm
+    source_version: icefall-20260908
+    annotation: human_meeting_annotation+teacher_verified_supplement(moss+qwen3-asr,cer<=10)
+    window_rule: no window contains unverified speech or crosses an identity break
+    clean_pass_not_invented: true
+    training_exclusions: exclude_records zh-v2-train-excluded-records.txt (zh245 selection
+      holdout + empty-target windows) in this version directory

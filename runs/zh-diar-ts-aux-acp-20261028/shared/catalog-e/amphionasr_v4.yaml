@@ -1,0 +1,4694 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: aishell4
+  version: turn-taking-20261014
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: test_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/aishell4/versions/turn-taking-20261014/records/test_2spk.jsonl.gz
+    expected_bytes: 150509
+    sha256: 6b0ba4b1af6bf760afd49ab0be4c95d27d6b5176e9c75423efb2aac0638f6dbe
+    metadata:
+      record_count: 857
+  - name: test_3spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/aishell4/versions/turn-taking-20261014/records/test_3spk.jsonl.gz
+    expected_bytes: 190545
+    sha256: e77a1bd674a19d4da8068ba2dcbb0fde62c2bff298bb9da75137829f01c0a3df
+    metadata:
+      record_count: 1367
+  - name: test_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/aishell4/versions/turn-taking-20261014/records/test_neg.jsonl.gz
+    expected_bytes: 93058
+    sha256: ccfdea92616068305962d03ab608c0d81740b1d851ff2d85186276830a46a351
+    metadata:
+      record_count: 1002
+  - name: train_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/aishell4/versions/turn-taking-20261014/records/train_2spk.jsonl.gz
+    expected_bytes: 1809479
+    sha256: 567dbc2cbcf453df9a6b25c3d44bb6b3c9d2e299d72537c2865ff73a7b319e24
+    metadata:
+      record_count: 10506
+  - name: train_3spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/aishell4/versions/turn-taking-20261014/records/train_3spk.jsonl.gz
+    expected_bytes: 2945963
+    sha256: c74f8709c4a30575e58b234c3af903df5a1874cf22520bbeb1aa8dcb16541d46
+    metadata:
+      record_count: 21925
+  - name: train_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/aishell4/versions/turn-taking-20261014/records/train_neg.jsonl.gz
+    expected_bytes: 1328218
+    sha256: 1b4321635b964a00bc3b73e16d484175d54801ad83c955a5a1d62aaf87ebf36d
+    metadata:
+      record_count: 14128
+  - name: audio_index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/aishell4/versions/turn-taking-20261014/audio_index/audio-index.jsonl.gz
+    expected_bytes: 13978
+    sha256: 7740f79f34264edad30ceefa593cf078be42e3c6100384217d7d1ef37f5333f5
+    metadata:
+      record_count: 209
+  - name: duration_distribution
+    kind: statistics
+    root_alias: aidc_data
+    relative_path: datasets/aishell4/versions/turn-taking-20261014/duration_distribution.json
+    expected_bytes: 14625
+    sha256: 302e0e3539ab30a8362e36927e387fd48a6df381ffe8721576a922e1a8336fcd
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/aishell4/versions/turn-taking-20261014/record_index/index.json
+    expected_bytes: 1658
+    sha256: c9615a9a054c94f46337b0614999cc909e23cd3d2ff4cb5fed7f342d348987a9
+    metadata:
+      snapshot_version: 13
+      rows: 49785
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    test_2spk:
+      group: test
+      artifacts:
+        records:
+        - test_2spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 857
+        negative_records: 0
+        duration_hours: 6.07265794166667
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 466
+        unique_mixture_duration_hours: 3.2974292472222237
+        languages:
+          zh: 857
+    test_3spk:
+      group: test
+      artifacts:
+        records:
+        - test_3spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 1367
+        negative_records: 0
+        duration_hours: 8.459919674999991
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 536
+        unique_mixture_duration_hours: 3.232495183333333
+        languages:
+          zh: 1367
+    test_neg:
+      group: test
+      artifacts:
+        records:
+        - test_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 1002
+        negative_records: 1002
+        duration_hours: 6.52992443055556
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 1002
+        unique_mixture_duration_hours: 6.52992443055556
+        languages:
+          zh: 1002
+    train_2spk:
+      group: train
+      artifacts:
+        records:
+        - train_2spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 10506
+        negative_records: 0
+        duration_hours: 73.87919890833342
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 5713
+        unique_mixture_duration_hours: 39.95122642777773
+        languages:
+          zh: 10506
+    train_3spk:
+      group: train
+      artifacts:
+        records:
+        - train_3spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 21925
+        negative_records: 0
+        duration_hours: 135.98402975833346
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 8415
+        unique_mixture_duration_hours: 51.423012883333335
+        languages:
+          zh: 21925
+    train_neg:
+      group: train
+      artifacts:
+        records:
+        - train_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 14128
+        negative_records: 14128
+        duration_hours: 91.37423931111137
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 14128
+        unique_mixture_duration_hours: 91.37423931111137
+        languages:
+          zh: 14128
+    train:
+      artifacts:
+        records:
+        - train_2spk
+        - train_3spk
+        - train_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 46559
+        duration_hours: 301.2374679777783
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 14128
+        unique_mixture_duration_hours: 91.37423931111088
+    test:
+      artifacts:
+        records:
+        - test_2spk
+        - test_3spk
+        - test_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 3226
+        duration_hours: 21.062502047222225
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 1002
+        unique_mixture_duration_hours: 6.529924430555551
+  recipe_parameters:
+    source: aishell4 train_L/test from legacy-20260804 and train_M/train_S from icefall-20260908
+    mixture_seconds:
+    - 0.5
+    - 30.0
+    enrollment_seconds:
+    - 1.0
+    - 30.0
+    min_target_speech_seconds: 1.0
+    max_gap_seconds: 3.0
+    max_speakers: 3
+    window_policy: whole utterances only; gap <= 3s; flush above 30s or above 3 speakers
+    enrollment_policy: a different non-overlapping utterance of 1-30s; same session and speaker first, then same split and speaker; md5 stable pick; far:near = 3:1 when a near file exists
+    negative_policy: one absent-speaker enrollment per kept window; empty target; window dropped without it
+    duration_distribution:
+      mixture_windows:
+        count: 15130
+        hours: 97.90416374166709
+        min: 1.1115
+        p50: 25.665
+        p90: 29.337
+        p99: 29.935
+        max: 30.0
+        mean: 23.295108358889724
+      enrollment_positive:
+        count: 34655
+        hours: 49.818296722221795
+        min: 1.0
+        p50: 4.348
+        p90: 9.938
+        p99: 15.185
+        max: 29.365
+        mean: 5.17518015293604
+      enrollment_negative:
+        count: 15130
+        hours: 22.01548802777776
+        min: 1.0
+        p50: 4.405
+        p90: 10.06
+        p99: 15.39
+        max: 29.365
+        mean: 5.23831836748182
+      enrollment_all:
+        count: 49785
+        hours: 71.8337847500006
+        min: 1.0
+        p50: 4.37
+        p90: 9.986
+        p99: 15.255
+        max: 29.365
+        mean: 5.1943682856282445
+    enroll_channel:
+      far: 49785
+  provenance:
+    description: 会议 turn-taking。整句拼成 2/3 人混合窗，时长 0.5～30 秒。注册音是窗外另一句，1～30 秒。有近场时远场:近场 = 3:1。
+    snapshot_date: '2026-10-14'
+    source: aishell4 train_L/test from legacy-20260804 and train_M/train_S from icefall-20260908
+    rules: AmphionASR-1.7B-v3/scripts/tsasr/build_turn_taking.py
+    quality_status: source_annotations_preserved_not_reaudited
+    load:
+      missing_audio_recordings: 0
+      near_links: 0
+    registered_from: lx 私有登记 /workspace/workspace/lx/data/amphionasr（AmphionASR v4 配方，open-audio-llm feat/amphionasr-v4）；清单原样复制到 aidc_data，root_alias amphionasr→aidc_data；生成脚本快照 /workspace/data/migration/register-amphionasr-v4-20261015/scripts/ (2026-10-15 公共登记)
+- schema_version: dataset-catalog/2.0
+  dataset_id: aishell4
+  version: asr-20261014
+  languages:
+  - zh
+  tasks:
+  - asr
+  aliases: []
+  artifacts:
+  - name: test
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/aishell4/versions/asr-20261014/records/test.jsonl.gz
+    expected_bytes: 576689
+    sha256: a108b8cb76615ec6bf7cf3ce5da13cac9b33b82984bc18ed9d0b7987248edb72
+    metadata:
+      record_count: 10093
+  - name: train
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/aishell4/versions/asr-20261014/records/train.jsonl.gz
+    expected_bytes: 5364749
+    sha256: b754458ad54ecc5ffcf7617d1c91140dce007d7004cf1144b1189cb5211b0dbd
+    metadata:
+      record_count: 96999
+  - name: audio_index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/aishell4/versions/asr-20261014/audio_index/audio-index.jsonl.gz
+    expected_bytes: 13978
+    sha256: 7740f79f34264edad30ceefa593cf078be42e3c6100384217d7d1ef37f5333f5
+    metadata:
+      record_count: 209
+  - name: duration_distribution
+    kind: statistics
+    root_alias: aidc_data
+    relative_path: datasets/aishell4/versions/asr-20261014/duration_distribution.json
+    expected_bytes: 714
+    sha256: 3b14d3d8be68c8cc3e5b09145c032a33fe8cc0f6c4611030d1e8fa951cb83c8a
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/aishell4/versions/asr-20261014/record_index/index.json
+    expected_bytes: 885
+    sha256: 968dd02fa34109e18d227563504a3d72f282e3a9ed211e48e9b31f8958d4fcc7
+    metadata:
+      snapshot_version: 13
+      rows: 107092
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    test:
+      group: test
+      artifacts:
+        records:
+        - test
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 10093
+        duration_hours: 12.052109694444427
+        duration_basis: sum of supervision duration on channel 0; overlapping speakers count once per supervision
+        languages:
+          zh: 10093
+    train:
+      group: train
+      artifacts:
+        records:
+        - train
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 96999
+        duration_hours: 105.36068975000258
+        duration_basis: sum of supervision duration on channel 0; overlapping speakers count once per supervision
+        languages:
+          zh: 96999
+  recipe_parameters:
+    source: aishell4 train_L/test legacy-20260804 and train_M/train_S icefall-20260908
+    duration_seconds:
+    - 0.5
+    - 30.0
+    text_policy: supervision text, ends trimmed; empty text is dropped
+    channel_policy: channel 0, the first array microphone used by the ShareGPT meeting cutter; not a mean downmix
+    audio_policy: records point at the registered recording with start and duration; no new wav is written
+    split_policy: source split is kept; AMI eval meetings are removed from train and the eight present in the local train manifest are eval
+    duration_distribution:
+      test:
+        count: 10093
+        hours: 12.052109694444427
+        min: 0.5005
+        p50: 3.415
+        p90: 9.295
+        p99: 14.404
+        max: 17.9392
+        mean: 4.298780828296834
+      train:
+        count: 96999
+        hours: 105.36068975000258
+        min: 0.5
+        p50: 2.788
+        p90: 8.895
+        p99: 15.128
+        max: 29.6601
+        mean: 3.9103339529274455
+      all:
+        count: 107092
+        hours: 117.41279944444659
+        min: 0.5
+        p50: 2.85
+        p90: 8.93
+        p99: 14.98
+        max: 29.6601
+        mean: 3.9469435438688953
+  provenance:
+    description: 会议普通转写。每条 supervision 一条，时长 0.5～30 秒，文本非空。多通道只取第 0 路。
+    snapshot_date: '2026-10-14'
+    source: aishell4 train_L/test legacy-20260804 and train_M/train_S icefall-20260908
+    rules: AmphionASR-1.7B-v3/scripts/lx/build_meeting_sharegpt.py
+    quality_status: source_annotations_preserved_not_reaudited
+    load:
+      missing_audio_recordings: 0
+      near_links: 0
+    registered_from: lx 私有登记 /workspace/workspace/lx/data/amphionasr（AmphionASR v4 配方，open-audio-llm feat/amphionasr-v4）；清单原样复制到 aidc_data，root_alias amphionasr→aidc_data；生成脚本快照 /workspace/data/migration/register-amphionasr-v4-20261015/scripts/ (2026-10-15 公共登记)
+- schema_version: dataset-catalog/2.0
+  dataset_id: alimeeting_sdm
+  version: turn-taking-20261014
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: eval_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/turn-taking-20261014/records/eval_2spk.jsonl.gz
+    expected_bytes: 66131
+    sha256: 2fe62369a1d2d94566d485ae20a5645d351740795cbcb88d4f864c84f146729b
+    metadata:
+      record_count: 376
+  - name: eval_3spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/turn-taking-20261014/records/eval_3spk.jsonl.gz
+    expected_bytes: 172072
+    sha256: aeb851c9499787c334793f97a799b54f22a319575220196c3eaf7974b41323a7
+    metadata:
+      record_count: 1361
+  - name: eval_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/turn-taking-20261014/records/eval_neg.jsonl.gz
+    expected_bytes: 73451
+    sha256: 0e9e2baf5bfcc032d24cbe4e048fe0052c636473fb99fe2aa5046fe487f03c27
+    metadata:
+      record_count: 822
+  - name: test_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/turn-taking-20261014/records/test_2spk.jsonl.gz
+    expected_bytes: 200686
+    sha256: 72fb78430b54a0ac4bfdbc608cd0ff96459f3ab2e61a88eaff5ddc0d18deff33
+    metadata:
+      record_count: 1185
+  - name: test_3spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/turn-taking-20261014/records/test_3spk.jsonl.gz
+    expected_bytes: 327833
+    sha256: efee8866cedc4b973ca55198ee1587090f4f4998d2ec1c9fdaf1bec4f08ee2a8
+    metadata:
+      record_count: 2614
+  - name: test_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/turn-taking-20261014/records/test_neg.jsonl.gz
+    expected_bytes: 179564
+    sha256: 6adc3ae17cc907f89fa33838071264b20454fc9e9933049b8050a7d299c2c164
+    metadata:
+      record_count: 1820
+  - name: train_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/turn-taking-20261014/records/train_2spk.jsonl.gz
+    expected_bytes: 1697786
+    sha256: bb395ecf0e8a8a90c6ab74435f62cfff80fdb0161dfe003d2d16848f747ea098
+    metadata:
+      record_count: 10020
+  - name: train_3spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/turn-taking-20261014/records/train_3spk.jsonl.gz
+    expected_bytes: 5669954
+    sha256: 2056cc6e103e427d23ba94b3d2166a169edab6df5bd043a1259d077c0d8f0d30
+    metadata:
+      record_count: 47348
+  - name: train_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/turn-taking-20261014/records/train_neg.jsonl.gz
+    expected_bytes: 2876711
+    sha256: 984362c941acb0d354b39200627004912accd989a49f322279b264642382208c
+    metadata:
+      record_count: 26581
+  - name: audio_index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/turn-taking-20261014/audio_index/audio-index.jsonl.gz
+    expected_bytes: 60001
+    sha256: c61e369603b4bd0d2803039027bca855e23f7e1a8b7f42fbcacb1079d52d62f9
+    metadata:
+      record_count: 865
+  - name: duration_distribution
+    kind: statistics
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/turn-taking-20261014/duration_distribution.json
+    expected_bytes: 14523
+    sha256: dde4226561a3eb319b92617a9334c6b118f3ea85edf5948d0df15fc1898442b7
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/turn-taking-20261014/record_index/index.json
+    expected_bytes: 2210
+    sha256: cc3fca9b14986b39d8acbdc2131cb70d987fe54d102df9b73aef951d33166f6b
+    metadata:
+      snapshot_version: 13
+      rows: 92127
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    eval_2spk:
+      group: eval
+      artifacts:
+        records:
+        - eval_2spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 376
+        negative_records: 0
+        duration_hours: 2.7946611111111133
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 200
+        unique_mixture_duration_hours: 1.4563305555555561
+        languages:
+          zh: 376
+    eval_3spk:
+      group: eval
+      artifacts:
+        records:
+        - eval_3spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 1361
+        negative_records: 0
+        duration_hours: 6.437050000000012
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 622
+        unique_mixture_duration_hours: 2.775713888888889
+        languages:
+          zh: 1361
+    eval_neg:
+      group: eval
+      artifacts:
+        records:
+        - eval_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 822
+        negative_records: 822
+        duration_hours: 4.232044444444446
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 822
+        unique_mixture_duration_hours: 4.232044444444446
+        languages:
+          zh: 822
+    test_2spk:
+      group: test
+      artifacts:
+        records:
+        - test_2spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 1185
+        negative_records: 0
+        duration_hours: 8.95461944444445
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 617
+        unique_mixture_duration_hours: 4.603605555555554
+        languages:
+          zh: 1185
+    test_3spk:
+      group: test
+      artifacts:
+        records:
+        - test_3spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 2614
+        negative_records: 0
+        duration_hours: 12.126127777777784
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 1203
+        unique_mixture_duration_hours: 5.221344444444443
+        languages:
+          zh: 2614
+    test_neg:
+      group: test
+      artifacts:
+        records:
+        - test_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 1820
+        negative_records: 1820
+        duration_hours: 9.824950000000008
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 1820
+        unique_mixture_duration_hours: 9.824950000000008
+        languages:
+          zh: 1820
+    train_2spk:
+      group: train
+      artifacts:
+        records:
+        - train_2spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 10020
+        negative_records: 0
+        duration_hours: 72.29382479166655
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 5247
+        unique_mixture_duration_hours: 36.96249017361117
+        languages:
+          zh: 10020
+    train_3spk:
+      group: train
+      artifacts:
+        records:
+        - train_3spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 47348
+        negative_records: 0
+        duration_hours: 191.84133104166796
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 21334
+        unique_mixture_duration_hours: 82.2226377430554
+        languages:
+          zh: 47348
+    train_neg:
+      group: train
+      artifacts:
+        records:
+        - train_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 26581
+        negative_records: 26581
+        duration_hours: 119.18512791666619
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 26581
+        unique_mixture_duration_hours: 119.18512791666619
+        languages:
+          zh: 26581
+    train:
+      artifacts:
+        records:
+        - train_2spk
+        - train_3spk
+        - train_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 83949
+        duration_hours: 383.3202837500007
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 26581
+        unique_mixture_duration_hours: 119.18512791666627
+    eval:
+      artifacts:
+        records:
+        - eval_2spk
+        - eval_3spk
+        - eval_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 2559
+        duration_hours: 13.46375555555557
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 822
+        unique_mixture_duration_hours: 4.232044444444445
+    test:
+      artifacts:
+        records:
+        - test_2spk
+        - test_3spk
+        - test_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 5619
+        duration_hours: 30.90569722222224
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 1820
+        unique_mixture_duration_hours: 9.824949999999983
+  recipe_parameters:
+    source: alimeeting_sdm@icefall-20260908 plus registered AliMeeting near-field wavs
+    mixture_seconds:
+    - 0.5
+    - 30.0
+    enrollment_seconds:
+    - 1.0
+    - 30.0
+    min_target_speech_seconds: 1.0
+    max_gap_seconds: 3.0
+    max_speakers: 3
+    window_policy: whole utterances only; gap <= 3s; flush above 30s or above 3 speakers
+    enrollment_policy: a different non-overlapping utterance of 1-30s; same session and speaker first, then same split and speaker; md5 stable pick; far:near = 3:1 when a near file exists
+    negative_policy: one absent-speaker enrollment per kept window; empty target; window dropped without it
+    duration_distribution:
+      mixture_windows:
+        count: 29223
+        hours: 133.24212236111077
+        min: 1.0
+        p50: 14.64
+        p90: 28.75
+        p99: 29.88
+        max: 30.0
+        mean: 16.41418199705707
+      enrollment_positive:
+        count: 62904
+        hours: 63.956636111111045
+        min: 1.0
+        p50: 2.54
+        p90: 7.9
+        p99: 13.89
+        max: 16.74
+        mean: 3.660242432913642
+      enrollment_negative:
+        count: 29223
+        hours: 27.850374999999893
+        min: 1.0
+        p50: 2.47
+        p90: 6.95
+        p99: 13.77
+        max: 16.74
+        mean: 3.4309054511856965
+      enrollment_all:
+        count: 92127
+        hours: 91.80701111111259
+        min: 1.0
+        p50: 2.51
+        p90: 7.82
+        p99: 13.78
+        max: 16.74
+        mean: 3.5874959566685694
+    enroll_channel:
+      far: 68944
+      near: 23183
+  provenance:
+    description: 会议 turn-taking。整句拼成 2/3 人混合窗，时长 0.5～30 秒。注册音是窗外另一句，1～30 秒。有近场时远场:近场 = 3:1。
+    snapshot_date: '2026-10-14'
+    source: alimeeting_sdm@icefall-20260908 plus registered AliMeeting near-field wavs
+    rules: AmphionASR-1.7B-v3/scripts/tsasr/build_turn_taking.py
+    quality_status: source_annotations_preserved_not_reaudited
+    load:
+      missing_audio_recordings: 0
+      near_links: 768
+    registered_from: lx 私有登记 /workspace/workspace/lx/data/amphionasr（AmphionASR v4 配方，open-audio-llm feat/amphionasr-v4）；清单原样复制到 aidc_data，root_alias amphionasr→aidc_data；生成脚本快照 /workspace/data/migration/register-amphionasr-v4-20261015/scripts/ (2026-10-15 公共登记)
+- schema_version: dataset-catalog/2.0
+  dataset_id: alimeeting_sdm
+  version: asr-20261014
+  languages:
+  - zh
+  tasks:
+  - asr
+  aliases: []
+  artifacts:
+  - name: eval
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/asr-20261014/records/eval.jsonl.gz
+    expected_bytes: 262015
+    sha256: 2c3fecc320b3a5baafb9b0e148854ef881da2ce4ef190d5929c2d993e2ecd8a6
+    metadata:
+      record_count: 5193
+  - name: test
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/asr-20261014/records/test.jsonl.gz
+    expected_bytes: 683112
+    sha256: 472dc179883a1dcb1b5947840574c70e1e80c797b3e574e053235bbb1ba10e1d
+    metadata:
+      record_count: 13683
+  - name: train
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/asr-20261014/records/train.jsonl.gz
+    expected_bytes: 7729072
+    sha256: 18a8d7840e4d5118d12fac4365fd297009f5ebd38a6c98063a4d5ae064be1e98
+    metadata:
+      record_count: 152368
+  - name: audio_index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/asr-20261014/audio_index/audio-index.jsonl.gz
+    expected_bytes: 16233
+    sha256: 0c787c89ff42b1e074eb4b7a2bce0d71e47a715fde7014bfd4000054ac842b0f
+    metadata:
+      record_count: 237
+  - name: duration_distribution
+    kind: statistics
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/asr-20261014/duration_distribution.json
+    expected_bytes: 883
+    sha256: a9deb2eadc8a71da4c3c93c55f0ee2baddce93be12b59168d49465f509a6ff9b
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/asr-20261014/record_index/index.json
+    expected_bytes: 1059
+    sha256: 30db0f432a5f090bf8b3e2fe92f3423317729b6698e058884c2a1856cc279251
+    metadata:
+      snapshot_version: 13
+      rows: 171244
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    eval:
+      group: eval
+      artifacts:
+        records:
+        - eval
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 5193
+        duration_hours: 4.774750000000005
+        duration_basis: sum of supervision duration on channel 0; overlapping speakers count once per supervision
+        languages:
+          zh: 5193
+    test:
+      group: test
+      artifacts:
+        records:
+        - test
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 13683
+        duration_hours: 12.203622222222226
+        duration_basis: sum of supervision duration on channel 0; overlapping speakers count once per supervision
+        languages:
+          zh: 13683
+    train:
+      group: train
+      artifacts:
+        records:
+        - train
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 152368
+        duration_hours: 137.2708044097266
+        duration_basis: sum of supervision duration on channel 0; overlapping speakers count once per supervision
+        languages:
+          zh: 152368
+  recipe_parameters:
+    source: alimeeting_sdm@icefall-20260908
+    duration_seconds:
+    - 0.5
+    - 30.0
+    text_policy: supervision text, ends trimmed; empty text is dropped
+    channel_policy: channel 0, the first array microphone used by the ShareGPT meeting cutter; not a mean downmix
+    audio_policy: records point at the registered recording with start and duration; no new wav is written
+    split_policy: source split is kept; AMI eval meetings are removed from train and the eight present in the local train manifest are eval
+    duration_distribution:
+      eval:
+        count: 5193
+        hours: 4.774750000000005
+        min: 0.5
+        p50: 2.11
+        p90: 8.07
+        p99: 13.86
+        max: 15.76
+        mean: 3.310051993067595
+      test:
+        count: 13683
+        hours: 12.203622222222226
+        min: 0.5
+        p50: 2.15
+        p90: 7.3
+        p99: 13.82
+        max: 15.7
+        mean: 3.210775414748229
+      train:
+        count: 152368
+        hours: 137.2708044097266
+        min: 0.5
+        p50: 2.22
+        p90: 7.37
+        p99: 13.79
+        max: 26.81
+        mean: 3.243298434546727
+      all:
+        count: 171244
+        hours: 154.24917663195174
+        min: 0.5
+        p50: 2.21
+        p90: 7.39
+        p99: 13.8
+        max: 26.81
+        mean: 3.2427240421563748
+  provenance:
+    description: 会议普通转写。每条 supervision 一条，时长 0.5～30 秒，文本非空。多通道只取第 0 路。
+    snapshot_date: '2026-10-14'
+    source: alimeeting_sdm@icefall-20260908
+    rules: AmphionASR-1.7B-v3/scripts/lx/build_meeting_sharegpt.py
+    quality_status: source_annotations_preserved_not_reaudited
+    load:
+      missing_audio_recordings: 0
+      near_links: 768
+    registered_from: lx 私有登记 /workspace/workspace/lx/data/amphionasr（AmphionASR v4 配方，open-audio-llm feat/amphionasr-v4）；清单原样复制到 aidc_data，root_alias amphionasr→aidc_data；生成脚本快照 /workspace/data/migration/register-amphionasr-v4-20261015/scripts/ (2026-10-15 公共登记)
+- schema_version: dataset-catalog/2.0
+  dataset_id: ami_sdm
+  version: turn-taking-20261014
+  languages:
+  - en
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: eval_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/turn-taking-20261014/records/eval_2spk.jsonl.gz
+    expected_bytes: 39032
+    sha256: 3e51e71a7637f57e456487dc2e40f085a49c506563076da088bfa55444e2dddd
+    metadata:
+      record_count: 236
+  - name: eval_3spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/turn-taking-20261014/records/eval_3spk.jsonl.gz
+    expected_bytes: 172092
+    sha256: e7c6e97c0407c47e1331bf5a2160d253414183a15a99679f04514d1d7bcba572
+    metadata:
+      record_count: 1437
+  - name: eval_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/turn-taking-20261014/records/eval_neg.jsonl.gz
+    expected_bytes: 57652
+    sha256: 11663363c14ef346b8d57246e53e33cad031d12021d6dd7661267350cc9d8909
+    metadata:
+      record_count: 746
+  - name: test_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/turn-taking-20261014/records/test_2spk.jsonl.gz
+    expected_bytes: 77138
+    sha256: dcad4c7afec5968ac1d76155ce0ae76fe5154984758b68e321c0daf7ed9627b6
+    metadata:
+      record_count: 466
+  - name: test_3spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/turn-taking-20261014/records/test_3spk.jsonl.gz
+    expected_bytes: 317307
+    sha256: 01f49ff3b06d55e9d06b91b0996afbaab70afce5e2108ea5511c04d8deb1f5e5
+    metadata:
+      record_count: 2513
+  - name: test_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/turn-taking-20261014/records/test_neg.jsonl.gz
+    expected_bytes: 108590
+    sha256: 0a36a6b121a379ed765398cd2f5c1140f64e79435b4ad40bdcaf4afce5c91137
+    metadata:
+      record_count: 1380
+  - name: train_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/turn-taking-20261014/records/train_2spk.jsonl.gz
+    expected_bytes: 825512
+    sha256: c39f37d074d27239ec3bc0a1a183231bf4a544cda7e90e9146ce77b87a90f69d
+    metadata:
+      record_count: 5081
+  - name: train_3spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/turn-taking-20261014/records/train_3spk.jsonl.gz
+    expected_bytes: 2940822
+    sha256: 222e3a3137f4d984a9f5ab48a06f46b10043380cae7d199d8e5cc2c248523d02
+    metadata:
+      record_count: 23853
+  - name: train_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/turn-taking-20261014/records/train_neg.jsonl.gz
+    expected_bytes: 1016500
+    sha256: eef4e2b836fc679aaf84de8d4b8c446dc1287e08099dd99b367572db2e3a4429
+    metadata:
+      record_count: 13117
+  - name: audio_index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/turn-taking-20261014/audio_index/audio-index.jsonl.gz
+    expected_bytes: 11708
+    sha256: d3160c9de5f7009e0b75c90ca4f39e336967007c065f9418164e84feca2f4656
+    metadata:
+      record_count: 168
+  - name: duration_distribution
+    kind: statistics
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/turn-taking-20261014/duration_distribution.json
+    expected_bytes: 14636
+    sha256: cb29d721e26346db1b9bedb50ef78281ff0f623459c7e1e659ef5e0aa147dc10
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/turn-taking-20261014/record_index/index.json
+    expected_bytes: 2201
+    sha256: e4220347d86ac3dcf632ac269fd4bd47692e9ac54a45628126973a0c48adf6ba
+    metadata:
+      snapshot_version: 13
+      rows: 48829
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    eval_2spk:
+      group: eval
+      artifacts:
+        records:
+        - eval_2spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 236
+        negative_records: 0
+        duration_hours: 1.4220166666666665
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 146
+        unique_mixture_duration_hours: 0.8543805555555556
+        languages:
+          en: 236
+    eval_3spk:
+      group: eval
+      artifacts:
+        records:
+        - eval_3spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 1437
+        negative_records: 0
+        duration_hours: 7.294661111111104
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 600
+        unique_mixture_duration_hours: 2.923722222222223
+        languages:
+          en: 1437
+    eval_neg:
+      group: eval
+      artifacts:
+        records:
+        - eval_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 746
+        negative_records: 746
+        duration_hours: 3.7781027777777814
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 746
+        unique_mixture_duration_hours: 3.7781027777777814
+        languages:
+          en: 746
+    test_2spk:
+      group: test
+      artifacts:
+        records:
+        - test_2spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 466
+        negative_records: 0
+        duration_hours: 2.648674999999996
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 290
+        unique_mixture_duration_hours: 1.6174888888888892
+        languages:
+          en: 466
+    test_3spk:
+      group: test
+      artifacts:
+        records:
+        - test_3spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 2513
+        negative_records: 0
+        duration_hours: 13.213494444444429
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 1090
+        unique_mixture_duration_hours: 5.472238888888894
+        languages:
+          en: 2513
+    test_neg:
+      group: test
+      artifacts:
+        records:
+        - test_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 1380
+        negative_records: 1380
+        duration_hours: 7.089727777777772
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 1380
+        unique_mixture_duration_hours: 7.089727777777772
+        languages:
+          en: 1380
+    train_2spk:
+      group: train
+      artifacts:
+        records:
+        - train_2spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 5081
+        negative_records: 0
+        duration_hours: 30.19728888888889
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 3077
+        unique_mixture_duration_hours: 17.87606944444443
+        languages:
+          en: 5081
+    train_3spk:
+      group: train
+      artifacts:
+        records:
+        - train_3spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 23853
+        negative_records: 0
+        duration_hours: 125.33356111111075
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 10040
+        unique_mixture_duration_hours: 50.45296111111095
+        languages:
+          en: 23853
+    train_neg:
+      group: train
+      artifacts:
+        records:
+        - train_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 13117
+        negative_records: 13117
+        duration_hours: 68.32903055555565
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 13117
+        unique_mixture_duration_hours: 68.32903055555565
+        languages:
+          en: 13117
+    train:
+      artifacts:
+        records:
+        - train_2spk
+        - train_3spk
+        - train_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 42051
+        duration_hours: 223.85988055555532
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 13117
+        unique_mixture_duration_hours: 68.32903055555578
+    eval:
+      artifacts:
+        records:
+        - eval_2spk
+        - eval_3spk
+        - eval_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 2419
+        duration_hours: 12.49478055555555
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 746
+        unique_mixture_duration_hours: 3.77810277777778
+    test:
+      artifacts:
+        records:
+        - test_2spk
+        - test_3spk
+        - test_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 4359
+        duration_hours: 22.951897222222193
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 1380
+        unique_mixture_duration_hours: 7.089727777777772
+  recipe_parameters:
+    source: ami_sdm@icefall-20260908
+    mixture_seconds:
+    - 0.5
+    - 30.0
+    enrollment_seconds:
+    - 1.0
+    - 30.0
+    min_target_speech_seconds: 1.0
+    max_gap_seconds: 3.0
+    max_speakers: 3
+    window_policy: whole utterances only; gap <= 3s; flush above 30s or above 3 speakers
+    enrollment_policy: a different non-overlapping utterance of 1-30s; same session and speaker first, then same split and speaker; md5 stable pick; far:near = 3:1 when a near file exists
+    negative_policy: one absent-speaker enrollment per kept window; empty target; window dropped without it
+    duration_distribution:
+      mixture_windows:
+        count: 15243
+        hours: 79.19686111111122
+        min: 1.02
+        p50: 20.91
+        p90: 29.05
+        p99: 29.91
+        max: 30.0
+        mean: 18.70423801089027
+      enrollment_positive:
+        count: 33586
+        hours: 36.23042722222192
+        min: 1.0
+        p50: 2.93
+        p90: 7.96
+        p99: 13.28
+        max: 24.3
+        mean: 3.883449592091911
+      enrollment_negative:
+        count: 15243
+        hours: 16.654419444444482
+        min: 1.0
+        p50: 3.0
+        p90: 8.04
+        p99: 13.1
+        max: 27.55
+        mean: 3.9333405497605547
+      enrollment_all:
+        count: 48829
+        hours: 52.88484666666689
+        min: 1.0
+        p50: 2.95
+        p90: 7.99
+        p99: 13.17
+        max: 27.55
+        mean: 3.899024104528063
+    enroll_channel:
+      far: 48829
+  provenance:
+    description: 会议 turn-taking。整句拼成 2/3 人混合窗，时长 0.5～30 秒。注册音是窗外另一句，1～30 秒。有近场时远场:近场 = 3:1。
+    snapshot_date: '2026-10-14'
+    source: ami_sdm@icefall-20260908
+    rules: AmphionASR-1.7B-v3/scripts/tsasr/build_turn_taking.py
+    quality_status: source_annotations_preserved_not_reaudited
+    load:
+      missing_audio_recordings: 0
+      near_links: 0
+      note: Registered AMI source has SDM array audio only; headset enrollment is unavailable, so enrollment stays far-field.
+    registered_from: lx 私有登记 /workspace/workspace/lx/data/amphionasr（AmphionASR v4 配方，open-audio-llm feat/amphionasr-v4）；清单原样复制到 aidc_data，root_alias amphionasr→aidc_data；生成脚本快照 /workspace/data/migration/register-amphionasr-v4-20261015/scripts/ (2026-10-15 公共登记)
+- schema_version: dataset-catalog/2.0
+  dataset_id: ami_sdm
+  version: asr-20261014
+  languages:
+  - en
+  tasks:
+  - asr
+  aliases: []
+  artifacts:
+  - name: eval
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/asr-20261014/records/eval.jsonl.gz
+    expected_bytes: 235534
+    sha256: b0ec386da0d8728d33eceacac6bedab3decde7c37817aaeb7b530872e54643e0
+    metadata:
+      record_count: 4955
+  - name: test
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/asr-20261014/records/test.jsonl.gz
+    expected_bytes: 442816
+    sha256: 1c83e4768604ce80362b31885047c50490e6425eb210d9e49e2c6ae231ac5e00
+    metadata:
+      record_count: 9309
+  - name: train
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/asr-20261014/records/train.jsonl.gz
+    expected_bytes: 4089015
+    sha256: e233a833e4df8010b41ccd09eada6b987a4657af327588a3abe124c65b850eb5
+    metadata:
+      record_count: 85414
+  - name: audio_index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/asr-20261014/audio_index/audio-index.jsonl.gz
+    expected_bytes: 11708
+    sha256: d3160c9de5f7009e0b75c90ca4f39e336967007c065f9418164e84feca2f4656
+    metadata:
+      record_count: 168
+  - name: duration_distribution
+    kind: statistics
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/asr-20261014/duration_distribution.json
+    expected_bytes: 983
+    sha256: 024a41b4698ee84324d66f74082dd840d02cab8aeb184514a70e8e171685659a
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/asr-20261014/record_index/index.json
+    expected_bytes: 1049
+    sha256: d9dd073c2d2a471c1f40a3244fdd93d6981bd340e6aa3f78b47fa846f1d5c69e
+    metadata:
+      snapshot_version: 13
+      rows: 99678
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    eval:
+      group: eval
+      artifacts:
+        records:
+        - eval
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 4955
+        duration_hours: 4.442869444444454
+        duration_basis: sum of supervision duration on channel 0; overlapping speakers count once per supervision
+        languages:
+          en: 4955
+    test:
+      group: test
+      artifacts:
+        records:
+        - test
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 9309
+        duration_hours: 8.281280555555563
+        duration_basis: sum of supervision duration on channel 0; overlapping speakers count once per supervision
+        languages:
+          en: 9309
+    train:
+      group: train
+      artifacts:
+        records:
+        - train
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 85414
+        duration_hours: 76.90061750000098
+        duration_basis: sum of supervision duration on channel 0; overlapping speakers count once per supervision
+        languages:
+          en: 85414
+  recipe_parameters:
+    source: ami_sdm@icefall-20260908
+    duration_seconds:
+    - 0.5
+    - 30.0
+    text_policy: supervision text, ends trimmed; empty text is dropped
+    channel_policy: channel 0, the first array microphone used by the ShareGPT meeting cutter; not a mean downmix
+    audio_policy: records point at the registered recording with start and duration; no new wav is written
+    split_policy: source split is kept; AMI eval meetings are removed from train and the eight present in the local train manifest are eval
+    duration_distribution:
+      eval:
+        count: 4955
+        hours: 4.442869444444454
+        min: 0.5
+        p50: 2.31
+        p90: 7.23
+        p99: 12.05
+        max: 21.5
+        mean: 3.227917255297686
+      test:
+        count: 9309
+        hours: 8.281280555555563
+        min: 0.5
+        p50: 2.23
+        p90: 7.17
+        p99: 12.45
+        max: 26.17
+        mean: 3.202557739821681
+      train:
+        count: 85414
+        hours: 76.90061750000098
+        min: 0.5
+        p50: 2.27
+        p90: 7.27
+        p99: 12.45
+        max: 27.81
+        mean: 3.2411808719882393
+      all:
+        count: 99678
+        hours: 89.62476750000096
+        min: 0.5
+        p50: 2.26
+        p90: 7.26
+        p99: 12.43
+        max: 27.81
+        mean: 3.236914494672881
+  provenance:
+    description: 会议普通转写。每条 supervision 一条，时长 0.5～30 秒，文本非空。多通道只取第 0 路。
+    snapshot_date: '2026-10-14'
+    source: ami_sdm@icefall-20260908
+    rules: AmphionASR-1.7B-v3/scripts/lx/build_meeting_sharegpt.py
+    quality_status: source_annotations_preserved_not_reaudited
+    load:
+      missing_audio_recordings: 0
+      near_links: 0
+      note: Registered AMI source has SDM array audio only; headset enrollment is unavailable, so enrollment stays far-field.
+    registered_from: lx 私有登记 /workspace/workspace/lx/data/amphionasr（AmphionASR v4 配方，open-audio-llm feat/amphionasr-v4）；清单原样复制到 aidc_data，root_alias amphionasr→aidc_data；生成脚本快照 /workspace/data/migration/register-amphionasr-v4-20261015/scripts/ (2026-10-15 公共登记)
+- schema_version: dataset-catalog/2.0
+  dataset_id: chime6
+  version: turn-taking-20261014
+  languages:
+  - en
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: eval_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/chime6/versions/turn-taking-20261014/records/eval_2spk.jsonl.gz
+    expected_bytes: 10812
+    sha256: ca5330546c508cbb45268616aa91a8c30e65c5eabd5e42ebd28c6daa1cdc9727
+    metadata:
+      record_count: 74
+  - name: eval_3spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/chime6/versions/turn-taking-20261014/records/eval_3spk.jsonl.gz
+    expected_bytes: 361958
+    sha256: d1b849d62a9f96a82227b12c32974cc2e90778ce7d419b2d6327e3c3306fd309
+    metadata:
+      record_count: 3040
+  - name: eval_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/chime6/versions/turn-taking-20261014/records/eval_neg.jsonl.gz
+    expected_bytes: 96627
+    sha256: 865781edb6820b102ce307009e1d415ae0d9db126d2aad675d94e6b8a828cc6a
+    metadata:
+      record_count: 1214
+  - name: test_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/chime6/versions/turn-taking-20261014/records/test_2spk.jsonl.gz
+    expected_bytes: 21111
+    sha256: 6fb90ac585ff3a5f82683332078aa56458c3c88470ca9bbff858535e2b3c6db0
+    metadata:
+      record_count: 168
+  - name: test_3spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/chime6/versions/turn-taking-20261014/records/test_3spk.jsonl.gz
+    expected_bytes: 414637
+    sha256: 0762fc9679a7017c5f14c21b8149c23a03b1418113f7f287378a3cf26b3427aa
+    metadata:
+      record_count: 3812
+  - name: test_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/chime6/versions/turn-taking-20261014/records/test_neg.jsonl.gz
+    expected_bytes: 135659
+    sha256: 2cf212f6554e4649ce5991748a4368f3e394f53f7ec81e9e6bd698b15353086f
+    metadata:
+      record_count: 1641
+  - name: train_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/chime6/versions/turn-taking-20261014/records/train_2spk.jsonl.gz
+    expected_bytes: 155258
+    sha256: 48c19799dba68f72067c15a91c51c655df0a6d324c2b2eae74cc2d5fc45fbd42
+    metadata:
+      record_count: 1181
+  - name: train_3spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/chime6/versions/turn-taking-20261014/records/train_3spk.jsonl.gz
+    expected_bytes: 2911525
+    sha256: 5a34e045b10666ce75cd63bbdd869f9db24acd81aa74bbf5b40933146b8830e0
+    metadata:
+      record_count: 25258
+  - name: train_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/chime6/versions/turn-taking-20261014/records/train_neg.jsonl.gz
+    expected_bytes: 917312
+    sha256: cf530a3c017367f825439f6322cfc72dd716e5f9e6a5aade32bc1b79b6613c0d
+    metadata:
+      record_count: 10959
+  - name: audio_index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/chime6/versions/turn-taking-20261014/audio_index/audio-index.jsonl.gz
+    expected_bytes: 6720
+    sha256: c286669a3114f8c850a62fc12bff5bdf21b3e7c4ef458559321eaddf51772d12
+    metadata:
+      record_count: 100
+  - name: duration_distribution
+    kind: statistics
+    root_alias: aidc_data
+    relative_path: datasets/chime6/versions/turn-taking-20261014/duration_distribution.json
+    expected_bytes: 14407
+    sha256: 6ee51771a4e6609a457dc04f68e52fdcf4fa2fb8b1003ff10135304740137a82
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/chime6/versions/turn-taking-20261014/record_index/index.json
+    expected_bytes: 2200
+    sha256: fcd1bd5c00132e686d3d9a2d16eece95c56bdd59a56b032d383ab5d9af6f4433
+    metadata:
+      snapshot_version: 13
+      rows: 47347
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    eval_2spk:
+      group: eval
+      artifacts:
+        records:
+        - eval_2spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 74
+        negative_records: 0
+        duration_hours: 0.250338888888889
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 46
+        unique_mixture_duration_hours: 0.13751388888888888
+        languages:
+          en: 74
+    eval_3spk:
+      group: eval
+      artifacts:
+        records:
+        - eval_3spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 3040
+        negative_records: 0
+        duration_hours: 12.528538888888853
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 1168
+        unique_mixture_duration_hours: 4.652175000000001
+        languages:
+          en: 3040
+    eval_neg:
+      group: eval
+      artifacts:
+        records:
+        - eval_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 1214
+        negative_records: 1214
+        duration_hours: 4.789688888888892
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 1214
+        unique_mixture_duration_hours: 4.789688888888892
+        languages:
+          en: 1214
+    test_2spk:
+      group: test
+      artifacts:
+        records:
+        - test_2spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 168
+        negative_records: 0
+        duration_hours: 0.42857777777777767
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 97
+        unique_mixture_duration_hours: 0.2290583333333333
+        languages:
+          en: 168
+    test_3spk:
+      group: test
+      artifacts:
+        records:
+        - test_3spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 3812
+        negative_records: 0
+        duration_hours: 12.727613888888833
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 1544
+        unique_mixture_duration_hours: 4.845622222222229
+        languages:
+          en: 3812
+    test_neg:
+      group: test
+      artifacts:
+        records:
+        - test_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 1641
+        negative_records: 1641
+        duration_hours: 5.074680555555572
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 1641
+        unique_mixture_duration_hours: 5.074680555555572
+        languages:
+          en: 1641
+    train_2spk:
+      group: train
+      artifacts:
+        records:
+        - train_2spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 1181
+        negative_records: 0
+        duration_hours: 3.614050000000001
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 719
+        unique_mixture_duration_hours: 2.0129527777777767
+        languages:
+          en: 1181
+    train_3spk:
+      group: train
+      artifacts:
+        records:
+        - train_3spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 25258
+        negative_records: 0
+        duration_hours: 96.33742777777977
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 10240
+        unique_mixture_duration_hours: 36.68665555555553
+        languages:
+          en: 25258
+    train_neg:
+      group: train
+      artifacts:
+        records:
+        - train_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 10959
+        negative_records: 10959
+        duration_hours: 38.69960833333325
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 10959
+        unique_mixture_duration_hours: 38.69960833333325
+        languages:
+          en: 10959
+    train:
+      artifacts:
+        records:
+        - train_2spk
+        - train_3spk
+        - train_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 37398
+        duration_hours: 138.65108611111302
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 10959
+        unique_mixture_duration_hours: 38.69960833333325
+    eval:
+      artifacts:
+        records:
+        - eval_2spk
+        - eval_3spk
+        - eval_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 4328
+        duration_hours: 17.568566666666637
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 1214
+        unique_mixture_duration_hours: 4.789688888888894
+    test:
+      artifacts:
+        records:
+        - test_2spk
+        - test_3spk
+        - test_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 5621
+        duration_hours: 18.23087222222218
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 1641
+        unique_mixture_duration_hours: 5.074680555555572
+  recipe_parameters:
+    source: chime6@speaker-records-v1-20260912 extracted U01.CH1 mixtures and speaker wavs
+    mixture_seconds:
+    - 0.5
+    - 30.0
+    enrollment_seconds:
+    - 1.0
+    - 30.0
+    min_target_speech_seconds: 1.0
+    max_gap_seconds: 3.0
+    max_speakers: 3
+    window_policy: whole utterances only; gap <= 3s; flush above 30s or above 3 speakers
+    enrollment_policy: a different non-overlapping utterance of 1-30s; same session and speaker first, then same split and speaker; md5 stable pick; far:near = 3:1 when a near file exists
+    negative_policy: one absent-speaker enrollment per kept window; empty target; window dropped without it
+    duration_distribution:
+      mixture_windows:
+        count: 13814
+        hours: 48.56397777777756
+        min: 1.06
+        p50: 10.41
+        p90: 26.53
+        p99: 29.78
+        max: 30.0
+        mean: 12.65602432315037
+      enrollment_positive:
+        count: 33533
+        hours: 20.005152777777774
+        min: 1.0
+        p50: 1.76
+        p90: 3.54
+        p99: 7.77
+        max: 17.94
+        mean: 2.147691825962484
+      enrollment_negative:
+        count: 13814
+        hours: 8.246097222222243
+        min: 1.0
+        p50: 1.76
+        p90: 3.56
+        p99: 7.58
+        max: 17.94
+        mean: 2.1489756768495787
+      enrollment_all:
+        count: 47347
+        hours: 28.25124999999906
+        min: 1.0
+        p50: 1.76
+        p90: 3.55
+        p99: 7.64
+        max: 17.94
+        mean: 2.1480664033623382
+    enroll_channel:
+      far: 35634
+      near: 11713
+  provenance:
+    description: 会议 turn-taking。整句拼成 2/3 人混合窗，时长 0.5～30 秒。注册音是窗外另一句，1～30 秒。有近场时远场:近场 = 3:1。
+    snapshot_date: '2026-10-14'
+    source: chime6@speaker-records-v1-20260912 extracted U01.CH1 mixtures and speaker wavs
+    rules: AmphionASR-1.7B-v3/scripts/tsasr/build_turn_taking.py
+    quality_status: source_annotations_preserved_not_reaudited
+    load:
+      missing_audio_recordings: 0
+      near_links: 80
+    registered_from: lx 私有登记 /workspace/workspace/lx/data/amphionasr（AmphionASR v4 配方，open-audio-llm feat/amphionasr-v4）；清单原样复制到 aidc_data，root_alias amphionasr→aidc_data；生成脚本快照 /workspace/data/migration/register-amphionasr-v4-20261015/scripts/ (2026-10-15 公共登记)
+- schema_version: dataset-catalog/2.0
+  dataset_id: emilia2_dialog
+  version: dialog-turn-taking-20261013-enroll
+  languages:
+  - zh
+  - en
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: eval_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_dialog/versions/dialog-turn-taking-20261013-enroll/records/eval_2spk.jsonl.gz
+    expected_bytes: 4470312
+    sha256: 9ea1d9c206859e6e679f454d462ed1821dc3d7271494ddbba484f3f03ac537a8
+    metadata:
+      record_count: 22323
+  - name: eval_3spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_dialog/versions/dialog-turn-taking-20261013-enroll/records/eval_3spk.jsonl.gz
+    expected_bytes: 1638416
+    sha256: 356508548d304005ba8a782b49b8616cffa8e7a3ac0d6475228b9b21dc72f8d3
+    metadata:
+      record_count: 9368
+  - name: eval_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_dialog/versions/dialog-turn-taking-20261013-enroll/records/eval_neg.jsonl.gz
+    expected_bytes: 2514611
+    sha256: ec827c22fd15fd6c23877585339c0e1adaa55ce82a433f80d0f60425a32b5f6c
+    metadata:
+      record_count: 18069
+  - name: test_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_dialog/versions/dialog-turn-taking-20261013-enroll/records/test_2spk.jsonl.gz
+    expected_bytes: 4540681
+    sha256: 8c1aa182a8584a00a7dc05abbdf456b1922c5a269bbe2ce27ae606388073e8b7
+    metadata:
+      record_count: 22991
+  - name: test_3spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_dialog/versions/dialog-turn-taking-20261013-enroll/records/test_3spk.jsonl.gz
+    expected_bytes: 1409736
+    sha256: 14dd47c258fc39212e51e98db49efe5af760ef0c578d25d2a6d57c3810ed3d70
+    metadata:
+      record_count: 8015
+  - name: test_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_dialog/versions/dialog-turn-taking-20261013-enroll/records/test_neg.jsonl.gz
+    expected_bytes: 2454502
+    sha256: 5f8cd7a3d1ea586295d9fa04af7bfb1001e7771d25532a8c1cef4aad8d8d8d40
+    metadata:
+      record_count: 17837
+  - name: train_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_dialog/versions/dialog-turn-taking-20261013-enroll/records/train_2spk.jsonl.gz
+    expected_bytes: 223354062
+    sha256: c8e9011ee118ddd44a4ed7d6da4090e3ccadd3fe8ccce9ec2224e33eaf2afaf9
+    metadata:
+      record_count: 1129151
+  - name: train_3spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_dialog/versions/dialog-turn-taking-20261013-enroll/records/train_3spk.jsonl.gz
+    expected_bytes: 77023624
+    sha256: fb0d298a59f49be3df4a1c4c40c4569a23c21b8d34251b953c371b8a1b3fdef1
+    metadata:
+      record_count: 439583
+  - name: train_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_dialog/versions/dialog-turn-taking-20261013-enroll/records/train_neg.jsonl.gz
+    expected_bytes: 123339874
+    sha256: c43d7ceb0f005c937ebae6324ad4a5ab41cf2a289225ffcfcab03a03dbf9abe8
+    metadata:
+      record_count: 890340
+  - name: audio_index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_dialog/versions/dialog-turn-taking-20261013-enroll/audio_index/audio-index-flac.jsonl.gz
+    expected_bytes: 12437398
+    sha256: 33ae301b04e413c1b45cf2b769084c1bfa9e89805404b0a16f1acf4fff6ba499
+    metadata:
+      record_count: 189150
+  - name: duration_distribution
+    kind: statistics
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_dialog/versions/dialog-turn-taking-20261013-enroll/duration_distribution.json
+    expected_bytes: 15487
+    sha256: 472a1bea309315f4b74ad833398919f149b4a5286a506f5010de6da17f1b6443
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_dialog/versions/dialog-turn-taking-20261013-enroll/record_index/index.json
+    expected_bytes: 2240
+    sha256: 56150b05a20d9ccb772a2513a5fb00522ef43607553b0d09f7ba29c5b750540a
+    metadata:
+      snapshot_version: 13
+      rows: 2557677
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    eval_2spk:
+      group: eval
+      artifacts:
+        records:
+        - eval_2spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 22323
+        negative_records: 0
+        duration_hours: 132.51531166666766
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 13258
+        unique_mixture_duration_hours: 77.06432805555556
+        languages:
+          zh: 11088
+          en: 11235
+    eval_3spk:
+      group: eval
+      artifacts:
+        records:
+        - eval_3spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 9368
+        negative_records: 0
+        duration_hours: 56.64699611111105
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 4271
+        unique_mixture_duration_hours: 25.258053611111112
+        languages:
+          zh: 4174
+          en: 5194
+    eval_neg:
+      group: eval
+      artifacts:
+        records:
+        - eval_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 18069
+        negative_records: 18069
+        duration_hours: 104.47867916666682
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 18069
+        unique_mixture_duration_hours: 104.47867916666667
+        languages:
+          zh: 9135
+          en: 8934
+    test_2spk:
+      group: test
+      artifacts:
+        records:
+        - test_2spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 22991
+        negative_records: 0
+        duration_hours: 137.49028000000055
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 13580
+        unique_mixture_duration_hours: 79.46416416666666
+        languages:
+          zh: 11703
+          en: 11288
+    test_3spk:
+      group: test
+      artifacts:
+        records:
+        - test_3spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 8015
+        negative_records: 0
+        duration_hours: 48.71762166666698
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 3684
+        unique_mixture_duration_hours: 21.8247825
+        languages:
+          zh: 3481
+          en: 4534
+    test_neg:
+      group: test
+      artifacts:
+        records:
+        - test_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 17837
+        negative_records: 17837
+        duration_hours: 103.58737805555553
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 17837
+        unique_mixture_duration_hours: 103.58737805555555
+        languages:
+          zh: 9221
+          en: 8616
+    train_2spk:
+      group: train
+      artifacts:
+        records:
+        - train_2spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 1129151
+        negative_records: 0
+        duration_hours: 6719.787510000266
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 664897
+        unique_mixture_duration_hours: 3875.892513055556
+        languages:
+          zh: 573639
+          en: 555512
+    train_3spk:
+      group: train
+      artifacts:
+        records:
+        - train_3spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 439583
+        negative_records: 0
+        duration_hours: 2691.1605583334826
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 198657
+        unique_mixture_duration_hours: 1191.3519894444444
+        languages:
+          zh: 206098
+          en: 233485
+    train_neg:
+      group: train
+      artifacts:
+        records:
+        - train_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 890340
+        negative_records: 890340
+        duration_hours: 5178.399963889214
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 890340
+        unique_mixture_duration_hours: 5178.399963888889
+        languages:
+          zh: 463796
+          en: 426544
+    train:
+      artifacts:
+        records:
+        - train_2spk
+        - train_3spk
+        - train_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 2459074
+        duration_hours: 14589.34803222296
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 890342
+        unique_mixture_duration_hours: 5178.410480555555
+    eval:
+      artifacts:
+        records:
+        - eval_2spk
+        - eval_3spk
+        - eval_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 49760
+        duration_hours: 293.6409869444455
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 18069
+        unique_mixture_duration_hours: 104.47867916666667
+    test:
+      artifacts:
+        records:
+        - test_2spk
+        - test_3spk
+        - test_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 48843
+        duration_hours: 289.7952797222231
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 17837
+        unique_mixture_duration_hours: 103.58737805555555
+  recipe_parameters:
+    source_dialogs: /workspace/workspace/lx/data/emilia2/dialog
+    audio: datasets/emilia2/m4a-128k/{zh|en}/dialog/<recording>/<recording>_dlg_<五位>[_pN].m4a
+    mixture_seconds:
+    - 1
+    - 30
+    enrollment_seconds:
+    - 1
+    - 30
+    max_gap_seconds: 3
+    max_speakers: 3
+    positive_and_negative_independent: true
+    enrollment_policy: contiguous same-speaker utterances, gap <= 3s, no other speaker inside, 1-30s; pick a 5-second bin uniformly before picking a span
+    target_policy: plain transcript; negative target is empty and labels.target_present is false
+    language_policy: pure Chinese or pure English only; any other language, or Chinese mixed with English, drops the whole dialog
+    english_selection: md5(emilia2-en-keep|session_id) until packed 2-speaker and 3-speaker hours each catch Chinese
+    split_policy: 'md5(emilia2-dialog-split|recording_id) % 100: <2 test, <4 eval, else train'
+    duration_distribution:
+      mixture_windows:
+        count: 926248
+        hours: 5386.476537778171
+        min: 1.0
+        p50: 22.6
+        p90: 28.84
+        p99: 29.89
+        max: 30.0
+        mean: 20.935338630692232
+      mixture_examples:
+        count: 2557677
+        hours: 15172.784298889605
+        min: 1.0
+        p50: 23.0
+        p90: 28.9
+        p99: 29.9
+        max: 30.0
+        mean: 21.35610691889655
+      enrollment_positive:
+        count: 1631431
+        hours: 4841.0745516658635
+        min: 1.0
+        p50: 8.48
+        p90: 23.1
+        p99: 29.36
+        max: 30.0
+        mean: 10.682565420172295
+      enrollment_negative:
+        count: 926246
+        hours: 2920.135981944136
+        min: 1.0
+        p50: 9.16
+        p90: 24.82
+        p99: 29.55
+        max: 30.0
+        mean: 11.34956538003823
+      enrollment_all:
+        count: 2557677
+        hours: 7761.210533610202
+        min: 1.0
+        p50: 8.69
+        p90: 23.86
+        p99: 29.44
+        max: 30.0
+        mean: 10.924115093890562
+  provenance:
+    description: Emilia2 对话 turn-taking。turn 时间戳来自 dialog tar，音频用 m4a-128k。只保留纯中文或纯英文。混合窗 1～30 秒。注册是同一说话人的连续整句，1～30 秒，按 5 秒分档抽取，正负样本分开保留。
+    snapshot_date: '2026-10-13'
+    source: /workspace/workspace/lx/data/emilia2/dialog
+    rules: /workspace/workspace/lx/emilia2_ckpt34479_cut_rules.md
+    quality_status: source_annotations_preserved_not_reaudited
+    registered_from: lx 私有登记 /workspace/workspace/lx/data/amphionasr（AmphionASR v4 配方，open-audio-llm feat/amphionasr-v4）；清单原样复制到 aidc_data，root_alias amphionasr→aidc_data；生成脚本快照 /workspace/data/migration/register-amphionasr-v4-20261015/scripts/ (2026-10-15 公共登记)
+- schema_version: dataset-catalog/2.0
+  dataset_id: emilia2_mix
+  version: mix-20261013
+  languages:
+  - zh
+  - en
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: eval_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013/records/eval_2spk.jsonl.gz
+    expected_bytes: 15405123
+    sha256: 834311e47b4103eb35f467abe4fe49432318b335f00f53102f063342439088a9
+    metadata:
+      record_count: 49139
+  - name: eval_3spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013/records/eval_3spk.jsonl.gz
+    expected_bytes: 15982826
+    sha256: 6273b8477d8eee7d161cb2164a6407378ef138514d3dc0c6d21ad3299363c0ba
+    metadata:
+      record_count: 48206
+  - name: eval_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013/records/eval_neg.jsonl.gz
+    expected_bytes: 24463202
+    sha256: f57c1ca68af9e04960e112b3c24b65956380469387fcefccb81fb71e04ccc6dd
+    metadata:
+      record_count: 97345
+  - name: test_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013/records/test_2spk.jsonl.gz
+    expected_bytes: 15163392
+    sha256: fb667a129c35d74489e4eeff4b867afbb4fbda2d9e66478a066e5a962e3c4ff1
+    metadata:
+      record_count: 48247
+  - name: test_3spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013/records/test_3spk.jsonl.gz
+    expected_bytes: 15757662
+    sha256: eaa2f1a7a76e238a6ab62e83cbf53a6cce6817be3d737793b98ae1b73e4c22b5
+    metadata:
+      record_count: 47784
+  - name: test_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013/records/test_neg.jsonl.gz
+    expected_bytes: 24143578
+    sha256: 51848fed416fd6e8bf4d2aef27068ccc8737c4ad6be746fb90d5c556ae0a1178
+    metadata:
+      record_count: 96031
+  - name: train_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013/records/train_2spk.jsonl.gz
+    expected_bytes: 698340369
+    sha256: a51e630c16af19d87c6ebe05b28727d4bd668b2a9eac049c4309dcee7a737294
+    metadata:
+      record_count: 2208856
+  - name: train_3spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013/records/train_3spk.jsonl.gz
+    expected_bytes: 731422922
+    sha256: 789410e763bf8740be3d3afe9112b0c9782b17af11defdd395e6054fc7959ba7
+    metadata:
+      record_count: 2204373
+  - name: train_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013/records/train_neg.jsonl.gz
+    expected_bytes: 1116968849
+    sha256: 8a7d558cd749c61cac82e7f5e6ae75fc5eba49b9642a1cd020858b243193b4eb
+    metadata:
+      record_count: 4413261
+  - name: audio_index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013/audio_index/audio-index-flac.jsonl.gz
+    expected_bytes: 363872566
+    sha256: 1f72aaa1a2daa4afdc448e9bd4b4a9a81addd714143cbd79df15a6e51ea754ec
+    metadata:
+      record_count: 5588159
+  - name: duration_distribution
+    kind: statistics
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013/duration_distribution.json
+    expected_bytes: 3195
+    sha256: 6b152382710da3e33e1e63603c5165af3192d0a225e1bff32e3ffc8979e6e811
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013/record_index/index.json
+    expected_bytes: 2221
+    sha256: 0ebf61080fd6fd5aa32e42bd5eccdd8e6d2721fcdaa18965e423b512aa36bcd9
+    metadata:
+      snapshot_version: 13
+      rows: 9213242
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    eval_2spk:
+      group: eval
+      artifacts:
+        records:
+        - eval_2spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 49139
+        negative_records: 0
+        duration_hours: 185.94530737847174
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 49139
+        unique_mixture_duration_hours: 185.94530737847222
+        languages:
+          en: 25963
+          zh: 23176
+    eval_3spk:
+      group: eval
+      artifacts:
+        records:
+        - eval_3spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 48206
+        negative_records: 0
+        duration_hours: 186.41546710069406
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 48206
+        unique_mixture_duration_hours: 186.41546710069443
+        languages:
+          en: 25707
+          zh: 22499
+    eval_neg:
+      group: eval
+      artifacts:
+        records:
+        - eval_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 97345
+        negative_records: 97345
+        duration_hours: 372.3607744791664
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 97345
+        unique_mixture_duration_hours: 372.36077447916665
+        languages:
+          en: 51670
+          zh: 45675
+    test_2spk:
+      group: test
+      artifacts:
+        records:
+        - test_2spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 48247
+        negative_records: 0
+        duration_hours: 184.21496236111105
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 48247
+        unique_mixture_duration_hours: 184.2149623611111
+        languages:
+          en: 25834
+          zh: 22413
+    test_3spk:
+      group: test
+      artifacts:
+        records:
+        - test_3spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 47784
+        negative_records: 0
+        duration_hours: 183.63783336805506
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 47784
+        unique_mixture_duration_hours: 183.63783336805554
+        languages:
+          en: 25685
+          zh: 22099
+    test_neg:
+      group: test
+      artifacts:
+        records:
+        - test_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 96031
+        negative_records: 96031
+        duration_hours: 367.8527957291624
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 96031
+        unique_mixture_duration_hours: 367.8527957291667
+        languages:
+          en: 51519
+          zh: 44512
+    train_2spk:
+      group: train
+      artifacts:
+        records:
+        - train_2spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 2208856
+        negative_records: 0
+        duration_hours: 8565.997518975946
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 2208856
+        unique_mixture_duration_hours: 8565.997518975695
+        languages:
+          en: 1143701
+          zh: 1065155
+    train_3spk:
+      group: train
+      artifacts:
+        records:
+        - train_3spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 2204373
+        negative_records: 0
+        duration_hours: 8566.072254600886
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 2204373
+        unique_mixture_duration_hours: 8566.072254600695
+        languages:
+          en: 1135768
+          zh: 1068605
+    train_neg:
+      group: train
+      artifacts:
+        records:
+        - train_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 4413261
+        negative_records: 4413261
+        duration_hours: 17132.13907312526
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 4413261
+        unique_mixture_duration_hours: 17132.139073125
+        languages:
+          en: 2279486
+          zh: 2133775
+    train:
+      artifacts:
+        records:
+        - train_2spk
+        - train_3spk
+        - train_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 8826490
+        duration_hours: 34264.208846702095
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 4413261
+        unique_mixture_duration_hours: 17132.139073125
+    eval:
+      artifacts:
+        records:
+        - eval_2spk
+        - eval_3spk
+        - eval_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 194690
+        duration_hours: 744.7215489583322
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 97345
+        unique_mixture_duration_hours: 372.36077447916665
+    test:
+      artifacts:
+        records:
+        - test_2spk
+        - test_3spk
+        - test_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 192062
+        duration_hours: 735.7055914583285
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 96031
+        unique_mixture_duration_hours: 367.8527957291667
+  recipe_parameters:
+    source_long: /workspace/workspace/lx/data/emilia2/long
+    audio: datasets/emilia2/m4a-128k/{zh|en}/long/<recording>/<recording>_long_<五位>[_pN].m4a
+    mixture_wav: shared_storage:datasets/emilia2-mix/versions/mix-20261013/audio/{split}/{prefix}/{mix_id}.wav
+    mixture_audio_root: /tmp/shared-storage
+    mixture_seconds:
+    - 0.5
+    - 30
+    enrollment_seconds:
+    - 1
+    - 30
+    enrollment_policy: same recording, span not used by the target, 1-30s; if a span >= 10s exists, ignore shorter spans; then pick a 5-second bin uniformly
+    target_modes: late, intermittent gaps 1-15s, brief insertion 5-20 percent; each about one third of unique hours
+    interferer_policy: about half continuous and half intermittent with gaps 1-15s; mutual silence <= 20 percent of the mixture
+    speaker_ratio: '2-speaker unique hours : 3-speaker unique hours = 1:1'
+    language_policy: pure Chinese or pure English; md5(emilia2-mix-keep|recording_id) drops the larger language until unique hours match
+    split_policy: 'md5(emilia2-mix-split|recording_id) % 100: <2 test, <4 eval, else train'
+    loudness: LUFS uniform [-33, -25], then peak scaled to 0.9
+    positive_and_negative_independent: true
+    duration_distribution:
+      mixture_windows:
+        count: 4606637
+        hours: 17872.3526433341
+        min: 0.5030625
+        p50: 10.841
+        p90: 28.879
+        p99: 29.989
+        max: 30.0
+        mean: 13.966906772989224
+      mixture_examples:
+        count: 9213242
+        hours: 35744.63598711696
+        min: 0.5030625
+        p50: 10.841
+        p90: 28.879
+        p99: 29.989
+        max: 30.0
+        mean: 13.966928205470026
+      enrollment_positive:
+        count: 4606605
+        hours: 25422.064731941096
+        min: 1.0
+        p50: 19.92
+        p90: 28.1
+        p99: 29.82
+        max: 30.0
+        mean: 19.867002496412855
+      enrollment_negative:
+        count: 4606637
+        hours: 26103.970878612607
+        min: 1.0
+        p50: 20.7
+        p90: 28.41
+        p99: 29.85
+        max: 30.0
+        mean: 20.399761292892272
+      enrollment_all:
+        count: 9213242
+        hours: 51526.03561055346
+        min: 1.0
+        p50: 20.31
+        p90: 28.26
+        p99: 29.84
+        max: 30.0
+        mean: 20.133382819857815
+  provenance:
+    description: Emilia2 long 合成的 2/3 人混合。目标可以晚开口、按 1～15 秒间隔断续，或在中间短插入。干扰人也可以断续。注册是同一录音上没用过的 1～30 秒片段。
+    snapshot_date: '2026-10-13'
+    source: /workspace/workspace/lx/data/emilia2/long
+    rules: /workspace/workspace/lx/emilia2_mix_plan.md
+    quality_status: synthesized_from_source_timestamps
+    registered_from: lx 私有登记 /workspace/workspace/lx/data/amphionasr（AmphionASR v4 配方，open-audio-llm feat/amphionasr-v4）；清单原样复制到 aidc_data，root_alias amphionasr→aidc_data；生成脚本快照 /workspace/data/migration/register-amphionasr-v4-20261015/scripts/ (2026-10-15 公共登记)
+- schema_version: dataset-catalog/2.0
+  dataset_id: emilia2_mix
+  version: mix-20261013-v5enroll
+  derived_from: emilia2_mix@mix-20261013
+  languages:
+  - zh
+  - en
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: eval_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013-v5enroll/records/eval_2spk.jsonl.gz
+    expected_bytes: 15484819
+    sha256: 78a024d1f6dabda4a402800b6797b646ae58d9d10008b9514cec5e1e677cea5c
+    metadata:
+      record_count: 49138
+  - name: eval_3spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013-v5enroll/records/eval_3spk.jsonl.gz
+    expected_bytes: 16058905
+    sha256: 518694b46f383978b78d095078e42016d9c50f228f9efbd6c0c98f79757bca02
+    metadata:
+      record_count: 48206
+  - name: eval_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013-v5enroll/records/eval_neg.jsonl.gz
+    expected_bytes: 24662931
+    sha256: 8cbeb7534a3703542d1b1a6a8be68bc8174e1863eacd22ae2bb9611bd8bfb1e7
+    metadata:
+      record_count: 97345
+  - name: test_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013-v5enroll/records/test_2spk.jsonl.gz
+    expected_bytes: 15242816
+    sha256: ee7efb2d01cfae837070300974121277dd614da20759339c053f6098f00bd9e1
+    metadata:
+      record_count: 48247
+  - name: test_3spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013-v5enroll/records/test_3spk.jsonl.gz
+    expected_bytes: 15828541
+    sha256: a96544f75edc4326ba7434c78d23ec0a468d10c68e773b03da4fbc5449d84235
+    metadata:
+      record_count: 47784
+  - name: test_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013-v5enroll/records/test_neg.jsonl.gz
+    expected_bytes: 24341928
+    sha256: 47dde553ba52a115d539bf0274d835aa0e30811d10974fbecf199d70e74ad0e5
+    metadata:
+      record_count: 96031
+  - name: train_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013-v5enroll/records/train_2spk.jsonl.gz
+    expected_bytes: 701733516
+    sha256: 0b90e2ae0a9febc1fba9945f3f3b6e2dc3cedc77a9f9c3c62c890b1dc6a0f8d3
+    metadata:
+      record_count: 2208813
+  - name: train_3spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013-v5enroll/records/train_3spk.jsonl.gz
+    expected_bytes: 734712436
+    sha256: 37b4ced401ba4f18e5d4ebb828bae8183f3e3fa85c0c805a4b6bf7fbecf64ef5
+    metadata:
+      record_count: 2204336
+  - name: train_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013-v5enroll/records/train_neg.jsonl.gz
+    expected_bytes: 1125565140
+    sha256: 042ab1d50153ca3cff942d8ac675a5631b46182e590f2d44834acf7f46f6dd5e
+    metadata:
+      record_count: 4413261
+  - name: audio_index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013-v5enroll/audio_index/audio-index-flac.jsonl.gz
+    expected_bytes: 363994607
+    sha256: 334fa2f647e4beb9567fafc3c29b9deca77dc67be34a9efa0605183762de62f6
+    metadata:
+      record_count: 5589919
+  - name: duration_distribution
+    kind: statistics
+    root_alias: aidc_data
+    relative_path: datasets/emilia2-mix/versions/mix-20261013-v5enroll/duration_distribution.json
+    expected_bytes: 3203
+    sha256: 99f6e2380e76d06f79aeba09f78b1a9f1a203d00460d47080f34d661d10f1a58
+  splits:
+    eval_2spk:
+      group: eval
+      artifacts:
+        records:
+        - eval_2spk
+        audio_index:
+        - audio_index
+      statistics:
+        records: 49138
+        negative_records: 0
+        duration_hours: 185.9441318288878
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 49138
+        unique_mixture_duration_hours: 185.94413182888889
+        languages:
+          en: 25962
+          zh: 23176
+    eval_3spk:
+      group: eval
+      artifacts:
+        records:
+        - eval_3spk
+        audio_index:
+        - audio_index
+      statistics:
+        records: 48206
+        negative_records: 0
+        duration_hours: 186.41546709861035
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 48206
+        unique_mixture_duration_hours: 186.41546709861112
+        languages:
+          en: 25707
+          zh: 22499
+    eval_neg:
+      group: eval
+      artifacts:
+        records:
+        - eval_neg
+        audio_index:
+        - audio_index
+      statistics:
+        records: 97345
+        negative_records: 97345
+        duration_hours: 372.3607744830552
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 97345
+        unique_mixture_duration_hours: 372.3607744830556
+        languages:
+          en: 51670
+          zh: 45675
+    test_2spk:
+      group: test
+      artifacts:
+        records:
+        - test_2spk
+        audio_index:
+        - audio_index
+      statistics:
+        records: 48247
+        negative_records: 0
+        duration_hours: 184.2149623347225
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 48247
+        unique_mixture_duration_hours: 184.21496233472223
+        languages:
+          en: 25834
+          zh: 22413
+    test_3spk:
+      group: test
+      artifacts:
+        records:
+        - test_3spk
+        audio_index:
+        - audio_index
+      statistics:
+        records: 47784
+        negative_records: 0
+        duration_hours: 183.6378333474994
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 47784
+        unique_mixture_duration_hours: 183.6378333475
+        languages:
+          en: 25685
+          zh: 22099
+    test_neg:
+      group: test
+      artifacts:
+        records:
+        - test_neg
+        audio_index:
+        - audio_index
+      statistics:
+        records: 96031
+        negative_records: 96031
+        duration_hours: 367.8527956822207
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 96031
+        unique_mixture_duration_hours: 367.8527956822222
+        languages:
+          en: 51519
+          zh: 44512
+    train_2spk:
+      group: train
+      artifacts:
+        records:
+        - train_2spk
+        audio_index:
+        - audio_index
+      statistics:
+        records: 2208813
+        negative_records: 0
+        duration_hours: 8565.900284967094
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 2208813
+        unique_mixture_duration_hours: 8565.900284966667
+        languages:
+          en: 1143660
+          zh: 1065153
+    train_3spk:
+      group: train
+      artifacts:
+        records:
+        - train_3spk
+        audio_index:
+        - audio_index
+      statistics:
+        records: 2204336
+        negative_records: 0
+        duration_hours: 8565.953433032906
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 2204336
+        unique_mixture_duration_hours: 8565.953433033055
+        languages:
+          en: 1135734
+          zh: 1068602
+    train_neg:
+      group: train
+      artifacts:
+        records:
+        - train_neg
+        audio_index:
+        - audio_index
+      statistics:
+        records: 4413261
+        negative_records: 4413261
+        duration_hours: 17132.1390728415
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 4413261
+        unique_mixture_duration_hours: 17132.1390728425
+        languages:
+          en: 2279486
+          zh: 2133775
+    train:
+      artifacts:
+        records:
+        - train_2spk
+        - train_3spk
+        - train_neg
+        audio_index:
+        - audio_index
+      statistics:
+        records: 8826410
+        duration_hours: 34263.9927908415
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 4413261
+        unique_mixture_duration_hours: 17132.1390728425
+    eval:
+      artifacts:
+        records:
+        - eval_2spk
+        - eval_3spk
+        - eval_neg
+        audio_index:
+        - audio_index
+      statistics:
+        records: 194689
+        duration_hours: 744.7203734105533
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 97345
+        unique_mixture_duration_hours: 372.3607744830556
+    test:
+      artifacts:
+        records:
+        - test_2spk
+        - test_3spk
+        - test_neg
+        audio_index:
+        - audio_index
+      statistics:
+        records: 192062
+        duration_hours: 735.7055913644425
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 96031
+        unique_mixture_duration_hours: 367.8527956822222
+  recipe_parameters:
+    source_long: /workspace/workspace/lx/data/emilia2/long
+    audio: datasets/emilia2/m4a-128k/{zh|en}/long/<recording>/<recording>_long_<五位>[_pN].m4a
+    mixture_wav: shared_storage:datasets/emilia2-mix/versions/mix-20261013/audio/{split}/{prefix}/{mix_id}.wav
+    mixture_audio_root: /tmp/shared-storage
+    mixture_seconds:
+    - 0.5
+    - 30
+    enrollment_seconds:
+    - 1
+    - 300
+    enrollment_policy: 同 mix-20261013 的混音和目标，只重选 enrollment：同录音、不与目标重叠的整段，1-300s（按数据反推，原始规则文档未找到）
+    target_modes: late, intermittent gaps 1-15s, brief insertion 5-20 percent; each about one third of unique hours
+    interferer_policy: about half continuous and half intermittent with gaps 1-15s; mutual silence <= 20 percent of the mixture
+    speaker_ratio: '2-speaker unique hours : 3-speaker unique hours = 1:1'
+    language_policy: pure Chinese or pure English; md5(emilia2-mix-keep|recording_id) drops the larger language until unique hours match
+    split_policy: 'md5(emilia2-mix-split|recording_id) % 100: <2 test, <4 eval, else train'
+    loudness: LUFS uniform [-33, -25], then peak scaled to 0.9
+    positive_and_negative_independent: true
+    duration_distribution:
+      mixture_windows:
+        count: 4606637
+        hours: 17872.3526433341
+        min: 0.5030625
+        p50: 10.841
+        p90: 28.879
+        p99: 29.989
+        max: 30.0
+        mean: 13.966906772989224
+      mixture_examples:
+        count: 9213161
+        hours: 35744.418756266256
+        min: 0.5030625
+        p50: 10.842
+        p90: 28.879
+        p99: 29.989
+        max: 30.0
+        mean: 13.966966117552762
+      enrollment_positive:
+        count: 4606524
+        hours: 125075.13827583336
+        min: 1.0
+        p50: 68.63
+        p90: 232.47
+        p99: 292.54
+        max: 300.0
+        mean: 97.74626112726214
+      enrollment_negative:
+        count: 4606637
+        hours: 74211.38021055558
+        min: 1.0
+        p50: 33.68
+        p90: 143.86
+        p99: 276.53
+        max: 300.0
+        mean: 57.99479506590168
+      enrollment_all:
+        count: 9213161
+        hours: 199286.5184863888
+        min: 1.0
+        p50: 44.96
+        p90: 203.29
+        p99: 288.73
+        max: 300.0
+        mean: 77.87028431946428
+  provenance:
+    description: mix-20261013 的 enrollment 加长版。混音、目标文本、负样本与 mix-20261013 完全相同，混音 wav 直接读 mix-20261013/audio；只换了 enrollment，从 1～30 秒放宽到最长 300 秒（正样本中位 68.6 秒，原版 19.9 秒）。81 条正样本因没有合格 enrollment 被去掉。
+    snapshot_date: '2026-10-16'
+    source: datasets/emilia2-mix/versions/mix-20261013
+    quality_status: synthesized_from_source_timestamps
+    registered_from: lx 于 2026-10-16 直接写在 aidc_data，未进 lx 私有登记；2026-10-19 补登记，统计和校验值按文件重新计算。没有 record_index。
+- schema_version: dataset-catalog/2.0
+  dataset_id: emilia2_short
+  version: short-20261014
+  languages:
+  - zh
+  - en
+  tasks:
+  - asr
+  aliases: []
+  artifacts:
+  - name: train_en
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_short/versions/short-20261014/records/train_en.jsonl.gz
+    expected_bytes: 263226157
+    sha256: e97e8390bc2fd41f83a222e5b2f6504a6318b0bf124db6d72030158585f048a6
+    metadata:
+      record_count: 2081298
+  - name: train_zh
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_short/versions/short-20261014/records/train_zh.jsonl.gz
+    expected_bytes: 241817188
+    sha256: 343f1edfb1119e4a24e2271fb2f2b31c10f0b4c80fe12f55e1772b492162ec45
+    metadata:
+      record_count: 1913616
+  - name: audio_index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_short/versions/short-20261014/audio_index/audio-index.jsonl.gz
+    expected_bytes: 244447779
+    sha256: 34f4107072ebe9cfa622ba4d7eed4aba7fafaf2a1c9200fc874deff0dc020265
+    metadata:
+      record_count: 3994914
+  - name: duration_distribution
+    kind: statistics
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_short/versions/short-20261014/duration_distribution.json
+    expected_bytes: 9007
+    sha256: 7ab71256ff60631d8a95f47497455eb0ff2b52535194aadd5f391fcbad533940
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_short/versions/short-20261014/record_index/index.json
+    expected_bytes: 933
+    sha256: 1f57358042571e32f188e62055330512f3754fa1e9feb59b36340d903a6209d7
+    metadata:
+      snapshot_version: 13
+      rows: 3994914
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    train_en:
+      group: train
+      artifacts:
+        records:
+        - train_en
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 2081298
+        duration_hours: 2740.174340696651
+        duration_basis: sum of short-file duration; each file is one ASR example
+        languages:
+          en: 2081298
+    train_zh:
+      group: train
+      artifacts:
+        records:
+        - train_zh
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 1913616
+        duration_hours: 2362.7554350843975
+        duration_basis: sum of short-file duration; each file is one ASR example
+        languages:
+          zh: 1913616
+    train:
+      artifacts:
+        records:
+        - train_en
+        - train_zh
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 3994914
+        duration_hours: 5102.929775781048
+        duration_basis: sum of short-file duration; each file is one ASR example
+        languages:
+          zh: 1913616
+          en: 2081298
+  recipe_parameters:
+    source_index: /workspace/data/datasets/emilia2/index.jsonl.gz
+    audio: datasets/emilia2/m4a-128k/{zh|en}/short/<recording>/<clip>.m4a
+    excluded_subsets:
+    - m4a-64k
+    - asmr
+    duration_seconds:
+    - 0.5
+    - 30.0
+    task: asr
+    audio_slot: one primary slot covering the whole short file
+    channel_policy: header channel count is stored in the audio index; the record does not select a channel, so training mean-downmixes
+    text_policy: short-item transcript, unchanged aside from trimming the ends; multiple items in one file are joined without spaces for Chinese and with spaces for English
+    language_policy: pure Chinese or pure English from languages and short[].language; zh/yue/cmn/wuu/nan/hak/zh-* count as Chinese; en/en-*/en_* count as English; mixed and other languages are dropped; topic tags are not language
+    split_policy: the extracted short split has no official train/eval/test; every kept clip is train, written separately as train_zh and train_en
+    order: emilia2 index order within each language
+    duration_distribution:
+      zh:
+        count: 1913616
+        hours: 2362.7554350843975
+        min: 0.5
+        p50: 2.98
+        p90: 9.32
+        p99: 24.39
+        max: 30.0
+        mean: 4.444945885853708
+      en:
+        count: 2081298
+        hours: 2740.174340696651
+        min: 0.5
+        p50: 3.38
+        p90: 9.42
+        p99: 24.44
+        max: 30.0
+        mean: 4.7396517108592535
+      all:
+        count: 3994914
+        hours: 5102.929775781048
+        min: 0.5
+        p50: 3.19
+        p90: 9.38
+        p99: 24.42
+        max: 30.0
+        mean: 4.598483770316901
+  provenance:
+    description: Emilia2 已抽出的 m4a-128k short。每条短音频是一条普通转写，只保留语言标签为纯中文或纯英文、时长 0.5～30 秒的片段。不使用 m4a-64k 和 asmr。
+    snapshot_date: '2026-10-14'
+    source: /workspace/data/datasets/emilia2
+    quality_status: source_annotations_preserved_not_reaudited
+    registered_from: lx 私有登记 /workspace/workspace/lx/data/amphionasr（AmphionASR v4 配方，open-audio-llm feat/amphionasr-v4）；清单原样复制到 aidc_data，root_alias amphionasr→aidc_data；生成脚本快照 /workspace/data/migration/register-amphionasr-v4-20261015/scripts/ (2026-10-15 公共登记)
+- schema_version: dataset-catalog/2.0
+  dataset_id: hard_hw_sft
+  version: hard-20261014
+  languages:
+  - en
+  - zh
+  tasks:
+  - asr_hotwords
+  aliases:
+  - hard_hw
+  artifacts:
+  - name: train
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/hard_hw_sft/versions/hard-20261014/records/train.jsonl.gz
+    expected_bytes: 40316828
+    sha256: abb42d806759598e571925672932053ac694ec7256d78f733e60006ae2959d91
+    metadata:
+      record_count: 69275
+  - name: audio_index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/hard_hw_sft/versions/hard-20261014/audio_index/audio-index.jsonl.gz
+    expected_bytes: 4443261
+    sha256: ca954ec9c40a43edfa39ee5d7e856d8f8a97aeb76ef85bf5719cd1ae2474e259
+    metadata:
+      record_count: 69275
+  - name: duration_distribution
+    kind: statistics
+    root_alias: aidc_data
+    relative_path: datasets/hard_hw_sft/versions/hard-20261014/duration_distribution.json
+    expected_bytes: 11800
+    sha256: d3ceec73b2e8df2c136a55dbfc3d244037f83b6f5e9ee06e18f3041677e285be
+    metadata: {}
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/hard_hw_sft/versions/hard-20261014/record_index/index.json
+    expected_bytes: 720
+    sha256: 927da0c6d644202fb757c28caedbe2f5d2b877914601bf53258e787321e868d9
+    metadata:
+      snapshot_version: 13
+      rows: 69275
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    train:
+      artifacts:
+        records:
+        - train
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 69275
+        duration_hours: 109.36439313722553
+        duration_basis: sum of whole-file duration; each jsonl line is one example
+        languages:
+          zh: 10828
+          en: 58447
+        tasks:
+          asr_hotwords: 69275
+  recipe_parameters:
+    source: /workspace/workspace/lx/data/ckpt34479_recipe/AmphionASR-1.7B-v3/data/sharegpt/hw_sft/hard_hw_sft.jsonl
+    path_policy: remap /ai_sds_wuzz/DATA_ASR/<corpus>/ to the registered source tree; no audio is copied
+    task_policy: 'system Hotwords: is asr_hotwords and the comma-separated list is stored in order; empty system is asr'
+    text_policy: text after <asr_text> is kept as written; language comes from the assistant language tag
+    split_policy: no official split; the whole file is train, in jsonl order
+    duration_distribution:
+      all:
+        count: 69275
+        hours: 109.36439313722553
+        min: 1.549
+        p50: 5.574
+        p90: 7.902
+        p99: 9.942
+        max: 25.856
+        mean: 5.683317434774621
+      asr_hotwords:
+        count: 69275
+        hours: 109.36439313722553
+        min: 1.549
+        p50: 5.574
+        p90: 7.902
+        p99: 9.942
+        max: 25.856
+        mean: 5.683317434774621
+      en:
+        count: 58447
+        hours: 94.86665127556988
+        min: 1.592
+        p50: 5.732
+        p90: 7.928
+        p99: 9.75
+        max: 17.18
+        mean: 5.843241647852782
+      zh:
+        count: 10828
+        hours: 14.497741861654358
+        min: 1.549
+        p50: 4.435
+        p90: 7.551
+        p99: 11.691
+        max: 25.856
+        mean: 4.82008410620204
+    corpora:
+      MAGICDATA:
+        records: 4675
+        hours: 6.229094427083364
+      common_voice_en:
+        records: 58447
+        hours: 94.86665127556988
+      data_aishell:
+        records: 3315
+        hours: 4.66031593750001
+      data_aishell3:
+        records: 2376
+        hours: 2.3909662887377165
+      data_thchs30:
+        records: 462
+        hours: 1.217365208333333
+  provenance:
+    description: 热词难例 ShareGPT。每条系统提示都带 Hotwords。音频指向已注册源文件。
+    snapshot_date: '2026-10-14'
+    source: /workspace/workspace/lx/data/ckpt34479_recipe/AmphionASR-1.7B-v3/data/sharegpt/hw_sft/hard_hw_sft.jsonl
+    rules: data/amphionasr/scripts/build_hw_sft_catalog.py
+    quality_status: source_annotations_preserved_not_reaudited
+    skipped_audio: 0
+    duplicate_hotword_rows: 0
+    registered_from: lx 私有登记 /workspace/workspace/lx/data/amphionasr（AmphionASR v4 配方，open-audio-llm feat/amphionasr-v4）；清单原样复制到 aidc_data，root_alias amphionasr→aidc_data；生成脚本快照 /workspace/data/migration/register-amphionasr-v4-20261015/scripts/ (2026-10-15 公共登记)
+- schema_version: dataset-catalog/2.0
+  dataset_id: hw_sft
+  version: hw-20261014
+  languages:
+  - en
+  - zh
+  tasks:
+  - asr
+  - asr_hotwords
+  aliases: []
+  artifacts:
+  - name: train
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/hw_sft/versions/hw-20261014/records/train.jsonl.gz
+    expected_bytes: 454530940
+    sha256: 09400105636e79e3f0f15c13f3d59aacc8e51d883dffca55bf7de4172b807450
+    metadata:
+      record_count: 1043317
+  - name: train_hotwords
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/hw_sft/versions/hw-20261014/records/train_hotwords.jsonl.gz
+    expected_bytes: 426916750
+    sha256: 7ec753f7945492296214b17d9ade91dad0d4c7e3d519d9a402886414bc6a16cc
+    metadata:
+      record_count: 834336
+  - name: audio_index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/hw_sft/versions/hw-20261014/audio_index/audio-index.jsonl.gz
+    expected_bytes: 70187804
+    sha256: 78c12862b7c69daedb52fd632d2ffefd8bc9080c06bef33f230cdf544fb4f890
+    metadata:
+      record_count: 1043317
+  - name: duration_distribution
+    kind: statistics
+    root_alias: aidc_data
+    relative_path: datasets/hw_sft/versions/hw-20261014/duration_distribution.json
+    expected_bytes: 14459
+    sha256: 69b6a18b031990bfc0574d40a3677a1a52a4397c1adf48604d1f93d3907a1741
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/hw_sft/versions/hw-20261014/record_index/index.json
+    expected_bytes: 906
+    sha256: e771bf21442735e6343580eec25c6640f4c697c19e347e0f98d23fba72cddee5
+    metadata:
+      snapshot_version: 13
+      rows: 1877653
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    train:
+      artifacts:
+        records:
+        - train
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 1043317
+        duration_hours: 1465.01806781245
+        duration_basis: sum of whole-file duration; each jsonl line is one example
+        languages:
+          en: 500000
+          zh: 543317
+        tasks:
+          asr_hotwords: 834336
+          asr: 208981
+    train_hotwords:
+      artifacts:
+        records:
+        - train_hotwords
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 834336
+        duration_hours: 1171.4421282397848
+        duration_basis: sum of whole-file duration; each jsonl line is one example
+        languages:
+          en: 399738
+          zh: 434598
+        tasks:
+          asr_hotwords: 834336
+  recipe_parameters:
+    source: /workspace/workspace/lx/data/ckpt34479_recipe/AmphionASR-1.7B-v3/data/sharegpt/hw_sft/hw_sft.jsonl
+    path_policy: remap /ai_sds_wuzz/DATA_ASR/<corpus>/ to the registered source tree; no audio is copied
+    task_policy: 'system Hotwords: is asr_hotwords and the comma-separated list is stored in order; empty system is asr'
+    text_policy: text after <asr_text> is kept as written; language comes from the assistant language tag
+    split_policy: no official split; the whole file is train, in jsonl order. train_hotwords keeps only task asr_hotwords, in the same order. Empty-system asr rows stay on train and are not in train_hotwords
+    stage3_cap:
+      max_lines: 695545
+      policy: stage 3 read the first 695545 jsonl lines; this catalog keeps the full file
+      records: 695545
+      duration_hours: 1029.3752476212755
+    duration_distribution:
+      all:
+        count: 1043317
+        hours: 1465.01806781245
+        min: 0.666
+        p50: 4.83
+        p90: 7.446
+        p99: 10.062
+        max: 79.104
+        mean: 5.0550935565363355
+      asr:
+        count: 208981
+        hours: 293.57593957286264
+        min: 0.666
+        p50: 4.83
+        p90: 7.446
+        p99: 10.069
+        max: 35.413
+        mean: 5.057270194239216
+      asr_hotwords:
+        count: 834336
+        hours: 1171.4421282397848
+        min: 0.727
+        p50: 4.83
+        p90: 7.446
+        p99: 10.062
+        max: 79.104
+        mean: 5.0545483614074245
+      en:
+        count: 500000
+        hours: 790.8204197043754
+        min: 1.124
+        p50: 5.574
+        p90: 7.854
+        p99: 9.75
+        max: 27.8
+        mean: 5.693907021871502
+      zh:
+        count: 543317
+        hours: 674.1976481079753
+        min: 0.666
+        p50: 4.096
+        p90: 6.629
+        p99: 10.667
+        max: 79.104
+        mean: 4.4672107318355785
+      stage3_prefix:
+        count: 695545
+        hours: 1029.3752476212755
+        min: 0.666
+        p50: 5.166
+        p90: 7.64
+        p99: 9.87
+        max: 79.104
+        mean: 5.327837726439831
+    corpora:
+      MAGICDATA:
+        records: 349958
+        hours: 434.62902362857335
+      common_voice_en:
+        records: 500000
+        hours: 790.8206329856253
+      data_aishell:
+        records: 120098
+        hours: 150.85201560763863
+      data_aishell3:
+        records: 63261
+        hours: 63.17132906273641
+      data_thchs30:
+        records: 10000
+        hours: 25.54506652777778
+  provenance:
+    description: 阶段 3 热词 ShareGPT。带 Hotwords 的行是热词转写，系统提示为空的行是普通转写。音频指向已注册源文件。
+    snapshot_date: '2026-10-14'
+    source: /workspace/workspace/lx/data/ckpt34479_recipe/AmphionASR-1.7B-v3/data/sharegpt/hw_sft/hw_sft.jsonl
+    rules: data/amphionasr/scripts/build_hw_sft_catalog.py
+    quality_status: source_annotations_preserved_not_reaudited
+    skipped_audio: 0
+    duplicate_hotword_rows: 1047
+    registered_from: lx 私有登记 /workspace/workspace/lx/data/amphionasr（AmphionASR v4 配方，open-audio-llm feat/amphionasr-v4）；清单原样复制到 aidc_data，root_alias amphionasr→aidc_data；生成脚本快照 /workspace/data/migration/register-amphionasr-v4-20261015/scripts/ (2026-10-15 公共登记)
+- schema_version: dataset-catalog/2.0
+  dataset_id: magicdata_ramc
+  version: turn-taking-20261014
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: eval_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/turn-taking-20261014/records/eval_2spk.jsonl.gz
+    expected_bytes: 309681
+    sha256: c456fd3ac70ab198b098160e557796fe3d14d10f260253711cc6d24857e978ee
+    metadata:
+      record_count: 1814
+  - name: eval_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/turn-taking-20261014/records/eval_neg.jsonl.gz
+    expected_bytes: 107614
+    sha256: fd0e63d8929fc7469d8c5aba4b58ac9ad12d8617efb756e100abdfa0a7e10a3a
+    metadata:
+      record_count: 965
+  - name: test_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/turn-taking-20261014/records/test_2spk.jsonl.gz
+    expected_bytes: 689688
+    sha256: 18921058d4a88293c0c6334d73173f7a0bfca244689c0d116e03c92e6962a66b
+    metadata:
+      record_count: 4063
+  - name: test_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/turn-taking-20261014/records/test_neg.jsonl.gz
+    expected_bytes: 264893
+    sha256: b1081e7cf2b900850e49051f6e88470c2465eecac97f6d5962ae222bdbf1c184
+    metadata:
+      record_count: 2123
+  - name: train_2spk
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/turn-taking-20261014/records/train_2spk.jsonl.gz
+    expected_bytes: 5043751
+    sha256: 41494bdd6759a4e549235c89d0324041fb03ccff69bf0ad5c6b95f257c637bd3
+    metadata:
+      record_count: 29508
+  - name: train_neg
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/turn-taking-20261014/records/train_neg.jsonl.gz
+    expected_bytes: 2161555
+    sha256: d4e55f6bdaf208d06af73194742daf74463ba737655c1c035e76f44ca7dddcb5
+    metadata:
+      record_count: 15372
+  - name: audio_index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/turn-taking-20261014/audio_index/audio-index.jsonl.gz
+    expected_bytes: 20977
+    sha256: 24427d0c166f8e0c71a86aa13856d288d15038fdd3f5598716761aff45237e2d
+    metadata:
+      record_count: 351
+  - name: duration_distribution
+    kind: statistics
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/turn-taking-20261014/duration_distribution.json
+    expected_bytes: 14429
+    sha256: 363f3dce83ceccc643fa5f779d8eacca4024a86a61e096931925f9a07f271182
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/turn-taking-20261014/record_index/index.json
+    expected_bytes: 1677
+    sha256: a801a7191bdac963c8d0f030b20ec592a0387f5998a0f7e18e6de3367486f2aa
+    metadata:
+      snapshot_version: 13
+      rows: 53845
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    eval_2spk:
+      group: eval
+      artifacts:
+        records:
+        - eval_2spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 1814
+        negative_records: 0
+        duration_hours: 13.45221499999995
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 965
+        unique_mixture_duration_hours: 7.12348722222222
+        languages:
+          zh: 1814
+    eval_neg:
+      group: eval
+      artifacts:
+        records:
+        - eval_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 965
+        negative_records: 965
+        duration_hours: 7.12348722222222
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 965
+        unique_mixture_duration_hours: 7.12348722222222
+        languages:
+          zh: 965
+    test_2spk:
+      group: test
+      artifacts:
+        records:
+        - test_2spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 4063
+        negative_records: 0
+        duration_hours: 30.17846083333336
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 2123
+        unique_mixture_duration_hours: 15.693224722222201
+        languages:
+          zh: 4063
+    test_neg:
+      group: test
+      artifacts:
+        records:
+        - test_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 2123
+        negative_records: 2123
+        duration_hours: 15.693224722222201
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 2123
+        unique_mixture_duration_hours: 15.693224722222201
+        languages:
+          zh: 2123
+    train_2spk:
+      group: train
+      artifacts:
+        records:
+        - train_2spk
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 29508
+        negative_records: 0
+        duration_hours: 221.8842449999981
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 15372
+        unique_mixture_duration_hours: 115.20826805555646
+        languages:
+          zh: 29508
+    train_neg:
+      group: train
+      artifacts:
+        records:
+        - train_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 15372
+        negative_records: 15372
+        duration_hours: 115.20826805555646
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 15372
+        unique_mixture_duration_hours: 115.20826805555646
+        languages:
+          zh: 15372
+    train:
+      artifacts:
+        records:
+        - train_2spk
+        - train_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 44880
+        duration_hours: 337.0925130555546
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 15372
+        unique_mixture_duration_hours: 115.20826805555646
+    eval:
+      artifacts:
+        records:
+        - eval_2spk
+        - eval_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 2779
+        duration_hours: 20.575702222222173
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 965
+        unique_mixture_duration_hours: 7.12348722222222
+    test:
+      artifacts:
+        records:
+        - test_2spk
+        - test_neg
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 6186
+        duration_hours: 45.871685555555565
+        duration_basis: sum of mixture duration per target example; excludes enrollment; repeated mixtures count once per example
+        unique_mixture_count: 2123
+        unique_mixture_duration_hours: 15.693224722222201
+  recipe_parameters:
+    source: magicdata_ramc@legacy-20260804; dev is used as eval
+    mixture_seconds:
+    - 0.5
+    - 30.0
+    enrollment_seconds:
+    - 1.0
+    - 30.0
+    min_target_speech_seconds: 1.0
+    max_gap_seconds: 3.0
+    max_speakers: 2
+    window_policy: whole utterances only; gap <= 3s; flush above 30s or above 3 speakers
+    enrollment_policy: a different non-overlapping utterance of 1-30s; same session and speaker first, then same split and speaker; md5 stable pick; far:near = 3:1 when a near file exists
+    negative_policy: one absent-speaker enrollment per kept window; empty target; window dropped without it
+    duration_distribution:
+      mixture_windows:
+        count: 18460
+        hours: 138.02498000000114
+        min: 1.496
+        p50: 28.072
+        p90: 29.688
+        p99: 29.976
+        max: 30.0
+        mean: 26.917114192849624
+      enrollment_positive:
+        count: 35385
+        hours: 32.44471777777827
+        min: 1.0
+        p50: 2.822
+        p90: 6.184
+        p99: 7.913
+        max: 12.848
+        mean: 3.3008614949838004
+      enrollment_negative:
+        count: 18460
+        hours: 17.489442222222184
+        min: 1.0
+        p50: 2.944
+        p90: 6.34
+        p99: 7.91
+        max: 14.912
+        mean: 3.4107254604550308
+      enrollment_all:
+        count: 53845
+        hours: 49.934159999999885
+        min: 1.0
+        p50: 2.865
+        p90: 6.245
+        p99: 7.913
+        max: 14.912
+        mean: 3.3385268084316015
+    enroll_channel:
+      far: 53845
+  provenance:
+    description: 会议 turn-taking。整句拼成 2/3 人混合窗，时长 0.5～30 秒。注册音是窗外另一句，1～30 秒。有近场时远场:近场 = 3:1。
+    snapshot_date: '2026-10-14'
+    source: magicdata_ramc@legacy-20260804; dev is used as eval
+    rules: AmphionASR-1.7B-v3/scripts/tsasr/build_turn_taking.py
+    quality_status: source_annotations_preserved_not_reaudited
+    load:
+      missing_audio_recordings: 0
+      near_links: 0
+      note: Official dev is eval. Source wav is mono, so there is no per-speaker near channel.
+    registered_from: lx 私有登记 /workspace/workspace/lx/data/amphionasr（AmphionASR v4 配方，open-audio-llm feat/amphionasr-v4）；清单原样复制到 aidc_data，root_alias amphionasr→aidc_data；生成脚本快照 /workspace/data/migration/register-amphionasr-v4-20261015/scripts/ (2026-10-15 公共登记)
+- schema_version: dataset-catalog/2.0
+  dataset_id: magicdata_ramc
+  version: asr-20261014
+  languages:
+  - zh
+  tasks:
+  - asr
+  aliases: []
+  artifacts:
+  - name: eval
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/asr-20261014/records/eval.jsonl.gz
+    expected_bytes: 497126
+    sha256: 7c7c3423495c4922c8945d29a2713f42c7f41d92219a85849411c56deb92fba7
+    metadata:
+      record_count: 9761
+  - name: test
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/asr-20261014/records/test.jsonl.gz
+    expected_bytes: 1069641
+    sha256: 550172f2e7a4a2e64ac6955498d50bcdcb68416f9fa9c6c0eb0eb3127c52c8c4
+    metadata:
+      record_count: 21386
+  - name: train
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/asr-20261014/records/train.jsonl.gz
+    expected_bytes: 7790606
+    sha256: 263e823435f62cf55e1b8aa9e50a77b3ab6396582a1559ab7aaf1798576a102a
+    metadata:
+      record_count: 154195
+  - name: audio_index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/asr-20261014/audio_index/audio-index.jsonl.gz
+    expected_bytes: 20977
+    sha256: 24427d0c166f8e0c71a86aa13856d288d15038fdd3f5598716761aff45237e2d
+    metadata:
+      record_count: 351
+  - name: duration_distribution
+    kind: statistics
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/asr-20261014/duration_distribution.json
+    expected_bytes: 970
+    sha256: 7c85a254784d8616a4fa01c78a9d7baad56ee7482b574cc5e18246b93d3bd46e
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/asr-20261014/record_index/index.json
+    expected_bytes: 1059
+    sha256: 20fae5fc0da6190dab4e2de0ceaca9cd0f0359a6c58b01bd3e5eb5deb3a57bfa
+    metadata:
+      snapshot_version: 13
+      rows: 185342
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    eval:
+      group: eval
+      artifacts:
+        records:
+        - eval
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 9761
+        duration_hours: 8.115837777777772
+        duration_basis: sum of supervision duration on channel 0; overlapping speakers count once per supervision
+        languages:
+          zh: 9761
+    test:
+      group: test
+      artifacts:
+        records:
+        - test
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 21386
+        duration_hours: 16.882299722222232
+        duration_basis: sum of supervision duration on channel 0; overlapping speakers count once per supervision
+        languages:
+          zh: 21386
+    train:
+      group: train
+      artifacts:
+        records:
+        - train
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 154195
+        duration_hours: 123.9923297222233
+        duration_basis: sum of supervision duration on channel 0; overlapping speakers count once per supervision
+        languages:
+          zh: 154195
+  recipe_parameters:
+    source: magicdata_ramc@legacy-20260804; dev is eval
+    duration_seconds:
+    - 0.5
+    - 30.0
+    text_policy: supervision text, ends trimmed; empty text is dropped
+    channel_policy: channel 0, the first array microphone used by the ShareGPT meeting cutter; not a mean downmix
+    audio_policy: records point at the registered recording with start and duration; no new wav is written
+    split_policy: source split is kept; AMI eval meetings are removed from train and the eight present in the local train manifest are eval
+    duration_distribution:
+      eval:
+        count: 9761
+        hours: 8.115837777777772
+        min: 0.5
+        p50: 2.56
+        p90: 6.012
+        p99: 7.835
+        max: 10.192
+        mean: 2.993240036881465
+      test:
+        count: 21386
+        hours: 16.882299722222232
+        min: 0.5
+        p50: 2.248
+        p90: 6.024
+        p99: 7.856
+        max: 12.848
+        mean: 2.8418722061161525
+      train:
+        count: 154195
+        hours: 123.9923297222233
+        min: 0.5
+        p50: 2.357
+        p90: 6.032
+        p99: 7.876
+        max: 14.912
+        mean: 2.894856428548292
+      all:
+        count: 185342
+        hours: 148.99046722222587
+        min: 0.5
+        p50: 2.356
+        p90: 6.031
+        p99: 7.873
+        max: 14.912
+        mean: 2.8939241078655304
+  provenance:
+    description: 会议普通转写。每条 supervision 一条，时长 0.5～30 秒，文本非空。多通道只取第 0 路。
+    snapshot_date: '2026-10-14'
+    source: magicdata_ramc@legacy-20260804; dev is eval
+    rules: AmphionASR-1.7B-v3/scripts/lx/build_meeting_sharegpt.py
+    quality_status: source_annotations_preserved_not_reaudited
+    load:
+      missing_audio_recordings: 0
+      near_links: 0
+      note: Official dev is eval. Source wav is mono, so there is no per-speaker near channel.
+    registered_from: lx 私有登记 /workspace/workspace/lx/data/amphionasr（AmphionASR v4 配方，open-audio-llm feat/amphionasr-v4）；清单原样复制到 aidc_data，root_alias amphionasr→aidc_data；生成脚本快照 /workspace/data/migration/register-amphionasr-v4-20261015/scripts/ (2026-10-15 公共登记)
+- schema_version: dataset-catalog/2.0
+  dataset_id: farfield_speech_noise_1spk
+  version: '20261014'
+  languages:
+  - zh
+  - en
+  tasks:
+  - noise
+  aliases: []
+  artifacts:
+  - name: train_zh
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/farfield_speech_noise_1spk/versions/20261014/records/train_zh.jsonl.gz
+    expected_bytes: 1007715
+    sha256: a11c40a3a7f7ca25714ba70da404680b49751d4bd868bb3f0c7210949bfc9610
+    metadata:
+      record_count: 5000
+  - name: train_en
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/farfield_speech_noise_1spk/versions/20261014/records/train_en.jsonl.gz
+    expected_bytes: 998412
+    sha256: e4fc2a33eb09714a93d011e1e660f3f5cfbc66f2c2cc7c0e150f7d2f18b4f549
+    metadata:
+      record_count: 5000
+  - name: audio_index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/farfield_speech_noise_1spk/versions/20261014/audio_index/audio-index.jsonl.gz
+    expected_bytes: 573121
+    sha256: 14e1341344f93d035907a342f125bb905ebc3ffac4d999e1ce22b9c1b8bc27a6
+    metadata:
+      record_count: 10000
+  - name: duration_distribution
+    kind: statistics
+    root_alias: aidc_data
+    relative_path: datasets/farfield_speech_noise_1spk/versions/20261014/duration_distribution.json
+    expected_bytes: 614
+    sha256: 122898841844719cb97402b52b80ea5cbf06e7415426a33ce32e8c1b656b0f7d
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/farfield_speech_noise_1spk/versions/20261014/record_index/index.json
+    expected_bytes: 930
+    sha256: be77a8fd9671053e98f10c3a2a0c8d5d783b092ae34101140148dfc2ff866a54
+    metadata:
+      snapshot_version: 13
+      rows: 10000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    train_zh:
+      group: train
+      task: noise
+      artifacts:
+        records:
+        - train_zh
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 5000
+        duration_hours: 12.579063315972222
+        duration_basis: sum of far-field speech-noise file duration; each wav is one noise example
+        languages:
+          zh: 5000
+    train_en:
+      group: train
+      task: noise
+      artifacts:
+        records:
+        - train_en
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 5000
+        duration_hours: 12.924538298611111
+        duration_basis: sum of far-field speech-noise file duration; each wav is one noise example
+        languages:
+          en: 5000
+    train:
+      task: noise
+      artifacts:
+        records:
+        - train_zh
+        - train_en
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 10000
+        duration_hours: 25.50360161458334
+        duration_basis: sum of far-field speech-noise file duration; each wav is one noise example
+        languages:
+          zh: 5000
+          en: 5000
+  recipe_parameters:
+    audio: datasets/farfield_speech_noise/1spk/{zh|en}/{id}.wav
+    speaker_count: 1
+    sample_rate: 16000
+    channels: 1
+    task: noise
+    text_policy: target keeps the source transcript; 2spk and 3spk join each speaker with a newline
+    split_policy: no official eval split; train_zh and train_en cover every generated file
+    duration_distribution:
+      zh:
+        count: 5000
+        hours: 12.579063315972222
+        min: 6.50975
+        p50: 8.836437499999999
+        p90: 11.5189375
+        p99: 12.4174425
+        max: 12.587
+        mean: 9.0569255875
+      en:
+        count: 5000
+        hours: 12.924538298611111
+        min: 6.5091875
+        p50: 9.1985
+        p90: 11.672543750000006
+        p99: 12.451
+        max: 12.596
+        mean: 9.305667575
+      all:
+        count: 10000
+        hours: 25.50360161458334
+        min: 6.5091875
+        p50: 9.022874999999999
+        p90: 11.601
+        p99: 12.434
+        max: 12.596
+        mean: 9.18129658125
+  provenance:
+    description: 单人远场人声噪声。Emilia 中文或英文干声卷上一条远场房间冲激响应，16 kHz 单声道。
+    snapshot_date: '2026-10-14'
+    source: /workspace/data/datasets/farfield_speech_noise/1spk
+    quality_status: synthetic_farfield_speech_noise
+    registered_from: lx 私有登记 /workspace/workspace/lx/data/amphionasr（AmphionASR v4 配方，open-audio-llm feat/amphionasr-v4）；清单原样复制到 aidc_data，root_alias amphionasr→aidc_data；生成脚本快照 /workspace/data/migration/register-amphionasr-v4-20261015/scripts/ (2026-10-15 公共登记)
+- schema_version: dataset-catalog/2.0
+  dataset_id: farfield_speech_noise_2spk
+  version: '20261014'
+  languages:
+  - zh
+  - en
+  tasks:
+  - noise
+  aliases: []
+  artifacts:
+  - name: train_zh
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/farfield_speech_noise_2spk/versions/20261014/records/train_zh.jsonl.gz
+    expected_bytes: 1596798
+    sha256: 7de8f0dcf05b6e0f5f1953db89a0cfdabae895e261205924d4d2f3eb9879d347
+    metadata:
+      record_count: 5000
+  - name: train_en
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/farfield_speech_noise_2spk/versions/20261014/records/train_en.jsonl.gz
+    expected_bytes: 1603718
+    sha256: eeb3086060fc3cdc54834a1c99a01c0dc39858251598a49c60de2007ea2f3831
+    metadata:
+      record_count: 5000
+  - name: audio_index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/farfield_speech_noise_2spk/versions/20261014/audio_index/audio-index.jsonl.gz
+    expected_bytes: 577783
+    sha256: f2314e8e7a89877d3d2605fc69349a92acec192b5ad1f848aaed431dce124252
+    metadata:
+      record_count: 10000
+  - name: duration_distribution
+    kind: statistics
+    root_alias: aidc_data
+    relative_path: datasets/farfield_speech_noise_2spk/versions/20261014/duration_distribution.json
+    expected_bytes: 651
+    sha256: 1cd603f4d9c92f133fe1b7b3b1aaa27487c9e7edd1bdd2f03bf348804cdf53a2
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/farfield_speech_noise_2spk/versions/20261014/record_index/index.json
+    expected_bytes: 930
+    sha256: 91bdb246a70a6a356042765b5d2d6770b8e6603413c874cf778ee7ff613ab61f
+    metadata:
+      snapshot_version: 13
+      rows: 10000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    train_zh:
+      group: train
+      task: noise
+      artifacts:
+        records:
+        - train_zh
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 5000
+        duration_hours: 15.004382847222223
+        duration_basis: sum of far-field speech-noise file duration; each wav is one noise example
+        languages:
+          zh: 5000
+    train_en:
+      group: train
+      task: noise
+      artifacts:
+        records:
+        - train_en
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 5000
+        duration_hours: 15.345674635416666
+        duration_basis: sum of far-field speech-noise file duration; each wav is one noise example
+        languages:
+          en: 5000
+    train:
+      task: noise
+      artifacts:
+        records:
+        - train_zh
+        - train_en
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 10000
+        duration_hours: 30.35005748263889
+        duration_basis: sum of far-field speech-noise file duration; each wav is one noise example
+        languages:
+          zh: 5000
+          en: 5000
+  recipe_parameters:
+    audio: datasets/farfield_speech_noise/2spk/{zh|en}/{id}.wav
+    speaker_count: 2
+    sample_rate: 16000
+    channels: 1
+    task: noise
+    text_policy: target keeps the source transcript; 2spk and 3spk join each speaker with a newline
+    split_policy: no official eval split; train_zh and train_en cover every generated file
+    duration_distribution:
+      zh:
+        count: 5000
+        hours: 15.004382847222223
+        min: 7.1078125
+        p50: 10.8134375
+        p90: 12.8022375
+        p99: 14.239018125000003
+        max: 15.245
+        mean: 10.80315565
+      en:
+        count: 5000
+        hours: 15.345674635416666
+        min: 6.9328125
+        p50: 11.1294375
+        p90: 12.97705625
+        p99: 14.292009375000001
+        max: 15.2559375
+        mean: 11.0488857375
+      all:
+        count: 10000
+        hours: 30.35005748263889
+        min: 6.9328125
+        p50: 10.96646875
+        p90: 12.918099999999999
+        p99: 14.25885375
+        max: 15.2559375
+        mean: 10.926020693749999
+  provenance:
+    description: 两人远场人声噪声。由两条不同说话人的 1spk 音频错开开口时间后叠加。
+    snapshot_date: '2026-10-14'
+    source: /workspace/data/datasets/farfield_speech_noise
+    quality_status: synthetic_farfield_speech_noise
+    registered_from: lx 私有登记 /workspace/workspace/lx/data/amphionasr（AmphionASR v4 配方，open-audio-llm feat/amphionasr-v4）；清单原样复制到 aidc_data，root_alias amphionasr→aidc_data；生成脚本快照 /workspace/data/migration/register-amphionasr-v4-20261015/scripts/ (2026-10-15 公共登记)
+  derived_from: farfield_speech_noise_1spk@20261014
+- schema_version: dataset-catalog/2.0
+  dataset_id: farfield_speech_noise_3spk
+  version: '20261014'
+  languages:
+  - zh
+  - en
+  tasks:
+  - noise
+  aliases: []
+  artifacts:
+  - name: train_zh
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/farfield_speech_noise_3spk/versions/20261014/records/train_zh.jsonl.gz
+    expected_bytes: 2206786
+    sha256: ba2fea03dcedfdaea301dd9e0001accdbb1db8dc934cbad3af7c4d84e129d693
+    metadata:
+      record_count: 5000
+  - name: train_en
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/farfield_speech_noise_3spk/versions/20261014/records/train_en.jsonl.gz
+    expected_bytes: 2225362
+    sha256: 9e5af3f87738a879268f8a3263e229ce76f6f48d0c105ebb48f4797cb719487c
+    metadata:
+      record_count: 5000
+  - name: audio_index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/farfield_speech_noise_3spk/versions/20261014/audio_index/audio-index.jsonl.gz
+    expected_bytes: 578635
+    sha256: d6460b4b84ceee32bf0de011b57d5c5060e617c60815d66b7fb504596287789e
+    metadata:
+      record_count: 10000
+  - name: duration_distribution
+    kind: statistics
+    root_alias: aidc_data
+    relative_path: datasets/farfield_speech_noise_3spk/versions/20261014/duration_distribution.json
+    expected_bytes: 662
+    sha256: 8b202b1a23d5b2a6a338a317b97e008e8f385009de9ec6c618b279f143e2f578
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/farfield_speech_noise_3spk/versions/20261014/record_index/index.json
+    expected_bytes: 930
+    sha256: f7adeb316bba352d446b1b42ee4241fd6771aa9bc58315da73e97db63fa4a3ec
+    metadata:
+      snapshot_version: 13
+      rows: 10000
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    train_zh:
+      group: train
+      task: noise
+      artifacts:
+        records:
+        - train_zh
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 5000
+        duration_hours: 16.191683975694446
+        duration_basis: sum of far-field speech-noise file duration; each wav is one noise example
+        languages:
+          zh: 5000
+    train_en:
+      group: train
+      task: noise
+      artifacts:
+        records:
+        - train_en
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 5000
+        duration_hours: 16.539561527777778
+        duration_basis: sum of far-field speech-noise file duration; each wav is one noise example
+        languages:
+          en: 5000
+    train:
+      task: noise
+      artifacts:
+        records:
+        - train_zh
+        - train_en
+        audio_index:
+        - audio_index
+        records_lance:
+        - record_index
+      statistics:
+        records: 10000
+        duration_hours: 32.73124550347222
+        duration_basis: sum of far-field speech-noise file duration; each wav is one noise example
+        languages:
+          zh: 5000
+          en: 5000
+  recipe_parameters:
+    audio: datasets/farfield_speech_noise/3spk/{zh|en}/{id}.wav
+    speaker_count: 3
+    sample_rate: 16000
+    channels: 1
+    task: noise
+    text_policy: target keeps the source transcript; 2spk and 3spk join each speaker with a newline
+    split_policy: no official eval split; train_zh and train_en cover every generated file
+    duration_distribution:
+      zh:
+        count: 5000
+        hours: 16.191683975694446
+        min: 7.6199375
+        p50: 11.704531249999999
+        p90: 13.548775000000001
+        p99: 14.665379375000008
+        max: 15.4325
+        mean: 11.6580124625
+      en:
+        count: 5000
+        hours: 16.539561527777778
+        min: 7.518125
+        p50: 12.0020625
+        p90: 13.660200000000001
+        p99: 14.654039375
+        max: 15.557
+        mean: 11.9084843
+      all:
+        count: 10000
+        hours: 32.73124550347222
+        min: 7.518125
+        p50: 11.865437499999999
+        p90: 13.594043749999999
+        p99: 14.658008125
+        max: 15.557
+        mean: 11.78324838125
+  provenance:
+    description: 三人远场人声噪声。由三条不同说话人的 1spk 音频错开开口时间后叠加。
+    snapshot_date: '2026-10-14'
+    source: /workspace/data/datasets/farfield_speech_noise
+    quality_status: synthetic_farfield_speech_noise
+    registered_from: lx 私有登记 /workspace/workspace/lx/data/amphionasr（AmphionASR v4 配方，open-audio-llm feat/amphionasr-v4）；清单原样复制到 aidc_data，root_alias amphionasr→aidc_data；生成脚本快照 /workspace/data/migration/register-amphionasr-v4-20261015/scripts/ (2026-10-15 公共登记)
+  derived_from: farfield_speech_noise_1spk@20261014
+- schema_version: dataset-catalog/2.0
+  dataset_id: wham
+  version: tr-20261014
+  languages:
+  - und
+  tasks:
+  - noise
+  aliases: []
+  artifacts:
+  - name: recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/wham/versions/tr-20261014/recordings/wham_tr_recordings.jsonl.gz
+    expected_bytes: 559915
+    sha256: 5bdfe64bd080cc9daaae0454c85877970faa27a42661a6dfd39e13c3d8a17a9d
+    metadata:
+      record_count: 20000
+  splits:
+    train:
+      task: noise
+      artifacts:
+        recordings:
+        - recordings
+      statistics:
+        records: 20000
+  provenance:
+    description: WHAM training noise. Paths point at noise_open/wham_noise/extracted/wham_noise/tr.
+    snapshot_date: '2026-10-14'
+    source: /workspace/workspace/lx/data/amphionasr/datasets/wham/versions/tr-20261014/recordings/wham_tr_recordings.jsonl.gz
+    registered_from: lx 私有登记 /workspace/workspace/lx/data/amphionasr（AmphionASR v4 配方，open-audio-llm feat/amphionasr-v4）；清单原样复制到 aidc_data，root_alias amphionasr→aidc_data；生成脚本快照 /workspace/data/migration/register-amphionasr-v4-20261015/scripts/ (2026-10-15 公共登记)
+- schema_version: dataset-catalog/2.0
+  dataset_id: wenetspeech_podcast
+  version: l-20261014
+  languages:
+  - zh
+  tasks:
+  - asr
+  aliases: []
+  artifacts:
+  - name: train_recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/wenetspeech_podcast/versions/l-20261014/recordings/train.jsonl.gz
+    expected_bytes: 952760
+    sha256: a8ab212e2b68a174b4c1a32bb58364520097c83773ec9b0cd9a223de39d8aeaa
+    metadata:
+      record_count: 37319
+  - name: train_supervisions
+    kind: lhotse-supervisions
+    root_alias: aidc_data
+    relative_path: datasets/wenetspeech_podcast/versions/l-20261014/supervisions/train.jsonl.gz
+    expected_bytes: 217932807
+    sha256: b27e01f49d60954e7ff33ccbc803cbf5d7649e9f7ae0f2b81acf5959e9edf2aa
+    metadata:
+      record_count: 6335277
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/wenetspeech_podcast/versions/l-20261014/record_index/index.json
+    expected_bytes: 759
+    sha256: 0e5ba78e61d4c64ea1c406a6ef099fbda4d960195ab4b6409c07da72f2f0897f
+    metadata:
+      snapshot_version: 13
+      rows: 6335277
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    train:
+      artifacts:
+        recordings:
+        - train_recordings
+        supervisions:
+        - train_supervisions
+        records_lance:
+        - record_index
+      statistics:
+        records: 6335277
+        recordings: 37319
+        duration_hours: 3892.2754388890244
+        duration_basis: sum of L-subset supervision duration; M and S are contained in L and are not added
+  recipe_parameters:
+    source: wenetspeech@legacy-20260804 L subset, split by recording path
+    youtube_path: audio/train/youtube and audio/test_net/youtube
+    podcast_path: audio/train/podcast
+    duration_policy: all segment lengths are kept; the replay 8-second meeting proxy is not applied
+    sample_policy: full L subset, not the replay-3000h sample
+    audio_policy: recording paths are rewritten onto the local WenetSpeech tree; no audio is copied
+  provenance:
+    description: WenetSpeech L 集按录音路径分成 YouTube 或 podcast。这是全集，不是 replay 的 3000 小时抽样。
+    snapshot_date: '2026-10-14'
+    source: /workspace/data/datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/LHOTSE/WenetSpeech/data/manifests
+    rules: data/amphionasr/scripts/build_wenetspeech_domain_catalogs.py
+    quality_status: source_annotations_preserved_not_reaudited
+    registered_from: lx 私有登记 /workspace/workspace/lx/data/amphionasr（AmphionASR v4 配方，open-audio-llm feat/amphionasr-v4）；清单原样复制到 aidc_data，root_alias amphionasr→aidc_data；生成脚本快照 /workspace/data/migration/register-amphionasr-v4-20261015/scripts/ (2026-10-15 公共登记)
+- schema_version: dataset-catalog/2.0
+  dataset_id: wenetspeech_youtube
+  version: l-20261014
+  languages:
+  - zh
+  tasks:
+  - asr
+  aliases: []
+  artifacts:
+  - name: train_recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/wenetspeech_youtube/versions/l-20261014/recordings/train.jsonl.gz
+    expected_bytes: 730713
+    sha256: 4a0a661018e9063eb907b7836ae03043eb6282ccd8b4d05be5a91436fd2af584
+    metadata:
+      record_count: 23808
+  - name: train_supervisions
+    kind: lhotse-supervisions
+    root_alias: aidc_data
+    relative_path: datasets/wenetspeech_youtube/versions/l-20261014/supervisions/train.jsonl.gz
+    expected_bytes: 277469342
+    sha256: 4ccdce3b49dd5a7b92bb212262ddfd48976e46481eae05e8b0d42cb55595cfd3
+    metadata:
+      record_count: 8289968
+  - name: test_recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/wenetspeech_youtube/versions/l-20261014/recordings/test.jsonl.gz
+    expected_bytes: 3927
+    sha256: 1340e95d8e2e731d1d71b85130b43e6a3bbeaa06d1e9ce246eeed15e5889ec53
+    metadata:
+      record_count: 124
+  - name: test_supervisions
+    kind: lhotse-supervisions
+    root_alias: aidc_data
+    relative_path: datasets/wenetspeech_youtube/versions/l-20261014/supervisions/test.jsonl.gz
+    expected_bytes: 1093920
+    sha256: 704ba36a07f56bcefe8c057a46236b756495b382a4e981237315833211d8fc1e
+    metadata:
+      record_count: 24774
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/wenetspeech_youtube/versions/l-20261014/record_index/index.json
+    expected_bytes: 1110
+    sha256: 3566d50a1f17ce9cceafb58b587cca1158f75b094f9225c8f8904742dff05a68
+    metadata:
+      snapshot_version: 13
+      rows: 8314742
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    train:
+      artifacts:
+        recordings:
+        - train_recordings
+        supervisions:
+        - train_supervisions
+        records_lance:
+        - record_index
+      statistics:
+        records: 8289968
+        recordings: 23808
+        duration_hours: 6113.135899990918
+        duration_basis: sum of L-subset supervision duration; M and S are contained in L and are not added
+    test:
+      artifacts:
+        recordings:
+        - test_recordings
+        supervisions:
+        - test_supervisions
+        records_lance:
+        - record_index
+      statistics:
+        records: 24774
+        recordings: 124
+        duration_hours: 23.05620833333321
+        duration_basis: sum of L-subset supervision duration; M and S are contained in L and are not added
+      group: test
+  recipe_parameters:
+    source: wenetspeech@legacy-20260804 L subset, split by recording path
+    youtube_path: audio/train/youtube and audio/test_net/youtube
+    podcast_path: audio/train/podcast
+    duration_policy: all segment lengths are kept; the replay 8-second meeting proxy is not applied
+    sample_policy: full L subset, not the replay-3000h sample
+    audio_policy: recording paths are rewritten onto the local WenetSpeech tree; no audio is copied
+  provenance:
+    description: WenetSpeech L 集按录音路径分成 YouTube 或 podcast。这是全集，不是 replay 的 3000 小时抽样。
+    snapshot_date: '2026-10-14'
+    source: /workspace/data/datasets/wenetspeech/source/cos-backup-20261011/legacy_asr/LHOTSE/WenetSpeech/data/manifests
+    rules: data/amphionasr/scripts/build_wenetspeech_domain_catalogs.py
+    quality_status: source_annotations_preserved_not_reaudited
+    registered_from: lx 私有登记 /workspace/workspace/lx/data/amphionasr（AmphionASR v4 配方，open-audio-llm feat/amphionasr-v4）；清单原样复制到 aidc_data，root_alias amphionasr→aidc_data；生成脚本快照 /workspace/data/migration/register-amphionasr-v4-20261015/scripts/ (2026-10-15 公共登记)
+- schema_version: dataset-catalog/2.0
+  dataset_id: vitw
+  version: 2m-20261013
+  languages:
+  - zh
+  - en
+  tasks:
+  - asr
+  artifacts:
+  - name: train_recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/vitw/versions/2m-20261013/train_recordings/vitw_2m_recordings_train.jsonl.gz
+    expected_bytes: 9113654
+    sha256: 5434d0a82638025d60deb83596c5f95029c4824e590ac5b4fb1d3664b4d22e9b
+    metadata:
+      record_count: 556414
+      duration_hours: 1085.4107984085672
+  - name: train_supervisions
+    kind: lhotse-supervisions
+    root_alias: aidc_data
+    relative_path: datasets/vitw/versions/2m-20261013/train_supervisions/vitw_2m_supervisions_train.jsonl.gz
+    expected_bytes: 43114026
+    sha256: d5190bb7f05e8859c763fc869a7593b3c6bdd7b49402d6bef8cd8c350f4a352f
+    metadata:
+      record_count: 556414
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/vitw/versions/2m-20261013/record_index/index.json
+    expected_bytes: 743
+    sha256: 3c91280a60f31c64d3acb04b358074c766b94b1c3c88b334434bccc2599efe13
+    metadata:
+      snapshot_version: 13
+      rows: 556414
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    train:
+      artifacts:
+        recordings:
+        - train_recordings
+        supervisions:
+        - train_supervisions
+        records_lance:
+        - record_index
+      statistics:
+        recordings: 556414
+        supervisions: 556414
+        duration_hours: 1085.4107984085672
+        duration_basis: sum_of_recording_durations
+        languages:
+          zh: 244495
+          en: 311919
+  recipe_parameters:
+    source_jsonl: /workspace/workspace/lx/data/ckpt34479_recipe/AmphionASR-1.7B-v3/data/sharegpt/voice-in-the-wild-2m/vitw.jsonl
+    audio_root: /workspace/data/datasets/vitw/source/Voices-in-the-Wild-2M-c1720687/audio
+    order: source jsonl order
+    text_policy: strip the language name and <asr_text> wrapper; keep the remaining transcript
+    native_sample_rates:
+      16000: 419030
+      24000: 1576
+      48000: 135808
+    channels: 1
+  provenance:
+    description: Voices-in-the-Wild 2M 配方全量转写。音频仍在 2M 源目录，按原 jsonl 顺序登记；不是 Bench 的 legacy-20260804。
+    snapshot_date: '2026-10-13'
+    source: checkpoint-34479 sharegpt vitw.jsonl
+    registered_from: lx 私有登记 /workspace/workspace/lx/data/amphionasr（AmphionASR v4 配方，open-audio-llm feat/amphionasr-v4）；清单原样复制到 aidc_data，root_alias amphionasr→aidc_data；生成脚本快照 /workspace/data/migration/register-amphionasr-v4-20261015/scripts/ (2026-10-15 公共登记)
+- schema_version: dataset-catalog/2.0
+  dataset_id: emilia2_short
+  version: short-lance-20261023
+  languages:
+  - zh
+  - en
+  tasks:
+  - asr
+  aliases: []
+  artifacts:
+  - name: train_en
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_short/versions/short-lance-20261023/records/train_en.jsonl.gz
+    expected_bytes: 317752190
+    sha256: bdccdd35877a8d3bd01c648cc0bba83489097240099693e105d3e8e0932a6551
+    metadata:
+      record_count: 2081289
+  - name: train_zh
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_short/versions/short-lance-20261023/records/train_zh.jsonl.gz
+    expected_bytes: 298467312
+    sha256: e8d80dc27b627b727323df054be2eb8972d759c49b54bd08669025440ca9e9e6
+    metadata:
+      record_count: 1913605
+  splits:
+    train_en:
+      group: train
+      artifacts:
+        records:
+        - train_en
+      statistics:
+        records: 2081289
+        duration_hours: 2740.149
+        duration_basis: sum of Lance sample duration; each sample is one ASR example
+        languages:
+          en: 2081289
+    train_zh:
+      group: train
+      artifacts:
+        records:
+        - train_zh
+      statistics:
+        records: 1913605
+        duration_hours: 2362.729
+        duration_basis: sum of Lance sample duration; each sample is one ASR example
+        languages:
+          zh: 1913605
+    train:
+      artifacts:
+        records:
+        - train_en
+        - train_zh
+      statistics:
+        records: 3994894
+        duration_hours: 5102.878
+        duration_basis: sum of Lance sample duration; each sample is one ASR example
+        languages:
+          zh: 1913605
+          en: 2081289
+  provenance:
+    description: 与 short-20261014 相同的记录与记录 ID，音频改读 emilia2@tts-unified-v0.1 Lance 发布里的同一条 m4a-128k standalone short（按上游 short ID 与 m4a 文件名对应；发布里存的是同一份完整解码的 FLAC），训练不再为这些片段启动 ffmpeg。音频引用写入 Lance 样本时长。Lance 中没有对应样本的 20 条（zh 11、en 9）已去掉。全部片段都在 Lance 里，没有音频索引，因此也没有 Lance 记录索引，训练端走 JSONL 记录缓存；读取需要 open-audio-llm 支持指向其他数据集 Lance 发布的音频引用（code-v14 起）。生成脚本 scripts/build_emilia2_short_lance.py。
+    snapshot_date: '2026-10-23'
+    source: emilia2_short@short-20261014 + emilia2@tts-unified-v0.1
+    quality_status: source_annotations_preserved_not_reaudited
+    sources:
+    - emilia2_short:short-20261014
+    - emilia2:tts-unified-v0.1

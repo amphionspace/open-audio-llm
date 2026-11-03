@@ -1,0 +1,514 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: alimeeting_sdm
+  version: turn-taking-20261014-utts
+  derived_from: alimeeting_sdm@turn-taking-20261014
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: train_2spk-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/turn-taking-20261014-utts/records_train_2spk.jsonl.gz
+    sha256: 191e8ba6c4a9bb2d1f2edd4c695d4ab0914dc718b58c3384db90457d3962aca7
+    metadata:
+      record_count: 10020
+  - name: train_2spk-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/turn-taking-20261014-utts/audio_index_train_2spk.jsonl.gz
+    sha256: f1149f0afcc6f2924cdb89aab5d8a89d7acaa126e1c3ab768f51eef9d215ab25
+    metadata:
+      record_count: 507
+  - name: train_3spk-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/turn-taking-20261014-utts/records_train_3spk.jsonl.gz
+    sha256: 9f6b153977d6a3e201b7e08a6abb171bf292dac3121466659f5914a557c837d6
+    metadata:
+      record_count: 47348
+  - name: train_3spk-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/turn-taking-20261014-utts/audio_index_train_3spk.jsonl.gz
+    sha256: 7c5fb8cf45d1ac7a71467787f0770f782e0e23571d90ee1c63c1edc5e2a759c9
+    metadata:
+      record_count: 558
+  - name: train_neg-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/turn-taking-20261014-utts/records_train_neg.jsonl.gz
+    sha256: 3ce4844ff65f53d3878eca4bb05d9096f725e0a4aa3e8bcd6a3fcf2589b957ac
+    metadata:
+      record_count: 26581
+  - name: train_neg-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/turn-taking-20261014-utts/audio_index_train_neg.jsonl.gz
+    sha256: d5dc0a09659e09d33709b1b0d2bb252088793afc0e3192863adc45e992f7fd08
+    metadata:
+      record_count: 753
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/alimeeting_sdm/versions/turn-taking-20261014-utts/record_index/index.json
+    expected_bytes: 1467
+    sha256: 6526260599df69e1835a45f3eddc0e2fd9ec48d2cf309a637aba0bbbb38d973e
+    metadata:
+      snapshot_version: 13
+      rows: 83949
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    train_2spk:
+      artifacts:
+        records:
+        - train_2spk-records
+        audio_index:
+        - train_2spk-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 10020
+        duration_hours: 8.21
+        duration_basis: clip duration (segment span, or the whole file)
+    train_3spk:
+      artifacts:
+        records:
+        - train_3spk-records
+        audio_index:
+        - train_3spk-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 47348
+        duration_hours: 49.54
+        duration_basis: clip duration (segment span, or the whole file)
+    train_neg:
+      artifacts:
+        records:
+        - train_neg-records
+        audio_index:
+        - train_neg-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 26581
+        duration_hours: 24.98
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-21'
+    description: alimeeting_sdm@turn-taking-20261014 的 train 划分（不含 eval/test），时间线取自 alimeeting_sdm@icefall-20260908 的 train
+      人工标注。加 metadata.window_utts（窗口内每句的说话人与相对混合起点的起止，取自来源标注并截到窗口，截断的标 clipped）与同一命名空间的 metadata.target_speaker，供 open-audio-llm
+      帧级说话人活动标签（objective.ts_activity_weight）；其余字段不变，音频引用改指本版本，音频索引与原版逐行相同。正样本的目标语句与转写逐字一致（忽略空白和标点；窗口边缘截断的句子允许只转写一部分）才写时间线，负样本只有注册人确实不在窗口里说话才写；其余记录不写时间线（不出帧级标签）。负样本中注册人按标注其实在窗口内说话的记录
+      ID 列在 excluded-records-<split>.txt，训练配方用 exclude_records 排除。生成脚本 audio-data-contract scripts/ts_robust/add_window_utts.py，逐划分统计见
+      report.json。
+    sources:
+    - alimeeting_sdm@turn-taking-20261014
+    - alimeeting_sdm@icefall-20260908
+- schema_version: dataset-catalog/2.0
+  dataset_id: aishell4
+  version: turn-taking-20261014-utts
+  derived_from: aishell4@turn-taking-20261014
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: train_2spk-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/aishell4/versions/turn-taking-20261014-utts/records_train_2spk.jsonl.gz
+    sha256: ff68cdbd866f7b712de35552cbd89295a66fd882526c92bc1cd07677d7ed0f26
+    metadata:
+      record_count: 10506
+  - name: train_2spk-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/aishell4/versions/turn-taking-20261014-utts/audio_index_train_2spk.jsonl.gz
+    sha256: 1fe6171ad0e2620923fe8557dfa293a7eb97ec5f19d3735862904e0f6c458851
+    metadata:
+      record_count: 189
+  - name: train_3spk-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/aishell4/versions/turn-taking-20261014-utts/records_train_3spk.jsonl.gz
+    sha256: 2f4ae632af0169dff3b4ed1be2b7240f19af0fe2bab7d43faed8ba3cf2c393d0
+    metadata:
+      record_count: 21925
+  - name: train_3spk-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/aishell4/versions/turn-taking-20261014-utts/audio_index_train_3spk.jsonl.gz
+    sha256: ba3f767a1ad813be7b61c200dbfd116b37c7ffedcdfccc9330c00e66233d36ff
+    metadata:
+      record_count: 189
+  - name: train_neg-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/aishell4/versions/turn-taking-20261014-utts/records_train_neg.jsonl.gz
+    sha256: 865e06ad41f1fd1b8d6756142df9282187a0e3b96e03391c2179a11c8fd9b2fd
+    metadata:
+      record_count: 14128
+  - name: train_neg-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/aishell4/versions/turn-taking-20261014-utts/audio_index_train_neg.jsonl.gz
+    sha256: a3eaaa7d6855fae876dc08763e32232b0c10c1e7dc17692a05dd0919a17c438b
+    metadata:
+      record_count: 189
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/aishell4/versions/turn-taking-20261014-utts/record_index/index.json
+    expected_bytes: 1461
+    sha256: e8aaf24d538d057b3e78c4557fc26a35b31ab5a85a24ac1fe64b29c7d4f3ac16
+    metadata:
+      snapshot_version: 13
+      rows: 46559
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    train_2spk:
+      artifacts:
+        records:
+        - train_2spk-records
+        audio_index:
+        - train_2spk-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 10506
+        duration_hours: 15.9
+        duration_basis: clip duration (segment span, or the whole file)
+    train_3spk:
+      artifacts:
+        records:
+        - train_3spk-records
+        audio_index:
+        - train_3spk-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 21925
+        duration_hours: 30.53
+        duration_basis: clip duration (segment span, or the whole file)
+    train_neg:
+      artifacts:
+        records:
+        - train_neg-records
+        audio_index:
+        - train_neg-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 14128
+        duration_hours: 20.51
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-21'
+    description: aishell4@turn-taking-20261014 的 train 划分（不含 eval/test），时间线取自 aishell4@icefall-20260908 的 train 人工标注。加 metadata.window_utts（窗口内每句的说话人与相对混合起点的起止，取自来源标注并截到窗口，截断的标
+      clipped）与同一命名空间的 metadata.target_speaker，供 open-audio-llm 帧级说话人活动标签（objective.ts_activity_weight）；其余字段不变，音频引用改指本版本，音频索引与原版逐行相同。正样本的目标语句与转写逐字一致（忽略空白和标点；窗口边缘截断的句子允许只转写一部分）才写时间线，负样本只有注册人确实不在窗口里说话才写；其余记录不写时间线（不出帧级标签）。负样本中注册人按标注其实在窗口内说话的记录
+      ID 列在 excluded-records-<split>.txt，训练配方用 exclude_records 排除。生成脚本 audio-data-contract scripts/ts_robust/add_window_utts.py，逐划分统计见
+      report.json。
+    sources:
+    - aishell4@turn-taking-20261014
+    - aishell4@icefall-20260908
+- schema_version: dataset-catalog/2.0
+  dataset_id: ami_sdm
+  version: turn-taking-20261014-utts
+  derived_from: ami_sdm@turn-taking-20261014
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: train_2spk-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/turn-taking-20261014-utts/records_train_2spk.jsonl.gz
+    sha256: ea63e74207b1c56918e88f435302d377bfa20890ace3457d9da1e72996dac39a
+    metadata:
+      record_count: 5081
+  - name: train_2spk-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/turn-taking-20261014-utts/audio_index_train_2spk.jsonl.gz
+    sha256: 691399b39176f958e6d0f96793714d731a7878e38c7272d1cba2e9925b7c2954
+    metadata:
+      record_count: 144
+  - name: train_3spk-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/turn-taking-20261014-utts/records_train_3spk.jsonl.gz
+    sha256: cdb8938391bec1ef0d6a7657f91eb1703e49390068085902df059bd9a1af707b
+    metadata:
+      record_count: 23853
+  - name: train_3spk-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/turn-taking-20261014-utts/audio_index_train_3spk.jsonl.gz
+    sha256: ee0025ec85cf16927d469c7f75612efbcab45161a265f97a66e36a4013975a3b
+    metadata:
+      record_count: 144
+  - name: train_neg-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/turn-taking-20261014-utts/records_train_neg.jsonl.gz
+    sha256: f55e6e6abc22a9e0b9c74ed5aa5121baa606bb4cf72cb7c4697b4b41d0b6956e
+    metadata:
+      record_count: 13117
+  - name: train_neg-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/turn-taking-20261014-utts/audio_index_train_neg.jsonl.gz
+    sha256: 4cc12452fab80397f606ec16290b6e6e21e5f92ea3fd4a43957dc4df47354033
+    metadata:
+      record_count: 144
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/ami_sdm/versions/turn-taking-20261014-utts/record_index/index.json
+    expected_bytes: 1459
+    sha256: c22915433fb5969660ca96b5e08b9d388ef805d9e2918d8c39bd184ad2c5ebb4
+    metadata:
+      snapshot_version: 13
+      rows: 42051
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    train_2spk:
+      artifacts:
+        records:
+        - train_2spk-records
+        audio_index:
+        - train_2spk-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 5081
+        duration_hours: 5.86
+        duration_basis: clip duration (segment span, or the whole file)
+    train_3spk:
+      artifacts:
+        records:
+        - train_3spk-records
+        audio_index:
+        - train_3spk-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 23853
+        duration_hours: 25.33
+        duration_basis: clip duration (segment span, or the whole file)
+    train_neg:
+      artifacts:
+        records:
+        - train_neg-records
+        audio_index:
+        - train_neg-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 13117
+        duration_hours: 14.26
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-21'
+    description: ami_sdm@turn-taking-20261014 的 train 划分（不含 eval/test），时间线取自 ami_sdm@icefall-20260908 的 train 人工标注。加 metadata.window_utts（窗口内每句的说话人与相对混合起点的起止，取自来源标注并截到窗口，截断的标
+      clipped）与同一命名空间的 metadata.target_speaker，供 open-audio-llm 帧级说话人活动标签（objective.ts_activity_weight）；其余字段不变，音频引用改指本版本，音频索引与原版逐行相同。正样本的目标语句与转写逐字一致（忽略空白和标点；窗口边缘截断的句子允许只转写一部分）才写时间线，负样本只有注册人确实不在窗口里说话才写；其余记录不写时间线（不出帧级标签）。负样本中注册人按标注其实在窗口内说话的记录
+      ID 列在 excluded-records-<split>.txt，训练配方用 exclude_records 排除。生成脚本 audio-data-contract scripts/ts_robust/add_window_utts.py，逐划分统计见
+      report.json。
+    sources:
+    - ami_sdm@turn-taking-20261014
+    - ami_sdm@icefall-20260908
+- schema_version: dataset-catalog/2.0
+  dataset_id: magicdata_ramc
+  version: turn-taking-20261014-utts
+  derived_from: magicdata_ramc@turn-taking-20261014
+  languages:
+  - zh
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: train_2spk-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/turn-taking-20261014-utts/records_train_2spk.jsonl.gz
+    sha256: bfe4543274cc0ab8b650b355e49854031b34e44469f85abb55829403b3ee567f
+    metadata:
+      record_count: 29508
+  - name: train_2spk-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/turn-taking-20261014-utts/audio_index_train_2spk.jsonl.gz
+    sha256: 3ed012e46aead910bb6e1f983ce157737e2f7c73481353b9f53c9094f53c83f2
+    metadata:
+      record_count: 289
+  - name: train_neg-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/turn-taking-20261014-utts/records_train_neg.jsonl.gz
+    sha256: 35e7c98592e7bfb088de2bc616adfe24a36c4d31d83ce15fae499b57a2819fbc
+    metadata:
+      record_count: 15372
+  - name: train_neg-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/turn-taking-20261014-utts/audio_index_train_neg.jsonl.gz
+    sha256: 24461b9424fc48ed70e4c50b9cfd676b56e6bedc1a618bcf6e40fd00114dcd15
+    metadata:
+      record_count: 289
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/turn-taking-20261014-utts/record_index/index.json
+    expected_bytes: 1114
+    sha256: 81c2b4150f343baac81239ce92a6bbeb437aa1c2e58493238a5b70f7f9cf9675
+    metadata:
+      snapshot_version: 13
+      rows: 44880
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    train_2spk:
+      artifacts:
+        records:
+        - train_2spk-records
+        audio_index:
+        - train_2spk-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 29508
+        duration_hours: 26.93
+        duration_basis: clip duration (segment span, or the whole file)
+    train_neg:
+      artifacts:
+        records:
+        - train_neg-records
+        audio_index:
+        - train_neg-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 15372
+        duration_hours: 14.54
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-21'
+    description: magicdata_ramc@turn-taking-20261014 的 train 划分（不含 eval/test），时间线取自 magicdata_ramc@icefall-20260908 的 train
+      人工标注。加 metadata.window_utts（窗口内每句的说话人与相对混合起点的起止，取自来源标注并截到窗口，截断的标 clipped）与同一命名空间的 metadata.target_speaker，供 open-audio-llm
+      帧级说话人活动标签（objective.ts_activity_weight）；其余字段不变，音频引用改指本版本，音频索引与原版逐行相同。正样本的目标语句与转写逐字一致（忽略空白和标点；窗口边缘截断的句子允许只转写一部分）才写时间线，负样本只有注册人确实不在窗口里说话才写；其余记录不写时间线（不出帧级标签）。负样本中注册人按标注其实在窗口内说话的记录
+      ID 列在 excluded-records-<split>.txt，训练配方用 exclude_records 排除。生成脚本 audio-data-contract scripts/ts_robust/add_window_utts.py，逐划分统计见
+      report.json。
+    sources:
+    - magicdata_ramc@turn-taking-20261014
+    - magicdata_ramc@icefall-20260908
+- schema_version: dataset-catalog/2.0
+  dataset_id: emilia2_mix
+  version: mix-20261013-utts
+  derived_from: emilia2_mix@mix-20261013
+  languages:
+  - zh
+  - en
+  tasks:
+  - ts_asr
+  aliases: []
+  artifacts:
+  - name: train_2spk-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_mix/versions/mix-20261013-utts/records_train_2spk.jsonl.gz
+    sha256: b7aa417c71627af94b389f0f80b4300cf947a89cd166544b91a80843e054c93f
+    metadata:
+      record_count: 2208856
+  - name: train_2spk-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_mix/versions/mix-20261013-utts/audio_index_train_2spk.jsonl.gz
+    sha256: 3324be60c75b501847a2394f56c051ade7940df2b7c32ae7cc41091dbec7b7ec
+    metadata:
+      record_count: 2814665
+  - name: train_3spk-records
+    kind: audio-records
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_mix/versions/mix-20261013-utts/records_train_3spk.jsonl.gz
+    sha256: 20e3d9fc59fb19f9ed989961e13a56e7bc128cdc3ed27c199215502eb3c5840a
+    metadata:
+      record_count: 2204373
+  - name: train_3spk-audio-index
+    kind: audio-index
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_mix/versions/mix-20261013-utts/audio_index_train_3spk.jsonl.gz
+    sha256: 919d303cea3cfec079588097c962bc9777c7205178ce13a6f966f5e52149dc15
+    metadata:
+      record_count: 2810451
+  - name: record_index
+    kind: lance-record-index
+    root_alias: aidc_data
+    relative_path: datasets/emilia2_mix/versions/mix-20261013-utts/record_index/index.json
+    expected_bytes: 1112
+    sha256: 25cfba1aeb725a2e1d0b9544c39ac7c1222e54fdbdb3e3d2099b1a23b83d23d5
+    metadata:
+      snapshot_version: 13
+      rows: 4413229
+      schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+  splits:
+    train_2spk:
+      artifacts:
+        records:
+        - train_2spk-records
+        audio_index:
+        - train_2spk-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 2208856
+        duration_hours: 12191.72
+        duration_basis: clip duration (segment span, or the whole file)
+    train_3spk:
+      artifacts:
+        records:
+        - train_3spk-records
+        audio_index:
+        - train_3spk-audio-index
+        records_lance:
+        - record_index
+      task: ts_asr
+      statistics:
+        records: 2204373
+        duration_hours: 12166.67
+        duration_basis: clip duration (segment span, or the whole file)
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '2026-10-21'
+    description: emilia2_mix@mix-20261013 的 train_2spk / train_3spk（不含 eval/test/train_neg），时间线取自混音协议 datasets/emilia2-mix/versions/mix-20261013/supervision/protocol-*.jsonl.gz（每个说话人每段在混音中的起点与时长）。加
+      metadata.window_utts（窗口内每句的说话人与相对混合起点的起止，取自来源标注并截到窗口，截断的标 clipped）与同一命名空间的 metadata.target_speaker，供 open-audio-llm
+      帧级说话人活动标签（objective.ts_activity_weight）；其余字段不变，音频引用改指本版本，音频索引与原版逐行相同。正样本的目标语句与转写逐字一致（忽略空白和标点；窗口边缘截断的句子允许只转写一部分）才写时间线，负样本只有注册人确实不在窗口里说话才写；其余记录不写时间线（不出帧级标签）。负样本中注册人按标注其实在窗口内说话的记录
+      ID 列在 excluded-records-<split>.txt，训练配方用 exclude_records 排除。生成脚本 audio-data-contract scripts/ts_robust/add_window_utts.py，逐划分统计见
+      report.json。
+    sources:
+    - emilia2_mix@mix-20261013

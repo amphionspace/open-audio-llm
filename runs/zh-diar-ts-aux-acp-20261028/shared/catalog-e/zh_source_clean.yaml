@@ -1,0 +1,847 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: primewords
+  version: clean-dual-qwen-moss-v1-20261008
+  languages:
+  - zh
+  tasks:
+  - asr
+  derived_from: primewords@icefall-20260908
+  artifacts:
+  - name: train_recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/primewords/versions/legacy-20260804/train_rec_0/primewords_recordings_train.jsonl.gz
+    expected_bytes: 1563903
+    sha256: 249b02362165a8fdb15d0ce2de04e4ace85b6653ea5479481be7dde97e9b2db9
+    metadata:
+      record_count: 50384
+      shared_with: primewords@icefall-20260908
+  - name: train_supervisions
+    kind: lhotse-supervisions
+    root_alias: aidc_data
+    relative_path: datasets/primewords/versions/clean-dual-qwen-moss-v1-20261008/supervisions/primewords_supervisions_train_cleaned.jsonl.gz
+    expected_bytes: 4301487
+    sha256: 42f48ea4df5fa1a42e9e3b0513884760402c5da23f30cb0eb0bc17699aa2a19f
+    metadata:
+      record_count: 50384
+      pass_count: 50119
+      text: source transcript with custom.clean; restored fillers may carry punctuation
+  - name: train_supervisions_no_punc
+    kind: lhotse-supervisions
+    root_alias: aidc_data
+    relative_path: datasets/primewords/versions/clean-dual-qwen-moss-v1-20261008/supervisions/primewords_supervisions_train_cleaned_clean.jsonl.gz
+    expected_bytes: 4301446
+    sha256: d3234885986fb49e84bb4ec1f4d199736d757a3ced95b3ec5f86fe03ea081f6d
+    metadata:
+      record_count: 50384
+      pass_count: 50119
+      punctuated: false
+  - name: engine_results
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/primewords/versions/clean-dual-qwen-moss-v1-20261008/evidence/engine_results.jsonl.gz
+    expected_bytes: 6920099
+    sha256: 0f86ccf958f07bd724d741fb588ad865cf3cbd9daeab9cef26fe8d4ab7780f17
+    metadata:
+      record_count: 50384
+  - name: rejected
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/primewords/versions/clean-dual-qwen-moss-v1-20261008/evidence/rejected.jsonl.gz
+    expected_bytes: 44157
+    sha256: b8eaf43de2ab6d12229297ff68cbf321c2ddca37243dfed2513ac75d35af3b91
+    metadata:
+      record_count: 265
+  - name: content_review
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/primewords/versions/clean-dual-qwen-moss-v1-20261008/evidence/content_review.jsonl.gz
+    expected_bytes: 924739
+    sha256: ffee9d112d14955a63a90790ba354e0f6c9dad3d159591cf85231b69995be841
+    metadata:
+      record_count: 8173
+  - name: replaced_review
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/primewords/versions/clean-dual-qwen-moss-v1-20261008/evidence/replaced_review.jsonl.gz
+    expected_bytes: 723
+    sha256: 29e9a15456ce6bb4a434c6628f2ba901376218ddca6d4b16ac913cd73fe0bb1d
+    metadata:
+      record_count: 3
+  - name: filter_report
+    kind: json-metadata
+    root_alias: aidc_data
+    relative_path: datasets/primewords/versions/clean-dual-qwen-moss-v1-20261008/evidence/filter_report.json
+    expected_bytes: 958
+    sha256: 140999f66d11100893e1d565e0ed6ef1b200000669270d4959ec4a6b487c61d0
+  - name: clean_version
+    kind: json-metadata
+    root_alias: aidc_data
+    relative_path: datasets/primewords/versions/clean-dual-qwen-moss-v1-20261008/evidence/clean-version.json
+    expected_bytes: 4682
+    sha256: d361b01d67ff1b4852a7cf97e224605f88fae4971aad0ae895996ae46dc349ec
+  - name: run_manifest
+    kind: json-metadata
+    root_alias: aidc_data
+    relative_path: datasets/primewords/versions/clean-dual-qwen-moss-v1-20261008/evidence/run_manifest.json
+    expected_bytes: 1606
+    sha256: 564e0e8ac11f3a697e4a94cbd251e1d11cfa01ea6ca9ce596868f08fefb3cf07
+  splits:
+    train:
+      artifacts:
+        recordings:
+        - train_recordings
+        supervisions:
+        - train_supervisions
+        clean_no_punc_supervisions:
+        - train_supervisions_no_punc
+      statistics:
+        supervisions: 50384
+        pass: 50119
+        reject: 265
+        by_reason:
+          ok: 50022
+          bad_annotation: 242
+          ambiguous: 23
+          substitution: 85
+          too_short: 12
+        hours_before_filter: 98.9588
+        duration_hours: 98.3832
+        duration_basis: sum of supervision durations with custom.clean.pass=true
+  recipe_parameters:
+    source_version: icefall-20260908
+    source_split: train
+    engines:
+    - name: Qwen3-ASR-1.7B
+      backend: vllm 0.18.0
+      request: &id001
+        to_language: zh
+        temperature: 0.0
+        repetition_penalty: 1.1
+    - name: MOSS-Transcribe-Diarize
+      backend: vllm 0.23.1rc1.dev949+g68b4a1d58
+      request: &id002
+        temperature: 0.0
+      prompt: vLLM default diarization prompt
+    filter_rules: consensus-v6
+    rewrite_rules: wenetspeech-faithful-v5
+    params:
+      threshold: 50.0
+      agree_threshold: 30.0
+      min_tokens: 2
+      max_hyp_ratio: 3.0
+      replace_engine: Qwen3-ASR-1.7B
+      max_replace_ratio: 3.0
+      rewrite_agree_threshold: 10.0
+    writes:
+    - text
+    - custom.clean
+    filters: custom.clean.pass=false
+  provenance:
+    source: AmphionData dual-engine cleaning (amphion-data clean, HTTP backend)
+    registered_at: '2026-10-08'
+    integrity: verified
+    description: primewords@icefall-20260908 的 train 监督片段，经 Qwen3-ASR-1.7B 与 MOSS-Transcribe-Diarize 双引擎一致性清洗；逐条写入
+      custom.clean（pass、reason、action、engine_status），不删除记录，读取时按 require_clean_pass 过滤。音频沿用源版本，不复制。规则 consensus-v6
+      / wenetspeech-faithful-v5：pass 50119、reject 265。少于 2 个字的 too_short 共 12 条按规则不经引擎直接 pass。用于合成时建议在
+      pass 之外再要求：两引擎均有效、MOSS 只输出 1 个说话人、action 不是 review_consensus；too_short 另要求两引擎规范化后与原文完全一致。按此筛选保留
+      41860 条、82.06 小时（too_short 通过 4/12）。
+    recommended_synthesis_filter:
+      require:
+      - custom.clean.pass=true
+      - both engines valid
+      - MOSS single speaker
+      - action!=review_consensus
+      - 'too_short: both engines exactly reproduce the reference'
+      records: 41860
+      hours: 82.0588
+      counted_by: zh-source-clean-20261008/scripts/synthesis_filter_stats.py
+    moss_speaker_count:
+      '1': 50136
+      '2': 236
+      '0': 7
+      3+: 5
+    code: amphiondata feat/clean-new-zh-sources 279fb69 (configs/experiments/zh-source-clean-qwen-moss.toml)
+    wandb: https://wandb.ai/1016097967-amphion/open-audio-llm/runs/zh-source-clean-qwen-moss-20261008-full
+- schema_version: dataset-catalog/2.0
+  dataset_id: aishell3
+  version: clean-dual-qwen-moss-v1-20261008
+  languages:
+  - zh
+  tasks:
+  - asr
+  derived_from: aishell3@icefall-20260908
+  artifacts:
+  - name: train_recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/aishell3/versions/legacy-20260804/train_rec_0/aishell3_recordings_train.jsonl.gz
+    expected_bytes: 1017083
+    sha256: 40b5d17e40d479c0c76884b83c4a8ab04b713e245e5ed5c134751515247185fc
+    metadata:
+      record_count: 63262
+      shared_with: aishell3@icefall-20260908
+  - name: train_supervisions
+    kind: lhotse-supervisions
+    root_alias: aidc_data
+    relative_path: datasets/aishell3/versions/clean-dual-qwen-moss-v1-20261008/supervisions/aishell3_supervisions_train.jsonl.gz
+    expected_bytes: 5541638
+    sha256: 8456845c41e7cf0c2657286338aaaaa5e13e2b2e4faf4c450ddcae190117037e
+    metadata:
+      record_count: 63262
+      pass_count: 63219
+      text: source transcript with custom.clean; restored fillers may carry punctuation
+  - name: train_supervisions_no_punc
+    kind: lhotse-supervisions
+    root_alias: aidc_data
+    relative_path: datasets/aishell3/versions/clean-dual-qwen-moss-v1-20261008/supervisions/aishell3_supervisions_train_clean.jsonl.gz
+    expected_bytes: 5541627
+    sha256: 6c60532de75ac8c33918a97002f0e4c25e3573d9f9a39990c28b62456369b9f8
+    metadata:
+      record_count: 63262
+      pass_count: 63219
+      punctuated: false
+  - name: engine_results
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/aishell3/versions/clean-dual-qwen-moss-v1-20261008/evidence/engine_results.jsonl.gz
+    expected_bytes: 7890374
+    sha256: bddf03060dfe0fc1ebe8e0d55c51ba3e0383c25e3085b39bc7e2cb685d8d7279
+    metadata:
+      record_count: 63262
+  - name: rejected
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/aishell3/versions/clean-dual-qwen-moss-v1-20261008/evidence/rejected.jsonl.gz
+    expected_bytes: 6786
+    sha256: c3cf8748fd3b267b17132b7a7b543126b7632ed41b92562223d27c606f7f0bec
+    metadata:
+      record_count: 43
+  - name: content_review
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/aishell3/versions/clean-dual-qwen-moss-v1-20261008/evidence/content_review.jsonl.gz
+    expected_bytes: 322063
+    sha256: 315a96e1e94a73618b61b226c6ee90a50c6ec27234d4abe09378199c32a2536e
+    metadata:
+      record_count: 5187
+  - name: replaced_review
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/aishell3/versions/clean-dual-qwen-moss-v1-20261008/evidence/replaced_review.jsonl.gz
+    expected_bytes: 423
+    sha256: ab73b48cbc902b70c4487c6bcfcd61d35a80dca395dbf8fdbce220da4bde8113
+    metadata:
+      record_count: 1
+  - name: filter_report
+    kind: json-metadata
+    root_alias: aidc_data
+    relative_path: datasets/aishell3/versions/clean-dual-qwen-moss-v1-20261008/evidence/filter_report.json
+    expected_bytes: 975
+    sha256: 81dd168f7b299782bfd05aa6915e3f9ea86758c6038ea4cf5ad5e9ff648f4faf
+  - name: clean_version
+    kind: json-metadata
+    root_alias: aidc_data
+    relative_path: datasets/aishell3/versions/clean-dual-qwen-moss-v1-20261008/evidence/clean-version.json
+    expected_bytes: 4604
+    sha256: 167960be1f097822abe337fa9a7dda8bac8e1257d42f84fcb684aba212301959
+  - name: run_manifest
+    kind: json-metadata
+    root_alias: aidc_data
+    relative_path: datasets/aishell3/versions/clean-dual-qwen-moss-v1-20261008/evidence/run_manifest.json
+    expected_bytes: 1522
+    sha256: dc0512ce2362843e89f4193a7d831305c50695573b8beffa2b2ebf433c772aaa
+  splits:
+    train:
+      artifacts:
+        recordings:
+        - train_recordings
+        supervisions:
+        - train_supervisions
+        clean_no_punc_supervisions:
+        - train_supervisions_no_punc
+      statistics:
+        supervisions: 63262
+        pass: 63219
+        reject: 43
+        by_reason:
+          ok: 61209
+          too_short: 1982
+          insufficient_engines: 1
+          substitution: 28
+          bad_annotation: 41
+          ambiguous: 1
+        hours_before_filter: 63.1724
+        duration_hours: 63.1349
+        duration_basis: sum of supervision durations with custom.clean.pass=true
+  recipe_parameters:
+    source_version: icefall-20260908
+    source_split: train
+    engines:
+    - name: Qwen3-ASR-1.7B
+      backend: vllm 0.18.0
+      request: *id001
+    - name: MOSS-Transcribe-Diarize
+      backend: vllm 0.23.1rc1.dev949+g68b4a1d58
+      request: *id002
+      prompt: vLLM default diarization prompt
+    filter_rules: consensus-v6
+    rewrite_rules: wenetspeech-faithful-v5
+    params:
+      threshold: 50.0
+      agree_threshold: 30.0
+      min_tokens: 2
+      max_hyp_ratio: 3.0
+      replace_engine: Qwen3-ASR-1.7B
+      max_replace_ratio: 3.0
+      rewrite_agree_threshold: 10.0
+    writes:
+    - text
+    - custom.clean
+    filters: custom.clean.pass=false
+  provenance:
+    source: AmphionData dual-engine cleaning (amphion-data clean, HTTP backend)
+    registered_at: '2026-10-08'
+    integrity: verified
+    description: aishell3@icefall-20260908 的 train 监督片段，经 Qwen3-ASR-1.7B 与 MOSS-Transcribe-Diarize 双引擎一致性清洗；逐条写入
+      custom.clean（pass、reason、action、engine_status），不删除记录，读取时按 require_clean_pass 过滤。音频沿用源版本，不复制。规则 consensus-v6
+      / wenetspeech-faithful-v5：pass 63219、reject 43。少于 2 个字的 too_short 共 1982 条按规则不经引擎直接 pass。用于合成时建议在
+      pass 之外再要求：两引擎均有效、MOSS 只输出 1 个说话人、action 不是 review_consensus；too_short 另要求两引擎规范化后与原文完全一致。按此筛选保留
+      57965 条、57.77 小时（too_short 通过 1898/1982）。
+    recommended_synthesis_filter:
+      require:
+      - custom.clean.pass=true
+      - both engines valid
+      - MOSS single speaker
+      - action!=review_consensus
+      - 'too_short: both engines exactly reproduce the reference'
+      records: 57965
+      hours: 57.7744
+      counted_by: zh-source-clean-20261008/scripts/synthesis_filter_stats.py
+    moss_speaker_count:
+      '1': 63250
+      '0': 5
+      '2': 7
+    code: amphiondata feat/clean-new-zh-sources 279fb69 (configs/experiments/zh-source-clean-qwen-moss.toml)
+    wandb: https://wandb.ai/1016097967-amphion/open-audio-llm/runs/zh-source-clean-qwen-moss-20261008-full
+- schema_version: dataset-catalog/2.0
+  dataset_id: aidatatang
+  version: clean-dual-qwen-moss-v1-20261008
+  languages:
+  - zh
+  tasks:
+  - asr
+  derived_from: aidatatang@icefall-20260908
+  artifacts:
+  - name: all_recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/aidatatang/versions/legacy-20260804/train_rec_0/zhaidatatang_recordings_all.jsonl.gz
+    expected_bytes: 2212592
+    sha256: e2e1bf9099dacb7971d11939b3bcf906b0cf71e62db52a824de19e1a87656797
+    metadata:
+      record_count: 237265
+      shared_with: aidatatang@icefall-20260908
+  - name: all_supervisions
+    kind: lhotse-supervisions
+    root_alias: aidc_data
+    relative_path: datasets/aidatatang/versions/clean-dual-qwen-moss-v1-20261008/supervisions/zhaidatatang_supervisions_all_cleaned.jsonl.gz
+    expected_bytes: 7317549
+    sha256: c483f278b2dfe44eccab9327b993955bab4981c5e20a404a7531432c91401f38
+    metadata:
+      record_count: 237265
+      pass_count: 236834
+      text: source transcript with custom.clean; restored fillers may carry punctuation
+  - name: all_supervisions_no_punc
+    kind: lhotse-supervisions
+    root_alias: aidc_data
+    relative_path: datasets/aidatatang/versions/clean-dual-qwen-moss-v1-20261008/supervisions/zhaidatatang_supervisions_all_cleaned_clean.jsonl.gz
+    expected_bytes: 7316665
+    sha256: f3e0a3b30180a7eea7e70faeec52674615ade2028d6cb5d2f11d84c765bf707e
+    metadata:
+      record_count: 237265
+      pass_count: 236834
+      punctuated: false
+  - name: engine_results
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/aidatatang/versions/clean-dual-qwen-moss-v1-20261008/evidence/engine_results.jsonl.gz
+    expected_bytes: 14854618
+    sha256: 21972b10df9f4382058579fac104eabf30d20bdbf592a9963adaa7a9278f17c1
+    metadata:
+      record_count: 237265
+  - name: rejected
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/aidatatang/versions/clean-dual-qwen-moss-v1-20261008/evidence/rejected.jsonl.gz
+    expected_bytes: 45626
+    sha256: c74c3a6d2ba7fa4b5f9b4a3f08ff2a9387badab8da1fff5acfd86f98ad143d92
+    metadata:
+      record_count: 431
+  - name: content_review
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/aidatatang/versions/clean-dual-qwen-moss-v1-20261008/evidence/content_review.jsonl.gz
+    expected_bytes: 852764
+    sha256: 5f534d2512bd7068768b2dbdd649d15c375d4389e08a53011ed91a83d685f8fd
+    metadata:
+      record_count: 15288
+  - name: replaced_review
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/aidatatang/versions/clean-dual-qwen-moss-v1-20261008/evidence/replaced_review.jsonl.gz
+    expected_bytes: 5645
+    sha256: effa5aa7acef44967d8cdc79bc39d6559cf6b82208df26456cddda144fdfd6d4
+    metadata:
+      record_count: 93
+  - name: filter_report
+    kind: json-metadata
+    root_alias: aidc_data
+    relative_path: datasets/aidatatang/versions/clean-dual-qwen-moss-v1-20261008/evidence/filter_report.json
+    expected_bytes: 1126
+    sha256: 3cb695731d2dabbcf86576fd9d0940deb37be45bb66766f3e9592322107a8c51
+  - name: clean_version
+    kind: json-metadata
+    root_alias: aidc_data
+    relative_path: datasets/aidatatang/versions/clean-dual-qwen-moss-v1-20261008/evidence/clean-version.json
+    expected_bytes: 4858
+    sha256: 2274cd6ad44d0fbc02bf93869bdb7f972b481f55013a99fe3ad235910a1dc77c
+  - name: run_manifest
+    kind: json-metadata
+    root_alias: aidc_data
+    relative_path: datasets/aidatatang/versions/clean-dual-qwen-moss-v1-20261008/evidence/run_manifest.json
+    expected_bytes: 1606
+    sha256: be771fb37105236bb2260cfc5616f6c684668dcab29f3ee5d86ec9e633663ef4
+  splits:
+    all:
+      artifacts:
+        recordings:
+        - all_recordings
+        supervisions:
+        - all_supervisions
+        clean_no_punc_supervisions:
+        - all_supervisions_no_punc
+      statistics:
+        supervisions: 237265
+        pass: 236834
+        reject: 431
+        by_reason:
+          ok: 236090
+          too_short: 251
+          no_valid_engine: 105
+          substitution: 493
+          bad_annotation: 252
+          insufficient_engines: 67
+          ambiguous: 7
+        hours_before_filter: 145.4723
+        duration_hours: 145.2523
+        duration_basis: sum of supervision durations with custom.clean.pass=true
+      provenance:
+        upstream_split: train
+        covers_official: train+dev+test
+  recipe_parameters:
+    source_version: icefall-20260908
+    source_split: train
+    engines:
+    - name: Qwen3-ASR-1.7B
+      backend: vllm 0.18.0
+      request: *id001
+    - name: MOSS-Transcribe-Diarize
+      backend: vllm 0.23.1rc1.dev949+g68b4a1d58
+      request: *id002
+      prompt: vLLM default diarization prompt
+    filter_rules: consensus-v6
+    rewrite_rules: wenetspeech-faithful-v5
+    params:
+      threshold: 50.0
+      agree_threshold: 30.0
+      min_tokens: 2
+      max_hyp_ratio: 3.0
+      replace_engine: Qwen3-ASR-1.7B
+      max_replace_ratio: 3.0
+      rewrite_agree_threshold: 10.0
+    writes:
+    - text
+    - custom.clean
+    filters: custom.clean.pass=false
+  provenance:
+    source: AmphionData dual-engine cleaning (amphion-data clean, HTTP backend)
+    registered_at: '2026-10-08'
+    integrity: verified
+    description: aidatatang@icefall-20260908 的全部监督片段（上游称 train，实为含官方 dev/test 说话人的全量，故登记为 all），经 Qwen3-ASR-1.7B
+      与 MOSS-Transcribe-Diarize 双引擎一致性清洗；逐条写入 custom.clean（pass、reason、action、engine_status），不删除记录，读取时按
+      require_clean_pass 过滤。音频沿用源版本，不复制。规则 consensus-v6 / wenetspeech-faithful-v5：pass 236834、reject 431。少于
+      2 个字的 too_short 共 251 条按规则不经引擎直接 pass。用于合成时建议在 pass 之外再要求：两引擎均有效、MOSS 只输出 1 个说话人、action 不是 review_consensus；too_short
+      另要求两引擎规范化后与原文完全一致。按此筛选保留 220726 条、134.34 小时（too_short 通过 144/251）。
+    recommended_synthesis_filter:
+      require:
+      - custom.clean.pass=true
+      - both engines valid
+      - MOSS single speaker
+      - action!=review_consensus
+      - 'too_short: both engines exactly reproduce the reference'
+      records: 220726
+      hours: 134.3372
+      counted_by: zh-source-clean-20261008/scripts/synthesis_filter_stats.py
+    moss_speaker_count:
+      '1': 236575
+      '2': 686
+      3+: 2
+      '0': 2
+    code: amphiondata feat/clean-new-zh-sources 279fb69 (configs/experiments/zh-source-clean-qwen-moss.toml)
+    wandb: https://wandb.ai/1016097967-amphion/open-audio-llm/runs/zh-source-clean-qwen-moss-20261008-full
+    split_note: 上游 icefall-20260908 的 train 实为 zhvoice 重打包的 aidatatang_200zh 全量：600 位说话人、237,265 条，等于官方
+      train+dev+test 总条数，含官方 dev/test 说话人；本地无官方划分清单，因此登记为 all，不称 train。用于训练前需按官方 train 说话人名单过滤，避免与官方 dev/test
+      泄漏。
+- schema_version: dataset-catalog/2.0
+  dataset_id: magicdata
+  version: clean-dual-qwen-moss-v1-20261008
+  languages:
+  - zh
+  tasks:
+  - asr
+  derived_from: magicdata@icefall-20260908
+  artifacts:
+  - name: train_recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/magicdata/versions/legacy-20260804/train_rec_0/magicdata_recordings_train.jsonl.gz
+    expected_bytes: 6440878
+    sha256: 9aa0b9638398ff018558db0ab848bb48c289e0f99dca366f2da4099d43a0e2ba
+    metadata:
+      record_count: 573478
+      shared_with: magicdata@icefall-20260908
+  - name: train_supervisions
+    kind: lhotse-supervisions
+    root_alias: aidc_data
+    relative_path: datasets/magicdata/versions/clean-dual-qwen-moss-v1-20261008/supervisions/magicdata_supervisions_train.jsonl.gz
+    expected_bytes: 19550132
+    sha256: 25037c7382c103d2a363b4bfb41d6508666ee7652f33ad2e7c33423991ede27e
+    metadata:
+      record_count: 573478
+      pass_count: 572637
+      text: source transcript with custom.clean; restored fillers may carry punctuation
+  - name: train_supervisions_no_punc
+    kind: lhotse-supervisions
+    root_alias: aidc_data
+    relative_path: datasets/magicdata/versions/clean-dual-qwen-moss-v1-20261008/supervisions/magicdata_supervisions_train_clean.jsonl.gz
+    expected_bytes: 19547862
+    sha256: 719d8d424518c406f6a08efd8876734de12bc0461f07887fd3d1fcff9eb6ab33
+    metadata:
+      record_count: 573478
+      pass_count: 572637
+      punctuated: false
+  - name: engine_results
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/magicdata/versions/clean-dual-qwen-moss-v1-20261008/evidence/engine_results.jsonl.gz
+    expected_bytes: 39671572
+    sha256: eb4d945fee8ca5f73a72a5c527a7eb436e52f2bd14102bed5c2c932692ad4f92
+    metadata:
+      record_count: 573478
+  - name: rejected
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/magicdata/versions/clean-dual-qwen-moss-v1-20261008/evidence/rejected.jsonl.gz
+    expected_bytes: 91167
+    sha256: 25f753270c2c43a1819e8819bf034feafeabfff45c9d1598ccfeb5fa81b41076
+    metadata:
+      record_count: 841
+  - name: content_review
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/magicdata/versions/clean-dual-qwen-moss-v1-20261008/evidence/content_review.jsonl.gz
+    expected_bytes: 2647374
+    sha256: fecca1b61c4019075fd97eb07a6b0c0f165db884acf594197a4678ce51f0322e
+    metadata:
+      record_count: 42554
+  - name: replaced_review
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/magicdata/versions/clean-dual-qwen-moss-v1-20261008/evidence/replaced_review.jsonl.gz
+    expected_bytes: 11467
+    sha256: 7144ea9b00c72ec67f9b829f09d30ae629bf6612101e06bc9a5c65759d31f84b
+    metadata:
+      record_count: 163
+  - name: filter_report
+    kind: json-metadata
+    root_alias: aidc_data
+    relative_path: datasets/magicdata/versions/clean-dual-qwen-moss-v1-20261008/evidence/filter_report.json
+    expected_bytes: 1118
+    sha256: 251c796421f01093e7adb8a88a4c3dd418cbeaa2cc91910f29a9c088e9983228
+  - name: clean_version
+    kind: json-metadata
+    root_alias: aidc_data
+    relative_path: datasets/magicdata/versions/clean-dual-qwen-moss-v1-20261008/evidence/clean-version.json
+    expected_bytes: 4791
+    sha256: ec6746cfce532c7d4cee71d76a95eb00634ac3e538d48ad555721fa96e9e8e05
+  - name: run_manifest
+    kind: json-metadata
+    root_alias: aidc_data
+    relative_path: datasets/magicdata/versions/clean-dual-qwen-moss-v1-20261008/evidence/run_manifest.json
+    expected_bytes: 1536
+    sha256: 4defda516a36334ec1ceec0602f208ef1796fd5373688596657c4e27a77eefb3
+  splits:
+    train:
+      artifacts:
+        recordings:
+        - train_recordings
+        supervisions:
+        - train_supervisions
+        clean_no_punc_supervisions:
+        - train_supervisions_no_punc
+      statistics:
+        supervisions: 573478
+        pass: 572637
+        reject: 841
+        by_reason:
+          ok: 571885
+          too_short: 241
+          substitution: 511
+          bad_annotation: 695
+          no_valid_engine: 31
+          ambiguous: 21
+          insufficient_engines: 94
+        hours_before_filter: 711.9157
+        duration_hours: 710.9553
+        duration_basis: sum of supervision durations with custom.clean.pass=true
+  recipe_parameters:
+    source_version: icefall-20260908
+    source_split: train
+    engines:
+    - name: Qwen3-ASR-1.7B
+      backend: vllm 0.18.0
+      request: *id001
+    - name: MOSS-Transcribe-Diarize
+      backend: vllm 0.23.1rc1.dev949+g68b4a1d58
+      request: *id002
+      prompt: vLLM default diarization prompt
+    filter_rules: consensus-v6
+    rewrite_rules: wenetspeech-faithful-v5
+    params:
+      threshold: 50.0
+      agree_threshold: 30.0
+      min_tokens: 2
+      max_hyp_ratio: 3.0
+      replace_engine: Qwen3-ASR-1.7B
+      max_replace_ratio: 3.0
+      rewrite_agree_threshold: 10.0
+    writes:
+    - text
+    - custom.clean
+    filters: custom.clean.pass=false
+  provenance:
+    source: AmphionData dual-engine cleaning (amphion-data clean, HTTP backend)
+    registered_at: '2026-10-08'
+    integrity: verified
+    description: magicdata@icefall-20260908 的 train 监督片段，经 Qwen3-ASR-1.7B 与 MOSS-Transcribe-Diarize 双引擎一致性清洗；逐条写入
+      custom.clean（pass、reason、action、engine_status），不删除记录，读取时按 require_clean_pass 过滤。音频沿用源版本，不复制。规则 consensus-v6
+      / wenetspeech-faithful-v5：pass 572637、reject 841。少于 2 个字的 too_short 共 241 条按规则不经引擎直接 pass。用于合成时建议在
+      pass 之外再要求：两引擎均有效、MOSS 只输出 1 个说话人、action 不是 review_consensus；too_short 另要求两引擎规范化后与原文完全一致。按此筛选保留
+      525329 条、644.54 小时（too_short 通过 136/241）。
+    recommended_synthesis_filter:
+      require:
+      - custom.clean.pass=true
+      - both engines valid
+      - MOSS single speaker
+      - action!=review_consensus
+      - 'too_short: both engines exactly reproduce the reference'
+      records: 525329
+      hours: 644.5391
+      counted_by: zh-source-clean-20261008/scripts/synthesis_filter_stats.py
+    moss_speaker_count:
+      '1': 568525
+      '2': 4922
+      '0': 6
+      3+: 25
+    code: amphiondata feat/clean-new-zh-sources 279fb69 (configs/experiments/zh-source-clean-qwen-moss.toml)
+    wandb: https://wandb.ai/1016097967-amphion/open-audio-llm/runs/zh-source-clean-qwen-moss-20261008-full
+- schema_version: dataset-catalog/2.0
+  dataset_id: magicdata_ramc
+  version: clean-dual-qwen-moss-v1-20261008
+  languages:
+  - zh
+  tasks:
+  - asr
+  derived_from: magicdata_ramc@icefall-20260908
+  artifacts:
+  - name: train_recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/legacy-20260804/train_rec_0/magicdata_ramc_recordings_train.jsonl.gz
+    expected_bytes: 4561
+    sha256: 9b3dbbe731f17f1821d92aad52cd2ae7d7d5333a4586e13b31c8a4378f79bcdc
+    metadata:
+      record_count: 289
+      shared_with: magicdata_ramc@icefall-20260908
+  - name: train_supervisions
+    kind: lhotse-supervisions
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/clean-dual-qwen-moss-v1-20261008/supervisions/magicdata_ramc_supervisions_train.jsonl.gz
+    expected_bytes: 7382561
+    sha256: e42242a572825c70d16bdf851d996e01b51dc8ac6512cbbb56daf5332d561367
+    metadata:
+      record_count: 168464
+      pass_count: 166711
+      text: source transcript with custom.clean; restored fillers may carry punctuation
+  - name: train_supervisions_no_punc
+    kind: lhotse-supervisions
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/clean-dual-qwen-moss-v1-20261008/supervisions/magicdata_ramc_supervisions_train_clean.jsonl.gz
+    expected_bytes: 7251054
+    sha256: b02eb41642008b9d9ccaa8cca99db25dc4dfcf54aa4846cdf8eaf6111cb3df63
+    metadata:
+      record_count: 168464
+      pass_count: 166711
+      punctuated: false
+  - name: engine_results
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/clean-dual-qwen-moss-v1-20261008/evidence/engine_results.jsonl.gz
+    expected_bytes: 12231848
+    sha256: 06ea7c836c275f7cd93cd49fe5fe2c8ea626e85a3696df85077f23b7e5a9e33e
+    metadata:
+      record_count: 168464
+  - name: rejected
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/clean-dual-qwen-moss-v1-20261008/evidence/rejected.jsonl.gz
+    expected_bytes: 162778
+    sha256: f22abf4ffa83b3d5a85320994e0c9a27574ffb3675aa230bde716721d3d1fafb
+    metadata:
+      record_count: 1753
+  - name: content_review
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/clean-dual-qwen-moss-v1-20261008/evidence/content_review.jsonl.gz
+    expected_bytes: 1722888
+    sha256: 673e64218d0ea71b862ef1a9ca2834752e1ba532a449dc89a83e04d775633b53
+    metadata:
+      record_count: 24252
+  - name: replaced_review
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/clean-dual-qwen-moss-v1-20261008/evidence/replaced_review.jsonl.gz
+    expected_bytes: 37156
+    sha256: 1daea262ec6ef5da8b325ba19680c68837a355046d1586cfc8dd0cd90a152867
+    metadata:
+      record_count: 511
+  - name: filter_report
+    kind: json-metadata
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/clean-dual-qwen-moss-v1-20261008/evidence/filter_report.json
+    expected_bytes: 1136
+    sha256: bdda19d595f1c4c16c5bf68320f1747397254b6672d0874fa079d2d18f3e3aab
+  - name: clean_version
+    kind: json-metadata
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/clean-dual-qwen-moss-v1-20261008/evidence/clean-version.json
+    expected_bytes: 4906
+    sha256: a59dfdd34ff81e6971925c4f21c2069815c0b16e3828ebca8ce170af2a2dd708
+  - name: run_manifest
+    kind: json-metadata
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/clean-dual-qwen-moss-v1-20261008/evidence/run_manifest.json
+    expected_bytes: 1606
+    sha256: 27d003db7efbb81047352fba747db2bfa4c4508cee4785dbc14dd3f715f82701
+  - name: ramc_gap_coverage
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/clean-dual-qwen-moss-v1-20261008/evidence/ramc-gaps/coverage.json
+    expected_bytes: 920
+    sha256: 0d598054e8cb4c35f356a29cbd9ede008ad98db22fc440b348478e393352ef07
+  - name: ramc_gap_asr_summary
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/clean-dual-qwen-moss-v1-20261008/evidence/ramc-gaps/gap_asr_summary.json
+    expected_bytes: 25458
+    sha256: b44f02e1aec55bd83b65a2d75104f06638b7065dc46a3d5f46a3969e266c2121
+  - name: ramc_gap_asr
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/clean-dual-qwen-moss-v1-20261008/evidence/ramc-gaps/gap_asr.jsonl.gz
+    expected_bytes: 1076289
+    sha256: b952cbc429af94be9508caf8a25613743ce01e01e2c1532ea2f6f4106bcb2fcd
+  - name: ramc_gap_energy
+    kind: quality-report
+    root_alias: aidc_data
+    relative_path: datasets/magicdata_ramc/versions/clean-dual-qwen-moss-v1-20261008/evidence/ramc-gaps/gap_energy.jsonl.gz
+    expected_bytes: 4590647
+    sha256: f9f24bcce36a10c212dcb5084bf2c86c3a2a93ca224369eba13f364d191f0a61
+  splits:
+    train:
+      artifacts:
+        recordings:
+        - train_recordings
+        supervisions:
+        - train_supervisions
+        clean_no_punc_supervisions:
+        - train_supervisions_no_punc
+      statistics:
+        supervisions: 168464
+        pass: 166711
+        reject: 1753
+        by_reason:
+          ok: 148022
+          too_short: 16573
+          substitution: 2116
+          bad_annotation: 991
+          insufficient_engines: 593
+          ambiguous: 132
+          no_valid_engine: 37
+        hours_before_filter: 125.4841
+        duration_hours: 124.9863
+        duration_basis: sum of supervision durations with custom.clean.pass=true
+  recipe_parameters:
+    source_version: icefall-20260908
+    source_split: train
+    engines:
+    - name: Qwen3-ASR-1.7B
+      backend: vllm 0.18.0
+      request: *id001
+    - name: MOSS-Transcribe-Diarize
+      backend: vllm 0.23.1rc1.dev949+g68b4a1d58
+      request: *id002
+      prompt: vLLM default diarization prompt
+    filter_rules: consensus-v6
+    rewrite_rules: wenetspeech-faithful-v5
+    params:
+      threshold: 50.0
+      agree_threshold: 30.0
+      min_tokens: 2
+      max_hyp_ratio: 3.0
+      replace_engine: Qwen3-ASR-1.7B
+      max_replace_ratio: 3.0
+      rewrite_agree_threshold: 10.0
+    writes:
+    - text
+    - custom.clean
+    filters: custom.clean.pass=false
+  provenance:
+    source: AmphionData dual-engine cleaning (amphion-data clean, HTTP backend)
+    registered_at: '2026-10-08'
+    integrity: verified
+    description: magicdata_ramc@icefall-20260908 的 train 监督片段，经 Qwen3-ASR-1.7B 与 MOSS-Transcribe-Diarize
+      双引擎一致性清洗；逐条写入 custom.clean（pass、reason、action、engine_status），不删除记录，读取时按 require_clean_pass 过滤。音频沿用源版本，不复制。规则
+      consensus-v6 / wenetspeech-faithful-v5：pass 166711、reject 1753。少于 2 个字的 too_short 共 16573 条按规则不经引擎直接
+      pass。用于合成时建议在 pass 之外再要求：两引擎均有效、MOSS 只输出 1 个说话人、action 不是 review_consensus；too_short 另要求两引擎规范化后与原文完全一致。按此筛选保留
+      122956 条、88.85 小时（too_short 通过 10332/16573）。
+    recommended_synthesis_filter:
+      require:
+      - custom.clean.pass=true
+      - both engines valid
+      - MOSS single speaker
+      - action!=review_consensus
+      - 'too_short: both engines exactly reproduce the reference'
+      records: 122956
+      hours: 88.8508
+      counted_by: zh-source-clean-20261008/scripts/synthesis_filter_stats.py
+    moss_speaker_count:
+      '1': 155125
+      '2': 12850
+      '0': 162
+      3+: 327
+    code: amphiondata feat/clean-new-zh-sources 279fb69 (configs/experiments/zh-source-clean-qwen-moss.toml)
+    wandb: https://wandb.ai/1016097967-amphion/open-audio-llm/runs/zh-source-clean-qwen-moss-20261008-full
+    unlabeled_speech_note: 289 段官方 train 对话共 149.65 小时，片段覆盖 125.48 小时、24.16 小时无标注；文本无 [...] 等标记残留。≥0.5
+      秒且响度接近语音的 12968 段空隙中，6822 段（3.13 小时）两引擎都转出 ≥2 个汉字；安静对照 1000 段仅 5 段。片段外存在未标注的真实语音，无法确认上游是否只删除了纯噪声标记段；合成或取背景时不要把片段外区域当作无人声。

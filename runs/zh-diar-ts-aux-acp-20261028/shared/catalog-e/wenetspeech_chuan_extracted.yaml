@@ -1,0 +1,57 @@
+# WenetSpeech-Chuan 训练集解包为单个 wav：cuts 与 icefall-20260908 逐条相同，音频从按偏移读 tar 改为读文件。
+- schema_version: dataset-catalog/2.0
+  dataset_id: wenetspeech_chuan
+  version: extracted-20261021
+  languages:
+    - zh
+  tasks:
+    - asr
+  derived_from: wenetspeech_chuan@icefall-20260908
+  artifacts:
+    - name: train_cuts_0
+      kind: lhotse-cuts
+      root_alias: aidc_data
+      relative_path: datasets/wenetspeech_chuan/versions/extracted-20261021/manifests/wenetspeech_chuan_cuts_train.jsonl.gz
+      expected_bytes: 746016089
+      sha256: 2b5b8df5f97bbbb5e3e8ad9e514dda16cbbfbfe97ebd7d773d37f4acc917a4cb
+      metadata:
+        record_count: 4938701
+        description: >-
+          与 wenetspeech_chuan@icefall-20260908 的 train cuts 逐条相同（顺序、ID、时长、标注一致），
+          只把每条 recording 的来源从 dd 字节范围改为下面 audio 目录里的 wav 绝对路径
+    - name: wav_files
+      kind: source-directory
+      root_alias: aidc_data
+      relative_path: datasets/wenetspeech_chuan/versions/extracted-20261021/audio
+      metadata:
+        layout: <2 位十六进制>/<sha256>.wav，旁边是同名 .wav.complete.json 完成记录（来源 tar、偏移、源文件大小与修改时间）
+        audio_files: 4938701
+        bytes: 1182168422636
+        source: DATA-TTS/WenetSpeech-Chuan 的 tar，按 icefall-20260908 cuts 中的 dd 字节范围取出
+        codec: 与 tar 内成员逐字节相同（wav，16 kHz），未重编码
+  splits:
+    train:
+      artifacts:
+        cuts:
+          - train_cuts_0
+        files:
+          - wav_files
+      statistics:
+        records: 4938701
+        duration_hours: 10259.5651865625
+        duration_basis: sum of cuts durations（与 icefall-20260908 相同）
+  provenance:
+    preparation_status: prepared
+    owner: shaoxiong
+    extracted_at: 2026-10-21
+    tool: >-
+      audio-data-contract extract-audio；先按 v17c 训练分片解包（2026-10-21），再以 icefall-20260908 train cuts 为输入、
+      同一缓存重跑生成全量清单（2026-10-22，4,938,701 条全部复用、0 失败）
+    description: >-
+      WenetSpeech-Chuan 训练集的 4,938,701 个音频从 DATA-TTS 的大 tar 中按字节范围取出，存为单个 wav，共 1.18 TB。
+      8 卡训练按 tar 偏移读音频时数据加载跟不上（约 1.7 秒/步），改读单文件后约 0.69 秒/步。
+      随机抽 550 条与 dd 读取结果逐字节相同。
+    known_issues:
+      - 源 tar 被替换时这里不会自动更新（完成记录只核对源文件大小和修改时间）
+    related:
+      - wenetspeech_chuan@icefall-20260908（同一批 cuts，音频按 dd 偏移从 tar 读）

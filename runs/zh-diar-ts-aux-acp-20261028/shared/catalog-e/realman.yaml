@@ -1,0 +1,265 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: realman
+  version: hf-aishell-20261025
+  languages:
+  - zh
+  tasks:
+  - speech_enhancement
+  - asr
+  - noise
+  - sound_source_localization
+  aliases:
+  - RealMAN
+  - real-man
+  artifacts:
+  - name: train_dp_speech
+    kind: source-directory
+    root_alias: realman
+    relative_path: source/hf-aishell-20261025/extracted/train/dp_speech
+    metadata:
+      file_count: 36816
+      expected_bytes: 11926053783
+      tree_sha256: d9b8da648dc38030e701721b4bbbeb3a41fc5ff7901a8d7be495ac1d109c211a
+      layout: <Scene>/<static|moving>/<speaker>/<UTT>.flac, 48 kHz 24-bit direct-path reference (channel 0)
+  - name: train_ma_speech
+    kind: source-directory
+    root_alias: realman
+    relative_path: source/hf-aishell-20261025/extracted/train/ma_speech
+    metadata:
+      file_count: 1178112
+      expected_bytes: 191685331789
+      tree_sha256: 613f93ce68cd14ee2d317661e1505497dee48af1e22eedd6d9dcbf2ee78da04e
+      layout: <Scene>/<static|moving>/<speaker>/<UTT>_CH<0-31>.flac, 48 kHz 16-bit, one file per array channel
+  - name: train_ma_noise
+    kind: source-directory
+    root_alias: realman
+    relative_path: source/hf-aishell-20261025/extracted/train/ma_noise
+    metadata:
+      file_count: 204128
+      expected_bytes: 370176163101
+      tree_sha256: 8fc87a0ef19f90f25cdf3455f47c19304827f2eab533514f4216ee93309912d5
+      layout: <Scene>/<recording>_CH<0-31>.flac, background noise only, 48 kHz 16-bit
+  - name: val_dp_speech
+    kind: source-directory
+    root_alias: realman
+    relative_path: source/hf-aishell-20261025/extracted/val/dp_speech
+    metadata:
+      file_count: 6698
+      expected_bytes: 1469923106
+      tree_sha256: 66abfb690c485eaaf6cc18fb3187d05ecef28768ca131789d0e7589eefba1067
+      layout: <Scene>/<static|moving>/<speaker>/<UTT>.flac, 48 kHz 24-bit direct-path reference (channel 0)
+  - name: val_ma_noisy_speech
+    kind: source-directory
+    root_alias: realman
+    relative_path: source/hf-aishell-20261025/extracted/val/ma_noisy_speech
+    metadata:
+      file_count: 214336
+      expected_bytes: 28046731050
+      tree_sha256: 1fdeb4d1b3a9261c1be4f30402f60b4d86992da1ef1cc80795302a7af198d70a
+      layout: <Scene>/<static|moving>/<speaker>/<UTT>_CH<0-31>.flac, speech mixed with recorded scene noise, 48 kHz 16-bit
+  - name: val_raw_ma_speech
+    kind: source-directory
+    root_alias: realman
+    relative_path: source/hf-aishell-20261025/extracted/val_raw/ma_speech
+    metadata:
+      file_count: 214336
+      expected_bytes: 24391836551
+      tree_sha256: 50e80f2b96f732709a905156fc08cd508f4bcf86f442b42f49337670c00f6e2e
+      layout: <Scene>/<static|moving>/<speaker>/<UTT>_CH<0-31>.flac, 48 kHz 16-bit, one file per array channel
+  - name: val_raw_ma_noise
+    kind: source-directory
+    root_alias: realman
+    relative_path: source/hf-aishell-20261025/extracted/val_raw/ma_noise
+    metadata:
+      file_count: 30624
+      expected_bytes: 47579752582
+      tree_sha256: 159c3a485126dba78e1e9b922dae32088c54e7da16f02ae8633fff4f3362fdbb
+      layout: <Scene>/<recording>_CH<0-31>.flac, background noise only, 48 kHz 16-bit
+  - name: test_dp_speech
+    kind: source-directory
+    root_alias: realman
+    relative_path: source/hf-aishell-20261025/extracted/test/dp_speech
+    metadata:
+      file_count: 7633
+      expected_bytes: 2100447881
+      tree_sha256: c84099cfd571bb9f542e381e5e2a7fb84931162cf8f6de0a794d35e39ff955b6
+      layout: <Scene>/<static|moving>/<speaker>/<UTT>.flac, 48 kHz 24-bit direct-path reference (channel 0)
+  - name: test_ma_noisy_speech
+    kind: source-directory
+    root_alias: realman
+    relative_path: source/hf-aishell-20261025/extracted/test/ma_noisy_speech
+    metadata:
+      file_count: 244256
+      expected_bytes: 40116382277
+      tree_sha256: f9ec639698ac2359916879a9cc305071c7f268e364e4947d42aeac7195cd48eb
+      layout: <Scene>/<static|moving>/<speaker>/<UTT>_CH<0-31>.flac, speech mixed with recorded scene noise, 48 kHz 16-bit
+  - name: test_raw_ma_speech
+    kind: source-directory
+    root_alias: realman
+    relative_path: source/hf-aishell-20261025/extracted/test_raw/ma_speech
+    metadata:
+      file_count: 244256
+      expected_bytes: 34879197247
+      tree_sha256: 271b6203b54371c3cd8ec693f4f7c5176b3ca26245056456c25728063c0992ac
+      layout: <Scene>/<static|moving>/<speaker>/<UTT>_CH<0-31>.flac, 48 kHz 16-bit, one file per array channel
+  - name: test_raw_ma_noise
+    kind: source-directory
+    root_alias: realman
+    relative_path: source/hf-aishell-20261025/extracted/test_raw/ma_noise
+    metadata:
+      file_count: 42592
+      expected_bytes: 64554755489
+      tree_sha256: 86faf78ac964a41095da1ec0390f1cf840ca0bf013bea4084091e9d1b2bfc381
+      layout: <Scene>/<recording>_CH<0-31>.flac, background noise only, 48 kHz 16-bit
+  - name: train_static_locations
+    kind: metadata
+    root_alias: realman
+    relative_path: source/hf-aishell-20261025/train/train_static_source_location.csv
+    expected_bytes: 3498219
+    sha256: c38f4cd2c5522448cb5520355163dc05623356b43ba7a3bedfbd501b629847fe
+  - name: train_moving_locations
+    kind: metadata
+    root_alias: realman
+    relative_path: source/hf-aishell-20261025/train/train_moving_source_location.csv
+    expected_bytes: 18139758
+    sha256: 05d4676c20c9bebb7e73566420756f1b15e01024b4917aea111efe4269a0ce0b
+  - name: val_static_locations
+    kind: metadata
+    root_alias: realman
+    relative_path: source/hf-aishell-20261025/val/val_static_source_location.csv
+    expected_bytes: 667203
+    sha256: 1f0be80d4ab1cc023e7599bf7e564f84acaf36ccad73fd59c992cc9e853f1233
+  - name: val_moving_locations
+    kind: metadata
+    root_alias: realman
+    relative_path: source/hf-aishell-20261025/val/val_moving_source_location.csv
+    expected_bytes: 2458884
+    sha256: 542f04d011c2b6fbdd49bfa51c423942fe854e7e0615fb1f67954c762ad20bf5
+  - name: test_static_locations
+    kind: metadata
+    root_alias: realman
+    relative_path: source/hf-aishell-20261025/test/test_static_source_location.csv
+    expected_bytes: 790478
+    sha256: e9d105b32ec7d4bb8d4ff86623e1894e79f42c176fdbf45daa5df33ee4b59a1d
+  - name: test_moving_locations
+    kind: metadata
+    root_alias: realman
+    relative_path: source/hf-aishell-20261025/test/test_moving_source_location.csv
+    expected_bytes: 3327876
+    sha256: 5390eba2c4cdf3898901fc0f0f8e638391aa34ecdfceb3af84d71c03af0b792f
+  - name: transcriptions
+    kind: metadata
+    root_alias: realman
+    relative_path: source/hf-aishell-20261025/transcriptions.trn
+    expected_bytes: 2521946
+    sha256: 5daba0aefd8f557af995b184e87259e8383e165c14915bdb53669c23a04fc2ba
+    metadata:
+      format: space-separated characters followed by (S<speaker>-<utt>); <UTT> TRAIN_M_AUDI_0029_0003 maps to S0029-0003
+  - name: dataset_info
+    kind: source-directory
+    root_alias: realman
+    relative_path: source/hf-aishell-20261025/dataset_info
+    metadata:
+      file_count: 49
+      expected_bytes: 140218609
+      tree_sha256: d00186abcfbee03a12b9d159810fee215798c7fdba1ea3f6985d086f6063b0ca
+      layout: scene_info.json (T60, durations, description per scene), speaker_info.csv, scene_images/
+  splits:
+    train:
+      artifacts:
+        source_directory:
+        - train_dp_speech
+        - train_ma_speech
+        - train_ma_noise
+        transcriptions:
+        - transcriptions
+        metadata:
+        - train_static_locations
+        - train_moving_locations
+        - dataset_info
+      statistics:
+        utterances: 36816
+        static_utterances: 21012
+        moving_utterances: 15804
+        source_sentences: 15515
+        speakers: 43
+        speech_scenes: 26
+        duration_hours: 64.027
+        duration_basis: sum of direct-path utterance lengths; each utterance also exists as 32 array channels
+        noise_recordings: 6379
+        noise_scenes: 26
+        noise_hours: 106.3167
+        noise_basis: sum of channel-0 noise recording lengths; each recording has 32 channels
+    val:
+      artifacts:
+        source_directory:
+        - val_dp_speech
+        - val_ma_noisy_speech
+        - val_raw_ma_speech
+        - val_raw_ma_noise
+        transcriptions:
+        - transcriptions
+        metadata:
+        - val_static_locations
+        - val_moving_locations
+        - dataset_info
+      statistics:
+        utterances: 6698
+        static_utterances: 3762
+        moving_utterances: 2936
+        source_sentences: 1982
+        speakers: 6
+        speech_scenes: 14
+        duration_hours: 8.0889
+        duration_basis: sum of direct-path utterance lengths; each utterance also exists as 32 array channels
+        noise_recordings: 957
+        noise_scenes: 12
+        noise_hours: 15.95
+        noise_basis: sum of channel-0 noise recording lengths; each recording has 32 channels
+      provenance: &id001
+        layout: ma_noisy_speech is the official noisy mixture; the matching clean array speech and noise are in the *_raw directories
+    test:
+      artifacts:
+        source_directory:
+        - test_dp_speech
+        - test_ma_noisy_speech
+        - test_raw_ma_speech
+        - test_raw_ma_noise
+        transcriptions:
+        - transcriptions
+        metadata:
+        - test_static_locations
+        - test_moving_locations
+        - dataset_info
+      statistics:
+        utterances: 7633
+        static_utterances: 4400
+        moving_utterances: 3233
+        source_sentences: 2132
+        speakers: 6
+        speech_scenes: 17
+        duration_hours: 11.5923
+        duration_basis: sum of direct-path utterance lengths; each utterance also exists as 32 array channels
+        noise_recordings: 1331
+        noise_scenes: 13
+        noise_hours: 22.1833
+        noise_basis: sum of channel-0 noise recording lengths; each recording has 32 channels
+      provenance: *id001
+  provenance:
+    source: RealMAN (Westlake University Audio Signal and Information Processing Lab with AISHELL), Hugging Face dataset AISHELL/RealMAN
+    url: https://github.com/Audio-WestlakeU/RealMAN
+    snapshot_date: '2026-10-25'
+    license: CC BY 4.0
+    description: RealMAN 真实录制的 32 麦阵列中文数据（NeurIPS 2024）：扬声器在 32 个真实场景（教室、办公室、食堂、球场、地铁、公交、轿车、街边等）外放普通话，阵列录下 32 路 48 kHz 音频，含静止和移动声源，每句带直达声干净参考（dp_speech）、声源方位和距离、转写。语音共
+      51147 句、83.7 小时（train 64.0、val 8.1、test 11.6），来自 55 个说话人的 19629 条不同句子，三个划分之间句子和说话人都不重叠；另有 31 个场景的纯噪声录音 144.5 小时。用于多通道/单通道降噪、远场
+      ASR 和声源定位；单通道用时取任意一个 CH。val/test 的 ma_noisy_speech 是官方带噪混合，*_raw 里是对应的干净阵列语音和噪声。这是完整版（32 通道全部解压）；只要 ASR 的 CH0 可用 `realman@icefall-20260908`。
+    acquisition: Downloaded all 253 files of the pinned Hugging Face snapshot (commit fea47505) from hf-mirror.com; each file's sha256
+      equals its LFS oid (hf-snapshot.json). The 196 RAR5 archives were extracted with bsdtar 3.8.8 into extracted/<split>/<subset>/
+      after checking that every member is a regular file or directory under the archive's scene directory, and the extracted file count
+      of each archive matches its listing. After every extracted directory and the full version passed check-registration on 2026-10-26,
+      the 196 archives (about 812 GB) were deleted to save space; their sizes and sha256 remain in hf-snapshot.json.
+    known_issues:
+    - transcriptions.trn holds 474 sentence IDs that no released utterance uses.
+    - The source RAR archives are not kept here. To re-extract, download them again from the pinned revision; 57 of them (train/ma_speech,
+      val/ma_noisy_speech, test/ma_noisy_speech) are still in realman@icefall-20260908's source/icefall-20260908.
+    integrity: local_sha256_recorded

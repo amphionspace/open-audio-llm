@@ -1,0 +1,200 @@
+# Emilia2 英文/中文部分解包为单文件（m4a + 同名 JSON），按来源 / 语言 / 类型 / 录音分目录。
+- schema_version: dataset-catalog/2.0
+  dataset_id: emilia2
+  version: extracted-enzh-20261012
+  languages:
+    - en
+    - zh
+  tasks:
+    - tts
+  aliases: []
+  artifacts:
+    - name: index
+      kind: jsonl-metadata
+      root_alias: aidc_data
+      relative_path: datasets/emilia2/index.jsonl.gz
+      expected_bytes: 168422408
+      sha256: 2ed0464d547a45a3234f40b30611d1859c34634474e64a80bef8a15064de15f7
+      metadata:
+        record_count: 7211651
+        description: >-
+          每行一个音频文件：id、type（dialogue/long/short）、language、recording_id、duration、sample_rate、tags、
+          subset（m4a-128k/m4a-64k/asmr）、audio、metadata（相对 datasets/emilia2/ 的路径）、source_tar（来源 tar）
+    - name: stats
+      kind: json-metadata
+      root_alias: aidc_data
+      relative_path: datasets/emilia2/stats.json
+    - name: m4a_128k_files
+      kind: source-directory
+      root_alias: aidc_data
+      relative_path: datasets/emilia2/m4a-128k
+      metadata:
+        layout: <en|zh>/<dialog|long|short>/<recording_id>/<stem>.{m4a,json}
+        audio_files: 5469197
+        source: DATA-TTS/Emilia2/Emilia2_TTS_m4a/data（8059 个 tar）
+        codec: AAC-LC 128 kbps, 44.1 kHz, mono
+    - name: m4a_64k_files
+      kind: source-directory
+      root_alias: aidc_data
+      relative_path: datasets/emilia2/m4a-64k
+      metadata:
+        layout: <en|zh>/<dialog|long|short>/<recording_id>/<stem>.{m4a,json}
+        audio_files: 1636411
+        source: DATA-TTS/Emilia2/Emilia2_TTS_m4a_64kbps/data（1266 个 tar，tianyi 线）
+        codec: AAC-LC 64 kbps 标称, 44.1 kHz, mono（二代有损）
+    - name: asmr_files
+      kind: source-directory
+      root_alias: aidc_data
+      relative_path: datasets/emilia2/asmr
+      metadata:
+        layout: <en|zh>/<long|short>/<recording_id>/<stem>.{m4a,json}
+        audio_files: 106043
+        source: DATA-TTS/Emilia2/Emilia2_TTS_m4a/ASMR（13 个 tar）
+        codec: AAC-LC 128 kbps, 44.1 kHz, mono
+  splits:
+    m4a_128k:
+      artifacts:
+        index:
+          - index
+        files:
+          - m4a_128k_files
+      group: train
+      statistics:
+        records: 5469197
+        duration_hours: 95930.4
+        recordings: 578287
+        by_language_type:
+          en/dialog: {records: 262613, hours: 27178.9}
+          en/long: {records: 464296, hours: 21428.4}
+          en/short: {records: 2081298, hours: 2740.2}
+          zh/dialog: {records: 207208, hours: 10362.5}
+          zh/long: {records: 540166, hours: 31857.6}
+          zh/short: {records: 1913616, hours: 2362.8}
+    m4a_64k:
+      artifacts:
+        index:
+          - index
+        files:
+          - m4a_64k_files
+      group: train
+      statistics:
+        records: 1636411
+        duration_hours: 23279.1
+        recordings: 95216
+        by_language_type:
+          en/dialog: {records: 227104, hours: 6163.1}
+          en/long: {records: 72801, hours: 3788.3}
+          en/short: {records: 475048, hours: 898.9}
+          zh/dialog: {records: 233197, hours: 7020.0}
+          zh/long: {records: 84603, hours: 4408.9}
+          zh/short: {records: 543658, hours: 999.9}
+    asmr:
+      artifacts:
+        index:
+          - index
+        files:
+          - asmr_files
+      group: train
+      statistics:
+        records: 106043
+        duration_hours: 329.6
+        recordings: 3247
+        by_language_type:
+          en/long: {records: 7226, hours: 168.9}
+          en/short: {records: 56271, hours: 62.6}
+          zh/long: {records: 2719, hours: 60.8}
+          zh/short: {records: 39827, hours: 37.3}
+  provenance:
+    preparation_status: prepared
+    owner: mingdong
+    source: /workspace/data/DATA-TTS/Emilia2
+    source_archived: >-
+      2026-10-19 起 aidc 上的 DATA-TTS/Emilia2 已删除（用户同意）。原始 tar 和 segment_info 完整备份在 SenseCore 桶
+      amphion-tts-data:Emilia2/：Emilia2_TTS_m4a/data 8059 个 tar、Emilia2_TTS_m4a/ASMR 13 个、Emilia2_TTS_m4a_64kbps/data 1266 个、
+      segment_info/dialog 与 segment_info/long 各 8059 个（2026-10-19 核对个数与大小）。segment_info 是对话逐轮（members：speaker、start/end、text）
+      和长音频逐句（start/end/text）的时间信息，全语种、只覆盖 128k，本地解包的 JSON 里没有这些时间戳；需要时用 AmphionBucket 拉回。
+    extracted_at: 2026-10-12
+    selection: JSON 的 languages 恰好为 ["en"] 或 ["zh"] 的条目；混合语种和其他语种不解包
+    description: >-
+      Emilia2 原始 tar（WebDataset 风格，m4a + JSON 成对）的英文、中文部分解包为单文件，共 7,211,651 个音频、119,539.1 小时。
+      每个音频旁边是同名 JSON（字段与原 tar 一致：dialogue/long/short 三种视图及各自的时间偏移）。
+      一段录音被切成互不重复的三类文件：dialog（≥2 人、≥2 轮、≥30 秒的多人片段，音频来自独立的人声分离）、
+      long（单人连续 ≥30 秒）、short（单人 <30 秒的零散短句）；dialog 判定规则上游未写明，以上为按数据反推。
+      m4a-128k 与 m4a-64k 的 recording_id 无重叠，是两批互补数据。
+      解包后逐录音目录核对文件数与 index 一致（984,128 个目录、14,423,302 个文件）。
+      音频需用识别 edit list 的解码器（ffmpeg 等）读取，按 JSON 的 frames / 样本偏移切片。
+    known_issues:
+      - segment_info 只覆盖 128k 的 8059 个 tar；m4a-64k 的对话/长音频没有 segment_info，上游处理目录本机不可得
+      - dialog 内部短句的说话人标注与 dialog 自身的 num_speakers 可能不一致（抽样中约 22% 的 dialog 内部短句只有 1 个说话人）
+      - 上游 README 记载 26 条 opus 来源录音的 dialog 与 short/long 偏移有 13–73 ms 恒定漂移
+    superseded_by: emilia2@extracted-enzh-flac16k-20261012
+    m4a_removed: >-
+      只对 dialog 和 long 生效：2026-10-18 删除了这两类的 m4a，共 2,101,910 个（释放 5.85 TB），index 中这些行的 audio 已不存在，改用
+      emilia2@extracted-enzh-flac16k-20261012 的同名 .flac。保留 23 个 m4a：emilia2_mix、emilia2_dialog 有 42 条训练引用超出 FLAC 末尾
+      1–12 个采样点，open-audio-llm 对这些引用仍读 m4a（清单见 FLAC 版本 run_dir 的 keep-m4a-past-flac-end.txt）。
+      short 与 asmr 的 m4a 未动。
+    related:
+      - emilia2@tts-unified-v0.1（同源的 Lance 发布，含全部语种）
+      - emilia2_zh_dialogue_diarize（中文对话的说话人日志伪标签，按 recording_id 对应）
+# 解包的 dialog / long m4a 转为 16 kHz 单声道 FLAC PCM16（放在原 m4a 位置，同名 .flac）；原 m4a 已于 2026-10-18 删除。
+- schema_version: dataset-catalog/2.0
+  dataset_id: emilia2
+  version: extracted-enzh-flac16k-20261012
+  languages:
+    - en
+    - zh
+  tasks:
+    - asr
+    - diarization
+  aliases: []
+  artifacts:
+    - name: index
+      kind: jsonl-metadata
+      root_alias: aidc_data
+      relative_path: datasets/emilia2/versions/extracted-enzh-flac16k-20261012/index.jsonl.gz
+      expected_bytes: 78826143
+      sha256: a6b0f6890fa796e9b17e75eba6f2328cc1b8a3650b5846564b0f74a72c7dc2ff
+      metadata:
+        record_count: 2101933
+        description: >-
+          每行一个转码后的 dialog / long 文件，字段与顺序同 extracted-enzh-20261012 的 index；audio 指向 .flac，sample_rate 为 16000，
+          duration 为 FLAC 帧数 / 16000，gain 为量化前的整条增益（1.0 表示未降），source_audio 为原 m4a（已删除）。路径相对 datasets/emilia2/。
+    - name: preparation_state
+      kind: dataset-state
+      root_alias: aidc_data
+      relative_path: datasets/emilia2/versions/extracted-enzh-flac16k-20261012/state.json
+  splits:
+    all:
+      artifacts:
+        index:
+          - index
+        preparation_state:
+          - preparation_state
+      group: train
+      statistics:
+        records: 2101933
+        duration_hours: 112444.2
+        source_records: 2101933
+        source_hours: 112437.4
+      provenance:
+        preparation_status: prepared
+  provenance:
+    preparation_status: prepared
+    owner: mingdong
+    description: >-
+      基于 extracted-enzh-20261012 的 dialog 和 long（standalone short 已在 emilia2@tts-unified-v0.1 中，不转）：每个 m4a 用与 DATA-TTS-UNIFIED Emilia2 接入相同的 FFmpeg 7.0.2 静态版完整解码（应用 edit list），
+      soxr 重采样到 16 kHz 单声道，按 round(gain*x*32768) 量化为 FLAC PCM16，峰值超出时整条降增益、不削波，写后逐样本回读核对。
+      目的：训练读取可随机跳转、不依赖 ffmpeg（原 m4a 读一个 120 秒窗口需 1–5 秒，16 kHz FLAC 约 0.03–0.3 秒）。
+      这份解包数据不用于 TTS（TTS 用 emilia2@tts-unified-v0.1）。
+      2026-10-17 转码完成：2,101,933 个文件、112,444 h 全部成功，FLAC 共 7.29 TB，20,240 个降了增益（最小 0.64）。
+      2026-10-18 删除原 m4a：逐个核对 FLAC 字节数与帧数后删除，保留 23 个仍被训练读取的 m4a（见 extracted-enzh-20261012 的 m4a_removed）。
+      emilia2_mix、emilia2_dialog、emilia2_zh_dialogue_diarize 的音频索引仍写 .m4a 路径，open-audio-llm（#63 起）读取时自动改读同名 .flac；
+      其他读取方需要自行把路径换成 .flac。
+    source: emilia2@extracted-enzh-20261012
+    run_dir: /workspace/workspace/mingdong/data/amphiondata/emilia2-extracted-flac16k-20261012
+  recipe_parameters:
+    decoder: ffmpeg-7.0.2-static (sha256 e7e7fb30477f717e6f55f9180a70386c62677ef8a4d4d1a5d948f4098aa3eb99), edit list applied
+    resampler: soxr precision 28
+    sample_rate: 16000
+    channels: 1
+    encoding: flac_pcm16_round_gain_no_clip

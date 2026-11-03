@@ -1,0 +1,55 @@
+  - schema_version: dataset-catalog/2.0
+    dataset_id: wenetspeech_clean
+    version: clean-v3-pass-20261027
+    languages:
+      - zh
+    tasks:
+      - asr
+    aliases: []
+    derived_from: wenetspeech_clean@clean-v3-20260828
+    artifacts:
+      - name: train_recordings
+        kind: lhotse-recordings
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech/source/cos-backup-20261011/relocated/LHOTSE/WenetSpeech/data/manifests/wenetspeech_recordings_L.jsonl.gz
+        expected_bytes: 1464697
+        sha256: aad6b67a67486fa091b7f6da28715e7db378c1001186a9c6330e5692303f6e51
+      - name: train_supervisions
+        kind: lhotse-supervisions
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech_clean/versions/clean-v3-pass-20261027/supervisions/train.jsonl.gz
+        expected_bytes: 507491947
+        sha256: 5c37f44a1b10ae67adcc8df12575199303b044cc3962d53945f7c80196e01cf1
+        metadata:
+          record_count: 14568791
+          pass_count: 14568791
+          punctuated: false
+      - name: record_index
+        kind: lance-record-index
+        root_alias: aidc_data
+        relative_path: datasets/wenetspeech_clean/versions/clean-v3-pass-20261027/record_index/index.json
+        expected_bytes: 771
+        sha256: a33e5e1e30b72ac00db9354c64e81ccee1b9a7cf62d45d349c16e45d1d0db49c
+        metadata:
+          snapshot_version: 13
+          rows: 14568791
+          schema_hash: 65313b8531adce3b2160e6cde8e2e0e4bb8c42a7f544c2aaa50de2d7bedb08b0
+    splits:
+      train:
+        artifacts:
+          recordings:
+            - train_recordings
+          supervisions:
+            - train_supervisions
+          records_lance:
+            - record_index
+        statistics:
+          duration_hours: 9971.0919
+          duration_basis: sum of supervision durations of the kept rows
+    recipe_parameters:
+      filter_rules: consensus-v6
+      rewrite_rules: wenetspeech-faithful-v5
+      filters: rows of wenetspeech_clean@clean-v3-20260828 train_supervisions (plain text) with custom.clean.pass=true
+      clean_pass_only: true
+    provenance:
+      description: wenetspeech_clean@clean-v3-20260828 训练集（WenetSpeech L）里上游清洗标记 custom.clean.pass=true 的分段，共 14568791 条 / 9971.1 小时（源 14625245 条，去掉未通过的 56454 条）；每行原样保留，包括 custom.clean，只用无标点文本。录音清单沿用源版本，不复制音频。用途：带 Lance 记录索引的 clean-only 版本，recipe_parameters.clean_pass_only 声明每行都已通过，open-audio-llm 据此让 require_clean_pass 的来源走 Lance 索引。脚本 scripts/wenetspeech_clean_pass.py。

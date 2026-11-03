@@ -1,0 +1,65 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: meeting_room_noise
+  version: v2-20261014
+  languages:
+  - und
+  tasks:
+  - noise
+  aliases: []
+  artifacts:
+  - name: alimeeting_train-recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/meeting_room_noise/versions/v2-20261014/meeting_room_noise_recordings_alimeeting_train.jsonl.gz
+    sha256: dbb60370e6ab32982da02d4d272ec9b3ac597c67ef2822d6de8966cd47647504
+    metadata:
+      record_count: 24
+  - name: aishell4_train_L-recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/meeting_room_noise/versions/v2-20261014/meeting_room_noise_recordings_aishell4_train_L.jsonl.gz
+    sha256: 607e185659fc3768f4201551d3ac4cdd86e08467238ca964d3cb18c82e6d58ac
+    metadata:
+      record_count: 30
+  - name: aishell4_train_M-recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/meeting_room_noise/versions/v2-20261014/meeting_room_noise_recordings_aishell4_train_M.jsonl.gz
+    sha256: cf2555711d157726070e9dfd3e3bb0de6167e49ff5669389e381511631f0ccec
+    metadata:
+      record_count: 104
+  - name: aishell4_train_S-recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/meeting_room_noise/versions/v2-20261014/meeting_room_noise_recordings_aishell4_train_S.jsonl.gz
+    sha256: 4d4b5e85fa5b013aa60454736991f8c3e312505ee4ca5a865a53e2761823c83b
+    metadata:
+      record_count: 51
+  splits:
+    train:
+      artifacts:
+        recordings:
+        - alimeeting_train-recordings
+        - aishell4_train_L-recordings
+        - aishell4_train_M-recordings
+        - aishell4_train_S-recordings
+      statistics:
+        records: 209
+        duration_hours: 2.481
+        duration_basis: sum of recording durations
+        hours_by_source:
+          alimeeting_train: 0.093
+          aishell4_train_L: 0.606
+          aishell4_train_M: 1.289
+          aishell4_train_S: 0.494
+      provenance:
+        training_use: augmentation
+  provenance:
+    snapshot_date: '2026-10-14'
+    source: AliMeeting Train far (openslr-119-local-20260826) and AISHELL-4 train_L/M/S far array recordings; evaluation recordings never read
+    description: 真实会议室底噪：从 AliMeeting 与 AISHELL-4 训练集远场阵列录音里截取无人说话的片段，每场会议取 1 个麦克风拼成 1 条，共 209 条、2.48 小时。先按标注空隙（前后扩 0.5 秒、剔除比该场底噪高 10 dB 的突发声）取候选，再每 4 秒用 Qwen3-ASR 转写，有文字就丢弃，因为部分会议有未标注的说话人。噪声已带录制房间的混响。
+    producer: amphiondata src/amphiondata/multispeaker/room_noise.py (MR !7), docs/meeting-room-noise.md
+    speech_residual_check: 'final tracks re-transcribed in 20 s chunks: 26 of 535 with text, 24 of them single fillers'
+    usage_guidance:
+      summary: '用于远场模拟的在线混噪（open-audio-llm noise_sources），不要再加混响（reverb_noise: false）；SNR 与音量按 open-audio-llm docs/guides/online-training-data.md 的校准配置。AliMeeting 仅贡献 0.09 小时，噪声主要来自 AISHELL-4 的房间。'
+    license: 继承源语料：AliMeeting 与 AISHELL-4 为 CC BY-SA 4.0

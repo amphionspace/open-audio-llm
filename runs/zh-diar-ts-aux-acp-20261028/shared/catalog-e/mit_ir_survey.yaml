@@ -1,0 +1,95 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: mit_ir_survey
+  version: modelscope-benjamin-paine-20261025
+  languages:
+  - und
+  tasks:
+  - rir
+  aliases:
+  - mit-ir-survey
+  - mit_environmental_impulse_responses
+  artifacts:
+  - name: parquet
+    kind: audio-records
+    root_alias: mit_ir_survey
+    relative_path: source/modelscope-benjamin-paine-20261025/data/train-00000-of-00001.parquet
+    expected_bytes: 15885190
+    sha256: 5efdfd881aa6c52e8dc918214222ff18444c6479f6eb60fa9fe98adb0fee97ac
+    metadata:
+      rows: 270
+      source_url: https://www.modelscope.cn/datasets/benjamin-paine/mit-impulse-response-survey
+      fields: audio (32 kHz mono 24-bit WAV bytes), id, location (68-class label), detail, hits
+  - name: readme
+    kind: metadata
+    root_alias: mit_ir_survey
+    relative_path: source/modelscope-benjamin-paine-20261025/README.md
+    expected_bytes: 7310
+    sha256: 72e7076058a3b9ba00139784632a997e3c508c4e417762dd904ce831ab0d4471
+  splits:
+    all:
+      artifacts:
+        records:
+        - parquet
+      statistics:
+        num_rirs: 270
+        locations: 68
+        duration_hours: 0.0483
+        duration_basis: sum of impulse response lengths
+      provenance:
+        format: 32 kHz mono 24-bit WAV bytes in the audio column
+  provenance:
+    source: MIT McDermott Lab environmental impulse response survey (Traer and McDermott, PNAS 2016), repacked as parquet by Benjamin
+      Paine and mirrored on ModelScope
+    url: https://mcdermottlab.mit.edu/Reverb/IR_Survey.html
+    snapshot_date: '2026-10-25'
+    license: CC BY 4.0
+    description: MIT 真实环境冲激响应（RIR）：志愿者两周日常生活里到过的地方（办公室、教室、餐厅、商场、地铁站、浴室、车里、户外等 68 类）实测的 RIR，声源和麦克风相距 1.5 米。共 270 条，32 kHz
+      单声道。可给干净语音加真实混响，补充模拟 RIR 和 `real_rir_slr28`。
+    acquisition: Downloaded every file of the ModelScope repo at master on 2026-10-25; the parquet's sha256 equals the ModelScope LFS
+      sha256 (modelscope-snapshot.json).
+    known_issues:
+    - The authors list 271 IRs; the repack has 270 rows. The uploader also fixed typos in some file names, so names may differ from
+      the original zip.
+    integrity: local_sha256_recorded
+- schema_version: dataset-catalog/2.0
+  dataset_id: mit_ir_survey
+  version: flac16k-20261026
+  languages:
+  - und
+  tasks:
+  - rir
+  aliases: []
+  artifacts:
+  - name: recordings
+    kind: lhotse-recordings
+    root_alias: mit_ir_survey
+    relative_path: versions/flac16k-20261026/manifests/mit_ir_survey_recordings_all.jsonl.gz
+    expected_bytes: 4013
+    sha256: 484aa5ce37d2939f6647286fdc512b7b1498ef92f87760a075570202e5fe2bb8
+    metadata:
+      record_count: 270
+  - name: places
+    kind: json-metadata
+    root_alias: mit_ir_survey
+    relative_path: versions/flac16k-20261026/manifests/mit_ir_survey_places.json
+    expected_bytes: 32285
+    sha256: d70ba9c7fd5c9093e5b2547a734e58a3867eacd0c6539f653cd066cb2fb14c6d
+    metadata:
+      record_count: 270
+  splits:
+    all:
+      artifacts:
+        recordings:
+        - recordings
+      statistics:
+        num_rirs: 270
+        duration_hours: 0.0483
+        duration_basis: sum of impulse response lengths
+  provenance:
+    source: mit_ir_survey@modelscope-benjamin-paine-20261025
+    derived_from: mit_ir_survey@modelscope-benjamin-paine-20261025
+    snapshot_date: '2026-10-26'
+    license: CC BY 4.0
+    description: MIT 真实环境冲激响应的 16 kHz 训练版：270 条 RIR 从 32 kHz 按 2:1 多相滤波降采样到 16 kHz，存成 24 位单声道 FLAC，带 lhotse 录音清单，可直接放进训练的
+      rir_sources。文件按调查编号命名（mit-ir-NNN），场所类别、说明与原文件名在 places 元数据文件里。
+    integrity: local_sha256_recorded

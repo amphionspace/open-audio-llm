@@ -1,0 +1,104 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: babble_noise_train
+  version: v1-20261017
+  languages:
+  - zh
+  - en
+  tasks:
+  - noise
+  aliases: []
+  artifacts:
+  - name: zh-recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/babble_noise_train/source/v1-20261017/recordings/babble_zh_recordings.jsonl.gz
+    expected_bytes: 16275
+    sha256: 1851d5fa803b8ff9f389a238de034f3d9950643e6b32954acd1d46d6956b39c3
+    metadata:
+      record_count: 2600
+  - name: en-recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/babble_noise_train/source/v1-20261017/recordings/babble_en_recordings.jsonl.gz
+    expected_bytes: 16274
+    sha256: b0e408a8ecb2f059cc61e42585dfcc429d87d052deb7b9659605dfa06d53dc27
+    metadata:
+      record_count: 2600
+  splits:
+    zh:
+      artifacts:
+        recordings:
+        - zh-recordings
+      task: noise
+      statistics:
+        records: 2600
+        duration_hours: 21.67
+    en:
+      artifacts:
+        recordings:
+        - en-recordings
+      task: noise
+      statistics:
+        records: 2600
+        duration_hours: 21.67
+  provenance:
+    status: complete
+    synthetic: none
+    snapshot_date: '20261017'
+    source: babble_noise_synth@v1-20261013
+    description: 训练用合成背景人声（babble）：babble_noise_synth 的 zh、en 训练划分（每种语言 2,600 条，30 秒，5–20 位说话人同时说，16 kHz 单声道 FLAC），按 Lhotse 录音清单登记，可作为 noise_sources 或空目标的 nonspeech_sources。评测的 babble 用 dev/test 说话人，与训练说话人互不重叠。脚本 scripts/ts_robust/register_babble_noise.py。
+- schema_version: dataset-catalog/2.0
+  dataset_id: babble_noise_train
+  version: v2-20261024
+  languages:
+  - zh
+  - en
+  tasks:
+  - noise
+  aliases: []
+  artifacts:
+  - name: zh-recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/babble_noise_train/source/v2-20261024/recordings/babble_zh_recordings.jsonl.gz
+    expected_bytes: 18808
+    sha256: 522c65b2098e0d088238bbe43298d931cf6ee8d1fa895adfc9d4f45a2de48890
+    metadata:
+      record_count: 3000
+  - name: en-recordings
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/babble_noise_train/source/v2-20261024/recordings/babble_en_recordings.jsonl.gz
+    expected_bytes: 18806
+    sha256: c68f02afd9b42396132073c9257351a322bb7c1f01257d5d122b5a2133d6a33a
+    metadata:
+      record_count: 3000
+  splits:
+    zh:
+      artifacts:
+        recordings:
+        - zh-recordings
+      task: noise
+      statistics:
+        records: 3000
+        duration_hours: 25.0
+        talkers_in_pool: 26486
+    en:
+      artifacts:
+        recordings:
+        - en-recordings
+      task: noise
+      statistics:
+        records: 3000
+        duration_hours: 25.0
+        talkers_in_pool: 2338
+  provenance:
+    status: complete
+    synthetic: full
+    snapshot_date: '20261024'
+    sources:
+    - aishell2@legacy-20260804:train
+    - kespeech@legacy-20260804:train
+    - librispeech@legacy-20260804:train
+    - sim_rir_slr28@legacy-20260804:all
+    description: 训练用房间背景人声（babble）：按 asr_babble_bench@v2-20261023 的合成方法（同一个渲染函数）用训练划分的说话人生成，每段 30 秒、16–24 人同时连续说话、每人站在 SLR28 中/大模拟房间的不同位置，听不出某一个人说的内容；中文说话人取自 AISHELL-2、KeSpeech train，英文取自 LibriSpeech train，与评测的背景人声和目标说话人互不重叠。按 Lhotse 录音清单登记，可作为 noise_sources、nonspeech_sources 或普通 ASR 空目标片段的来源。v1-20261017 是 5–20 人、无混响，可能听得清某句话。脚本 scripts/ts_robust/build_babble_noise_room.py。

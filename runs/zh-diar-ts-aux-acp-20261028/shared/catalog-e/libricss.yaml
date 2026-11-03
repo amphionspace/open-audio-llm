@@ -1,0 +1,116 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: libricss
+  version: hf-uglyducking-20261023
+  languages:
+  - en
+  tasks:
+  - asr
+  - speech_separation
+  - overlap_speech
+  aliases:
+  - libri-css
+  - libri_css
+  artifacts:
+  - name: archive
+    kind: source-archive
+    root_alias: libricss
+    relative_path: source/hf-uglyducking-20261023/for_release.zip
+    expected_bytes: 6407297637
+    sha256: c3913f0fb8b566d2c6532d259db66a73ebb79f4530aaf5bf5080f8a5cf4620ee
+    metadata:
+      source_url: https://huggingface.co/datasets/uglyducking/libri_css
+      upstream_commit: edffe8e5dea76b01bc005c45eca0919e754bac33
+      upstream_lfs_sha256: c3913f0fb8b566d2c6532d259db66a73ebb79f4530aaf5bf5080f8a5cf4620ee
+  - name: extracted_dir
+    kind: source-directory
+    root_alias: libricss
+    relative_path: source/hf-uglyducking-20261023/extracted/for_release
+    metadata:
+      file_count: 958
+      expected_bytes: 18595818177
+      tree_sha256: 43e4ffd89c0c8cbbc649e96c1e176b9a55ebeb21c80f36150801f76b367144a9
+  splits:
+    0L:
+      artifacts:
+        source_directory:
+        - extracted_dir
+      statistics:
+        sessions: 10
+        utterances: 602
+        duration_hours: 1.686
+        duration_basis: length of the 7-channel room recordings (record/raw_recording.wav)
+      provenance:
+        condition: no overlap, long silences (2.9-3.0 s)
+        session_dirs: 0L/overlap_ratio_0.0_sil2.9_3.0_session<k>_actual0.0
+    0S:
+      artifacts:
+        source_directory:
+        - extracted_dir
+      statistics:
+        sessions: 10
+        utterances: 814
+        duration_hours: 1.679
+        duration_basis: length of the 7-channel room recordings (record/raw_recording.wav)
+      provenance:
+        condition: no overlap, short silences (0.1-0.5 s)
+        session_dirs: 0S/overlap_ratio_0.0_sil0.1_0.5_session<k>_actual0.0
+    OV10:
+      artifacts:
+        source_directory:
+        - extracted_dir
+      statistics:
+        sessions: 10
+        utterances: 816
+        duration_hours: 1.686
+        duration_basis: length of the 7-channel room recordings (record/raw_recording.wav)
+      provenance:
+        condition: 10% overlap
+        session_dirs: OV10/overlap_ratio_10.0_sil0.1_1.0_session<k>_actual<ratio>
+    OV20:
+      artifacts:
+        source_directory:
+        - extracted_dir
+      statistics:
+        sessions: 10
+        utterances: 876
+        duration_hours: 1.679
+        duration_basis: length of the 7-channel room recordings (record/raw_recording.wav)
+      provenance:
+        condition: 20% overlap
+        session_dirs: OV20/overlap_ratio_20.0_sil0.1_1.0_session<k>_actual<ratio>
+    OV30:
+      artifacts:
+        source_directory:
+        - extracted_dir
+      statistics:
+        sessions: 10
+        utterances: 973
+        duration_hours: 1.688
+        duration_basis: length of the 7-channel room recordings (record/raw_recording.wav)
+      provenance:
+        condition: 30% overlap
+        session_dirs: OV30/overlap_ratio_30.0_sil0.1_1.0_session<k>_actual<ratio>
+    OV40:
+      artifacts:
+        source_directory:
+        - extracted_dir
+      statistics:
+        sessions: 10
+        utterances: 942
+        duration_hours: 1.679
+        duration_basis: length of the 7-channel room recordings (record/raw_recording.wav)
+      provenance:
+        condition: 40% overlap
+        session_dirs: OV40/overlap_ratio_40.0_sil0.1_1.0_session<k>_actual<ratio>
+  provenance:
+    source: LibriCSS (Microsoft), community mirror uglyducking/libri_css on Hugging Face of the original for_release.zip
+    url: https://github.com/chenzhuo1011/libri_css
+    snapshot_date: '2026-10-23'
+    license: LibriSpeech-derived audio and text are CC BY 4.0; the LibriCSS tools are MIT.
+    description: LibriCSS：把 LibriSpeech test-clean 句子拼成约 10 分钟的“会议”，在办公室里用扬声器外放，7 麦圆形阵列录制，英文 16 kHz。6 种条件（无重叠长停顿
+      0L、无重叠短停顿 0S、重叠 10%–40% 的 OV10–OV40）各 10 个 session，共 60 段、10.1 小时、5023 句。每个 session 有 `record/raw_recording.wav`（7 通道录音）、`clean/`
+      （外放源信号，`mix.wav` 单声道、`each_spk.wav` 8 通道）和 `transcription/meeting_info.txt`（起止时间、说话人、LibriSpeech 句子 ID、文本）。用于多人重叠 ASR
+      和语音分离评测；句子来自 LibriSpeech test-clean，不要和它一起当训练数据。
+    acquisition: Downloaded for_release.zip from hf-mirror.com at commit edffe8e5 (sha256 equals the LFS oid) and extracted it under
+      extracted/ with Python zipfile; no member path leaves the archive root.
+    integrity: local_sha256_recorded

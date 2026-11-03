@@ -1,0 +1,596 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: cs_dialogue
+  version: long-mix-v1-20261010
+  derived_from: BAAI/CS-Dialogue long_wav (ModelScope master)
+  languages:
+  - zh
+  - en
+  - zh-en
+  tasks:
+  - asr
+  - speaker_attributed_asr
+  artifacts:
+  - name: dev_rec
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/cs_dialogue/versions/long-mix-v1-20261010/cs_dialogue_recordings_dev.jsonl.gz
+    sha256: 0794620632cbcea617a1bafaa543d94c744033f9759da63a5ba73f908998fb31
+    expected_bytes: 603
+  - name: dev_sup
+    kind: lhotse-supervisions
+    root_alias: aidc_data
+    relative_path: datasets/cs_dialogue/versions/long-mix-v1-20261010/cs_dialogue_supervisions_dev.jsonl.gz
+    sha256: ee4436d48bf32b1157b06e918bd699b4420c5da36ecf19dfcea9a0accf021bd9
+    expected_bytes: 403725
+  - name: test_rec
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/cs_dialogue/versions/long-mix-v1-20261010/cs_dialogue_recordings_test.jsonl.gz
+    sha256: 3e35f9c4186bc7179a4f8ba315e292d9fc475c79c7f5c9165fa535f7d94303f8
+    expected_bytes: 613
+  - name: test_sup
+    kind: lhotse-supervisions
+    root_alias: aidc_data
+    relative_path: datasets/cs_dialogue/versions/long-mix-v1-20261010/cs_dialogue_supervisions_test.jsonl.gz
+    sha256: a204e80a30cf10a4b2f9ebe9527fa51f7a567a2d524575e9457f8ce4b4e1475b
+    expected_bytes: 398445
+  - name: train_rec
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/cs_dialogue/versions/long-mix-v1-20261010/cs_dialogue_recordings_train.jsonl.gz
+    sha256: 4f527347fa07b76b9447400fc0d3e92e12fdf1b2844e0678a770709076a3928a
+    expected_bytes: 1846
+  - name: train_sup
+    kind: lhotse-supervisions
+    root_alias: aidc_data
+    relative_path: datasets/cs_dialogue/versions/long-mix-v1-20261010/cs_dialogue_supervisions_train.jsonl.gz
+    sha256: 482f9193d23d6650d1b6ab240d34564a31707f7744dff4895456b19de35dd6b7
+    expected_bytes: 1628112
+  splits:
+    dev:
+      artifacts:
+        recordings:
+        - dev_rec
+        supervisions:
+        - dev_sup
+      statistics:
+        recordings: 15
+        duration_hours: 17.138969618055555
+        supervisions: 6182
+    test:
+      artifacts:
+        recordings:
+        - test_rec
+        supervisions:
+        - test_sup
+      statistics:
+        recordings: 15
+        duration_hours: 15.97456923611111
+        supervisions: 6256
+    train:
+      artifacts:
+        recordings:
+        - train_rec
+        supervisions:
+        - train_sup
+      statistics:
+        recordings: 70
+        duration_hours: 65.18235397569445
+        supervisions: 26233
+  provenance:
+    source: https://www.modelscope.cn/datasets/BAAI/CS-Dialogue
+    license: CC BY-NC-SA 4.0
+    audio: sum of the two per-speaker long recordings of each dialogue (FLAC, 16 kHz)
+    transcript_policy: tier-1 TextGrid text; <FIL/> <SPK/> <NON/> <NPS/> and ** removed
+    muting: <Z> and markup-only intervals muted in that speaker's channel with 10
+      ms fades
+    split_policy: official long_wav train/dev/test speaker lists
+- schema_version: dataset-catalog/2.0
+  dataset_id: cs_dialogue_meeting_sot
+  version: meeting-v1-20261010
+  languages:
+  - zh-en
+  tasks:
+  - speaker_attributed_asr
+  artifacts:
+  - name: train-audio-index
+    kind: jsonl-metadata
+    root_alias: cs_dialogue_meeting_sot
+    relative_path: cs_dialogue-train-audio-index.jsonl.gz
+    sha256: 59039e369ebe40f8b4718436a123d182bfcb11246eb6f7292222a1a39afe13aa
+  - name: train_30s-records
+    kind: audio-records
+    root_alias: cs_dialogue_meeting_sot
+    relative_path: cs_dialogue-train_30s.jsonl.gz
+    sha256: 608fe94f1d14e3173f94f0b60eea00f277d47dd950ce586c843a46f81d0caa93
+    metadata:
+      record_count: 7248
+  - name: train_120s-records
+    kind: audio-records
+    root_alias: cs_dialogue_meeting_sot
+    relative_path: cs_dialogue-train_120s.jsonl.gz
+    sha256: 2239c9af5288d5a9238ec52e036fc0c91aca691c8ea1cdab1ee66e3fb9b476b5
+    metadata:
+      record_count: 2307
+  - name: train_300s-records
+    kind: audio-records
+    root_alias: cs_dialogue_meeting_sot
+    relative_path: cs_dialogue-train_300s.jsonl.gz
+    sha256: 58972b246b0ebfcb74cc3ac1d08afaa3592a19eb93ab547f52b42ed9a13acda4
+    metadata:
+      record_count: 886
+  - name: train_600s-records
+    kind: audio-records
+    root_alias: cs_dialogue_meeting_sot
+    relative_path: cs_dialogue-train_600s.jsonl.gz
+    sha256: e97ca35822096a445756db814bd3690811240f4ab6d65137232bed54a4ed860e
+    metadata:
+      record_count: 439
+  - name: dev-audio-index
+    kind: jsonl-metadata
+    root_alias: cs_dialogue_meeting_sot
+    relative_path: cs_dialogue-dev-audio-index.jsonl.gz
+    sha256: a98dfd2b6262c381806d4182a048876fa248f9983a4ab8336fad2b4bb2dd70ee
+  - name: dev_30s-records
+    kind: audio-records
+    root_alias: cs_dialogue_meeting_sot
+    relative_path: cs_dialogue-dev_30s.jsonl.gz
+    sha256: 67cf245166b329266c5f256f2118593b09b00e3b658ab6c70b06ce841a572b8a
+    metadata:
+      record_count: 1869
+  - name: dev_120s-records
+    kind: audio-records
+    root_alias: cs_dialogue_meeting_sot
+    relative_path: cs_dialogue-dev_120s.jsonl.gz
+    sha256: 03dd17ec1ad3bb03a3202169cb838dc27f691cbee0130bc5755935940ac2446a
+    metadata:
+      record_count: 606
+  - name: dev_300s-records
+    kind: audio-records
+    root_alias: cs_dialogue_meeting_sot
+    relative_path: cs_dialogue-dev_300s.jsonl.gz
+    sha256: edeb05e00fcd49fdfef08bddac12f70511aad7303d4ff5322b3982c84b79caef
+    metadata:
+      record_count: 233
+  - name: dev_600s-records
+    kind: audio-records
+    root_alias: cs_dialogue_meeting_sot
+    relative_path: cs_dialogue-dev_600s.jsonl.gz
+    sha256: 4d2c64f21ba89bdd2e8cda81a2caeff8e374abafd7d0c5b239f8e92b5eca3406
+    metadata:
+      record_count: 116
+  - name: test-audio-index
+    kind: jsonl-metadata
+    root_alias: cs_dialogue_meeting_sot
+    relative_path: cs_dialogue-test-audio-index.jsonl.gz
+    sha256: 6343ccb0b0daf226b9f3b7ac2d77d483f0001e52007c48288e7663b347d1aa0c
+  - name: test_30s-records
+    kind: audio-records
+    root_alias: cs_dialogue_meeting_sot
+    relative_path: cs_dialogue-test_30s.jsonl.gz
+    sha256: 19033077ed735816a891676dac90a8788f8cc8b408fad6cb7cc4831b95b42127
+    metadata:
+      record_count: 1720
+  - name: test_120s-records
+    kind: audio-records
+    root_alias: cs_dialogue_meeting_sot
+    relative_path: cs_dialogue-test_120s.jsonl.gz
+    sha256: dbabacf6c2b6d197a3773ae2bb600981635d49eba8ec72beb9db6004a245d9a2
+    metadata:
+      record_count: 559
+  - name: test_300s-records
+    kind: audio-records
+    root_alias: cs_dialogue_meeting_sot
+    relative_path: cs_dialogue-test_300s.jsonl.gz
+    sha256: 358437497355ee6b05f7993036a4c52370fee484a4977eae8ba9d3d9a1e75c42
+    metadata:
+      record_count: 218
+  - name: test_600s-records
+    kind: audio-records
+    root_alias: cs_dialogue_meeting_sot
+    relative_path: cs_dialogue-test_600s.jsonl.gz
+    sha256: 82811f0d5f5c77bd069ef5a1ded8007595602e2057e5cbc4b45d236342585235
+    metadata:
+      record_count: 107
+  splits:
+    train_30s:
+      artifacts:
+        records:
+        - train_30s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 7248
+        duration_hours: 65.18235397569424
+      provenance:
+        training_use: train
+    train_120s:
+      artifacts:
+        records:
+        - train_120s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 2307
+        duration_hours: 65.1823539756943
+      provenance:
+        training_use: train
+    train_300s:
+      artifacts:
+        records:
+        - train_300s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 886
+        duration_hours: 65.18235397569448
+      provenance:
+        training_use: train
+    train_600s:
+      artifacts:
+        records:
+        - train_600s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 439
+        duration_hours: 65.18235397569444
+      provenance:
+        training_use: train
+    dev_30s:
+      artifacts:
+        records:
+        - dev_30s-records
+        audio_index:
+        - dev-audio-index
+      group: dev
+      statistics:
+        records: 1869
+        duration_hours: 17.138969618055537
+      provenance:
+        training_use: held_out_not_for_training
+    dev_120s:
+      artifacts:
+        records:
+        - dev_120s-records
+        audio_index:
+        - dev-audio-index
+      group: dev
+      statistics:
+        records: 606
+        duration_hours: 17.138969618055537
+      provenance:
+        training_use: held_out_not_for_training
+    dev_300s:
+      artifacts:
+        records:
+        - dev_300s-records
+        audio_index:
+        - dev-audio-index
+      group: dev
+      statistics:
+        records: 233
+        duration_hours: 17.138969618055555
+      provenance:
+        training_use: held_out_not_for_training
+    dev_600s:
+      artifacts:
+        records:
+        - dev_600s-records
+        audio_index:
+        - dev-audio-index
+      group: dev
+      statistics:
+        records: 116
+        duration_hours: 17.13896961805555
+      provenance:
+        training_use: held_out_not_for_training
+    test_30s:
+      artifacts:
+        records:
+        - test_30s-records
+        audio_index:
+        - test-audio-index
+      group: test
+      statistics:
+        records: 1720
+        duration_hours: 15.974569236111066
+      provenance:
+        training_use: held_out_not_for_training
+    test_120s:
+      artifacts:
+        records:
+        - test_120s-records
+        audio_index:
+        - test-audio-index
+      group: test
+      statistics:
+        records: 559
+        duration_hours: 15.974569236111114
+      provenance:
+        training_use: held_out_not_for_training
+    test_300s:
+      artifacts:
+        records:
+        - test_300s-records
+        audio_index:
+        - test-audio-index
+      group: test
+      statistics:
+        records: 218
+        duration_hours: 15.974569236111119
+      provenance:
+        training_use: held_out_not_for_training
+    test_600s:
+      artifacts:
+        records:
+        - test_600s-records
+        audio_index:
+        - test-audio-index
+      group: test
+      statistics:
+        records: 107
+        duration_hours: 15.974569236111106
+      provenance:
+        training_use: held_out_not_for_training
+  provenance:
+    source: cs_dialogue
+    source_version: long-mix-v1-20261010
+    annotation: human utterance times and speaker identity
+    channel_policy: sum of the two per-speaker phone recordings; untranscribed intervals
+      muted in their own channel (amphiondata.multispeaker.cs_dialogue)
+    transcript_policy: TextGrid text with markup and ** removed, whitespace stripped
+    clean_pass_not_invented: true
+    training_exclusions: exclude_records train-empty-target-records.txt (682 empty-target
+      train windows) in this version directory
+- schema_version: dataset-catalog/2.0
+  dataset_id: aishell5
+  version: far-mic-v1-20261010
+  derived_from: OpenSLR 159 AISHELL-5
+  languages:
+  - zh
+  tasks:
+  - asr
+  - speaker_attributed_asr
+  artifacts:
+  - name: train_rec
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/aishell5/versions/far-mic-v1-20261010/aishell5_recordings_train.jsonl.gz
+    sha256: ef5f6c44a2735319ae6dc663cf44321a2d3d75dafe92454d5a796d3cd562a1a5
+    expected_bytes: 19635
+  - name: train_sup
+    kind: lhotse-supervisions
+    root_alias: aidc_data
+    relative_path: datasets/aishell5/versions/far-mic-v1-20261010/aishell5_supervisions_train.jsonl.gz
+    sha256: 7149ce546cbaeeb26483cca4bc7452789ecc7713fce70b01fbf7258453b3c9eb
+    expected_bytes: 15507544
+  - name: dev_rec
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/aishell5/versions/far-mic-v1-20261010/aishell5_recordings_dev.jsonl.gz
+    sha256: 319d1985b5e1a852db2b5b604e1c5eaa7302c4859b0aa05d09e374366522e87f
+    expected_bytes: 903
+  - name: dev_sup
+    kind: lhotse-supervisions
+    root_alias: aidc_data
+    relative_path: datasets/aishell5/versions/far-mic-v1-20261010/aishell5_supervisions_dev.jsonl.gz
+    sha256: 2697fbba31346b46585692ef0892d42131464a4af037b008b45d0e6169bc209a
+    expected_bytes: 559552
+  splits:
+    train:
+      artifacts:
+        recordings:
+        - train_rec
+        supervisions:
+        - train_sup
+      statistics:
+        sessions: 568
+        recordings: 2272
+        session_hours: 107.41434520833333
+        duration_hours: 429.6573808333333
+        supervisions: 466068
+    dev:
+      artifacts:
+        recordings:
+        - dev_rec
+        supervisions:
+        - dev_sup
+      statistics:
+        sessions: 18
+        recordings: 72
+        session_hours: 3.9282346006944446
+        duration_hours: 15.712938402777777
+        supervisions: 16620
+  provenance:
+    source: https://www.openslr.org/159/
+    license: CC BY-SA 4.0
+    audio: original far-field cabin microphones DX01C01..DX04C01, one recording each
+    transcript_policy: TextGrid speaker tiers (majority copy across microphones);
+      the * marker removed
+    duration_note: duration_hours counts each session once per microphone
+- schema_version: dataset-catalog/2.0
+  dataset_id: aishell5_meeting_sot
+  version: far-mic-v1-20261010
+  languages:
+  - zh
+  tasks:
+  - speaker_attributed_asr
+  artifacts:
+  - name: train-audio-index
+    kind: jsonl-metadata
+    root_alias: aishell5_meeting_sot
+    relative_path: aishell5-train-audio-index.jsonl.gz
+    sha256: 2c9d1569ff932420f3b2526cf84acc3543e74b945d897fa7161b54daf8d24733
+  - name: train_30s-records
+    kind: audio-records
+    root_alias: aishell5_meeting_sot
+    relative_path: aishell5-train_30s.jsonl.gz
+    sha256: 76bf9a51acdd43262e6b7ea6f80e01a0f6801d8ea94addfc28c7a80f984c8b77
+    metadata:
+      record_count: 58600
+  - name: train_120s-records
+    kind: audio-records
+    root_alias: aishell5_meeting_sot
+    relative_path: aishell5-train_120s.jsonl.gz
+    sha256: cdb28fc8703b40f3ea42ebc6ca4d4d5cf11c82edb8e0b80d4d5b67b30cc9a148
+    metadata:
+      record_count: 14376
+  - name: train_300s-records
+    kind: audio-records
+    root_alias: aishell5_meeting_sot
+    relative_path: aishell5-train_300s.jsonl.gz
+    sha256: 757a5d11a544d51324350da15aaa527abb228f55d50eaa4bd1ebb08bf56fed64
+    metadata:
+      record_count: 6452
+  - name: train_600s-records
+    kind: audio-records
+    root_alias: aishell5_meeting_sot
+    relative_path: aishell5-train_600s.jsonl.gz
+    sha256: c259681be99a5b0d0019cf934087a1e3a6dad7c43e5287ff25cbc48d220adced
+    metadata:
+      record_count: 3976
+  - name: dev-audio-index
+    kind: jsonl-metadata
+    root_alias: aishell5_meeting_sot
+    relative_path: aishell5-dev-audio-index.jsonl.gz
+    sha256: 589d2f847d9bf619752437a7a0dfcd5e488fe93f7150545e8ebc439ca045b1ff
+  - name: dev_30s-records
+    kind: audio-records
+    root_alias: aishell5_meeting_sot
+    relative_path: aishell5-dev_30s.jsonl.gz
+    sha256: 5558972732becf370380f28d76bd7c255425af747f6dc4afd785168a0fb6f68c
+    metadata:
+      record_count: 2104
+  - name: dev_120s-records
+    kind: audio-records
+    root_alias: aishell5_meeting_sot
+    relative_path: aishell5-dev_120s.jsonl.gz
+    sha256: 4e0b49c3f1ffc0cbf3f6aaa06e5ce1adfe80c17f60a7b01be4b681cea5a81ee7
+    metadata:
+      record_count: 516
+  - name: dev_300s-records
+    kind: audio-records
+    root_alias: aishell5_meeting_sot
+    relative_path: aishell5-dev_300s.jsonl.gz
+    sha256: fa801664f2d57ea8efb387dfccf0289460b8041cb45915bbb18d5202526d9011
+    metadata:
+      record_count: 232
+  - name: dev_600s-records
+    kind: audio-records
+    root_alias: aishell5_meeting_sot
+    relative_path: aishell5-dev_600s.jsonl.gz
+    sha256: 2c9fd605b60ceb3f6ed6900f04ad9b7defa30b6bd55be31565bb08c2fba012fc
+    metadata:
+      record_count: 140
+  splits:
+    train_30s:
+      artifacts:
+        records:
+        - train_30s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 58600
+        duration_hours: 429.65738083327665
+      provenance:
+        training_use: train
+    train_120s:
+      artifacts:
+        records:
+        - train_120s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 14376
+        duration_hours: 429.65738083335737
+      provenance:
+        training_use: train
+    train_300s:
+      artifacts:
+        records:
+        - train_300s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 6452
+        duration_hours: 429.65738083333224
+      provenance:
+        training_use: train
+    train_600s:
+      artifacts:
+        records:
+        - train_600s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 3976
+        duration_hours: 427.67262409722457
+      provenance:
+        training_use: train
+    dev_30s:
+      artifacts:
+        records:
+        - dev_30s-records
+        audio_index:
+        - dev-audio-index
+      group: dev
+      statistics:
+        records: 2104
+        duration_hours: 15.712938402777734
+      provenance:
+        training_use: held_out_not_for_training
+    dev_120s:
+      artifacts:
+        records:
+        - dev_120s-records
+        audio_index:
+        - dev-audio-index
+      group: dev
+      statistics:
+        records: 516
+        duration_hours: 15.712938402777768
+      provenance:
+        training_use: held_out_not_for_training
+    dev_300s:
+      artifacts:
+        records:
+        - dev_300s-records
+        audio_index:
+        - dev-audio-index
+      group: dev
+      statistics:
+        records: 232
+        duration_hours: 15.712938402777795
+      provenance:
+        training_use: held_out_not_for_training
+    dev_600s:
+      artifacts:
+        records:
+        - dev_600s-records
+        audio_index:
+        - dev-audio-index
+      group: dev
+      statistics:
+        records: 140
+        duration_hours: 15.712938402777766
+      provenance:
+        training_use: held_out_not_for_training
+  provenance:
+    source: aishell5
+    source_version: far-mic-v1-20261010
+    annotation: human utterance times and speaker identity
+    channel_policy: one original far-field cabin microphone (DX01C01..DX04C01) per
+      recording; the four microphones of a session are views of one meeting
+    transcript_policy: TextGrid text with * removed, whitespace stripped
+    clean_pass_not_invented: true
+    training_exclusions: exclude_records train-empty-target-records.txt (empty-target
+      train windows) in this version directory

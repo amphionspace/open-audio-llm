@@ -1,0 +1,38 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: police_terms_v5_test
+  version: icefall-20260908
+  languages:
+  - zh
+  tasks:
+  - asr
+  artifacts:
+  - name: test_rec_0
+    kind: lhotse-recordings
+    root_alias: aidc_data
+    relative_path: datasets/police_terms_v5_test/versions/icefall-20260908/test_rec_0/police_terms_v5_recordings_test.jsonl.gz
+    sha256: bde4547ceaeae2732550eb82d2dc6fb893f1dc01b7903eb5fb6e65d2d321f881
+    metadata:
+      record_count: 585
+  - name: test_sup_0
+    kind: lhotse-supervisions
+    root_alias: aidc_data
+    relative_path: datasets/police_terms_v5_test/versions/icefall-20260908/test_sup_0/police_terms_v5_supervisions_test.jsonl.gz
+    sha256: fd559580d1983f34845e342af0f312fb0fd19df889bb48553f62d87356aead99
+    metadata:
+      record_count: 585
+  splits:
+    test:
+      artifacts:
+        recordings:
+        - test_rec_0
+        supervisions:
+        - test_sup_0
+      statistics:
+        records: 585
+        duration_hours: 1.5433444444444444
+  provenance:
+    source: icefall runtime manifest snapshot（audio-data-contract catalog/icefall_runtime.yaml 同名版本）；本机缺原 recordings 清单，按 recording_id 从 police_asr_unified@v1-20261009 test_recordings 取出 585 条（音频为同一批 qwen3_tts / cosyvoice 合成文件），监督文件为本机已有副本
+    snapshot_date: '2026-09-08'
+    registered: 2026-10-15，为 icefall/asr-benchmark@20261012 在本机可评测补登
+    dataset_family: police_terms_v5
+    superseded_by: police_asr_unified@v1-20261009

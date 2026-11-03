@@ -1,0 +1,539 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: demand
+  version: hf-voice-biomarkers-20261023
+  languages:
+  - und
+  tasks:
+  - noise
+  aliases:
+  - demand-noise
+  artifacts:
+  - name: parquet_dir
+    kind: hf-dataset-directory
+    root_alias: demand
+    relative_path: source/hf-voice-biomarkers-20261023/data
+    metadata:
+      file_count: 22
+      expected_bytes: 10446419041
+      tree_sha256: 41eb2d73d0fbbcf4a6f84cbc7d5de52d0c735533f74abe6062c3972ad6de1a14
+      rows: 560
+      source_url: https://huggingface.co/datasets/voice-biomarkers/DEMAND-acoustic-noise
+      upstream_commit: 608fdd578ee7c485761ea75157122b924bd0de73
+  splits:
+    16k:
+      artifacts:
+        records:
+        - parquet_dir
+      statistics:
+        num_clips: 272
+        recordings: 17
+        duration_hours: 22.6667
+        duration_basis: sum of single-channel file lengths (16 channels x 5 min per recording)
+      provenance:
+        format: 16 kHz mono 16-bit WAV bytes in the audio column
+    48k:
+      artifacts:
+        records:
+        - parquet_dir
+      statistics:
+        num_clips: 288
+        recordings: 18
+        duration_hours: 24.0
+        duration_basis: sum of single-channel file lengths (16 channels x 5 min per recording)
+      provenance:
+        format: 48 kHz mono 16-bit WAV bytes in the audio column
+  provenance:
+    source: DEMAND (Thiemann, Ito, Vincent; IRISA, Inria), Kaggle copy chrisfilo/demand repackaged as parquet in the Hugging Face mirror
+      voice-biomarkers/DEMAND-acoustic-noise
+    url: https://zenodo.org/records/1227121
+    snapshot_date: '2026-10-23'
+    license: The Zenodo record metadata says CC BY 4.0 while its description text says CC BY-SA 3.0 Unported; treat it as CC BY-SA
+      3.0 (share-alike) unless the authors confirm otherwise.
+    description: DEMAND 多通道环境噪声：16 麦阵列在 18 种真实环境录的 5 分钟噪声（厨房、客厅、洗衣房、田野、公园、河边、走廊、会议室、办公室、食堂、餐馆、车站、广场、街道、咖啡馆、公交、轿车、地铁），每个通道一个单声道
+      WAV。这份 parquet 有 16 kHz（17 个环境，没有咖啡馆 SCAFE）和 48 kHz（18 个环境）两种采样率，共 560 个单通道文件、46.7 小时。可当加噪素材用，16 个通道彼此高度相关，混入时按录音取一个通道即可。这份镜像丢了环境名，要按环境挑噪声用
+      `demand@zenodo-1227121-16k-20261023`。
+    acquisition: Downloaded the pinned Hugging Face snapshot from hf-mirror.com; each parquet's sha256 equals its LFS oid.
+    known_issues:
+    - The mirror drops the environment names; file_name holds only ch01-ch16. Rows come in 35 consecutive 16-row blocks, one per
+      recording and sample rate, so a block is one environment, but which one is unknown. Use demand@zenodo-1227121-16k-20261023
+      when the environment matters.
+    integrity: local_sha256_recorded
+- schema_version: dataset-catalog/2.0
+  dataset_id: demand
+  version: zenodo-1227121-16k-20261023
+  languages:
+  - und
+  tasks:
+  - noise
+  aliases:
+  - demand-16k
+  artifacts:
+  - name: archive_dkitchen
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-16k-20261023/DKITCHEN_16k.zip
+    expected_bytes: 110501049
+    sha256: 9d68e46d2709847c59580770e2f8aa160607ebff7475788174aa1080332cc845
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 7ffbf52d7f4699f96927846103dc8788
+  - name: archive_dliving
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-16k-20261023/DLIVING_16k.zip
+    expected_bytes: 80170627
+    sha256: 2b1726fe06e41551ce2397f2aaf3e4fb692c912d81914b04708df0bbb5252338
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 46741384d9e434a0bd8b3ec1830b6052
+  - name: archive_dwashing
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-16k-20261023/DWASHING_16k.zip
+    expected_bytes: 102343250
+    sha256: f687c0806b0e9731b71a9c01c6134a21330efc5fa4aa7ee97cf4df276ad1dae1
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 7e5ee9437ce9409c5f9a779b6212a240
+  - name: archive_nfield
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-16k-20261023/NFIELD_16k.zip
+    expected_bytes: 86536782
+    sha256: b7ef25d2af0d9ff0b8b1e359aba3f928f59b966b87009c2aed53df93e57856e3
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: a740046c6f4e174e16f5d568aaec5024
+  - name: archive_npark
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-16k-20261023/NPARK_16k.zip
+    expected_bytes: 86029332
+    sha256: 80e12fa245eb7c035efc9add749620aa4efbf79ab4a8c0ead76d734cc7bc3f1b
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 80f1385a34d7f1705758926b57f138ce
+  - name: archive_nriver
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-16k-20261023/NRIVER_16k.zip
+    expected_bytes: 98689565
+    sha256: 98e3a3f05a7234ea07619d965bafeea68a100bbce5c9269b7487393e3b559660
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 54264db61d3fe073fb81f2e40e0d19b5
+  - name: archive_ohallway
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-16k-20261023/OHALLWAY_16k.zip
+    expected_bytes: 77941854
+    sha256: 4d5ef858a05954f03340048131f60a2004b7b28afc65f7bd2301636a7002d6cb
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: fe918bbb0e63e73d09ba7f4843ef33f1
+  - name: archive_omeeting
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-16k-20261023/OMEETING_16k.zip
+    expected_bytes: 82703355
+    sha256: 512016cad3a42511a0fb7e3c74d6924e6efde4921a6101361f1306bf90bf2e5a
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 62f7cfe7fe6d30b7d8a215fe37c2dfd2
+  - name: archive_ooffice
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-16k-20261023/OOFFICE_16k.zip
+    expected_bytes: 88995191
+    sha256: 7570c952f621990d0d71b8398107d9a78066254f883a5569abec9c233ffda358
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 7b61cc2d182d5a654cb9c3101ddd4041
+  - name: archive_pcafeter
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-16k-20261023/PCAFETER_16k.zip
+    expected_bytes: 107431494
+    sha256: 89be7194b83cd583c4b12f4bf7c19e9cf0e612b95312e9f4aedc968cd811bcd5
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 99927d148128254141a9417d051510bb
+  - name: archive_presto
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-16k-20261023/PRESTO_16k.zip
+    expected_bytes: 111292815
+    sha256: cfd2e13998fac36aa5628070e08261deb7993dada302dc00a76aaf4e02ee4166
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: b98d2e6854eeebb397f29a8ad7457092
+  - name: archive_pstation
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-16k-20261023/PSTATION_16k.zip
+    expected_bytes: 119441094
+    sha256: f19565b7b1d089bd89cb0d7178af77b052b59a15502229424fe36ddc9d379f1b
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: d7448009f6c2aeb6ba570375df1750a3
+  - name: archive_spsquare
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-16k-20261023/SPSQUARE_16k.zip
+    expected_bytes: 110928528
+    sha256: 82e90754aff6720d3d0dfb5ad076b972750b5e79c797f945e242aaa1de259eec
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 205d0e7b8fe74504a2f8d252fc414b9e
+  - name: archive_straffic
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-16k-20261023/STRAFFIC_16k.zip
+    expected_bytes: 118572691
+    sha256: 2df9b444afb3b789df92d96cb6f58a50653cdbbbe7e7e74fcd9de2af6385fbea
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 2efa87262f272bbf9ba578088e81939c
+  - name: archive_tbus
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-16k-20261023/TBUS_16k.zip
+    expected_bytes: 128916709
+    sha256: 82e79983c91c69acbabf76d56b3fc75ab06e0f1c539eadaaf21d297987a97a5a
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 706b11b0d8504f9f3b3f3211e91b3863
+  - name: archive_tcar
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-16k-20261023/TCAR_16k.zip
+    expected_bytes: 130045975
+    sha256: 6b48e45f273ea8d401b5ec97d22c864169684b0ad231bef4a1758922aa5daedc
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 4d930012796bd298932245a26189f973
+  - name: archive_tmetro
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-16k-20261023/TMETRO_16k.zip
+    expected_bytes: 126589090
+    sha256: 62deb6b1fbc412139c6b1f021869988aa9fae81b2861c4b2a4f87baa5addb49a
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 95daf4df678e13b120e14211e6d89571
+  - name: scripts_archive
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-16k-20261023/scripts.zip
+    expected_bytes: 4783
+    sha256: 3415d1c54620b5ba30004943e3515f63db76930640f27aa2c30a21a718677dad
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 8e4cfde3e264e1a0cc1bcc24fa3f16f9
+  - name: documentation
+    kind: metadata
+    root_alias: demand
+    relative_path: source/zenodo-1227121-16k-20261023/DEMAND.pdf
+    expected_bytes: 87837
+    sha256: debec0d9de603c800a062108a065efb61d87b56cd1718b0b61566e2fed6b4800
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: a513afe131e08cdacf7c1854b174d5ab
+  - name: extracted_dir
+    kind: source-directory
+    root_alias: demand
+    relative_path: source/zenodo-1227121-16k-20261023/extracted
+    metadata:
+      file_count: 272
+      expected_bytes: 2611246784
+      tree_sha256: 9c415a052c3f905ec12098a565c95d02a2ae4b342ea10c2c8c873a17620e8eb6
+      layout: extracted/<ENVIRONMENT>/ch01.wav ... ch16.wav
+  splits:
+    16k:
+      artifacts:
+        source_archive:
+        - archive_dkitchen
+        - archive_dliving
+        - archive_dwashing
+        - archive_nfield
+        - archive_npark
+        - archive_nriver
+        - archive_ohallway
+        - archive_omeeting
+        - archive_ooffice
+        - archive_pcafeter
+        - archive_presto
+        - archive_pstation
+        - archive_spsquare
+        - archive_straffic
+        - archive_tbus
+        - archive_tcar
+        - archive_tmetro
+        source_directory:
+        - extracted_dir
+      statistics:
+        num_clips: 272
+        recordings: 17
+        duration_hours: 22.667
+        duration_basis: sum of single-channel file lengths (16 channels x 5 min per recording)
+      provenance:
+        format: 16 kHz mono 16-bit PCM WAV
+        environments: DKITCHEN, DLIVING, DWASHING, NFIELD, NPARK, NRIVER, OHALLWAY, OMEETING, OOFFICE, PCAFETER, PRESTO, PSTATION, SPSQUARE,
+          STRAFFIC, TBUS, TCAR, TMETRO
+  provenance:
+    source: DEMAND (Thiemann, Ito, Vincent; IRISA, Inria), original 16 kHz release on Zenodo record 1227121
+    url: https://zenodo.org/records/1227121
+    snapshot_date: '2026-10-23'
+    license: The Zenodo record metadata says CC BY 4.0 while its description text says CC BY-SA 3.0 Unported; treat it as CC BY-SA 3.0
+      (share-alike) unless the authors confirm otherwise.
+    description: DEMAND 环境噪声 16 kHz 原版，带环境名：16 麦阵列在 17 种真实环境各录 5 分钟（D 家庭：厨房、客厅、洗衣房；N 户外：运动场、公园、小河边；O 办公：走廊、会议室、办公室；P 公共场所：食堂、餐馆、地铁站；S
+      街道：广场、路口；T 交通：公交、轿车、地铁），每个通道一个单声道 WAV，共 272 个文件、22.7 小时。咖啡馆 SCAFE 官方只有 48 kHz，见 48 kHz 原版。按环境挑噪声用这一版；16 个通道彼此高度相关，混入时按环境取一个通道即可。
+    acquisition: Downloaded the 17 *_16k.zip archives, DEMAND.pdf and scripts.zip from Zenodo; each file's md5 matches the record (zenodo-snapshot.json).
+      The audio zips were extracted under extracted/ with Python zipfile; no member path leaves the archive root. scripts.zip (MATLAB
+      array-geometry helpers) is kept unextracted.
+    integrity: local_sha256_recorded
+- schema_version: dataset-catalog/2.0
+  dataset_id: demand
+  version: zenodo-1227121-48k-20261023
+  languages:
+  - und
+  tasks:
+  - noise
+  aliases:
+  - demand-48k
+  artifacts:
+  - name: archive_dkitchen
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-48k-20261023/DKITCHEN_48k.zip
+    expected_bytes: 336992458
+    sha256: 4197f1a02dbb36c4c655a11d14cc4c5dca50eae52a4abaa2c61bfca9de6be17f
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: b4d38241fbd50d8a17f8742ca6870c10
+  - name: archive_dliving
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-48k-20261023/DLIVING_48k.zip
+    expected_bytes: 253978613
+    sha256: 7e2817fffa8e4b3a10e4772e25d103e7242a8b5309f81def1bc21b3ebc1f0262
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 6ea02bb944e7e5950274f9e7d5faab4b
+  - name: archive_dwashing
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-48k-20261023/DWASHING_48k.zip
+    expected_bytes: 306101499
+    sha256: 2215138b4102bc946217074ee7c3282fad827f6f01924b9d7232694f93836bf9
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: ecf765f12b8d3ada7ef0ec664b8f8d73
+  - name: archive_nfield
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-48k-20261023/NFIELD_48k.zip
+    expected_bytes: 270538724
+    sha256: 2bf58ecde1051e030108f8fdae3129bda97029d5931f5c08ceb8e65f3a3e5374
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 937eab7d3f64cea99fa377238e84c185
+  - name: archive_npark
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-48k-20261023/NPARK_48k.zip
+    expected_bytes: 257645848
+    sha256: bf4a183cd5e29b64b51780837ebb2266293a941293d64defb82ce78ab50bc368
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: bb90ec754ac02eede51bf80675a78cfe
+  - name: archive_nriver
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-48k-20261023/NRIVER_48k.zip
+    expected_bytes: 284560347
+    sha256: 0a65133998610932a40c4bd2b92e7c7f5cd79d74c6f4c4f1c089587d27fecdf2
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 112c7997f19ef8f1f952fb3e066f6e1f
+  - name: archive_ohallway
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-48k-20261023/OHALLWAY_48k.zip
+    expected_bytes: 252905617
+    sha256: 23427520727c9737cd540f69678e3f20506a92c879483efe56b409de9fff4383
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: cb9227a75d2c1342de0b6548da4bbb1b
+  - name: archive_omeeting
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-48k-20261023/OMEETING_48k.zip
+    expected_bytes: 253340198
+    sha256: 74eb791ec87bd43d31818f334a6831d599907e86c0df1154901dd8cf1079d9f9
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: eae4c54c0e441df8375a979c0e9828f6
+  - name: archive_ooffice
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-48k-20261023/OOFFICE_48k.zip
+    expected_bytes: 277643831
+    sha256: 5e0e50f3ab7750c795b71eaf3b001a9fe1d6e5e15a95c6b036d3eefaa5ec6eaf
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 6f87edf8a6b03f17b3f693af1754aab4
+  - name: archive_pcafeter
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-48k-20261023/PCAFETER_48k.zip
+    expected_bytes: 314117272
+    sha256: ea1defbc29d564d4cdbf8b34191783ebf8debba47cdd3a82c6026608b9788942
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: b7b8b10f41b747cd0fd3849db13cebd2
+  - name: archive_presto
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-48k-20261023/PRESTO_48k.zip
+    expected_bytes: 327432202
+    sha256: 5f4acec91143a6cfa6a10cfdfb0908a7748f6511f99128d6224e9f787a06218f
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 6e9fef96d78e636029fd4c5929b9cece
+  - name: archive_pstation
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-48k-20261023/PSTATION_48k.zip
+    expected_bytes: 348948834
+    sha256: 86d7412f779aac85c5eaa92b0664c93217ed6cbed17882b59318e59c831888c5
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: b40f603504997111b0bf7e2ce78e0594
+  - name: archive_scafe
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-48k-20261023/SCAFE_48k.zip
+    expected_bytes: 325884186
+    sha256: 600f3b5b93af2b949f96e4d3fa488d678d4b14c381030a84bfcbb05d7b2d236d
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 1a4ee387f1900f4b15ba219481c76556
+  - name: archive_spsquare
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-48k-20261023/SPSQUARE_48k.zip
+    expected_bytes: 320482248
+    sha256: b82897ae23355d28c352527da431a353c880716999c98c6a7a4244cfcf9246c7
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: f5fbdd5c1e03ab8c44c32ad96261ca26
+  - name: archive_straffic
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-48k-20261023/STRAFFIC_48k.zip
+    expected_bytes: 348263839
+    sha256: 6e4d400d76f151b1387b143d10854ce526e3f107465244f8791c811286066e98
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: ffbcdebb7e1c39d3d5b7920b0594e20b
+  - name: archive_tbus
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-48k-20261023/TBUS_48k.zip
+    expected_bytes: 376202003
+    sha256: b46499812baf8d7e2735c0dc1c33f5e54e53ff3159ff9607032aa6fd490f9f96
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: f7d6657314d90c6f270955eaed411ddc
+  - name: archive_tcar
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-48k-20261023/TCAR_48k.zip
+    expected_bytes: 373520251
+    sha256: 8ff68f65c8af88764a6bae44ce35747f592929753b03319e68211f9ef58c55d6
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 8550f03e8356d8054ae845e8b4b6c773
+  - name: archive_tmetro
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-48k-20261023/TMETRO_48k.zip
+    expected_bytes: 367513573
+    sha256: 2d9be4da51098491be1ed67474dabfa7f5ed254cae921cca1dd06585bddfe883
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 00d895020233f94348aafce7140d671f
+  - name: scripts_archive
+    kind: source-archive
+    root_alias: demand
+    relative_path: source/zenodo-1227121-48k-20261023/scripts.zip
+    expected_bytes: 4783
+    sha256: 3415d1c54620b5ba30004943e3515f63db76930640f27aa2c30a21a718677dad
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: 8e4cfde3e264e1a0cc1bcc24fa3f16f9
+  - name: documentation
+    kind: metadata
+    root_alias: demand
+    relative_path: source/zenodo-1227121-48k-20261023/DEMAND.pdf
+    expected_bytes: 87837
+    sha256: debec0d9de603c800a062108a065efb61d87b56cd1718b0b61566e2fed6b4800
+    metadata:
+      source_url: https://zenodo.org/records/1227121
+      upstream_md5: a513afe131e08cdacf7c1854b174d5ab
+  - name: extracted_dir
+    kind: source-directory
+    root_alias: demand
+    relative_path: source/zenodo-1227121-48k-20261023/extracted
+    metadata:
+      file_count: 288
+      expected_bytes: 8294523264
+      tree_sha256: 8a6b168942bfe0fc846553877b63aa53d5c2ce6a45d2421ab0f5768a153b2fb3
+      layout: extracted/<ENVIRONMENT>/ch01.wav ... ch16.wav
+  splits:
+    48k:
+      artifacts:
+        source_archive:
+        - archive_dkitchen
+        - archive_dliving
+        - archive_dwashing
+        - archive_nfield
+        - archive_npark
+        - archive_nriver
+        - archive_ohallway
+        - archive_omeeting
+        - archive_ooffice
+        - archive_pcafeter
+        - archive_presto
+        - archive_pstation
+        - archive_scafe
+        - archive_spsquare
+        - archive_straffic
+        - archive_tbus
+        - archive_tcar
+        - archive_tmetro
+        source_directory:
+        - extracted_dir
+      statistics:
+        num_clips: 288
+        recordings: 18
+        duration_hours: 24.0
+        duration_basis: sum of single-channel file lengths (16 channels x 5 min per recording)
+      provenance:
+        format: 48 kHz mono 16-bit PCM WAV
+        environments: DKITCHEN, DLIVING, DWASHING, NFIELD, NPARK, NRIVER, OHALLWAY, OMEETING, OOFFICE, PCAFETER, PRESTO, PSTATION, SCAFE,
+          SPSQUARE, STRAFFIC, TBUS, TCAR, TMETRO
+  provenance:
+    source: DEMAND (Thiemann, Ito, Vincent; IRISA, Inria), original 48 kHz release on Zenodo record 1227121
+    url: https://zenodo.org/records/1227121
+    snapshot_date: '2026-10-23'
+    license: The Zenodo record metadata says CC BY 4.0 while its description text says CC BY-SA 3.0 Unported; treat it as CC BY-SA 3.0
+      (share-alike) unless the authors confirm otherwise.
+    description: DEMAND 环境噪声 48 kHz 原版，带环境名：16 麦阵列在 18 种真实环境各录 5 分钟（D 家庭：厨房、客厅、洗衣房；N 户外：运动场、公园、小河边；O 办公：走廊、会议室、办公室；P 公共场所：食堂、餐馆、地铁站；S
+      街道：广场、咖啡馆露台、路口；T 交通：公交、轿车、地铁），每个通道一个单声道 WAV，共 288 个文件、24 小时。比 16 kHz 原版多一个咖啡馆 SCAFE；要 16 kHz 时用 `demand@zenodo-1227121-16k-20261023`
+      或自行降采样。16 个通道彼此高度相关，混入时按环境取一个通道即可。
+    acquisition: Downloaded the 18 *_48k.zip archives, DEMAND.pdf and scripts.zip from Zenodo; each file's md5 matches the record (zenodo-snapshot.json).
+      The audio zips were extracted under extracted/ with Python zipfile; no member path leaves the archive root. scripts.zip (MATLAB
+      array-geometry helpers) is kept unextracted.
+    integrity: local_sha256_recorded

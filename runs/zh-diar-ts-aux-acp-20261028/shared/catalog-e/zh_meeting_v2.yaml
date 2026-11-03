@@ -1,0 +1,294 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: aishell4_meeting_sot
+  version: real-meetings-v2-20261010
+  languages:
+  - zh
+  tasks:
+  - speaker_attributed_asr
+  artifacts:
+  - name: train-audio-index
+    kind: jsonl-metadata
+    root_alias: real_meetings_20261010_aishell4
+    relative_path: aishell4-train-audio-index.jsonl.gz
+    sha256: f510a6a2e734940c087b43f65281cfb00bb45c40cb78970b5ec81e083bd27825
+  - name: train_30s-records
+    kind: audio-records
+    root_alias: real_meetings_20261010_aishell4
+    relative_path: aishell4-train_30s.jsonl.gz
+    sha256: 921d298b095d6cf021da65671adfaae91d2d927a39b64f25729d80200a2f590e
+    metadata:
+      record_count: 14634
+  - name: train_120s-records
+    kind: audio-records
+    root_alias: real_meetings_20261010_aishell4
+    relative_path: aishell4-train_120s.jsonl.gz
+    sha256: eb95bdc0e8eb1f5f0f0467b60552af85220b043c4f9c0cde8bfad7c060ffd4bd
+    metadata:
+      record_count: 4132
+  - name: train_300s-records
+    kind: audio-records
+    root_alias: real_meetings_20261010_aishell4
+    relative_path: aishell4-train_300s.jsonl.gz
+    sha256: 915b80900fd80fa87e423c3f45946ff26cc65b1fbc7a2c21d628738dd2068f48
+    metadata:
+      record_count: 2356
+  - name: train_600s-records
+    kind: audio-records
+    root_alias: real_meetings_20261010_aishell4
+    relative_path: aishell4-train_600s.jsonl.gz
+    sha256: 5b0034a2ad9cc367fa64df4e82ea6f69e153ded3bf7c8f7c78399279b966c900
+    metadata:
+      record_count: 1864
+  splits:
+    train_30s:
+      artifacts:
+        records:
+        - train_30s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 14634
+        duration_hours: 100.68253371527983
+      provenance:
+        training_use: train
+    train_120s:
+      artifacts:
+        records:
+        - train_120s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 4132
+        duration_hours: 100.68345145833301
+      provenance:
+        training_use: train
+    train_300s:
+      artifacts:
+        records:
+        - train_300s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 2356
+        duration_hours: 100.68402873263868
+      provenance:
+        training_use: train
+    train_600s:
+      artifacts:
+        records:
+        - train_600s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 1864
+        duration_hours: 100.68402873263885
+      provenance:
+        training_use: train
+  provenance:
+    source: aishell4
+    source_version: icefall-20260908
+    annotation: human_meeting_annotation+teacher_verified_supplement(moss+qwen3-asr,cer<=10)
+    window_rule: no window contains unverified speech or crosses an identity break
+    clean_pass_not_invented: true
+    training_exclusions: exclude_records zh-v2-train-excluded-records.txt (zh245 selection
+      holdout + empty-target windows) in this version directory
+- schema_version: dataset-catalog/2.0
+  dataset_id: alimeeting_sdm_meeting_sot
+  version: real-meetings-v2-20261010
+  languages:
+  - zh
+  tasks:
+  - speaker_attributed_asr
+  artifacts:
+  - name: train-audio-index
+    kind: jsonl-metadata
+    root_alias: real_meetings_20261010_alimeeting_sdm
+    relative_path: alimeeting_sdm-train-audio-index.jsonl.gz
+    sha256: 0e8fc83b4612c4815f43ea036ad735bf7e8760f8edfb027fc2f527d213907a35
+  - name: train_30s-records
+    kind: audio-records
+    root_alias: real_meetings_20261010_alimeeting_sdm
+    relative_path: alimeeting_sdm-train_30s.jsonl.gz
+    sha256: d93b17b0481233474d4373519a3b8974325aa0f748364518458eb7bf2992cfa0
+    metadata:
+      record_count: 12001
+  - name: train_120s-records
+    kind: audio-records
+    root_alias: real_meetings_20261010_alimeeting_sdm
+    relative_path: alimeeting_sdm-train_120s.jsonl.gz
+    sha256: 61550fcfcc4566edc9743bc3a75e2068a5ffdaff25a18fd2fe07cea56f9d5dde
+    metadata:
+      record_count: 4106
+  - name: train_300s-records
+    kind: audio-records
+    root_alias: real_meetings_20261010_alimeeting_sdm
+    relative_path: alimeeting_sdm-train_300s.jsonl.gz
+    sha256: 613c09bdab4065ca0a4370df27a0597078a5247cb62ffa29b27bf01d554750d5
+    metadata:
+      record_count: 2516
+  - name: train_600s-records
+    kind: audio-records
+    root_alias: real_meetings_20261010_alimeeting_sdm
+    relative_path: alimeeting_sdm-train_600s.jsonl.gz
+    sha256: e1ffd0ee73044f15987885ed938c3ea96e99c52f3d107facdc126cf60cbb0ca6
+    metadata:
+      record_count: 1986
+  splits:
+    train_30s:
+      artifacts:
+        records:
+        - train_30s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 12001
+        duration_hours: 88.61319875000144
+      provenance:
+        training_use: train
+    train_120s:
+      artifacts:
+        records:
+        - train_120s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 4106
+        duration_hours: 88.64990869791626
+      provenance:
+        training_use: train
+    train_300s:
+      artifacts:
+        records:
+        - train_300s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 2516
+        duration_hours: 88.65116425347206
+      provenance:
+        training_use: train
+    train_600s:
+      artifacts:
+        records:
+        - train_600s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 1986
+        duration_hours: 73.73577925347233
+      provenance:
+        training_use: train
+  provenance:
+    source: alimeeting_sdm
+    source_version: icefall-20260908
+    annotation: human_meeting_annotation+teacher_verified_supplement(moss+qwen3-asr,cer<=10)
+    window_rule: no window contains unverified speech or crosses an identity break
+    clean_pass_not_invented: true
+    training_exclusions: exclude_records zh-v2-train-excluded-records.txt (zh245 selection
+      holdout + empty-target windows) in this version directory
+- schema_version: dataset-catalog/2.0
+  dataset_id: magicdata_ramc_meeting_sot
+  version: real-meetings-v2-20261010
+  languages:
+  - zh
+  tasks:
+  - speaker_attributed_asr
+  artifacts:
+  - name: train-audio-index
+    kind: jsonl-metadata
+    root_alias: real_meetings_20261010_magicdata_ramc
+    relative_path: magicdata_ramc-train-audio-index.jsonl.gz
+    sha256: 24ce1dd7fc877ccef6b26a78f871ed1ec0025c340308b6d526f7462d9352c14c
+  - name: train_30s-records
+    kind: audio-records
+    root_alias: real_meetings_20261010_magicdata_ramc
+    relative_path: magicdata_ramc-train_30s.jsonl.gz
+    sha256: 346131f3e33385a0082f1155811304cf8a0d5c049ca85ccf3875a62516844dc0
+    metadata:
+      record_count: 23077
+  - name: train_120s-records
+    kind: audio-records
+    root_alias: real_meetings_20261010_magicdata_ramc
+    relative_path: magicdata_ramc-train_120s.jsonl.gz
+    sha256: 704f4dd89f50a86d4dce8129fa50f481e2e69f52309d9d86aee18ef4ed2bc9eb
+    metadata:
+      record_count: 11083
+  - name: train_300s-records
+    kind: audio-records
+    root_alias: real_meetings_20261010_magicdata_ramc
+    relative_path: magicdata_ramc-train_300s.jsonl.gz
+    sha256: 6175b86ad357b88d49b27b1bc9caf66b07983b894194327f797d14c26e6f2c6c
+    metadata:
+      record_count: 9528
+  - name: train_600s-records
+    kind: audio-records
+    root_alias: real_meetings_20261010_magicdata_ramc
+    relative_path: magicdata_ramc-train_600s.jsonl.gz
+    sha256: 9441f7e5201cb1bd16349c9d37d15b45031fe5b6b8faa79ad3cff924b751e854
+    metadata:
+      record_count: 9199
+  splits:
+    train_30s:
+      artifacts:
+        records:
+        - train_30s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 23077
+        duration_hours: 141.64923597222688
+      provenance:
+        training_use: train
+    train_120s:
+      artifacts:
+        records:
+        - train_120s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 11083
+        duration_hours: 141.65445692708374
+      provenance:
+        training_use: train
+    train_300s:
+      artifacts:
+        records:
+        - train_300s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 9528
+        duration_hours: 141.6549663715286
+      provenance:
+        training_use: train
+    train_600s:
+      artifacts:
+        records:
+        - train_600s-records
+        audio_index:
+        - train-audio-index
+      group: train
+      statistics:
+        records: 9199
+        duration_hours: 141.65496637152842
+      provenance:
+        training_use: train
+  provenance:
+    source: magicdata_ramc
+    source_version: legacy-20260804
+    annotation: human_meeting_annotation+teacher_verified_supplement(moss+qwen3-asr,cer<=10)
+    window_rule: no window contains unverified speech or crosses an identity break
+    clean_pass_not_invented: true
+    training_exclusions: exclude_records zh-v2-train-excluded-records.txt in this
+      version directory

@@ -26,6 +26,15 @@ from .augment import (
 from .catalog_resolver import LhotseCatalogAudioResolver
 from .interference_pool import PoolClip, pool_clips
 from .lance_source import SAMPLES_ROLE, lance_records, open_lance_release, read_lance_audio
+from .meeting_online import (
+    OnlineMeetingConfig,
+    group_rooms,
+    load_material,
+    meeting_target,
+    plan_meeting,
+    read_material_rows,
+    render_meeting,
+)
 from .online_dataset import TASK_TEMPLATES, OnlineAudioDataset
 from .m4a_backend import install_m4a_backend
 from .records import ResolvedAudioRecord
@@ -382,7 +391,16 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             raise ValueError("weight is mutually exclusive with samples/reps")
         if explicit and not all("weight" in s for s in sources):
             raise ValueError("Specify weight for every source")
+        if not training and any(s.get("online_meeting") is not None for s in sources):
+            raise ValueError("online_meeting windows are synthesized for training only")
         for source in sources:
+            if source.get("online_meeting") is not None:
+                if source.get("online_mix") is not None or source.get("enrollment") is not None \
+                        or source.get("sot_timestamps"):
+                    raise ValueError("online_meeting cannot be combined with online_mix, enrollment or sot_timestamps")
+                if message_format != "qwen3_asr" or grpo:
+                    raise ValueError("online_meeting needs Qwen3-ASR SFT (timestamped SOT)")
+                OnlineMeetingConfig(**source["online_meeting"])
             if source.get("online_mix") is not None:
                 if source.get("enrollment") is not None:
                     raise ValueError("online_mix and enrollment cannot be combined")
@@ -503,6 +521,12 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                 raise ValueError(f"No RIR microphone has a DRR within {low}..{high} dB")
         self.rir_pair_groups = rir_pairs
         self.rir_choices = [choice for group in rir_pairs for choice in group]
+        # Material, rooms and room noise of online meetings, loaded before the workers fork.
+        self._meetings = {}
+        if augmenting:
+            for source in config.get("train", []):
+                if source.get("online_meeting") is not None:
+                    self._meeting_resources(OnlineMeetingConfig(**source["online_meeting"]))
         if grpo and self.augmentation.spec_aug_prob:
             raise ValueError(
                 "GRPO supports waveform augmentation; SpecAugment is SFT-only"
@@ -629,6 +653,13 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                 row = replace(row, record=replace(row.record, metadata={
                     **row.record.metadata, "nonspeech": source["nonspeech"],
                 }))
+            if source.get("online_meeting") is not None:
+                if row.record.task != "speaker_attributed_asr" or "meeting_template" not in row.record.metadata:
+                    raise ValueError(f"{row.record.id}: online_meeting needs a speaker-attributed template window")
+                row = replace(row, record=replace(row.record, metadata={
+                    **row.record.metadata, "online_meeting": source["online_meeting"],
+                    "sot_output_format": TIMESTAMP_FORMAT,
+                }))
             if source.get("online_mix") is not None:
                 # A scene may have no target speaker (similar voices only), so its transcript can be empty.
                 if row.record.task != "ts_asr" or not (row.record.target.strip() or row.record.metadata.get("scene")):
@@ -745,9 +776,12 @@ class CatalogSwiftDataset(OnlineAudioDataset):
     def _prepare_record(self, resolved, seed):
         """Draw the speed of a timestamped SOT sample and retime its target to match."""
         record = resolved.record
+        # A synthesized meeting is rendered without waveform augmentation (its voices, room, levels and noise are
+        # drawn anew each epoch), so a speed draw would retime its target against unstretched audio.
         if (not self.training or not self.augmentation.speed_prob
                 or record.metadata.get("sot_output_format") != TIMESTAMP_FORMAT
-                or record.metadata.get("online_mix") is not None):
+                or record.metadata.get("online_mix") is not None
+                or record.metadata.get("online_meeting") is not None):
             return resolved
         # Own stream: the waveform transforms keep the draws they had before.
         rng = random.Random(f"{seed}:speed")
@@ -782,8 +816,20 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         import soundfile as sf
 
         result = {}
+        plan = resolved.record.metadata.get("meeting_plan") if self.training else None
         for slot in resolved.record.audio_slots:
             ref = slot.ref
+            if plan is not None:
+                # A synthesized meeting has no stored audio; it brings its own room, levels and noise.
+                started = time.perf_counter()
+                audio = self._render_meeting(resolved.record, plan, rng)
+                if self.collect_metrics:
+                    self._sample_metrics["wave_augment_s"] += time.perf_counter() - started
+                    self._sample_metrics["audio_seconds"] += len(audio) / self.sampling_rate
+                buffer = BytesIO()
+                sf.write(buffer, audio, self.sampling_rate, format="WAV", subtype="FLOAT")
+                result[slot.name] = buffer.getvalue()
+                continue
             release = self._lance_release(ref.dataset_id, ref.version, ref.split)
             if release is None:
                 cut = (resolved.cuts or {}).get(slot.name) or self._audio_cuts.get(
@@ -850,6 +896,86 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             else:
                 result[slot.name] = np.ascontiguousarray(audio, dtype=np.float32)
         return result
+
+    def _meeting_resources(self, config):
+        """(material, rooms, noise loader) of an online-meeting config, loaded once per process."""
+        import json
+
+        key = json.dumps([config.material, list(config.rir_sources), list(config.noise_sources),
+                          config.corpus_weights, config.max_overlap, config.teacher_material,
+                          config.min_room_positions], sort_keys=True)
+        if key in self._meetings:
+            return self._meetings[key]
+        material = config.material
+        args = (self.resolver.catalog, material["dataset_id"], material["version"], material["split"])
+        tracks = {}
+        for path in resolve_split(*args, "audio_index", self.resolver.roots):
+            for row in read_material_rows([path]):
+                tracks[row["cut_id"]] = str(Path(self.resolver.roots[row["root_alias"]]) / row["relative_path"])
+        voices = load_material(read_material_rows(resolve_split(*args, "meeting_material", self.resolver.roots)),
+                               config, lambda row: tracks[f"{row['corpus']}/{row['meeting']}/{row['speaker']}"])
+        rooms = []
+        if config.dry_prob < 1:
+            items = [item for group in self._resource_groups(list(config.rir_sources)) for item in group]
+            rooms = group_rooms(items, lambda item: item.id, config.min_room_positions)
+        groups, weights = self._resource_groups(list(config.noise_sources)), source_weights(list(config.noise_sources))
+        noise = lambda r: load_mono(choose_from_groups(r, groups, weights), self.sampling_rate)  # noqa: E731
+        self._meetings[key] = (voices, rooms, noise)
+        return self._meetings[key]
+
+    def _plan_meeting(self, record, rng):
+        """Voice the record's template window: the transcript and the utterances to place."""
+        config = OnlineMeetingConfig(**record.metadata["online_meeting"])
+        material = self._meeting_resources(config)[0]
+        length = record.slot("mixture").ref.duration
+        corpus, placed = plan_meeting(rng, record.metadata["meeting_template"]["turns"], length, material, config)
+        target, mapping = meeting_target(placed)
+        plan = {"corpus": corpus, "utterances": [
+            {"start": start, "duration": duration, "speaker": speaker, "track": voice.track,
+             "offset": float(voice.offsets[index])}
+            for start, duration, speaker, voice, index in placed]}
+        return replace(record, target=target, metadata={
+            **record.metadata, "meeting_plan": plan, "timestamp_speaker_map": mapping})
+
+    def _render_meeting(self, record, plan, rng):
+        import soundfile as sf
+
+        config = OnlineMeetingConfig(**record.metadata["online_meeting"])
+        _, rooms, noise = self._meeting_resources(config)
+        rate = self.sampling_rate
+        length = round(record.slot("mixture").ref.duration * rate)
+        speakers = {}
+        for utterance in plan["utterances"]:
+            speakers.setdefault(utterance["speaker"], []).append(utterance)
+        tracks, spans = [], []
+        for utterances in speakers.values():
+            track, own = np.zeros(length, dtype=np.float32), []
+            pieces = sorted((round(u["offset"] * rate), round(u["duration"] * rate), round(u["start"] * rate))
+                           for u in utterances)
+            with sf.SoundFile(utterances[0]["track"]) as stream:
+                if stream.samplerate != rate:
+                    raise ValueError(f"meeting material must be {rate} Hz: {utterances[0]['track']}")
+                # Consecutive utterances lie together in the track: read each run of them at once, never the
+                # stretches between runs (a fallback pick can sit anywhere in a 30-minute speaker track).
+                runs, clips = [], {}
+                for offset, frames, begin in pieces:
+                    if runs and offset - runs[-1][1] <= rate:
+                        runs[-1][1] = max(runs[-1][1], offset + frames)
+                    else:
+                        runs.append([offset, offset + frames])
+                for first, last in runs:
+                    stream.seek(first)
+                    clips[first] = stream.read(last - first, dtype="float32", always_2d=True)[:, 0]
+            for offset, frames, begin in pieces:
+                first = max(f for f in clips if f <= offset)
+                clip = clips[first][offset - first:][:frames][: length - begin]
+                track[begin : begin + len(clip)] = clip
+                own.append((begin, begin + len(clip)))
+            tracks.append(track)
+            spans.append(own)
+        return render_meeting(rng, tracks, spans, length, config, rooms=rooms,
+                              load_rir=lambda item: load_rir_item(item, rate), noise_loader=noise,
+                              sampling_rate=rate)
 
     def _speech_loader(self, language):
         if language not in self.interference:

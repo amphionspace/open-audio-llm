@@ -1,0 +1,50 @@
+# 训练集拟合诊断的对照：起点 Emilia2 6000 步在 zh245 留出的 18 场训练集会议（同一构建；10-08 起不再训练，更早的起点 LoRA 8000 训过）全部 120 秒窗口上的 cpER。
+# 全量（AISHELL-4 205 条、AliMeeting 123 条）。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/amphion-eval/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: []
+  gpus: []
+  threads: {omp: 4, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+    AUDIO_DATA_CATALOG: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-ts-aux-acp-20261028/shared/catalog-holdout/catalog.yaml
+    AUDIO_DATA_ROOTS_FILE: /workspace/workspace/mingdong/repo/oal-diar-restart/runs/zh-diar-ts-aux-acp-20261028/shared/catalog-holdout/roots.json
+task:
+  kind: eval
+  backend: vllm
+  server_url: http://127.0.0.1:9031
+  module: amphion_eval.cli
+  positional: [open-audio-llm, meeting]
+  arguments:
+    --model: {path: /workspace/data/ae-runs/zh-emilia2-dialogue-6000/checkpoint-6000}
+    --data_config: {path: data/train-fit-holdout.yaml}
+    --split_group: evaluation
+    --samples_per_source: 0
+    --seed: 42
+    --batch_size: 16
+    --max_new_tokens: 4096
+    --worker-timeout: 3600
+    --server-url: http://127.0.0.1:9031
+    --served-model: step6000
+    --server-api: chat
+    --output-format: open_audio_llm
+    --output_dir: {path: '{attempt}/artifacts/evaluation'}
+recording:
+  attempts_dir: {path: ../tasks/05-train-fit/start-holdout/attempts}
+  result: {path: '{attempt}/artifacts/evaluation/summary.json'}
+tracking:
+  pythonpath: [{path: ../../../src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: AmphionASR-zh-diar-restart-train-fit-holdout-step6000
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file: {path: '{attempt}/artifacts/evaluation/summary.json'}
+    prefix: evaluation

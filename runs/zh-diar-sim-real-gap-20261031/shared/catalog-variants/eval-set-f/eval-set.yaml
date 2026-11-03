@@ -1,0 +1,26 @@
+task: diarization
+tags:
+- meeting
+- multi-speaker
+- timestamps
+sampling_rate: 16000
+groups:
+- name: near_retimed
+  section: 声学对照
+  labels:
+  - near_retimed
+  aggregate: macro
+  description: 同一批真实句子按合成器的方式重新排出重叠（换人处整句压上、附和随机插入），声学与文字不变
+evaluation:
+- dataset_id: meeting_simreal_probe
+  version: v1-20261031
+  split: near_retimed
+  task: speaker_attributed_asr
+  label: near_retimed
+  tags:
+  - zh
+  - meeting
+  - multi-speaker
+  - timestamps
+  display: 同一批真实句子按合成器的方式重新排出重叠（换人处整句压上、附和随机插入），声学与文字不变
+  description: AliMeeting 官方 Eval 8 场 138 个选模窗口：同一批真实句子按合成器的方式重新排出重叠（换人处整句压上、附和随机插入），声学与文字不变

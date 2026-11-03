@@ -1,0 +1,66 @@
+- schema_version: dataset-catalog/2.0
+  dataset_id: ami_ihm
+  version: hf-edinburghcstr-20261023
+  languages:
+  - en
+  tasks:
+  - asr
+  aliases:
+  - ami-ihm
+  artifacts:
+  - name: ihm_dir
+    kind: hf-dataset-directory
+    root_alias: ami_ihm
+    relative_path: source/hf-edinburghcstr-20261023/ihm
+    metadata:
+      file_count: 51
+      expected_bytes: 15243022474
+      tree_sha256: 496f6e64a22704cfdfb443129eca44e77375357966c1af8c66cd25cfc2378236
+      rows: 134243
+      source_url: https://huggingface.co/datasets/edinburghcstr/ami
+      upstream_commit: 46f28f2503e2ec48f8867a84eef356c70476beab
+      fields: meeting_id, audio_id, text, audio, begin_time, end_time, microphone_id, speaker_id
+  splits:
+    train:
+      artifacts:
+        records:
+        - ihm_dir
+      statistics:
+        utterances: 108502
+        meetings: 137
+        speakers: 155
+        duration_hours: 77.8948
+        duration_basis: sum of end_time - begin_time of the Kaldi segments
+    dev:
+      artifacts:
+        records:
+        - ihm_dir
+      statistics:
+        utterances: 13098
+        meetings: 18
+        speakers: 21
+        duration_hours: 8.9418
+        duration_basis: sum of end_time - begin_time of the Kaldi segments
+      provenance:
+        parquet_split: validation
+    test:
+      artifacts:
+        records:
+        - ihm_dir
+      statistics:
+        utterances: 12643
+        meetings: 16
+        speakers: 16
+        duration_hours: 8.6815
+        duration_basis: sum of end_time - begin_time of the Kaldi segments
+  provenance:
+    source: AMI Meeting Corpus (University of Edinburgh), individual headset microphones segmented by the Kaldi AMI s5 recipe, Hugging
+      Face dataset edinburghcstr/ami config ihm
+    url: https://groups.inf.ed.ac.uk/ami/corpus/
+    snapshot_date: '2026-10-23'
+    license: CC BY 4.0
+    description: AMI 会议语料的近讲耳麦（IHM）版本：英文 16 kHz 单声道，按 Kaldi AMI s5 切句、文本大写归一化，带会议、说话人和耳麦编号。train / dev / test 分别 108502、13098、12643
+      句，共 95.5 小时，会议划分与 Kaldi full-corpus-ASR 一致。本机已有 AMI 单远场麦克风版 `ami_sdm`，可与这份近讲版对照近场和远场。
+    acquisition: Downloaded only the ihm/ parquet shards and README of the pinned Hugging Face snapshot from hf-mirror.com; each shard's
+      sha256 equals its LFS oid. The sdm/ config was skipped because ami_sdm already holds the SDM meetings.
+    integrity: local_sha256_recorded

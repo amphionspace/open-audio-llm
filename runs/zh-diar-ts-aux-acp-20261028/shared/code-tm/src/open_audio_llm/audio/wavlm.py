@@ -1,0 +1,1 @@
+"""Placeholder WavLM encoder adapter."""

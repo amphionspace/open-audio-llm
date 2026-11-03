@@ -1,0 +1,55 @@
+# 合成保真度检查（方案第 1 步）：起点模型解码 build_dev_fidelity.py 的 5 个 dev 变体，按重叠档位与
+# ../zh-diar-sim-real-gap-20261031 的真实对照（far_mean / near_gated）比较。每个变体解码 3 次合并（单次解码噪声约 ±0.5）。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: [{path: ../shared/code/src}]
+  gpus: []
+  threads: {omp: 2, openblas: 1}
+  environment:
+    PYTHONUNBUFFERED: '1'
+    # api.wandb.ai 对本机出口 IP 返回 403（../zh-diar-aug-acp-20261030/tracking/wandb-egress-probe.txt），W&B 流量走本地中转。
+    WANDB_HTTP_PROXY: http://127.0.0.1:17910
+    WANDB_HTTPS_PROXY: http://127.0.0.1:17910
+task:
+  kind: prepare
+  script: {path: ../scripts/probe_panels.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  tracking_prefix: AmphionASR-zh-diar-synth-fidelity
+  serve_template: {path: serve.yaml}
+  parallel: 1
+  port_base: 9101
+  gpu_pool: [1, 2, 3, 4, 6, 7]
+  gpu_free_mib: 26000
+  server_startup_timeout: 1800
+  delete_request_audio: true
+  jobs:
+  - name: start-fidelity
+    model: {path: /workspace/data/ae-runs/zh-emilia2-dialogue-6000/checkpoint-6000}
+    repeats: 3
+    panels:
+      fidelity:
+        template: {path: eval-fidelity.yaml}
+        turn_diagnostics: [syn_acoustic, syn_fill_near_alimeeting, syn_fill_far_alimeeting, syn_fill_near_aishell5,
+                           syn_fill_far_aishell5]
+recording:
+  attempts_dir: {path: ../tasks/02-fidelity-check/attempts}
+  result: {path: '{attempt}/artifacts/probe-results.json'}
+tracking:
+  pythonpath: [{path: ../shared/code/src}]
+  enabled: true
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python}
+  credentials_file: {path: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh}
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: AmphionASR-zh-diar-synth-fidelity
+  interval: 30
+  startup_timeout: 180
+  finish_timeout: 300
+  metrics:
+  - file: {path: '{attempt}/artifacts/probe-results.json'}
+    prefix: probe
