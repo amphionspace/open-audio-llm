@@ -222,6 +222,19 @@ class CatalogTrainingMixin:
                 from .grpo_vllm_rollout import install_vllm_rollout
 
                 install_vllm_rollout(trainer, config["rollout"])
+            else:
+                # Sampled completions must not contain audio placeholder tokens: one <|audio_pad|> in a completion
+                # makes the scoring forward scatter more audio positions than there are features (masked_scatter
+                # assert, GRPO round 9 at step 273; an "<|audio_start|>" completion was logged earlier in that run).
+                # The local engine copies suppress_tokens from this generation config into every request.
+                tokenizer = getattr(trainer.processing_class, "tokenizer", trainer.processing_class)
+                audio_ids = tokenizer.convert_tokens_to_ids(["<|audio_start|>", "<|audio_end|>", "<|audio_pad|>"])
+                if tokenizer.unk_token_id is not None and tokenizer.unk_token_id in audio_ids:
+                    raise ValueError("audio special tokens missing from the tokenizer")
+                for generation_config in {id(c): c for c in (trainer.model.generation_config,
+                                          getattr(getattr(trainer, "engine", None), "generation_config", None))
+                                          if c is not None}.values():
+                    generation_config.suppress_tokens = sorted(set(generation_config.suppress_tokens or []) | set(audio_ids))
             if os.environ.get("GRPO_EFFICIENT_LOGPS") == "1":
                 from .grpo_shared_prefix import install_efficient_logps
 
