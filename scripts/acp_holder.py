@@ -79,7 +79,14 @@ def main():
     while True:
         refresh_sco(cluster)
         base = ["acp", "jobs", "list", f"--workspace-name={cluster['workspace']}", f"--aec2-name={cluster['aec2']}", "--state=RUNNING"]
-        held = asr_nodes(run_sco(cluster, *base)[1])
+        code, table = run_sco(cluster, *base)
+        if code or "DISPLAY NAME" not in table:
+            # A failed or empty listing reads as 0 nodes and would submit a holder next to running jobs
+            # (2026-11-04 18:16Z: an extra third node).
+            print(f"{datetime.now(timezone.utc):%F %T}Z jobs list failed (exit {code}): {table[-200:]!r}", flush=True)
+            time.sleep(args.interval)
+            continue
+        held = asr_nodes(table)
         idle = idle_gpus(run_sco(cluster, "aec2", "clusters", "usage", f"--name={cluster['aec2']}")[1])
         print(f"{datetime.now(timezone.utc):%F %T}Z ASR nodes {held}/{args.nodes}, idle GPUs {idle}", flush=True)
         if held < args.nodes and idle >= GPUS_PER_NODE:
