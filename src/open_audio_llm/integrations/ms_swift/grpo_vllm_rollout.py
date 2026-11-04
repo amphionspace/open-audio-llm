@@ -25,6 +25,7 @@ import torch
 logger = logging.getLogger(__name__)
 
 AUDIO_PAD = "<|audio_pad|>"
+AUDIO_TOKENS = ("<|audio_start|>", "<|audio_end|>", AUDIO_PAD)  # never valid in a completion
 # The vLLM decoder never runs the audio tower: embeddings come from the policy.
 AUDIO_PREFIX = "thinker.audio_tower."
 # Activation-checkpoint wrappers rename parameters; vLLM expects checkpoint names.
@@ -97,6 +98,13 @@ class VllmAudioRolloutEngine:
         self.hf_engine = hf_engine
         self.tokenizer = hf_engine.template.tokenizer
         self.pad_id = self.tokenizer.convert_tokens_to_ids(AUDIO_PAD)
+        # A sampled audio placeholder makes the scoring forward see more audio positions than features
+        # (masked_scatter assert; GRPO round 9 crashed at step 273 after "<|audio_start|>" completions).
+        # Rollout logprobs are processed_logprobs, so they renormalize over the rest: these tokens' mass is ~0.
+        audio_ids = self.tokenizer.convert_tokens_to_ids(list(AUDIO_TOKENS))
+        if self.tokenizer.unk_token_id is not None and self.tokenizer.unk_token_id in audio_ids:
+            raise ValueError("audio special tokens missing from the tokenizer")
+        self.blocked = {token: -100.0 for token in audio_ids}  # vLLM clamps logit_bias to [-100, 100]
         kwargs = {"distributed_executor_backend": "external_launcher"} if external_launcher else {}
         with _expandable_segments(False):
             self.llm = LLM(
@@ -198,6 +206,7 @@ class VllmAudioRolloutEngine:
                 max_tokens=max_tokens,
                 logprobs=0,
                 skip_special_tokens=False,
+                logit_bias=self.blocked,
             ))
         outputs = self.llm.generate(prompts, params, use_tqdm=False)
         pad_token = self.tokenizer.pad_token_id
