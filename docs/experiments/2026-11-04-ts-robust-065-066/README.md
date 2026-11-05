@@ -55,4 +55,4 @@
 ## 四、遗留
 
 - v12 CER 与空参考误报仍略差于 10.28。GRPO 第九轮在 066 上修复了这两项（v12 12.78、空参考误报 1358），见 `2026-11-04-grpo-v7-v9`。
-- 归档：执行记录与评测原始输出还在本地 `runs/`，尚未按 `docs/guides/experiments.md` 上传到对象存储。
+- 归档（2026-11-05）：实验目录已上传到 `whai:open-audio-llm/runs/ts-robust-acp-20261015/`（训练执行记录此前已由启动器同步，训练检查点与 `shared/metadata-cache` 等可重建内容不传）；评测原始输出（048 / 054 / 065 / 066 avg3）在同一路径的 `ae-runs/<模型>/runs/` 下。清单与排除规则见 `upload-manifest.json`、`upload-manifest-ae-runs.json`；ACP 任务写出的 root 文件不能硬链接，暂存时改为复制。

@@ -43,4 +43,4 @@
 ## 四、遗留
 
 - CHiME-4 空输出要真正回到 2.20% 以内，需要在训练里补远场、带噪、有人说话的正例。来源待定：用 CHiME-4 训练集需要另换守门集。
-- 归档：执行记录与评测原始输出还在本地 `runs/`，尚未按 `docs/guides/experiments.md` 上传到对象存储。
+- 归档（2026-11-05）：实验目录已上传到 `whai:open-audio-llm/runs/amphionasr2-grpo-20261101/`（训练执行记录此前已由启动器同步，训练检查点与 `shared/metadata-cache` 等可重建内容不传）；评测原始输出（v7 / v8 / v9 avg3、插值、第九轮各步、6 个合并候选）在同一路径的 `ae-runs/<模型>/runs/` 下。清单与排除规则见 `upload-manifest.json`、`upload-manifest-ae-runs.json`；ACP 任务写出的 root 文件不能硬链接，暂存时改为复制。
