@@ -1,0 +1,60 @@
+# MOSS-Transcribe-Diarize 拼接注册做 TS-ASR：在 054avg3（10.28 版本）跑过的 ts-asr-benchmark@v12 全集上同口径评测。
+# 输入与 AmphionASR TS 服务收到的相同（注册截/补到 5 秒 + 混合音频）；worker 在两者之间插静音，送官方 vLLM 服务，
+# 只保留注册之后开始的 S01 片段作为目标人转写。数据、归一化、打分、W&B 均由 AmphionEval after-training 完成。
+version: 1
+runtime:
+  python: {path: /workspace/workspace/mingdong/miniconda3/envs/amphion-eval/bin/python}
+  cwd: {path: ../../..}
+  pythonpath: []
+  gpus: []
+  threads: {omp: 4, openblas: 1}
+  environment:
+    HF_HUB_OFFLINE: '1'
+    TRANSFORMERS_OFFLINE: '1'
+    PYTHONUNBUFFERED: '1'
+    AMPHION_EVAL_HOME: /workspace/data/ae-state
+    AUDIO_DATA_CATALOG: /workspace/data/registry/catalog
+    AUDIO_DATA_ROOTS_FILE: /workspace/data/registry/roots.json
+    # 本机 W&B 直连返回 403，与 ts-robust 评测相同走本地代理。
+    WANDB_HTTP_PROXY: http://127.0.0.1:17911
+    WANDB_HTTPS_PROXY: http://127.0.0.1:17911
+task:
+  kind: prepare
+  script: {path: ../scripts/run_after_training.py}
+  accepts_config: true
+  arguments: {}
+parameters:
+  output: {path: '{attempt}/artifacts'}
+  ae: {path: /workspace/workspace/mingdong/miniconda3/envs/amphion-eval/bin/ae}
+  model: {path: /workspace/model/MOSS-Transcribe-Diarize}
+  suite_id: asr-regression-native@1
+  model_name: moss-transcribe-diarize-0.9b-enroll-concat-s01
+  # 与 054avg3 的 v12 运行（run-20261028T033033Z-70075026）同一评测集与参数。
+  eval_set: open-audio-llm/ts-asr-benchmark@v12-20261022
+  parameters: {split_group: evaluation, samples_per_source: 0, batch_size: 32, max_new_tokens: 512, seed: 42, enroll_seconds: 5}
+  worker_timeout: 43200
+  worker:
+    python: {path: /workspace/workspace/mingdong/miniconda3/envs/moss-vllm/bin/python}
+    script: {path: ../scripts/moss_ts_worker.py}
+    arguments:
+      served-model-name: moss-transcribe-diarize
+      gpu: '3'
+      port: 8741
+      # 与此前 MOSS 会议基线相同的服务参数（官方 vLLM 提交 68b4a1d5）。
+      gpu-memory-utilization: '0.6'
+      enroll-seconds: 5
+      # 注册与混合之间的静音，让 MOSS 在边界处切段；1 秒是设计选择，不是调出来的值。
+      gap-seconds: 1.0
+      # 用户提出的规则：注册在最前，MOSS 按出场顺序编号，S01 即目标人。
+      target-speaker: S01
+      concurrency: 32
+      startup-timeout: 1800
+      request-timeout: 600
+  wandb: {entity: 1016097967-amphion, project: open-audio-llm}
+  # 非官方用法的第三方结果，不发布到共享评测记录。
+  publish: {enabled: false}
+recording:
+  attempts_dir: {path: ../tasks/01-eval-v12/attempts}
+  result: {path: '{attempt}/artifacts/handoff.json'}
+tracking:
+  enabled: false
