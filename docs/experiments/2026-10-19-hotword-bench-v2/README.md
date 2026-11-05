@@ -149,7 +149,7 @@ ae open-audio-llm after-training --handoff baselines/<model>/handoff.json \
 | 34479 | [`run-20261019T135422Z-b7b138a2`](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/run-20261019T135422Z-b7b138a2) | `run-20261019T070836Z-25a03f54` |
 | Qwen3-ASR-1.7B | [`run-20261019T135642Z-8e74fa0a`](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/run-20261019T135642Z-8e74fa0a) | `run-20261019T070836Z-94b256b7` |
 
-- 运行目录在 `/workspace/data/ae-runs/<model>/runs/<run>/`。
+- 运行目录已发布到 COS `anfeiweng-audiollm-resource-1373259071:amphion-eval/runs/<run>/`（v2 与 v1 对照四个运行均已核对存在）。
 - W&B 远端两个 run 都是 finished，各 1,123 个指标，与本地 `summary.json` 逐项相等。
 - 推理和评测日志（`inference.log`、`worker.log`）在各运行目录里。
 - 四个 run（v2 两个、v1 对照两个）已用 `ae publish` 发布到 COS `amphion-eval`，评测集 `open-audio-llm/hotword-bench@v2-20261019` 也已发布。

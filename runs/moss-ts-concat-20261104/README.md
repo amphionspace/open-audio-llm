@@ -41,4 +41,5 @@
 ## 证据
 
 - W&B：全集 `run-20261105T082033Z-d4697e21`（远端 finished，1,490 项指标），冒烟 `run-20261105T065412Z-cdf0a3b6`。
-- 逐条预测与 MOSS 原始输出：`tasks/01-eval-v12/attempts/002/artifacts/ae/runs/run-20261105T082033Z-d4697e21/predictions.jsonl`（`raw_text`）。
+- 全部执行产物（含逐条预测与 MOSS 原始输出 `raw_text`）：`whai:open-audio-llm/runs/moss-ts-concat-20261104/`，路径与本目录一致。
+- 10.28 基线运行：`whai:open-audio-llm/runs/ts-robust-acp-20261015/ae-runs/ts-robust-054-avg3/runs/run-20261028T033033Z-70075026/`。

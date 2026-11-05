@@ -101,7 +101,7 @@
 
 ## 怎么造的
 
-脚本在 audio-data-contract `scripts/hotword_bench/`，配方是 `recipe.yaml`。所有 LLM 调用（prompt、模型、原始回复）存档在 `/workspace/data/datasets/hotword_bench/source/v1-20261018/llm-log/`。
+脚本在 audio-data-contract `scripts/hotword_bench/`，配方是 `recipe.yaml`。所有 LLM 调用（prompt、模型、原始回复）存档在 `whai:audio-data/datasets/hotword_bench/source/v1-20261018/llm-log/`。
 
 | 步骤 | 做法 | 结果 |
 | --- | --- | --- |

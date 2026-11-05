@@ -47,8 +47,8 @@
 
 | 内容 | 位置 |
 |---|---|
-| 实验目录（配置、脚本、任务记录） | [runs/moss-ts-concat-20261104](../../../runs/moss-ts-concat-20261104/README.md) |
+| 实验目录（配置、脚本、任务记录、全部执行产物） | `whai:open-audio-llm/runs/moss-ts-concat-20261104/`（清单 [upload-manifest.json](upload-manifest.json)）；仓库内的 README、配置与脚本见 [runs/moss-ts-concat-20261104](../../../runs/moss-ts-concat-20261104/README.md) |
 | 机器可读结果 | [results.json](results.json) |
 | W&B | 全集 `run-20261105T082033Z-d4697e21`，冒烟 `run-20261105T065412Z-cdf0a3b6`（`1016097967-amphion/open-audio-llm`） |
-| 逐条预测与 MOSS 原始输出 | 本机 `runs/moss-ts-concat-20261104/tasks/01-eval-v12/attempts/002/artifacts/ae/runs/run-20261105T082033Z-d4697e21/predictions.jsonl`（未上传对象存储） |
-| 10.28 基线运行 | `/workspace/data/ae-runs/ts-robust-054-avg3/runs/run-20261028T033033Z-70075026` |
+| 逐条预测与 MOSS 原始输出 | `whai:open-audio-llm/runs/moss-ts-concat-20261104/tasks/01-eval-v12/attempts/002/artifacts/ae/runs/run-20261105T082033Z-d4697e21/predictions.jsonl`（`raw_text`） |
+| 10.28 基线运行 | `whai:open-audio-llm/runs/ts-robust-acp-20261015/ae-runs/ts-robust-054-avg3/runs/run-20261028T033033Z-70075026/` |

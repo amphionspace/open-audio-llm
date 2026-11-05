@@ -26,7 +26,7 @@
 ## 对 TS-ASR 有用的部分
 
 - 做"音色相近"负样本或注册语音污染时，不要直接用 MOSS 标注判断"是否另一个人"；先用声纹相似度（ERes2NetV2）和人工标注的分布核对，再定阈值。
-- 相似度脚本与听审流程：`/workspace/workspace/mingdong/data/amphiondata/similar-voice-views-20261014/scripts/`（`emilia2_split_cap.py`、`make_split_review.py`），听审页用 `amphiondata review build/serve`。
+- 相似度脚本与听审流程：`whai:open-audio-llm/runs/zh-similar-voice-acp-20261014/shared/similar-voice-views-20261014/scripts/`（`emilia2_split_cap.py`、`make_split_review.py`），听审页用 `amphiondata review build/serve`。
 - 选模器 `runs/zh-similar-voice-acp-20261014/scripts/select_checkpoints.py` 可直接复用：异步评测每个保存点、基线重测、门槛与提前停止、`previous_state` 续跑。
 - 共享 GPU 的坑：vLLM 启动要求空闲显存 ≥ `gpu-memory-utilization` × 总量；启动前看 `nvidia-smi`，避开 GPU 0；失败后改 `gpus` 并用 `previous_state` 续跑，不要从头来。已有两轮因此失败（GPU 2、GPU 3 被他人占用）。
 - 配置里不要引用会被删除的工作树路径（overlap 轮的 `chime6-dev.yaml` 因此在最终面板失败）。
@@ -35,9 +35,9 @@
 
 | 内容 | 位置 |
 | --- | --- |
-| 音色相近视图（已注册 `similar-voice-v1-20261014`） | `/workspace/workspace/mingdong/data/amphiondata/similar-voice-views-20261014/`（README 有登记与拆人上限记录） |
-| 与 MOSS 的逐窗对比、声纹相似度 | `/workspace/workspace/mingdong/data/model-compare-review-20261014/` |
-| 各轮选模历史、最终面板 | 各 `runs/<轮>/tasks/03-select/attempts/*/artifacts/` |
+| 音色相近视图（已注册 `similar-voice-v1-20261014`） | `whai:open-audio-llm/runs/zh-similar-voice-acp-20261014/shared/similar-voice-views-20261014/`（README 有登记与拆人上限记录） |
+| 与 MOSS 的逐窗对比、声纹相似度 | `whai:open-audio-llm/runs/zh-similar-voice-acp-20261014/shared/model-compare-review-20261014/` |
+| 各轮选模历史、最终面板 | `whai:open-audio-llm/runs/<轮>/tasks/03-select/attempts/*/artifacts/`（8 轮，2026-11-05 补传，清单见 [upload-manifests/](upload-manifests/)） |
 | W&B | entity `1016097967-amphion`，project `open-audio-llm`，run 名前缀 `zh-similar-voice-acp-20261014` 等 |
 
 ## 没做的事
