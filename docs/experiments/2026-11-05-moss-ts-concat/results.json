@@ -1,0 +1,95 @@
+{
+ "date": "2026-11-05",
+ "question": "注册音频拼在混合音频前送 MOSS-Transcribe-Diarize、取 S01，能否替代 AmphionASR TS-ASR",
+ "eval_set": "open-audio-llm/ts-asr-benchmark@v12-20261022",
+ "samples": 26750,
+ "scoring": "AmphionEval scoring v3，两边逐条重算",
+ "baseline": {
+  "model": "054avg3（10.28 版本）",
+  "run": "run-20261028T033033Z-70075026"
+ },
+ "moss": {
+  "model": "MOSS-Transcribe-Diarize 0.9B，官方 vLLM 0.23.1rc1.dev949+g68b4a1d58",
+  "wandb_run": "run-20261105T082033Z-d4697e21",
+  "input": "注册截/补 5 s + 1 s 静音 + 混合音频",
+  "target_rule": "S01，开始时间 ≥ 5.5 s"
+ },
+ "overall": {
+  "base": {
+   "n_pos": 12953,
+   "n_neg": 13797,
+   "cer": 13.07,
+   "miss": 2.85,
+   "fa": 3.28
+  },
+  "s01": {
+   "n_pos": 12953,
+   "n_neg": 13797,
+   "cer": 54.32,
+   "miss": 31.2,
+   "fa": 5.06
+  },
+  "alt": {
+   "n_pos": 12953,
+   "n_neg": 13797,
+   "cer": 53.91,
+   "miss": 31.54,
+   "fa": 4.41
+  }
+ },
+ "difference_ci95_vs_base": {
+  "s01": {
+   "cer": [
+    35.0,
+    48.82
+   ],
+   "miss": [
+    27.58,
+    29.19
+   ],
+   "fa": [
+    1.38,
+    2.2
+   ]
+  },
+  "alt": {
+   "cer": [
+    34.61,
+    48.5
+   ],
+   "miss": [
+    27.91,
+    29.49
+   ],
+   "fa": [
+    0.75,
+    1.51
+   ]
+  }
+ },
+ "moss_diagnostics": {
+  "samples": 26750,
+  "no_speaker_in_enrollment": 163,
+  "several_speakers_in_enrollment": 1186,
+  "enrollment_speaker_not_S01": 275,
+  "segment_spans_enrollment_and_mixture": 366,
+  "decode_truncated": 31
+ },
+ "groups_moss_better_by_2pt": [
+  "目标缺席 · 另一个人说一句短话"
+ ],
+ "groups_total": 46,
+ "business_feedback": {
+  "note": "样本 ID 与场景标签不对应，单独计算",
+  "absent": {
+   "n": 46,
+   "base_fa_pct": 4.35,
+   "moss_fa_pct": 2.17
+  },
+  "present": {
+   "n": 3,
+   "base_miss": 0,
+   "moss_miss": 1
+  }
+ }
+}

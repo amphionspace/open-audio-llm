@@ -1,6 +1,6 @@
 # moss-ts-concat-20261104：注册拼接 + MOSS 说话人日志能否替代 TS-ASR
 
-**结论：不能。** 把注册音频拼在混合音频前送 MOSS-Transcribe-Diarize、取 S01 作为目标人，在 ts-asr-benchmark@v12 全集 26,750 条上，与 10.28 版本（054avg3）逐条配对：目标在场 CER 54.3 对 13.1，漏识 31.2% 对 2.9%，目标缺席误输出 5.1% 对 3.3%，三项差值的 95% 区间都不跨 0。46 个场景组里只有 1 组 MOSS 明显更好。
+**结论：不能。** 把注册音频拼在混合音频前送 MOSS-Transcribe-Diarize、取 S01 作为目标人，在 ts-asr-benchmark@v12 全集 26,750 条上，与 10.28 版本（054avg3）逐条配对：目标在场 CER 54.3 对 13.1，漏识 31.2% 对 2.9%，目标缺席误输出 5.1% 对 3.3%，三项差值的 95% 区间都不跨 0。46 个场景组里只有 1 组 MOSS 明显更好（业务反馈 2 组样本 ID 与场景标签不对应，对比脚本单独计算，见结论文档）。
 
 | 同一批样本、同一打分（v3） | 054avg3 | MOSS·S01 | MOSS·注册主讲人 | MOSS·S01 − 054（95% 区间） |
 |---|---:|---:|---:|---|
@@ -16,7 +16,7 @@
 - 复读：31 条解到 token 上限（"我我我…"），按截断内容计入分数（attempt 001 因此失败，见任务 README）。
 - MOSS 唯一明显更好的组：目标缺席 · 另一个人说一句短话，误输出 2.2% 对 7.1%。真实远场会议在场 CER 接近（AISHELL-4 15.9 对 15.0），但缺席误输出 25.7% 对 5.0%。
 
-逐组表见 [tasks/02-compare/README.md](tasks/02-compare/README.md)。
+逐组表见 [tasks/02-compare/README.md](tasks/02-compare/README.md)；阶段结论见 [docs/experiments/2026-11-05-moss-ts-concat](../../docs/experiments/2026-11-05-moss-ts-concat/README.md)。
 
 ## 做法
 
