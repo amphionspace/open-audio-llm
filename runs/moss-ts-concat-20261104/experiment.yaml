@@ -1,0 +1,12 @@
+version: 1
+name: moss-ts-concat-20261104
+purpose: 检验"注册音频拼在混合音频前送 MOSS-Transcribe-Diarize，取 S01"能否替代 AmphionASR 的 TS-ASR：与 10.28 版本（054avg3）在同一 TS 评测全集上同口径对比
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+inputs:
+  model: /workspace/model/MOSS-Transcribe-Diarize
+  baseline_run: /workspace/data/ae-runs/ts-robust-054-avg3/runs/run-20261028T033033Z-70075026
+tasks:
+- {id: smoke, name: 冒烟（每来源 2 条）, config: configs/smoke.yaml, depends_on: []}
+- {id: eval-v12, name: v12 全集评测, config: configs/eval-v12.yaml, depends_on: [smoke]}
