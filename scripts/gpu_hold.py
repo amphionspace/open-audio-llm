@@ -1,4 +1,4 @@
-"""Fill every visible GPU for ASR- holder jobs on ACP (scripts/acp_holder.py): full utilization and most of the memory.
+"""Fill every visible GPU for AmphionASR- holder jobs on ACP (scripts/acp_holder.py): full utilization and most of the memory.
 
 One process per GPU runs back-to-back bf16 matmuls (the cluster is all A800 80G, 312 TFLOPS bf16) and keeps a
 resident tensor of --memory-fraction of the free memory; a worker that fails is restarted. Stop it by stopping

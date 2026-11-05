@@ -26,7 +26,9 @@ REQUIRED = ("sco_home", "credentials", "workspace", "aec2", "image", "worker_spe
             "nodes", "mounts")
 # The registry serves only its latest release; sco installed from an older one fails every acp call.
 SCO_REGISTRY = "https://sco.sensecore.cn/registry"
-JOB_PREFIX = "ASR-"
+JOB_PREFIX = "AmphionASR-"
+# Jobs submitted before 2026-10-25 carry the old prefix and still count as this project's.
+LEGACY_JOB_PREFIX = "ASR-"
 # Statuses after which the main launcher will never start torchrun for this attempt.
 FINISHED = {"failed", "completed", "interrupted"}
 # Written by rank 0 after recording, W&B verification and storage sync have ended.
@@ -75,7 +77,7 @@ def check(config, attempt=None):
 
 
 def job_name(config, attempt):
-    # Every ACP job of this project starts with ASR- so the pool listing can be filtered by prefix (AGENTS.md).
+    # Every ACP job of this project starts with AmphionASR- so the pool listing can be filtered by prefix (AGENTS.md).
     name = f"{config.get('tracking', {}).get('name', 'open-audio-llm')}-{attempt.name}"
     return name if name.startswith(JOB_PREFIX) else f"{JOB_PREFIX}{name}"
 
