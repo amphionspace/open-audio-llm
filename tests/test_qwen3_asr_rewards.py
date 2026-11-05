@@ -50,6 +50,15 @@ def test_hotword_list_comes_from_the_prompt_not_the_dataset_column():
     assert qwen3_asr.prompt_hotwords(hidden) is None
 
 
+def test_ts_prompt_hotword_line_is_read():
+    from open_audio_llm.tsasr.ts_prompt import TS_CONCAT_SYSTEM, ts_system
+
+    shown = [{"role": "system", "content": ts_system("张伟,章玮")}, {"role": "user", "content": "<audio>"}]
+    plain_ts = [{"role": "system", "content": TS_CONCAT_SYSTEM}, {"role": "user", "content": "<audio>"}]
+    assert qwen3_asr.prompt_hotwords(shown) == "张伟,章玮"
+    assert qwen3_asr.prompt_hotwords(plain_ts) is None
+
+
 def test_latin_hotwords_match_whole_words():
     ref = "language English<asr_text>Call Anna today"
     assert qwen3_asr.hotword("language English<asr_text>call anna today", ref, "Anna,Ann") == 1.0

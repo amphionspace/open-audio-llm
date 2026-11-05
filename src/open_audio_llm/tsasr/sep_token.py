@@ -77,8 +77,8 @@ def default_enroll_n_frames(
     return int(round(float(enroll_sec) * sr)) // int(hop_length)
 
 
-def extract_wav_mel(feature_extractor, wav, sampling_rate: int | None = None):
-    """One clip -> cropped Mel ``(1, n_mels, T)`` plus mask and T."""
+def extract_wav_mel(feature_extractor, wav, sampling_rate: int | None = None, device: str = "cpu"):
+    """One clip -> cropped Mel ``(1, n_mels, T)`` plus mask and T (STFT on ``device``)."""
     import numpy as np
 
     sr = int(sampling_rate or getattr(feature_extractor, "sampling_rate", 16000))
@@ -93,6 +93,7 @@ def extract_wav_mel(feature_extractor, wav, sampling_rate: int | None = None):
         return_tensors="pt",
         padding=True,
         truncation=False,
+        device=device,
     )
     mask = out["attention_mask"]
     feat_len = int(mask.sum(dim=-1)[0].item())
@@ -101,10 +102,12 @@ def extract_wav_mel(feature_extractor, wav, sampling_rate: int | None = None):
     return feat, mask, feat_len
 
 
-def extract_enroll_mix_mel(feature_extractor, enroll_wav, mix_wav, sampling_rate: int | None = None):
+def extract_enroll_mix_mel(
+    feature_extractor, enroll_wav, mix_wav, sampling_rate: int | None = None, device: str = "cpu"
+):
     """Independent Mel for enroll and mix, concatenated along time for transport."""
-    e_f, e_m, e_len = extract_wav_mel(feature_extractor, enroll_wav, sampling_rate)
-    m_f, m_m, _m_len = extract_wav_mel(feature_extractor, mix_wav, sampling_rate)
+    e_f, e_m, e_len = extract_wav_mel(feature_extractor, enroll_wav, sampling_rate, device)
+    m_f, m_m, _m_len = extract_wav_mel(feature_extractor, mix_wav, sampling_rate, device)
     return torch.cat([e_f, m_f], dim=-1), torch.cat([e_m, m_m], dim=-1), e_len
 
 

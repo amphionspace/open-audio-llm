@@ -63,6 +63,17 @@ def test_native_audio_gradient_hook_uses_real_convolution():
     assert tower.get_input_embeddings() is replacement
 
 
+def test_top_level_forward_lists_position_ids_for_swift_pre_forward_hook():
+    import inspect
+    import pytest
+    pytest.importorskip('qwen_asr')
+    from open_audio_llm.integrations.ms_swift.register_qwen3_asr import Qwen3ASRLoader
+    from qwen_asr.core.transformers_backend.modeling_qwen3_asr import Qwen3ASRForConditionalGeneration
+    Qwen3ASRLoader._import_qwen_asr()
+    # Template.pre_forward_hook pops position_ids unless the base model's forward names it.
+    assert 'position_ids' in inspect.signature(Qwen3ASRForConditionalGeneration.forward).parameters
+
+
 def test_torch_profile_window_covers_exactly_the_requested_updates(monkeypatch, tmp_path):
     from open_audio_llm.integrations.ms_swift.performance import TorchProfileCallback
 

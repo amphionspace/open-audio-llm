@@ -243,12 +243,14 @@ class Qwen3ASRLoader(ModelLoader):
             def _set_input_embeddings(self, value):
                 return self.thinker.set_input_embeddings(value)
 
-            def _forward(self, *args, **kwargs):
+            def _forward(self, *args, position_ids=None, **kwargs):
+                # position_ids is named: ms-swift's pre_forward_hook drops inputs that the base model's
+                # forward signature does not list, and the thinker does take explicit positions.
                 # GRPO's log-prob forward skips the Trainer's cast of float inputs to the DeepSpeed dtype.
                 features = kwargs.get('input_features')
                 if torch.is_tensor(features) and features.is_floating_point():
                     kwargs['input_features'] = features.to(self.dtype)
-                return self.thinker.forward(*args, **kwargs)
+                return self.thinker.forward(*args, position_ids=position_ids, **kwargs)
 
             _Cls.get_input_embeddings = _get_input_embeddings
             _Cls.set_input_embeddings = _set_input_embeddings
@@ -343,6 +345,13 @@ class Qwen3ASRTemplate(Template):
         self.sampling_rate = get_env_args('sampling_rate', int, fe.sampling_rate)
         # Use the same hop size for placeholder counts and feature padding.
         self._hop_length = getattr(fe, 'hop_length', 160)
+        # AUDIO_FEATURE_DEVICE=cuda computes the log-Mel STFT on this rank's GPU (GRPO encodes
+        # in the trainer process and its thread pool). The CUDA current device is per thread,
+        # so name the rank's card explicitly instead of "cuda", which pool threads map to card 0.
+        device = get_env_args('audio_feature_device', str, 'cpu')
+        if device == 'cuda':
+            device = f"cuda:{int(os.environ.get('LOCAL_RANK', 0))}"
+        self._feature_device = device
 
     @property
     def feature_extractor(self):
@@ -427,7 +436,8 @@ class Qwen3ASRTemplate(Template):
         if not hasattr(mix_wav, 'shape'):
             mix_wav = self._waveform(mix_wav, enroll=False)
         feat, mask, enroll_n = extract_enroll_mix_mel(
-            self.feature_extractor, enroll_wav, mix_wav, self.sampling_rate)
+            self.feature_extractor, enroll_wav, mix_wav, self.sampling_rate,
+            device=self._feature_device)
         policy = (getattr(inputs, 'extra_kwargs', None) or {}).get('audio_augmentation')
         if policy:
             mix_n = int(feat.shape[-1]) - int(enroll_n)
@@ -549,6 +559,7 @@ class Qwen3ASRTemplate(Template):
             padding='max_length',
             max_length=padded_samples,
             truncation=False,
+            device=self._feature_device,
         )
         # feature_attention_mask: (B, T) bool mask — 1=valid frame, 0=padding.
         # This is what Qwen3ASRForConditionalGeneration.forward() expects.

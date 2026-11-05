@@ -891,14 +891,21 @@ def test_grpo_deepspeed_scheduler_keeps_parameter_groups_aligned():
 
     pipeline = Pipeline()
     pipeline.args = SimpleNamespace(rlhf_type="grpo", _catalog_config={"train": [{}]})
+    audio_ids = {"<|audio_start|>": 151669, "<|audio_end|>": 151670, "<|audio_pad|>": 151676}
+    tokenizer = SimpleNamespace(unk_token_id=None, convert_tokens_to_ids=lambda tokens: [audio_ids[t] for t in tokens])
+    generation_config = SimpleNamespace(suppress_tokens=None)
     trainer = SimpleNamespace(
         args=SimpleNamespace(deepspeed="zero2", optimizer=None),
         train_dataset=[],
         add_callback=lambda callback: None,
         create_optimizer=create_optimizer,
+        processing_class=tokenizer,
+        model=SimpleNamespace(generation_config=generation_config),
     )
     pipeline.train(trainer)
     assert trainer.create_optimizer is create_optimizer
+    # GRPO sampling must never emit audio placeholders (round 9 crashed on one).
+    assert generation_config.suppress_tokens == sorted(audio_ids.values())
 
 
 def test_spec_augment_preserves_lengths_and_padding():

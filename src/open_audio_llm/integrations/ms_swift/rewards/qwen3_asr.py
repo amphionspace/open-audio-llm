@@ -52,11 +52,17 @@ def _contains(haystack: list[str], needle: list[str]) -> bool:
 
 
 def prompt_hotwords(messages) -> str | None:
-    """The list the model was shown: the system prompt's ``Hotwords:`` line, None without one."""
+    """The list the model was shown: the system prompt's ``Hotwords:`` line, None without one.
+
+    Plain ASR sends the line as the whole system prompt; TS-ASR (``ts_prompt.ts_system``) puts it on
+    its own line after the TS instruction, so every line is checked.
+    """
     for message in messages or []:
-        content = str(message.get("content") or "")
-        if message.get("role") == "system" and content.startswith("Hotwords:"):
-            return content.split(":", 1)[1].strip()
+        if message.get("role") != "system":
+            continue
+        for line in str(message.get("content") or "").splitlines():
+            if line.startswith("Hotwords:"):
+                return line.split(":", 1)[1].strip()
     return None
 
 

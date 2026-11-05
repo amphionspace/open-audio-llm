@@ -2,7 +2,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from open_audio_llm.integrations.ms_swift.grpo_contrast import contrast_indices, replace_with_reference
+from open_audio_llm.integrations.ms_swift.grpo_contrast import (
+    contrast_indices,
+    presence_directions,
+    replace_with_reference,
+)
 
 EMPTY = "language None<asr_text>"
 SPEECH = "language Chinese<asr_text>你好"
@@ -46,3 +50,14 @@ def test_no_replacement_when_no_generation_finished():
     group = [sample(SPEECH, [5], "length"), sample(SPEECH, [6], "length")]
     assert not replace_with_reference(group, group[1], lambda text: [1], {99})
     assert group[1].response_token_ids == [6]
+
+
+def test_presence_directions_count_only_groups_that_disagree_on_writing():
+    outputs = [
+        SPEECH, EMPTY,  # target absent, mixed: pushed toward empty output
+        SPEECH, SPEECH,  # target absent, all write: no presence signal among the samples
+        EMPTY, SPEECH,  # speech, mixed: pushed toward writing
+        SPEECH, "language Chinese<asr_text>您好",  # speech, all write: accuracy only
+    ]
+    solutions = [EMPTY] * 4 + [SPEECH] * 4
+    assert presence_directions(outputs, solutions, 2) == (1, 1)

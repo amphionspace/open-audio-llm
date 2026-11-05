@@ -20,6 +20,7 @@ def audio_template(request, monkeypatch):
     template = object.__new__(cls)
     template.sampling_rate = 16000
     template._hop_length = 160
+    template._feature_device = 'cpu'
     monkeypatch.setattr(module.Template, "_data_collator", lambda *a, **kw: {})
     monkeypatch.setattr(module.Template, "_encode", lambda *a, **kw: {})
     return module, template
@@ -139,6 +140,7 @@ def test_ts_encode_uses_independent_mel_and_sep_pad_count(monkeypatch):
     template = object.__new__(module.Qwen3ASRTemplate)
     template.sampling_rate = 16000
     template._hop_length = 160
+    template._feature_device = 'cpu'
     template._feature_extractor = WhisperFeatureExtractor(
         feature_size=128, sampling_rate=16000)
     captured = {}
@@ -184,6 +186,7 @@ def test_ts_encode_aligns_activity_to_mixture_mel_frames_and_collates_with_paddi
     template = object.__new__(module.Qwen3ASRTemplate)
     template.sampling_rate = 16000
     template._hop_length = 160
+    template._feature_device = 'cpu'
     template._feature_extractor = WhisperFeatureExtractor(feature_size=128, sampling_rate=16000)
     monkeypatch.setattr(module.Template, "_encode", lambda self, inputs: self.replace_tag("audio", 0, inputs) and {})
     enroll, mix = np.full(16000, 0.1, dtype=np.float32), np.full(8000, 0.2, dtype=np.float32)
