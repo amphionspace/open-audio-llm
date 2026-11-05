@@ -61,4 +61,4 @@ COS 上还有更早的 `20260913` 版（`AmphionASR-1.7B-release-20260913T055431
 | ts-asr-farfield v1 | `396f25a7` | `20324220` | `75249553` |
 | ts-asr-nearfar v1 | `68e05825` | `8844ddc1` | `5de94f90` |
 
-运行输出在 `/workspace/data/ae-runs/<模型>/runs/run-<日期>-<运行号>/`，分析结果在 [../results/full/](../results/full/)。0923 版的配置与 handoff 在 `checkpoint-33407/`，0926 版在 `checkpoint-34479/`，Cocktail 在 `cocktail/`。
+运行输出已发布到 COS `anfeiweng-audiollm-resource-1373259071:amphion-eval/runs/run-<日期>-<运行号>/`（下表各运行号均已核对存在），分析结果在 [../results/full/](../results/full/)。0923 版的配置与 handoff 在 `checkpoint-33407/`，0926 版在 `checkpoint-34479/`，Cocktail 在 `cocktail/`。

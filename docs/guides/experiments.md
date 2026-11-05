@@ -13,7 +13,7 @@
    - 180 秒会议评测集（`evaluate-meeting-benchmark` → `score-meeting-benchmark`）：中文、英文、6/8/10 人和复读条数；MOSS 输出已缓存，复用即可。该集已登记为 AmphionEval 共享评测集 `open-audio-llm/meeting-180s@20261008`（数据 `meeting_180s_benchmark@v1-20261008`），训练后评测可直接写 `eval_set` 引用。
    新 checkpoint 只需加入 `models`，已完成的推理通过 `completed_inference` 复用。
 4. **归档**：执行记录、原始输出、逐条打分和保留的 checkpoint 用 `scripts/stage_experiment_upload.py` 暂存后 `ab push` 到 `whai:open-audio-llm/runs/<实验>/`，路径与本地一致；清单和排除规则提交到 `docs/experiments/<日期>/`。保留：每次训练最后可续训的 checkpoint 和选中的最佳点；合并模型、已确认退化的中间点可不传，但须在清单中写明。
-5. **结论**：阶段结束时写 `docs/experiments/<日期>/README.md`（结论先行，执行表含做了什么、结果、决定）和 `results.json`（机器可读的关键指标）。失败或中止的执行同样记录原因，不删除。
+5. **结论**：阶段结束时写 `docs/experiments/<日期>/README.md`（结论先行，执行表含做了什么、结果、决定）和 `results.json`（机器可读的关键指标）。结论文档和 `results.json` 引用的结果目录（执行产物、评测运行、分析与听审目录）一律写对象存储路径（`whai:...`，或已 `ae publish` 的 COS 路径），先上传再引用，不写本机目录；本机已删除、远端也没有的，写明缺失和核对日期。复现命令里的输出目录与 registry 配置不在此列。失败或中止的执行同样记录原因，不删除。
 
 每个新实验根目录只放中文概览、实验方案和目录。任务输入、完成条件、进展、结果与证据链接写在任务 README；逐次执行细节放到 attempts，执行完成与质量达标分开记录。
 

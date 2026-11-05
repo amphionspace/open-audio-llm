@@ -208,12 +208,6 @@ CER %。“—”表示该列没有这个集。
 
 ## 证据
 
-- 服务日志与评测日志：`/workspace/data/ae-runs/streaming-s0-logs/`。
-  - A1 第一次启动时误用了 18130 端口，和别人已有的服务冲突。已停止，改用 18190 重跑。
-  - 冲突经过见 `serve-34479-win1s-port18130-collision.log`。
-  - 正式的 A1 运行确认连接的是 `http://127.0.0.1:18190`、模型 `amphionasr-v3-asr-win1s`。
-- 评测运行目录：
-  - `/workspace/data/ae-runs/streaming-s0-34479-win1s/runs/`
-  - `/workspace/data/ae-runs/streaming-s0-qwen3-asr-win1s/runs/`
-  - `/workspace/data/ae-runs/x2streaming-asr-4b-1009/runs/`
+- 原始运行目录与服务日志未归档到对象存储：本机 `ae-runs` 下的 `streaming-s0-logs`、`streaming-s0-34479-win1s`、`streaming-s0-qwen3-asr-win1s`、`x2streaming-asr-4b-1009` 已被清理，COS `amphion-eval` 与 `whai:open-audio-llm` 也没有这三个运行（2026-11-05 核对）。现存证据只有 W&B 上的指标与本文表格。
+  - A1 第一次启动时误用了 18130 端口，和别人已有的服务冲突，已停止并改用 18190 重跑；正式的 A1 运行连接的是 `http://127.0.0.1:18190`、模型 `amphionasr-v3-asr-win1s`（冲突日志随目录一起丢失）。
 - W&B：项目 `1016097967-amphion/open-audio-llm`，run 名就是运行号。

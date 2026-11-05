@@ -16,7 +16,7 @@
 | `quarantine` | asr | 425 | 3.1 h | 音频没过质检的条目，保留原因，不打分 |
 
 对象存储：
-- **数据**：本机目录 `/workspace/data/datasets/context_correction_zh/`（版本记录、音频、生成和挖掘的中间产物、LLM 调用存档，3,225 个文件、2.1 GiB）原样镜像在 `whai:audio-data/datasets/context_correction_zh/`；
+- **数据**：`whai:audio-data/datasets/context_correction_zh/`（版本记录、音频、生成和挖掘的中间产物、LLM 调用存档，3,225 个文件、2.1 GiB）；
 - **评测集定义**：已发布到 COS，`anfeiweng-audiollm-resource-1373259071:amphion-eval/eval-sets/open-audio-llm/context-correction-zh@v1-20261018/`。
 
 题目按子类型成对出：
@@ -38,7 +38,7 @@
 
 ## 怎么造的（LLM 出内容，代码只做机械校验）
 
-脚本在 audio-data-contract `scripts/context_correction/`，配方 `recipe.yaml`。所有 LLM 调用（prompt、模型、原始回复）存档在 `/workspace/data/datasets/context_correction_zh/source/v1-20261018/llm-log/`。
+脚本在 audio-data-contract `scripts/context_correction/`，配方 `recipe.yaml`。所有 LLM 调用（prompt、模型、原始回复）存档在 `whai:audio-data/datasets/context_correction_zh/source/v1-20261018/llm-log/`。
 
 | 步骤 | 做法 | 结果 |
 | --- | --- | --- |

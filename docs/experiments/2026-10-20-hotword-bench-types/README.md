@@ -249,7 +249,7 @@ Qwen 用 8001 上现成的 vLLM 0.32.0 服务，贪心解码，见上文"v3 正�
 
 ## 证据
 
-- 标注记录：`/workspace/data/datasets/hotword_bench/source/v3-20261020/`。
+- 标注记录：`whai:audio-data/datasets/hotword_bench/source/v3-20261020/`。
   - `mined/` 下是标注和复核结果；`llm-log/` 下是每次 LLM 调用的 prompt 和原始回复。
   - `annotate.log`、`build.log` 是运行日志。
   - `rescored/` 下是两个模型的重算 summary、表格和丢词统计。
