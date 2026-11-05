@@ -363,3 +363,59 @@ def test_scene_info_spans_follow_each_track():
             assert (marked & ~heard).sum() <= 2 * len(spans)  # extra marks only where a span starts or ends mid-frame
         assert (3 in codes) == (mode == "burst")  # the burst target always has company
 
+
+
+def test_another_speaker_can_open_the_window_before_the_target():
+    target = _tone(200, 2.0)
+    config = OnlineMixConfig(interferer_probs=(0, 1), other_first_prob=1.0, other_first_gap_seconds=(0.5, 0.5),
+                             sir_db=(0, 0), speaker_rir_prob=0)
+    info = {}
+    mixture, count = build_mixture(random.Random(0), target, config, absent=False,
+                                   speech_loader=lambda r, sr: _tone(500, 1.0, 0.3), rir_loader=None,
+                                   sampling_rate=SR, info=info)
+    assert count == 1 and info["other_spans"] == [(0, SR)]
+    assert info["lead"] == pytest.approx(1.5) and info["target_spans"] == [(int(1.5 * SR), int(3.5 * SR))]
+    # Only the interferer before the target, nothing at all in the gap, the target alone after it.
+    assert _rms(mixture[:SR]) == pytest.approx(_rms(target), rel=0.01)  # 0 dB SIR
+    assert not mixture[SR : int(1.5 * SR)].any()
+    np.testing.assert_allclose(mixture[int(1.5 * SR) :], target, atol=1e-6)
+    # An absent target, or no interferer drawn, leaves the window as before.
+    absent, _ = build_mixture(random.Random(0), target, config, absent=True,
+                              speech_loader=lambda r, sr: _tone(500, 1.0, 0.3), rir_loader=None, sampling_rate=SR)
+    assert len(absent) == 2 * SR
+    alone = OnlineMixConfig(interferer_probs=(1.0,), other_first_prob=1.0, speaker_rir_prob=0)
+    assert len(_impulse_free(alone)[0]) == 2 * SR
+
+
+def test_other_first_off_keeps_the_random_stream():
+    config = OnlineMixConfig(interferer_probs=(0, 1), speaker_rir_prob=0)
+    a, _ = _impulse_free(config, seed=7)
+    b, _ = _impulse_free(OnlineMixConfig(interferer_probs=(0, 1), speaker_rir_prob=0, other_first_prob=0.0,
+                                         enrollment_channel_prob=0.0), seed=7)
+    assert np.array_equal(a, b)
+
+
+def test_enrollment_from_another_recording_chain_is_band_limited_and_noisy():
+    from open_audio_llm.data.ts_online import _cutoff, degrade_enrollment
+
+    speech = _tone(1000, 1.0, 0.2) + _tone(6000, 1.0, 0.2)
+    config = OnlineMixConfig(enrollment_channel_prob=1.0, enrollment_lowpass_hz=(3500, 5000),
+                             enrollment_channel_snr_db=(20, 20), floor_kinds=(1.0, 0.0, 0.0))
+    out = degrade_enrollment(random.Random(0), speech, config, None, SR)
+    spectrum = np.abs(np.fft.rfft(out))
+    assert spectrum[6000] < 0.05 * spectrum[1000]  # 6 kHz is above every drawn cutoff
+    residual = out - degrade_enrollment(random.Random(0), speech, OnlineMixConfig(
+        enrollment_lowpass_prob=1.0, enrollment_lowpass_hz=(3500, 5000)), None, SR)
+    # The floor sits 20 dB under the band-limited speech (its own RMS, not an absolute level).
+    assert 20 * np.log10(_rms(out - residual) / _rms(residual)) == pytest.approx(20, abs=1.5)
+    cutoffs = {round(_cutoff(random.Random(seed), config)) for seed in range(20)}
+    assert min(cutoffs) >= 3500 and max(cutoffs) <= 5000 and len(cutoffs) > 10
+
+
+@pytest.mark.parametrize("bad", [{"other_first_prob": 1.5}, {"other_first_gap_seconds": (1.0, 0.5)},
+                                 {"other_first_gap_seconds": (-0.1, 0.5)}, {"enrollment_channel_prob": -0.1},
+                                 {"enrollment_channel_snr_db": (25, 15)}, {"enrollment_lowpass_hz": (5000, 3500)},
+                                 {"enrollment_lowpass_hz": 0}])
+def test_new_augmentation_knobs_are_validated(bad):
+    with pytest.raises(ValueError):
+        OnlineMixConfig(**bad)

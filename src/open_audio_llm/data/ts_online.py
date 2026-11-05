@@ -45,6 +45,12 @@ class OnlineMixConfig:
     # enters late, leaves early or both; interferers and the noise floor fill the rest.
     entry_prob: float = 0.0
     lead_seconds: tuple[float, float] = (0.5, 8.0)
+    # Another speaker talks first: one interferer's utterance opens the window on its own and the
+    # target starts other_first_gap_seconds after it. Without it the target starts at sample 0 of
+    # nearly every online mix, so "the first voice is the target" goes unpunished (2026-11-05: a
+    # 3-speaker room recording where every release followed whoever spoke first).
+    other_first_prob: float = 0.0
+    other_first_gap_seconds: tuple[float, float] = (0.2, 1.0)
     trail_seconds: tuple[float, float] = (0.5, 6.0)
     # A speech-free window (noise, music) with an empty transcript replaces the mixture.
     nonspeech_prob: float = 0.0
@@ -56,7 +62,13 @@ class OnlineMixConfig:
     floor_kinds: tuple[float, float, float] = (0.15, 0.15, 0.70)
     # Enrollment through a narrowband channel, or recorded with a silent start.
     enrollment_lowpass_prob: float = 0.0
-    enrollment_lowpass_hz: float = 4000.0
+    # A cutoff in Hz, or a (low, high) range drawn per enrollment.
+    enrollment_lowpass_hz: float | tuple[float, float] = 4000.0
+    # Enrollment from another recording chain than the mixture: band-limited (enrollment_lowpass_hz)
+    # and noisy at once, at enrollment_channel_snr_db against its own speech. The 2026-11-05 badcase
+    # voiceprint had a noise floor 28 dB higher and 6 dB less energy above 4 kHz than the session.
+    enrollment_channel_prob: float = 0.0
+    enrollment_channel_snr_db: tuple[float, float] = (15.0, 25.0)
     enrollment_lead_silence_prob: float = 0.0
     enrollment_lead_silence_seconds: tuple[float, float] = (0.3, 2.0)
     # Enrollment spoken quietly in an unchanged room: the speech is turned down by
@@ -82,17 +94,23 @@ class OnlineMixConfig:
         if len(self.floor_kinds) != 3 or any(p < 0 for p in self.floor_kinds) or not np.isclose(sum(self.floor_kinds), 1.0):
             raise ValueError("floor_kinds must be three non-negative weights that sum to 1")
         for name in ("entry_prob", "nonspeech_prob", "floor_prob", "enrollment_lowpass_prob",
-                     "enrollment_lead_silence_prob", "enrollment_quiet_prob", "telephony_prob", "clip_prob"):
+                     "enrollment_lead_silence_prob", "enrollment_quiet_prob", "telephony_prob", "clip_prob",
+                     "other_first_prob", "enrollment_channel_prob"):
             if not 0 <= getattr(self, name) <= 1:
                 raise ValueError(f"{name} must be between 0 and 1")
         for name in ("lead_seconds", "trail_seconds", "nonspeech_seconds", "nonspeech_level_dbfs",
                      "floor_dbfs", "enrollment_lead_silence_seconds", "enrollment_quiet_db", "clip_gain_db",
-                     "alternate_gap_seconds", "burst_gap_seconds", "short_gap_seconds"):
+                     "alternate_gap_seconds", "burst_gap_seconds", "short_gap_seconds",
+                     "other_first_gap_seconds", "enrollment_channel_snr_db"):
             pair = getattr(self, name)
             if len(pair) != 2 or pair[0] > pair[1]:
                 raise ValueError(f"{name} must be an ordered pair")
-        if self.nonspeech_seconds[0] <= 0 or self.enrollment_lowpass_hz <= 0:
-            raise ValueError("nonspeech_seconds and enrollment_lowpass_hz must be positive")
+        cutoff = self.enrollment_lowpass_hz
+        cutoff = tuple(cutoff) if isinstance(cutoff, (list, tuple)) else (cutoff,)
+        if self.nonspeech_seconds[0] <= 0 or len(cutoff) not in (1, 2) or min(cutoff) <= 0 or cutoff != tuple(sorted(cutoff)):
+            raise ValueError("nonspeech_seconds must be positive; enrollment_lowpass_hz a positive Hz or ordered pair")
+        if self.other_first_gap_seconds[0] < 0:
+            raise ValueError("other_first_gap_seconds must be non-negative")
         for name in ("absent_prob", "speaker_rir_prob", "speaker_far_rir_prob", "enrollment_contam_prob"):
             if not 0 <= getattr(self, name) <= 1:
                 raise ValueError(f"{name} must be between 0 and 1")
@@ -220,16 +238,24 @@ def build_mixture(rng, target, config, *, absent, speech_loader, rir_loader, sam
     target = np.asarray(target, dtype=np.float32)
     length = len(target)
     lead, trail = timing(rng, config, sampling_rate)
-    window = lead + length + trail
     probs = config.absent_interferer_probs if absent else config.interferer_probs
     count = _draw_count(rng, probs)
+    first = None
+    if not absent and count and config.other_first_prob and rng.random() < config.other_first_prob:
+        # Replaces the drawn lead: the opening interferer's utterance plus a gap.
+        first = reverberate(rng, speech_loader(rng, sampling_rate), config, rir_loader, sampling_rate)
+        lead = len(first) + int(rng.uniform(*config.other_first_gap_seconds) * sampling_rate)
+    window = lead + length + trail
     present = reverberate(rng, target, config, rir_loader, sampling_rate)
     reference = _rms(present[np.abs(present) > 0])
     mixture = np.zeros(window, dtype=np.float32)
     if not absent:
         mixture[lead : lead + length] = present
     other_spans = []
-    for _ in range(count):
+    if first is not None:
+        mixture[: len(first)] += _scale_to(first, reference, rng.uniform(*config.sir_db))
+        other_spans.append((0, len(first)))
+    for _ in range(count - (first is not None)):
         other = reverberate(rng, speech_loader(rng, sampling_rate), config, rir_loader, sampling_rate)
         other, span = _place(rng, other, window)
         other_spans.append(span)
@@ -417,13 +443,23 @@ def overdrive(rng, audio, config):
     return np.clip(audio / peak * gain, -1.0, 1.0).astype(np.float32)
 
 
+def _cutoff(rng, config):
+    hz = config.enrollment_lowpass_hz
+    return rng.uniform(*hz) if isinstance(hz, (list, tuple)) else hz
+
+
 def degrade_enrollment(rng, enrollment, config, noise_loader, sampling_rate):
     """Turn the enrollment down over a noise floor, band-limit it and/or give it a quiet start."""
     if config.enrollment_quiet_prob and rng.random() < config.enrollment_quiet_prob:
         gain = 10 ** (rng.uniform(*config.enrollment_quiet_db) / 20)
         enrollment = enrollment * gain + noise_floor(rng, len(enrollment), config, noise_loader, sampling_rate)
     if config.enrollment_lowpass_prob and rng.random() < config.enrollment_lowpass_prob:
-        enrollment = lowpass(enrollment, config.enrollment_lowpass_hz, sampling_rate)
+        enrollment = lowpass(enrollment, _cutoff(rng, config), sampling_rate)
+    if config.enrollment_channel_prob and rng.random() < config.enrollment_channel_prob:
+        enrollment = lowpass(enrollment, _cutoff(rng, config), sampling_rate)
+        floor = noise_floor(rng, len(enrollment), config, noise_loader, sampling_rate)
+        speech = _rms(enrollment[np.abs(enrollment) > 0])
+        enrollment = enrollment + _scale_to(floor, speech, rng.uniform(*config.enrollment_channel_snr_db))
     if config.enrollment_lead_silence_prob and rng.random() < config.enrollment_lead_silence_prob:
         pad = int(rng.uniform(*config.enrollment_lead_silence_seconds) * sampling_rate)
         enrollment = np.concatenate([noise_floor(rng, pad, config, noise_loader, sampling_rate), enrollment])
