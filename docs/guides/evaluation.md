@@ -44,7 +44,7 @@ v2 相对 v1 的变化：`checkpoint` 不再保证存在于本地，新增 `chec
 | --- | --- | --- |
 | 普通 ASR | 空字符串 | 原始音频 |
 | 热词 ASR | `Hotwords: w1,w2` | 原始音频 |
-| TS-ASR | `ts_prompt.TS_CONCAT_SYSTEM`；有热词时换行追加 `Hotwords: ...` | 注册音频截断或补零到 3 秒，后面紧接混合音频，中间不插静音 |
+| TS-ASR | `ts_prompt.TS_SYSTEM`；有热词时换行追加 `Hotwords: ...` | 注册音频截断或补零到 `enroll_seconds`（评测与交付用 5 秒），后面紧接混合音频，中间不插静音；请求顶层带 `mm_processor_kwargs.enroll_seconds` |
 
 - TS-ASR 服务必须用 `serve/tsasr.yaml` 启动（`AMPHION_TSASR_INSERT_SEP=1`），由服务端在两段之间插入可学习的 `[SEP]`。拼接的参考实现是 `open_audio_llm.tsasr.concat_audio.pack_ts_transport_b64`。客户端按本节规则自行实现，不 import 这个函数。
 - 模型原始输出形如 `language Chinese<asr_text>转写文本`。打分前去掉 `<asr_text>` 前面的语言前缀。

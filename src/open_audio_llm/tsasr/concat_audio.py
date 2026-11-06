@@ -201,7 +201,7 @@ def pack_ts_transport_b64(enroll_b64: str, mix_b64: str) -> str:
     """Pack the served TS-ASR request audio: 3s enrollment immediately followed by the mixture.
 
     The TS-ASR vLLM service accepts one audio per request, so callers send this
-    waveform together with ``ts_prompt.TS_CONCAT_SYSTEM``.
+    waveform together with ``ts_prompt.TS_SYSTEM``.
     """
     enroll, enroll_sr = sf.read(io.BytesIO(base64.b64decode(enroll_b64)), dtype="float32")
     mix, mix_sr = sf.read(io.BytesIO(base64.b64decode(mix_b64)), dtype="float32")

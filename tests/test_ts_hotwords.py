@@ -7,15 +7,16 @@ from audio_data_contract import AudioRecord, AudioRef, AudioSlot
 from open_audio_llm.data.hotwords import sample_ts_hotwords
 from open_audio_llm.data.online_dataset import OnlineAudioDataset
 from open_audio_llm.data.records import ResolvedAudioRecord
-from open_audio_llm.tsasr.ts_prompt import TS_CONCAT_SYSTEM, ts_system
+from open_audio_llm.tsasr.ts_prompt import TS_SYSTEM, ts_system
 
 POOL = [f"pool{i}" for i in range(200)]
 
 
 def test_ts_system_without_hotwords_is_the_fixed_prompt():
-    assert ts_system() == TS_CONCAT_SYSTEM
-    assert ts_system("N/A") == TS_CONCAT_SYSTEM
-    assert ts_system("e警保,义警") == TS_CONCAT_SYSTEM + "\nHotwords: e警保,义警"
+    assert TS_SYSTEM == "Transcribe only the enrolled speaker. Output nothing if they do not speak."
+    assert ts_system() == TS_SYSTEM
+    assert ts_system("N/A") == TS_SYSTEM
+    assert ts_system("e警保,义警") == TS_SYSTEM + "\nHotwords: e警保,义警"
 
 
 def test_list_keeps_every_target_word_and_only_real_interferer_words():
@@ -66,7 +67,7 @@ def test_ts_sample_carries_the_list_and_keeps_the_transcript(target):
                     ts_hotword_prompt_prob=1.0)
     samples = [data[(epoch, 0, None)] for epoch in range(40)]
     systems = [s["messages"][0]["content"] for s in samples]
-    assert all(s == TS_CONCAT_SYSTEM or s.startswith(TS_CONCAT_SYSTEM + "\nHotwords: ") for s in systems)
+    assert all(s == TS_SYSTEM or s.startswith(TS_SYSTEM + "\nHotwords: ") for s in systems)
     if target:  # a present target always lists its own word
         assert all("e警保" in s for s in systems)
     else:  # an absent target's list holds only other people's and unspoken words; some draws list nothing
@@ -77,7 +78,7 @@ def test_ts_sample_carries_the_list_and_keeps_the_transcript(target):
 def test_ts_hotwords_off_keeps_the_fixed_prompt():
     pytest.importorskip("qwen_asr")
     data = _Dataset([ResolvedAudioRecord(_ts_record("打开e警保。"))], message_format="qwen3_asr")
-    assert all(data[(epoch, 0, None)]["messages"][0]["content"] == TS_CONCAT_SYSTEM for epoch in range(10))
+    assert all(data[(epoch, 0, None)]["messages"][0]["content"] == TS_SYSTEM for epoch in range(10))
 
 
 def test_confusables_join_plain_and_ts_lists():
