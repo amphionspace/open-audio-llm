@@ -81,11 +81,14 @@ class MTPModule(nn.Module):
 
     @classmethod
     def from_thinker(cls, thinker):
-        """Initialised from the backbone: its last decoder layer and final norm, ``fc = [0 | I]``.
+        """Starts by passing the backbone's output through: ``fc = [0 | I]``, the last decoder
+        layer's weights with zero output projections (``o_proj``, ``down_proj``), unit norms.
 
-        With that ``fc`` the first pass starts as one more application of the last layer to the
-        backbone's output, so the joint loss starts near the backbone's own next-token loss
-        instead of a random head's ~12 nats; the embedding half of ``fc`` learns from zero.
+        The first pass then returns ``h / rms(h)`` for the backbone's final-norm output ``h``:
+        the backbone's own next-token logits up to a positive scale, a few nats from the token
+        after next. Running the copied layer on that normalised input instead started at about
+        14 nats, worse than uniform (11.9). The embedding half of ``fc`` and both output
+        projections learn from zero.
         """
         text = thinker.config.text_config
         module = cls(
@@ -98,7 +101,8 @@ class MTPModule(nn.Module):
         module.to(device=reference.device, dtype=reference.dtype)
         with torch.no_grad():
             module.layers[0].load_state_dict(thinker.model.layers[-1].state_dict())
-            module.norm.weight.copy_(thinker.model.norm.weight)
+            module.layers[0].self_attn.o_proj.weight.zero_()
+            module.layers[0].mlp.down_proj.weight.zero_()
             hidden = text.hidden_size
             module.fc.weight.zero_()
             module.fc.weight[:, hidden:].copy_(torch.eye(hidden, dtype=module.fc.weight.dtype))

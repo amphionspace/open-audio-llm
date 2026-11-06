@@ -133,15 +133,22 @@ class _TinyASR(torch.nn.Module):
                             use_cache=use_cache)
 
 
-def test_from_thinker_starts_as_the_last_layer_on_the_backbone_output():
+def test_from_thinker_starts_as_the_identity_on_the_backbone_output():
     model = _TinyASR()
     module = MTPModule.from_thinker(model.thinker)
     last = model.thinker.model.layers[-1].state_dict()
     for name, value in module.layers[0].state_dict().items():
-        torch.testing.assert_close(value, last[name])
-    hidden = torch.randn(1, 5, 16)
-    fused = module.fc(torch.cat((torch.randn(1, 5, 16), module.pre_fc_norm_hidden(hidden)), -1))
-    torch.testing.assert_close(fused, module.pre_fc_norm_hidden(hidden))
+        if name in ("self_attn.o_proj.weight", "mlp.down_proj.weight"):
+            assert not value.any()
+        else:
+            torch.testing.assert_close(value, last[name])
+    with torch.no_grad():
+        model.thinker.model.norm.weight.uniform_(0.5, 1.5)
+        hidden = model.thinker.model.norm(torch.randn(1, 5, 16) * 3)
+        out = module.unrolled(torch.randn(1, 5, 16), hidden, 1)[0]
+    # The backbone's own logits up to a positive per-position scale.
+    torch.testing.assert_close(out, hidden / hidden.pow(2).mean(-1, keepdim=True).add(1e-6).sqrt(),
+                               rtol=1e-4, atol=1e-5)
 
 
 def _batch():
