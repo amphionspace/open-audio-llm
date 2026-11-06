@@ -193,6 +193,54 @@ def save_mtp(module, directory, *, vocab_size, info):
         indent=1) + "\n")
 
 
+def _own_lr_groups(trainer, module, lr):
+    if lr is None:
+        return
+    if not 0 < lr or not math.isfinite(lr):
+        raise ValueError("joint_mtp_lr must be positive")
+    # The module starts from the backbone-based init while the backbone fine-tunes at a few
+    # 1e-6; its own parameter groups keep the scheduler's shape at this peak instead.
+    create_optimizer = trainer.create_optimizer
+    own = {id(p) for p in module.parameters()}
+
+    def create_optimizer_with_mtp():
+        optimizer = create_optimizer()
+        if any(group.get("joint_mtp") for group in optimizer.param_groups):
+            return optimizer
+        extra = []
+        for group in optimizer.param_groups:
+            params = [p for p in group["params"] if id(p) in own]
+            if params:
+                group["params"] = [p for p in group["params"] if id(p) not in own]
+                extra.append({**{k: v for k, v in group.items() if k != "params"},
+                              "params": params, "lr": lr, "joint_mtp": True})
+        optimizer.param_groups[:] = [group for group in optimizer.param_groups if group["params"]]
+        for group in extra:
+            optimizer.add_param_group(group)
+        return optimizer
+
+    trainer.create_optimizer = create_optimizer_with_mtp
+
+
+def _save_split(trainer, module, model, thinker, weight, steps, decay, init):
+    """Backbone into model.safetensors as before, the module into mtp/."""
+    save = trainer._save_model
+
+    def save_with_mtp(self, output_dir=None, state_dict=None):
+        output_dir = output_dir or self.args.output_dir
+        if state_dict is None:
+            state_dict = self.model.state_dict()
+        save(output_dir, {k: v for k, v in state_dict.items() if not k.startswith(f"{MTP}.")})
+        if self.args.should_save:
+            save_mtp(module, Path(output_dir) / MTP, vocab_size=thinker.config.text_config.vocab_size,
+                     info={"backbone": getattr(model.config, "_name_or_path", None),
+                           "global_step": self.state.global_step, "joint_mtp_weight": weight,
+                           "train_steps": steps, "step_decay": decay, "init": init,
+                           "layout": "qwen3_next_mtp with a dense Qwen3 decoder layer"})
+
+    trainer._save_model = MethodType(save_with_mtp, trainer)
+
+
 def enable_joint_mtp(trainer, weight, steps=1, decay=0.8, init=None, lr=None):
     """Add a DeepSeek-V3 style MTP module to supervised-head SFT and train it with the model.
 
@@ -213,31 +261,7 @@ def enable_joint_mtp(trainer, weight, steps=1, decay=0.8, init=None, lr=None):
 
         module.load_state_dict(load_file(init))
     model.add_module(MTP, module)
-    if lr is not None:
-        if not 0 < lr or not math.isfinite(lr):
-            raise ValueError("joint_mtp_lr must be positive")
-        # The module starts from the backbone-based init while the backbone fine-tunes at a few
-        # 1e-6; its own parameter groups keep the scheduler's shape at this peak instead.
-        create_optimizer = trainer.create_optimizer
-        own = {id(p) for p in module.parameters()}
-
-        def create_optimizer_with_mtp():
-            optimizer = create_optimizer()
-            if any(group.get("joint_mtp") for group in optimizer.param_groups):
-                return optimizer
-            extra = []
-            for group in optimizer.param_groups:
-                params = [p for p in group["params"] if id(p) in own]
-                if params:
-                    group["params"] = [p for p in group["params"] if id(p) not in own]
-                    extra.append({**{k: v for k, v in group.items() if k != "params"},
-                                  "params": params, "lr": lr, "joint_mtp": True})
-            optimizer.param_groups[:] = [group for group in optimizer.param_groups if group["params"]]
-            for group in extra:
-                optimizer.add_param_group(group)
-            return optimizer
-
-        trainer.create_optimizer = create_optimizer_with_mtp
+    _own_lr_groups(trainer, module, lr)
     lm_head = thinker.lm_head
     embed_tokens = thinker.get_input_embeddings()
     forward = model.forward
@@ -278,21 +302,76 @@ def enable_joint_mtp(trainer, weight, steps=1, decay=0.8, init=None, lr=None):
             pending.clear()
         return log(logs, *args, **kwargs)
 
-    save = trainer._save_model
-
-    def save_with_mtp(self, output_dir=None, state_dict=None):
-        output_dir = output_dir or self.args.output_dir
-        if state_dict is None:
-            state_dict = self.model.state_dict()
-        save(output_dir, {k: v for k, v in state_dict.items() if not k.startswith(f"{MTP}.")})
-        if self.args.should_save:
-            save_mtp(module, Path(output_dir) / MTP, vocab_size=thinker.config.text_config.vocab_size,
-                     info={"backbone": getattr(model.config, "_name_or_path", None),
-                           "global_step": self.state.global_step, "joint_mtp_weight": weight,
-                           "train_steps": steps, "step_decay": decay, "init": init,
-                           "layout": "qwen3_next_mtp with a dense Qwen3 decoder layer"})
-
     model.forward = MethodType(joint_forward, model)
     trainer.log = MethodType(log_with_mtp, trainer)
-    trainer._save_model = MethodType(save_with_mtp, trainer)
+    _save_split(trainer, module, model, thinker, weight, steps, decay, init)
+    return module
+
+
+def install_grpo_mtp(trainer, weight, steps=1, decay=0.8, init=None, lr=None):
+    """Keep training a joint MTP module during GRPO on the policy's own best completion.
+
+    Each micro-batch holds one prompt's generations. After the GRPO loss, the completion with the
+    highest advantage is run once more as an ordinary causal row (prompt + completion, right padded)
+    and ``weight`` times the MTP cross entropy on its completion tokens joins the loss, so the module
+    tracks the moving policy on the text it actually generates. Rows that are not right padded skip
+    the MTP term (counted as ``mtp/skipped``).
+    """
+    if not 0 < weight or not math.isfinite(weight):
+        raise ValueError("joint_mtp_weight must be positive")
+    if steps < 1 or not 0 < decay <= 1 or not math.isfinite(decay):
+        raise ValueError("joint_mtp_steps must be >= 1 and joint_mtp_step_decay in (0, 1]")
+    model = trainer.model
+    thinker = model.thinker
+    module = MTPModule.from_thinker(thinker)
+    if init:
+        from safetensors.torch import load_file
+
+        module.load_state_dict(load_file(init))
+    model.add_module(MTP, module)
+    _own_lr_groups(trainer, module, lr)
+    lm_head = thinker.lm_head
+    embed_tokens = thinker.get_input_embeddings()
+    compute_loss = trainer.compute_loss
+
+    def metric(name, value):
+        trainer._metrics["train"][name].append(value)
+
+    def compute_loss_with_mtp(self, model, inputs, return_outputs=False, num_items_in_batch=None):
+        loss = compute_loss(model, inputs, return_outputs=return_outputs, num_items_in_batch=num_items_in_batch)
+        if not (torch.is_grad_enabled() and self.model.training):
+            return loss
+        batch = inputs[0] if isinstance(inputs, list) else inputs
+        model_inputs, grpo_batch = batch["model_inputs"], batch["grpo_batch"]
+        ids, mask = model_inputs["input_ids"], model_inputs.get("attention_mask")
+        completion = grpo_batch.completion_mask.bool()
+        advantages = grpo_batch.advantages
+        score = advantages if advantages.dim() == 1 else (advantages * completion).sum(1) / completion.sum(1).clamp_min(1)
+        row = int(score.argmax())
+        if mask is None or mask.dim() != 2 or (mask[row, 1:] > mask[row, :-1]).any() or not completion[row].any():
+            metric("mtp/skipped", 1.0)
+            return loss
+        keep = completion.shape[1]
+        labels = torch.full_like(ids[row:row + 1], -100)
+        labels[0, -keep:] = torch.where(completion[row], ids[row, -keep:], torch.full_like(ids[row, -keep:], -100))
+        single = {k: (v[row:row + 1] if torch.is_tensor(v) and v.dim() and v.shape[0] == len(ids) else v)
+                  for k, v in model_inputs.items() if k not in ("use_cache", "logits_to_keep")}
+        captured = {}
+        hook = lm_head.register_forward_pre_hook(
+            lambda m, a: (captured.__setitem__("hidden", a[0]), (a[0][:, :0],))[1])
+        try:
+            model(**single, use_cache=False)
+        finally:
+            hook.remove()
+        auxiliary, stats = mtp_loss(module, lm_head.weight, embed_tokens(single["input_ids"]),
+                                    captured["hidden"], labels, steps, decay)
+        metric("mtp/skipped", 0.0)
+        metric("mtp/loss", auxiliary.item())
+        for step, (_, correct) in enumerate(stats, start=1):
+            if len(correct):
+                metric(f"mtp/acc_{step}", correct.float().mean().item())
+        return loss + weight * auxiliary
+
+    trainer.compute_loss = MethodType(compute_loss_with_mtp, trainer)
+    _save_split(trainer, module, model, thinker, weight, steps, decay, init)
     return module
