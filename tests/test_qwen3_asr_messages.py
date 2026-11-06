@@ -29,15 +29,13 @@ def test_native_context_and_labels():
 
 
 def test_ts_context_takes_the_hotword_list_after_the_fixed_prompt():
-    from open_audio_llm.tsasr.ts_prompt import TS_CONCAT_SYSTEM, TS_SYSTEM
+    from open_audio_llm.tsasr.ts_prompt import TS_SYSTEM
 
     ts = replace(record("zh", "打开e警保。"), task="ts_asr",
                  audio_slots=(AudioSlot("enrollment", AudioRef("t", "1", "zh", "e")),
                               AudioSlot("mixture", AudioRef("t", "1", "zh", "m"))))
     assert native_messages(ts, "N/A")[0]["content"] == TS_SYSTEM
     assert native_messages(ts, "e警保,义警")[0]["content"] == TS_SYSTEM + "\nHotwords: e警保,义警"
-    legacy = native_messages(ts, "e警保,义警", legacy_ts_prompt=True)[0]["content"]
-    assert legacy == TS_CONCAT_SYSTEM + "\nHotwords: e警保,义警"
     assert native_messages(ts, "e警保")[-1]["content"] == "language Chinese<asr_text>打开e警保。"
 
 

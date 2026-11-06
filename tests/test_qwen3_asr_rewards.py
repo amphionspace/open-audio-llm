@@ -51,10 +51,10 @@ def test_hotword_list_comes_from_the_prompt_not_the_dataset_column():
 
 
 def test_ts_prompt_hotword_line_is_read():
-    from open_audio_llm.tsasr.ts_prompt import TS_CONCAT_SYSTEM, ts_system
+    from open_audio_llm.tsasr.ts_prompt import TS_SYSTEM, ts_system
 
     shown = [{"role": "system", "content": ts_system("张伟,章玮")}, {"role": "user", "content": "<audio>"}]
-    plain_ts = [{"role": "system", "content": TS_CONCAT_SYSTEM}, {"role": "user", "content": "<audio>"}]
+    plain_ts = [{"role": "system", "content": TS_SYSTEM}, {"role": "user", "content": "<audio>"}]
     assert qwen3_asr.prompt_hotwords(shown) == "张伟,章玮"
     assert qwen3_asr.prompt_hotwords(plain_ts) is None
 

@@ -19,7 +19,7 @@ open-audio-llm model --config examples/configs/model/merge-lora.yaml
 
 ### TS-ASR 提示
 
-TS-ASR 样本的 system 来自 `tsasr/ts_prompt.py`：2026-11-06 起是 `TS_SYSTEM`（"Transcribe only the enrolled speaker. Output nothing if they do not speak."），注册长度不写进提示，由请求的 `enroll_seconds` 决定。数据配置顶层 `prompts.ts_legacy_prob`（默认 0）让这一比例的训练样本改用旧提示 `TS_CONCAT_SYSTEM`，供仍发旧提示的客户端过渡；抽签用独立随机流，不改变其余采样与增强。
+TS-ASR 样本的 system 来自 `tsasr/ts_prompt.py` 的 `TS_SYSTEM`（"Transcribe only the enrolled speaker. Output nothing if they do not speak."，2026-11-06 起），有热词时另起一行 `Hotwords: ...`。注册长度不写进提示，由请求的 `enroll_seconds` 决定。
 
 ### Qwen3-ASR GRPO
 

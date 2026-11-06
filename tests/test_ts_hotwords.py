@@ -7,7 +7,7 @@ from audio_data_contract import AudioRecord, AudioRef, AudioSlot
 from open_audio_llm.data.hotwords import sample_ts_hotwords
 from open_audio_llm.data.online_dataset import OnlineAudioDataset
 from open_audio_llm.data.records import ResolvedAudioRecord
-from open_audio_llm.tsasr.ts_prompt import TS_CONCAT_SYSTEM, TS_SYSTEM, ts_system
+from open_audio_llm.tsasr.ts_prompt import TS_SYSTEM, ts_system
 
 POOL = [f"pool{i}" for i in range(200)]
 
@@ -17,8 +17,6 @@ def test_ts_system_without_hotwords_is_the_fixed_prompt():
     assert ts_system() == TS_SYSTEM
     assert ts_system("N/A") == TS_SYSTEM
     assert ts_system("e警保,义警") == TS_SYSTEM + "\nHotwords: e警保,义警"
-    assert ts_system(legacy=True) == TS_CONCAT_SYSTEM
-    assert ts_system("e警保", legacy=True) == TS_CONCAT_SYSTEM + "\nHotwords: e警保"
 
 
 def test_list_keeps_every_target_word_and_only_real_interferer_words():
@@ -81,26 +79,6 @@ def test_ts_hotwords_off_keeps_the_fixed_prompt():
     pytest.importorskip("qwen_asr")
     data = _Dataset([ResolvedAudioRecord(_ts_record("打开e警保。"))], message_format="qwen3_asr")
     assert all(data[(epoch, 0, None)]["messages"][0]["content"] == TS_SYSTEM for epoch in range(10))
-
-
-def test_ts_legacy_prompt_share_keeps_the_rest_of_the_sample():
-    pytest.importorskip("qwen_asr")
-    records = [ResolvedAudioRecord(_ts_record("打开e警保。"))]
-    new = _Dataset(records, message_format="qwen3_asr", ts_hotword_prompt_prob=0.5)
-    mixed = _Dataset(records, message_format="qwen3_asr", ts_hotword_prompt_prob=0.5, ts_legacy_prompt_prob=0.3)
-    legacy = 0
-    for epoch in range(200):
-        a, b = new[(epoch, 0, None)], mixed[(epoch, 0, None)]
-        system = b["messages"][0]["content"]
-        legacy += system.startswith(TS_CONCAT_SYSTEM)
-        # Same hotword list, transcript and audio; only the prompt's first line may differ.
-        assert system.split("\n")[1:] == a["messages"][0]["content"].split("\n")[1:]
-        assert b["messages"][-1] == a["messages"][-1] and np.array_equal(b["mix_wav"], a["mix_wav"])
-    assert 40 <= legacy <= 80
-    evaluation = _Dataset(records, message_format="qwen3_asr", training=False, ts_legacy_prompt_prob=1.0)
-    assert evaluation[(0, 0, None)]["messages"][0]["content"].startswith(TS_SYSTEM)
-    with pytest.raises(ValueError, match="ts_legacy_prob"):
-        _Dataset(records, message_format="qwen3_asr", ts_legacy_prompt_prob=1.5)
 
 
 def test_confusables_join_plain_and_ts_lists():
