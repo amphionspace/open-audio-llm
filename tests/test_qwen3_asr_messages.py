@@ -29,13 +29,15 @@ def test_native_context_and_labels():
 
 
 def test_ts_context_takes_the_hotword_list_after_the_fixed_prompt():
-    from open_audio_llm.tsasr.ts_prompt import TS_CONCAT_SYSTEM
+    from open_audio_llm.tsasr.ts_prompt import TS_CONCAT_SYSTEM, TS_SYSTEM
 
     ts = replace(record("zh", "打开e警保。"), task="ts_asr",
                  audio_slots=(AudioSlot("enrollment", AudioRef("t", "1", "zh", "e")),
                               AudioSlot("mixture", AudioRef("t", "1", "zh", "m"))))
-    assert native_messages(ts, "N/A")[0]["content"] == TS_CONCAT_SYSTEM
-    assert native_messages(ts, "e警保,义警")[0]["content"] == TS_CONCAT_SYSTEM + "\nHotwords: e警保,义警"
+    assert native_messages(ts, "N/A")[0]["content"] == TS_SYSTEM
+    assert native_messages(ts, "e警保,义警")[0]["content"] == TS_SYSTEM + "\nHotwords: e警保,义警"
+    legacy = native_messages(ts, "e警保,义警", legacy_ts_prompt=True)[0]["content"]
+    assert legacy == TS_CONCAT_SYSTEM + "\nHotwords: e警保,义警"
     assert native_messages(ts, "e警保")[-1]["content"] == "language Chinese<asr_text>打开e警保。"
 
 
@@ -77,14 +79,14 @@ def test_silence_and_unsupported_task():
 
 
 def test_ts_prompt_and_negative_keep_native_task_boundary():
-    from open_audio_llm.data.qwen3_asr import TS_CONCAT_SYSTEM
+    from open_audio_llm.data.qwen3_asr import TS_SYSTEM
 
     ts = replace(record("zh", "你好"), task="ts_asr", audio_slots=tuple(
         AudioSlot(name, AudioRef("test", "1", "train", name))
         for name in ("enrollment", "mixture")
     ))
     messages = native_messages(ts, "N/A")
-    assert messages[0]["content"] == TS_CONCAT_SYSTEM
+    assert messages[0]["content"] == TS_SYSTEM
     assert messages[1]["content"] == "<audio>"
     assert messages[2]["content"] == "language Chinese<asr_text>你好"
     assert native_messages(replace(ts, target=""), "N/A")[-1]["content"] == "language None<asr_text>"

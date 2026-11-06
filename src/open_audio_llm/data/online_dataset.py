@@ -156,6 +156,7 @@ class OnlineAudioDataset(Dataset):
         hotword_miss_prob: float = 0.0,
         ts_hotword_prompt_prob: float = 0.0,
         hotword_confusable_prob: float = 0.0,
+        ts_legacy_prompt_prob: float = 0.0,
         training: bool = True,
         message_format: str = "generic",
     ):
@@ -174,6 +175,10 @@ class OnlineAudioDataset(Dataset):
         # Share of listed samples whose record names sound-alike words (metadata.confusable_hotwords) that join the
         # list as distractors (0 keeps every list as before).
         self.hotword_confusable_prob = hotword_confusable_prob
+        if not 0.0 <= ts_legacy_prompt_prob <= 1.0:
+            raise ValueError("prompts.ts_legacy_prob must be in [0, 1]")
+        # Share of TS-ASR training samples rendered with the pre-11.06 prompt (ts_prompt.TS_CONCAT_SYSTEM).
+        self.ts_legacy_prompt_prob = ts_legacy_prompt_prob
         self.hotword_pool = (
             records.hotword_pool if hasattr(records, "hotword_pool")
             else build_hotword_pool(self.records)
@@ -309,7 +314,10 @@ class OnlineAudioDataset(Dataset):
         if self.message_format == "qwen3_asr":
             from .qwen3_asr import native_messages, prepare_ts_clips
 
-            sample["messages"] = native_messages(record, hotwords)
+            # Its own stream, so the draw leaves sampling and augmentation unchanged.
+            legacy = (record.task == "ts_asr" and self.training and self.ts_legacy_prompt_prob > 0
+                      and random.Random(f"{seed}:ts-prompt").random() < self.ts_legacy_prompt_prob)
+            sample["messages"] = native_messages(record, hotwords, legacy_ts_prompt=legacy)
             sample["solution"] = sample["messages"][-1]["content"]
             if record.task == "ts_asr":
                 enroll, mix = prepare_ts_clips(sample["audios"], self.sampling_rate)

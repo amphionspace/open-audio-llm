@@ -536,6 +536,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             training=training,
             message_format=message_format,
             seed=int(config.get("seed", 42)),
+            ts_legacy_prompt_prob=float(config.get("prompts", {}).get("ts_legacy_prob", 0.0)),
             **config.get("hotwords", {}),
         )
 

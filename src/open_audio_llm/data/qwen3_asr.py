@@ -2,7 +2,7 @@
 
 from audio_data_contract import AudioRecord
 
-from open_audio_llm.tsasr.ts_prompt import TS_CONCAT_SYSTEM, ts_system  # noqa: F401 - TS_CONCAT_SYSTEM is re-exported
+from open_audio_llm.tsasr.ts_prompt import TS_CONCAT_SYSTEM, TS_SYSTEM, ts_system  # noqa: F401 - re-exported
 
 from .sot import TIMESTAMP_FORMAT, TIMESTAMP_SYSTEM
 from .target_sot import TARGET_FORMAT, target_prompt
@@ -80,7 +80,7 @@ def prepare_ts_clips(audios, sampling_rate):
     return _wav_bytes(enrollment, sampling_rate), _wav_bytes(mixture, sampling_rate)
 
 
-def native_messages(record: AudioRecord, hotwords: str) -> list[dict[str, str]]:
+def native_messages(record: AudioRecord, hotwords: str, legacy_ts_prompt: bool = False) -> list[dict[str, str]]:
     if record.task == "ts_asr":
         if [s.name for s in record.audio_slots] != ["enrollment", "mixture"]:
             raise ValueError("Native TS-ASR requires enrollment then mixture slots")
@@ -108,7 +108,7 @@ def native_messages(record: AudioRecord, hotwords: str) -> list[dict[str, str]]:
         validate_language(language)
     else:
         language = "None"
-    context = ts_system(hotwords) if record.task == "ts_asr" else ""
+    context = ts_system(hotwords, legacy=legacy_ts_prompt) if record.task == "ts_asr" else ""
     if record.task == "speaker_attributed_asr":
         context = (TIMESTAMP_SYSTEM if record.metadata.get("sot_output_format") == TIMESTAMP_FORMAT
                    else SOT_SYSTEM)
