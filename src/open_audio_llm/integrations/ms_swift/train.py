@@ -84,6 +84,18 @@ class CatalogSftArguments(CatalogArgumentsMixin, SftArguments):
     draft_head_targets: str = "reference"
     # A draft checkpoint's model.safetensors to start the head from instead of a fresh init.
     draft_head_init: str | None = None
+    # DeepSeek-V3 style multi-token prediction trained jointly with the model (0: off): the loss
+    # adds this weight times the MTP module's cross entropy on the token after next. Needs
+    # supervised_head_loss SFT; the module is saved under each checkpoint's mtp/ directory.
+    joint_mtp_weight: float = 0.0
+    # Speculative steps unrolled under teacher forcing through the one MTP layer; later steps
+    # weigh decay**(k-1). DeepSeek-V3 trains one step (depth 1).
+    joint_mtp_steps: int = 1
+    joint_mtp_step_decay: float = 0.8
+    # An mtp/model.safetensors to start the module from instead of the backbone-based init.
+    joint_mtp_init: str | None = None
+    # Peak learning rate of the MTP module's own parameter groups (None: the model's).
+    joint_mtp_lr: float | None = None
     # One unpadded row per microbatch for the Qwen3-ASR text decoder (FlashAttention-2 varlen).
     packed_text: bool = False
     # None keeps the training worker count. Eval sets these explicitly because
@@ -198,6 +210,20 @@ class CatalogTrainingMixin:
             # The head reads the frozen model's final-norm output on padded rows and replaces its loss.
             raise ValueError("draft_head_steps is SFT-only, without supervised_head_loss, a data objective, "
                              "packed_text, Liger, a retention teacher or DeepSpeed")
+        joint_mtp = getattr(self.args, "joint_mtp_weight", 0.0)
+        if joint_mtp and (
+            getattr(self.args, "rlhf_type", None) == "grpo"
+            or not getattr(self.args, "supervised_head_loss", False)
+            or draft_steps
+            or self.args._catalog_config.get("objective")
+            or getattr(self.args, "packed_text", False)
+            or liger
+            or getattr(self.args, "retention_teacher", None)
+        ):
+            # The MTP loss reads every position's final-norm output on right-padded rows and joins
+            # the supervised-head token-mean loss.
+            raise ValueError("joint_mtp_weight is SFT-only and needs supervised_head_loss, without a draft "
+                             "head, a data objective, packed_text, Liger or a retention teacher")
         original_create_optimizer = None
         if getattr(self.args, "rlhf_type", None) == "grpo":
             config = self.args._catalog_config
@@ -283,6 +309,12 @@ class CatalogTrainingMixin:
                 from .retention import install_retention_objective
 
                 install_retention_objective(trainer, self.args)
+            elif joint_mtp:
+                from .joint_mtp import enable_joint_mtp
+
+                enable_joint_mtp(trainer, joint_mtp, self.args.joint_mtp_steps,
+                                 self.args.joint_mtp_step_decay, self.args.joint_mtp_init,
+                                 self.args.joint_mtp_lr)
             elif getattr(self.args, "supervised_head_loss", False):
                 from .supervised_head import enable_supervised_head
 
