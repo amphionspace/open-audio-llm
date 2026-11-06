@@ -247,3 +247,57 @@ def test_joint_mtp_lr_moves_module_parameters_into_their_own_groups(tmp_path):
     assert sum(len(ids) for _, _, ids in groups) == len(list(model.parameters()))
     assert {(lr, wd) for lr, wd, ids in groups if ids & own} == {(1e-4, 0.1), (1e-4, 0.0)}
     assert all(not (ids & own) for lr, _, ids in groups if lr == 3e-6)
+
+
+def _grpo_trainer(model, tmp_path):
+    trainer = SimpleNamespace(model=model, args=SimpleNamespace(output_dir=str(tmp_path), should_save=True),
+                              state=SimpleNamespace(global_step=2), _metrics={"train": defaultdict(list)})
+    trainer.compute_loss = MethodType(lambda self, model, inputs, return_outputs=False, num_items_in_batch=None:
+                                      torch.tensor(0.5, requires_grad=True), trainer)
+    trainer._save_model = MethodType(lambda self, output_dir=None, state_dict=None: None, trainer)
+    return trainer
+
+
+def test_grpo_mtp_adds_the_mtp_loss_of_the_best_completion():
+    from open_audio_llm.integrations.ms_swift.joint_mtp import install_grpo_mtp
+
+    torch.manual_seed(5)
+    model = _TinyASR().train()
+    trainer = _grpo_trainer(model, "/tmp")
+    module = install_grpo_mtp(trainer, 0.2, steps=2)
+    # Three generations of one 6-token prompt with up to 4 completion tokens, right padded.
+    ids = torch.randint(0, 13, (3, 10))
+    mask = torch.ones(3, 10, dtype=torch.long)
+    mask[0, 8:] = 0
+    completion = mask[:, 6:].bool()
+    batch = {"model_inputs": {"input_ids": ids, "attention_mask": mask, "logits_to_keep": 4},
+             "grpo_batch": SimpleNamespace(completion_mask=completion, advantages=torch.tensor([0.1, -0.3, 0.7]))}
+    loss = trainer.compute_loss(model, [batch])
+    loss.backward()
+    assert module.fc.weight.grad is not None and model.thinker.model.layers[0].mlp.up_proj.weight.grad is not None
+
+    labels = torch.full((1, 10), -100)
+    labels[0, 6:] = ids[2, 6:]
+    with torch.no_grad():
+        hidden = model.thinker.model(input_ids=ids[2:3], attention_mask=mask[2:3]).last_hidden_state
+        expected, _ = mtp_loss(module, model.thinker.lm_head.weight, model.thinker.model.embed_tokens(ids[2:3]),
+                               hidden, labels, 2, 0.8)
+    torch.testing.assert_close(loss.detach(), torch.tensor(0.5) + 0.2 * expected, rtol=1e-5, atol=1e-6)
+    assert trainer._metrics["train"]["mtp/skipped"] == [0.0] and "mtp/acc_2" in trainer._metrics["train"]
+
+    # A left-padded best row keeps the GRPO loss alone.
+    mask[2, 0] = 0
+    assert trainer.compute_loss(model, [batch]).item() == 0.5
+    assert trainer._metrics["train"]["mtp/skipped"][-1] == 1.0
+    with torch.no_grad():
+        assert trainer.compute_loss(model, [batch]).item() == 0.5
+
+
+def test_vllm_policy_weights_leave_out_the_mtp_module():
+    from open_audio_llm.integrations.ms_swift.grpo_vllm_rollout import policy_weights
+    from open_audio_llm.integrations.ms_swift.joint_mtp import install_grpo_mtp
+
+    model = _TinyASR().train()
+    install_grpo_mtp(_grpo_trainer(model, "/tmp"), 0.1)
+    names = [name for name, _ in policy_weights(model)]
+    assert names and not any(name.startswith(f"{MTP}.") for name in names)

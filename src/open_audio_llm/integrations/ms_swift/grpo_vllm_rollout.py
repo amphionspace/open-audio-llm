@@ -67,7 +67,8 @@ def policy_weights(model):
     for name, param in model.named_parameters():
         for prefix in WRAPPER_PREFIXES:
             name = name.replace(prefix, "")
-        if not name.startswith(AUDIO_PREFIX):
+        # The joint MTP module (joint_mtp.py) is not part of the served policy.
+        if not name.startswith(AUDIO_PREFIX) and not name.startswith("mtp."):
             yield name, param.detach()
 
 

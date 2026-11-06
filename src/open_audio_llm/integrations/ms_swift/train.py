@@ -115,6 +115,13 @@ class CatalogSftArguments(CatalogArgumentsMixin, SftArguments):
 class CatalogRLHFArguments(CatalogArgumentsMixin, RLHFArguments):
     data_config: str | None = None
     storage_sync: str | None = None
+    # Keep training a joint MTP module (joint_mtp.py) during GRPO on each micro-batch's best
+    # completion; same meaning as the SFT fields. joint_mtp_init is usually the SFT checkpoint's mtp/.
+    joint_mtp_weight: float = 0.0
+    joint_mtp_steps: int = 1
+    joint_mtp_step_decay: float = 0.8
+    joint_mtp_init: str | None = None
+    joint_mtp_lr: float | None = None
 
 
 class DatasetEpochCallback(TrainerCallback):
@@ -211,9 +218,11 @@ class CatalogTrainingMixin:
             raise ValueError("draft_head_steps is SFT-only, without supervised_head_loss, a data objective, "
                              "packed_text, Liger, a retention teacher or DeepSpeed")
         joint_mtp = getattr(self.args, "joint_mtp_weight", 0.0)
-        if joint_mtp and (
-            getattr(self.args, "rlhf_type", None) == "grpo"
-            or not getattr(self.args, "supervised_head_loss", False)
+        grpo = getattr(self.args, "rlhf_type", None) == "grpo"
+        if joint_mtp and grpo and liger:
+            raise ValueError("joint_mtp_weight in GRPO runs without Liger")
+        if joint_mtp and not grpo and (
+            not getattr(self.args, "supervised_head_loss", False)
             or draft_steps
             or self.args._catalog_config.get("objective")
             or getattr(self.args, "packed_text", False)
@@ -222,8 +231,8 @@ class CatalogTrainingMixin:
         ):
             # The MTP loss reads every position's final-norm output on right-padded rows and joins
             # the supervised-head token-mean loss.
-            raise ValueError("joint_mtp_weight is SFT-only and needs supervised_head_loss, without a draft "
-                             "head, a data objective, packed_text, Liger or a retention teacher")
+            raise ValueError("joint_mtp_weight in SFT needs supervised_head_loss, without a draft head, a data "
+                             "objective, packed_text, Liger or a retention teacher")
         original_create_optimizer = None
         if getattr(self.args, "rlhf_type", None) == "grpo":
             config = self.args._catalog_config
@@ -244,6 +253,11 @@ class CatalogTrainingMixin:
                 from .grpo_contrast import install_presence_contrast
 
                 install_presence_contrast(trainer)
+            if joint_mtp:
+                from .joint_mtp import install_grpo_mtp
+
+                install_grpo_mtp(trainer, joint_mtp, self.args.joint_mtp_steps, self.args.joint_mtp_step_decay,
+                                 self.args.joint_mtp_init, self.args.joint_mtp_lr)
             if config.get("rollout"):
                 from .grpo_vllm_rollout import install_vllm_rollout
 
