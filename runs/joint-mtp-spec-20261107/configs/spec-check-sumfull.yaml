@@ -1,0 +1,71 @@
+# 草稿迁移：目标为不训练的合并模型 whitebox-merge-sum-full（没有自己的 mtp/），草稿用 v16 avg3 的 MTP；协议同 spec-check.yaml。
+version: 1
+parameters:
+  output: /workspace/workspace/mingdong/repo/oal-joint-mtp/runs/joint-mtp-spec-20261107/tasks/01-spec-bench/attempts/004/artifacts
+  pack: /workspace/workspace/mingdong/repo/oal-joint-mtp/runs/joint-mtp-spec-20261107/shared/pack-mtp
+  gpu_util: 0.3
+  max_model_len: 8192
+  model_name: spec-check
+  server_arguments:
+  - --max-num-seqs
+  - '48'
+  - --max-num-batched-tokens
+  - '4096'
+  server_startup_timeout_s: 1800
+  enroll_s: 5
+  ts_max_mix_s: 22
+  catalog: /workspace/data/registry/catalog
+  roots: /workspace/data/registry/roots.json
+  asr_samples: /workspace/data/ae-runs/ts-robust-054-avg3/runs/run-20261028T035924Z-0142dad8/samples.jsonl
+  asr_per_source: 9
+  ts_samples: /workspace/data/ae-runs/amphionasr2-grpo-v16avg3-ckpt400/runs/run-20261107T022131Z-c6ec67e6/samples.jsonl
+  ts_count: 300
+  seed: 20261031
+  max_tokens: 256
+  request_timeout_s: 300
+  warmup_requests: 16
+  modes:
+  - asr
+  - tsasr
+  concurrency:
+  - 1
+  - 16
+  - 48
+  variants:
+  - name: base
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+    environment: &id001
+      MODEL: /workspace/data/ae-runs/whitebox-merge-sum-full/checkpoint
+  - name: mtp-k2
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+    arguments:
+    - --speculative-config
+    - '{"method": "eagle", "model": "/workspace/workspace/mingdong/repo/oal-joint-mtp/runs/joint-mtp-spec-20261107/shared/draft-v16avg3",
+      "num_speculative_tokens": 2}'
+    environment: *id001
+  - name: mtp-k3
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+    arguments:
+    - --speculative-config
+    - '{"method": "eagle", "model": "/workspace/workspace/mingdong/repo/oal-joint-mtp/runs/joint-mtp-spec-20261107/shared/draft-v16avg3",
+      "num_speculative_tokens": 3}'
+    environment: *id001
+  lanes:
+  - gpu: 0
+    port: 18310
+    variants:
+    - base
+  - gpu: 1
+    port: 18320
+    variants:
+    - mtp-k2
+  - gpu: 2
+    port: 18330
+    variants:
+    - mtp-k3
+  wandb:
+    enabled: true
+    mode: online
+    entity: 1016097967-amphion
+    project: open-audio-llm
+    name: AmphionASR-joint-mtp-spec-sumfull-draftv16avg3-a004
