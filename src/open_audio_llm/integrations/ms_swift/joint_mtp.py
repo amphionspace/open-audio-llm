@@ -181,16 +181,19 @@ def mtp_loss(module, weight, embeds, hidden, labels, steps, decay):
     return loss / total_weight, stats
 
 
-def save_mtp(module, directory, *, vocab_size, info):
+def save_mtp(module, directory, *, vocab_size, max_position_embeddings, info):
+    """``directory`` is also the vLLM draft directory (``open_audio_llm.tsasr.vllm_mtp``)."""
     from safetensors.torch import save_file
+
+    from ...tsasr.vllm_mtp import vllm_config_fields
 
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     save_file({k: v.detach().contiguous().cpu() for k, v in module.state_dict().items()},
               directory / "model.safetensors")
-    (directory / "config.json").write_text(json.dumps(
-        {**module.config, "vocab_size": vocab_size, "num_nextn_predict_layers": 1, **info},
-        indent=1) + "\n")
+    config = {**module.config, "vocab_size": vocab_size, "num_nextn_predict_layers": 1, **info}
+    config.update(vllm_config_fields(config, max_position_embeddings=max_position_embeddings))
+    (directory / "config.json").write_text(json.dumps(config, indent=1) + "\n")
 
 
 def _own_lr_groups(trainer, module, lr):
@@ -233,6 +236,7 @@ def _save_split(trainer, module, model, thinker, weight, steps, decay, init):
         save(output_dir, {k: v for k, v in state_dict.items() if not k.startswith(f"{MTP}.")})
         if self.args.should_save:
             save_mtp(module, Path(output_dir) / MTP, vocab_size=thinker.config.text_config.vocab_size,
+                     max_position_embeddings=thinker.config.text_config.max_position_embeddings,
                      info={"backbone": getattr(model.config, "_name_or_path", None),
                            "global_step": self.state.global_step, "joint_mtp_weight": weight,
                            "train_steps": steps, "step_decay": decay, "init": init,

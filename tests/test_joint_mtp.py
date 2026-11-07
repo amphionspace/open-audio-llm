@@ -207,6 +207,16 @@ def test_joint_loss_adds_weighted_mtp_ce_and_trains_backbone_and_module(tmp_path
             "layers.0.self_attn.q_norm.weight"} <= set(weights)
     config = json.loads((tmp_path / MTP / "config.json").read_text())
     assert config["global_step"] == 5 and config["joint_mtp_weight"] == 0.3 and config["vocab_size"] == 13
+    # mtp/ is the vLLM draft directory: a one-layer Qwen3 config naming the draft class.
+    from transformers import AutoConfig
+
+    draft = AutoConfig.from_pretrained(tmp_path / MTP)
+    text = model.thinker.config
+    assert draft.model_type == "qwen3" and draft.architectures == ["EagleQwen3ASRMTP"]
+    assert draft.num_hidden_layers == 1 and draft.max_position_embeddings == text.max_position_embeddings
+    for key in ("hidden_size", "intermediate_size", "num_attention_heads", "num_key_value_heads",
+                "head_dim", "rms_norm_eps", "vocab_size"):
+        assert getattr(draft, key) == getattr(text, key), key
 
 
 def test_joint_mtp_init_loads_a_saved_module(tmp_path):

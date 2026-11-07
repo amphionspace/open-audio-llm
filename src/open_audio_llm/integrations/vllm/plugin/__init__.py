@@ -42,6 +42,11 @@ def register():
 
     from vllm import ModelRegistry
 
+    from open_audio_llm.tsasr import vllm_mtp
+
+    # Speculative draft for checkpoints with a jointly trained MTP module (``<checkpoint>/mtp``).
+    vllm_mtp.register()
+
     if enable_target_sot:
         ModelRegistry.register_model(
             "Qwen3ASRTargetSOTForVLLM",
