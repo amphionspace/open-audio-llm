@@ -1,0 +1,11 @@
+version: 1
+name: joint-mtp-spec-20261107
+purpose: 测联合训练 MTP 模块（DeepSeek-V3 式，随 SFT 与 GRPO 一起训）在 vLLM 0.18 投机解码下的接受率与速度；贪心校验，输出应与不开投机一致
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+inputs:
+  target_model: /workspace/data/ae-runs/amphionasr2-grpo-v16avg3-ckpt400/checkpoint
+  draft: shared/draft-v16avg3（由 checkpoint/mtp 生成）
+tasks:
+- {id: spec-bench, name: 无投机与 MTP k1–k3 的无损、接受率与并发 1/16/48 速度, config: configs/spec-check.yaml, depends_on: []}

@@ -40,6 +40,16 @@ Qwen3-ASR（`--model_type amphion_asr_1.7b`）用 `--reward_funcs qwen3_asr_accu
     - 采样 token 的 logprob 与策略 teacher forcing 平均绝对差 0.003。
     - 4 卡训练每步从约 75 s 降到 7–10 s。
 
+### 联合训练 MTP 的投机解码
+
+`--joint_mtp_weight` 训出的 checkpoint 带 `mtp/`，它本身就是 vLLM 0.18 的草稿目录（`save_mtp` 写入一层 Qwen3 的配置，架构 `EagleQwen3ASRMTP`，类在 `src/open_audio_llm/tsasr/vllm_mtp.py`，插件注册）。旧 checkpoint 先用 `write_vllm_config` 补配置。服务加：
+
+```
+--speculative-config '{"method": "eagle", "model": "<checkpoint>/mtp", "num_speculative_tokens": 2}'
+```
+
+走 EAGLE 提议器而不是 vLLM 的 `mtp` 方法：后者只认 `MTPModelTypes` 和 Qwen3-Next 的层。embed_tokens 与 lm_head 共享目标模型的，草稿只用文本 embedding，与训练一致。v16 avg3 实测（`runs/joint-mtp-spec-20261107/`）：k3 每次校验接受 3.62 个 token，单路普通 ASR 均值 103→63 ms，推荐 k2。
+
 ### 投机解码草稿头（MTP）
 
 `--draft_head_steps N`（N>0）冻结 Qwen3-ASR，只训一层 EAGLE 草稿头，供 vLLM 投机解码使用。草稿头按 N 步展开，第 k 步的损失权重为 `--draft_head_step_decay` 的 k−1 次方（默认 0.8）。只支持 SFT 数据配置，不能与 `supervised_head_loss` 或数据 objective 同用。
