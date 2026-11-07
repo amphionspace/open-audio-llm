@@ -1,0 +1,57 @@
+# TS 流式回放（参数同 mtp-draft-head-20261031 的 stream-final，新提示词），02 的 001，lane 0：base，服务包 shared/pack-mtp。
+version: 1
+parameters:
+  output: /workspace/workspace/mingdong/repo/oal-joint-mtp/runs/joint-mtp-spec-20261107/tasks/02-stream-bench/attempts/001/artifacts/lane0
+  pack: /workspace/workspace/mingdong/repo/oal-joint-mtp/runs/joint-mtp-spec-20261107/shared/pack-mtp
+  gpu: 0
+  port: 18600
+  gpu_util: 0.3
+  max_model_len: 8192
+  model_name: tsasr-bench
+  server_arguments:
+  - --max-num-seqs
+  - '48'
+  - --max-num-batched-tokens
+  - '4096'
+  server_startup_timeout_s: 1800
+  variants:
+  - name: base
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+  samples: /workspace/data/ae-runs/amphionasr2-grpo-v16avg3-ckpt400/runs/run-20261107T022131Z-c6ec67e6/samples.jsonl
+  datasets_root: /workspace/data/datasets
+  split_prefixes:
+  - real-
+  seed: 20261031
+  enroll_s: 5
+  first_partial_s: 0.2
+  partial_interval_s: 0.6
+  min_new_audio_s: 1.5
+  stable_s: 6
+  max_window_s: 7
+  preview_silence_s: 0.5
+  final_window_s: 27
+  final_empty_retry_s: 0.5
+  max_tokens: 128
+  endpoint_delay_s: 0.9
+  request_timeout_s: 30
+  stream_prompts:
+  - name: ts-prompt-v2
+    system: Transcribe only the enrolled speaker. Output nothing if they do not speak.
+  prompts:
+  - name: ts-prompt-v2
+    system: Transcribe only the enrolled speaker. Output nothing if they do not speak.
+  prefill_window_s: 6.5
+  prefill_concurrency: []
+  prefill_requests: 400
+  stream_concurrency:
+  - 1
+  - 16
+  - 48
+  stream_seconds: 300
+  wandb:
+    enabled: true
+    mode: online
+    entity: 1016097967-amphion
+    project: open-audio-llm
+    name: AmphionASR-joint-mtp-stream-v16avg3-a001-base
+  identity_requests: 0
