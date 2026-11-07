@@ -19,8 +19,8 @@ source /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh >/d
 export WANDB_HTTP_PROXY=http://10.119.17.252:17920 WANDB_HTTPS_PROXY=http://10.119.17.252:17920
 unset no_proxy NO_PROXY
 export PYTHONPATH=/workspace/workspace/mingdong/repo/oal-joint-mtp/src
-cp configs/spec-check.yaml $A/effective.yaml
-pids=(); for lane in 0 1 2 3; do $PY scripts/spec_check.py --config configs/spec-check.yaml --lane $lane > $A/logs/lane$lane.log 2>&1 & pids+=($!); done
+cp ${CONFIG:-configs/spec-check.yaml} $A/effective.yaml
+pids=(); for lane in ${LANES:-0 1 2 3}; do $PY scripts/spec_check.py --config ${CONFIG:-configs/spec-check.yaml} --lane $lane > $A/logs/lane$lane.log 2>&1 & pids+=($!); done
 rc=0; for x in "${pids[@]}"; do wait $x || rc=1; done
 echo "lanes rc=$rc $(date -u +%FT%TZ)" >> $A/status.txt
 $PY scripts/show_spec.py $A > $A/summary.txt 2>&1

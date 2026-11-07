@@ -14,6 +14,8 @@
 | 002 | 全量 | 失败：MTP 服务未启动。`from __future__ import annotations` 下 `support_torch_compile` 推不出动态维度，改为显式 `dynamic_arg_dims` |
 | 003 | 全量 | 完成（W&B 8 个 run 远端核验 finished，`attempts/003/wandb-verification.json`）；结果见下 |
 
+| 004 | 草稿迁移：目标换成不训练的合并模型 whitebox-merge-sum-full（没有自己的 mtp/），草稿仍用 v16 avg3 的（`configs/spec-check-sumfull.yaml`，base / k2 / k3） | 完成；接受长度 k3 3.60 / 3.52（普通 ASR / TS），与 v16 avg3 自身 3.62 / 3.51 相同；W&B 6 个 run 远端 finished |
+
 ## 结果（003）
 
 **接受率**（每次校验接受的 token 数 MAL；逐位置接受率）

@@ -19,4 +19,5 @@ v16 avg3（新提示词，SFT 073 起，GRPO 两轮）带一个随训练一起�
 
 | 任务 | 内容 | 状态 |
 |---|---|---|
-| [01-spec-bench](tasks/01-spec-bench/README.md) | 无投机 / MTP k1 / k2 / k3，普通 ASR 306 条 + TS 300 条，并发 1/16/48 | 完成（003） |
+| [01-spec-bench](tasks/01-spec-bench/README.md) | 无投机 / MTP k1 / k2 / k3，普通 ASR 306 条 + TS 300 条，并发 1/16/48；004 为草稿迁移到合并模型 | 完成（003、004） |
+| [02-stream-bench](tasks/02-stream-bench/README.md) | TS 流式回放，无投机 / k2 / k3 | 完成：预览滞后 p50 −30%~−38% |
