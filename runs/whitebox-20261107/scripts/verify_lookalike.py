@@ -31,7 +31,7 @@ MODEL = "/workspace/model/wespeaker-ecapa-tdnn512-LM/voxceleb_ECAPA512_LM.onnx"
 def part_a(table, pool, records, samples, rng):
     builder._init(CATALOG, ROOTS, MODEL, table.meta["max_seconds"])
     pool_tasks = {t[1]: t for t in builder._pool_tasks(CATALOG, ROOTS, pool)}
-    enroll_tasks = {t[1]: t for t in builder._enrollment_tasks(CATALOG, ROOTS, records)}
+    enroll_tasks = {t[1]: t for t in builder._enrollment_tasks(CATALOG, ROOTS, records)[0]}
     rows = [i for i in rng.sample(range(len(table.enroll_ids)), samples) if table.neighbors[i, 0] >= 0]
     pool_keys = list(pool_tasks)
     stored, recomputed, random_cos = [], [], []
@@ -52,9 +52,8 @@ def part_a(table, pool, records, samples, rng):
             "lookalike_above_random_p90": float((recomputed > np.percentile(random_cos, 90)).mean())}
 
 
-def part_b(table_path, pool, records, samples, rng):
+def part_b(table_path, pool, records, samples, rng, language):
     dataset_id, version, split = records[0]
-    language = pool[2]
     config = {
         "catalog": CATALOG, "roots": ROOTS, "sampling_rate": 16000,
         "train": [{"dataset_id": dataset_id, "version": version, "split": split, "weight": 1.0,
@@ -98,11 +97,12 @@ def main():
     parser.add_argument("records", type=builder._split)
     parser.add_argument("out", type=Path)
     parser.add_argument("--samples", type=int, default=300)
+    parser.add_argument("--language", help="language of the pool (default: the pool split name, e.g. zh)")
     args = parser.parse_args()
     table = LookalikeTable(args.table)
     result = {"table": str(args.table), "meta": table.meta,
               "A_embedding_check": part_a(table, args.pool, [args.records], args.samples, random.Random(0)),
-              "B_loader_check": part_b(args.table, args.pool, [args.records], 100, random.Random(1))}
+              "B_loader_check": part_b(args.table, args.pool, [args.records], 100, random.Random(1), args.language or args.pool[2])}
     args.out.write_text(json.dumps(result, indent=1, ensure_ascii=False))
     print(json.dumps(result, indent=1, ensure_ascii=False))
 
