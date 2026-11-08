@@ -21,6 +21,20 @@ open-audio-llm model --config examples/configs/model/merge-lora.yaml
 
 TS-ASR 样本的 system 来自 `tsasr/ts_prompt.py` 的 `TS_SYSTEM`（"Transcribe only the enrolled speaker. Output nothing if they do not speak."，2026-11-06 起），有热词时另起一行 `Hotwords: ...`。注册长度不写进提示，由请求的 `enroll_seconds` 决定。
 
+### 成对相似嗓音损失（SFT）
+
+数据配置写 `objective.paired_lookalike: {weight, prob, top: 4, margin: 2.0}` 后：
+- **生成孪生题**：在线混音的目标在场样本以 `prob` 的概率得到一条"孪生注册"。它取自相似嗓音表里与原注册最近的前 `top` 个同语料说话人，按原注册的方式处理，并截成与原注册相同的长度。
+- **计算成对损失**：训练时把这些样本的注册 Mel 换成孪生注册，再前向一次，只读决定出不出字的那个 token。损失要求同一混合段在真注册下出字、在孪生注册下输出 ` None`（`integrations/ms_swift/paired_lookalike.py`）。
+
+损失按监督 token 数归一，`weight` 为 1 时，每对相当于两边各多一个监督 token。
+
+前提条件：
+- 要求 SFT 开启 `--supervised_head_loss`，不能开 `packed_text`。可以与联合 MTP 同时使用，从带 MTP 的 checkpoint 继续训练时用 `--joint_mtp_init` 加载它的 `mtp/`。
+- 干扰源里要登记同语料的相似嗓音表，例如 `/workspace/data/lookalike/v2-samecorpus-20261108/`，做法见 `runs/whitebox-20261107/tasks/11-lookalike`。
+
+训练日志里的 `pair_twin_none` 和 `pair_present_speaks`，分别是孪生题输出 None、真注册出字的比例。依据见白盒 task 12。
+
 ### Qwen3-ASR GRPO
 
 Qwen3-ASR（`--model_type amphion_asr_1.7b`）用 `--reward_funcs qwen3_asr_accuracy qwen3_asr_presence qwen3_asr_hotword qwen3_asr_format`，奖励按模型原生输出 `language X<asr_text>文本` 计算。数据配置里有三项相关设置：

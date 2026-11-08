@@ -204,11 +204,24 @@ class CatalogTrainingMixin:
             # The loss reads the batched encoder's frame layout and adds to the supervised-head SFT loss.
             raise ValueError("objective.ts_activity_weight must be positive and needs SFT with "
                              "supervised_head_loss and audio_encoder_batching, without packed_text")
+        paired = self.args._catalog_config.get("objective", {}).get("paired_lookalike")
+        if paired is not None and (
+            getattr(self.args, "rlhf_type", None) == "grpo"
+            or not getattr(self.args, "supervised_head_loss", False)
+            or getattr(self.args, "packed_text", False)
+            or not isinstance(paired.get("weight"), (int, float)) or not paired["weight"] > 0
+            or not isinstance(paired.get("margin", 2.0), (int, float))
+        ):
+            # A second, decision-only forward of the paired rows joins the supervised-head SFT loss.
+            raise ValueError("objective.paired_lookalike needs SFT with supervised_head_loss, without packed_text, "
+                             "and a positive weight")
+        # paired_lookalike only adds its own forward; the other objectives read the main forward.
+        objective = {k: v for k, v in self.args._catalog_config.get("objective", {}).items() if k != "paired_lookalike"}
         draft_steps = getattr(self.args, "draft_head_steps", 0)
         if draft_steps and (
             getattr(self.args, "rlhf_type", None) == "grpo"
             or getattr(self.args, "supervised_head_loss", False)
-            or self.args._catalog_config.get("objective")
+            or objective
             or getattr(self.args, "packed_text", False)
             or liger
             or getattr(self.args, "retention_teacher", None)
@@ -224,7 +237,7 @@ class CatalogTrainingMixin:
         if joint_mtp and not grpo and (
             not getattr(self.args, "supervised_head_loss", False)
             or draft_steps
-            or self.args._catalog_config.get("objective")
+            or objective
             or getattr(self.args, "packed_text", False)
             or liger
             or getattr(self.args, "retention_teacher", None)
@@ -396,6 +409,12 @@ class CatalogTrainingMixin:
             # Last: its forward takes ts_activity off the batch before the wrapped forwards see it.
             enable_ts_activity_loss(trainer, float(activity_weight))
             logging.getLogger(__name__).warning("TS speaker-activity auxiliary loss, weight %s", activity_weight)
+        if paired is not None:
+            from .paired_lookalike import enable_paired_lookalike
+
+            # Last: its forward takes the twin columns off the batch before the wrapped forwards see them.
+            enable_paired_lookalike(trainer, float(paired["weight"]), float(paired.get("margin", 2.0)))
+            logging.getLogger(__name__).warning("Paired look-alike loss: %s", paired)
         try:
             return super().train(trainer)
         finally:
