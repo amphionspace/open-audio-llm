@@ -11,13 +11,15 @@ the nearest same-corpus look-alike speaker's enrollment, processed like the real
 length, so the twin shares input ids and mixture features and differs only in the enrollment Mel frames.
 Here each such row is run a second time with those frames swapped, and per pair
 
-    softplus(margin - m_twin) + softplus(gap - (m_twin - m_present))
+    softplus(margin - m_twin) + softplus(margin + m_present) + softplus(gap - (m_twin - m_present))
 
 summed over pairs and divided by the micro-batch's supervised tokens (the supervised-head token-mean scale).
 The second term pushes the pair apart with one weight on both sides, ``grad m_present - grad m_twin``, until the
 twin's margin is ``gap`` above the real one; plain cross-entropy on the present row vanishes once it is right,
 which leaves only the threshold-shifting half (task 12, attempts 005-006). The bound matters: an unbounded
-``w * m_present`` term (first version) drove m_present to -160 nats and let 10% of present rows say None.
+``w * m_present`` term (first version) drove m_present to -160 nats and let 10% of present rows say None. The
+gap term alone (second version) saturates once the twin is far above, so a real row that drifts to None got no
+pull back (8-12% of them in attempt 077); ``softplus(margin + m_present)`` anchors it, active only near a tie.
 """
 
 from __future__ import annotations
@@ -69,7 +71,8 @@ def presence_margin(logits, none_id, language_ids):
 
 
 def pair_loss(m_present, m_twin, margin, gap, tokens):
-    return (F.softplus(margin - m_twin) + F.softplus(gap - (m_twin - m_present))).sum() / tokens
+    return (F.softplus(margin - m_twin) + F.softplus(margin + m_present)
+            + F.softplus(gap - (m_twin - m_present))).sum() / tokens
 
 
 def enable_paired_lookalike(trainer, weight, margin, gap):
