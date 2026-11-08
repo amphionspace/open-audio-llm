@@ -28,6 +28,11 @@ Qwen3-ASR（`--model_type amphion_asr_1.7b`）用 `--reward_funcs qwen3_asr_accu
 - `grpo` 一节：按 SFT 回放配方的来源比例抽 `prompts` 条 prompt。
   - `mined` 列出挖掘计划，格式为 `{plan, share}`，由 `python -m open_audio_llm.scripts.grpo_mining` 生成，按 `share` 混入。
   - `mined_only` 中的来源只经挖掘计划进入训练。
+  - 开启 `--log_completions` 时，`completions.jsonl` 和 W&B 表多一列 `grpo_meta`（JSON 字符串），记录每条 prompt 的来历，供事后按计划、来源或混音方式切分 rollout：
+    - `origin`：`replay` 或挖掘计划（`<任务目录>/<计划名>`）；
+    - `source`、`record_id`、`draw`：来源、记录和抽样三元组，可用 `draw` 复现同一段音频；
+    - `task`、`target_empty`：任务和参考是否为空；
+    - 在线混音时另有 `enrollment`（时长、污染用的片段）和 `mixture`。`mixture` 包括类型（`absent`/`present`/`nonspeech`/`scene-*`）、时长、前后留白、干扰片段及其是否取自相似说话人表（`lookalike`）、其他人说话总时长。
 - `objective.presence_contrast: true`：一组采样全部判错“该不该出字”时，组内最后一条换成参考答案。否则这组优势全为 0，得不到梯度。
 - `rollout: {engine: vllm, gpu_memory_utilization: 0.25, max_model_len: 4096}`：rollout 改由训练进程内的 vLLM 解码。
   - 策略模型自己的音频塔按训练模板算出音频 embedding，vLLM（`Qwen3ASRTargetSOTForVLLM`）只解码文本；每次优化器步后同步文本权重。

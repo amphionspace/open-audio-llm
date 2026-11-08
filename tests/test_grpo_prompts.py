@@ -64,3 +64,34 @@ def test_building_a_mined_plan_reads_no_mined_record(tmp_path):
 
     ds.records = Unread(ds.records)
     GRPOPromptPlan(ds, prompts=40, epoch=3, mined_only=["hard@v:all"], mined=[{"plan": path, "share": 0.25}])
+
+
+class _Rendering:
+    """A dataset view that renders a GRPO sample the way CatalogSwiftDataset does (grpo=True)."""
+
+    def __init__(self, ds):
+        self.__dict__.update(vars(ds))
+
+    def __getitem__(self, draw):
+        _, record, _ = draw
+        return {"audios": [b"RIFF"], "task": "ts_asr", "solution": "language None<asr_text>",
+                "online_mix_info": {"mixture": {"kind": "absent", "interferers": [
+                    {"clip": f"c{record}", "lookalike": True}]}}}
+
+
+def test_every_prompt_carries_its_origin_and_online_mix_build(tmp_path):
+    ds = _Rendering(recipe())
+    mined = [{"source": "hard@v:all", "index": [20, 85, 0], "record_id": "85"}]
+    path = tmp_path / "task-7" / "mining" / "plan-ts-absent.jsonl"
+    path.parent.mkdir(parents=True)
+    plan = GRPOPromptPlan(ds, prompts=40, epoch=3, mined_only=["hard@v:all"],
+                          mined=[{"plan": write_plan(path, mined), "share": 0.25}])
+    replay, mined_prompt = plan[0], plan[len(plan) - 1]
+    assert "online_mix_info" not in replay
+    meta = json.loads(replay["grpo_meta"])
+    assert meta["origin"] == "replay" and meta["source"] in {"a@v:train", "b@v:train"}
+    assert meta["draw"][0] == 3 and meta["record_id"] == str(meta["draw"][1])
+    assert meta["task"] == "ts_asr" and meta["target_empty"] is True
+    assert meta["mixture"]["interferers"] == [{"clip": f"c{meta['draw'][1]}", "lookalike": True}]
+    meta = json.loads(mined_prompt["grpo_meta"])
+    assert meta["origin"] == "task-7/plan-ts-absent" and meta["source"] == "hard@v:all" and meta["draw"] == [20, 85, 0]
