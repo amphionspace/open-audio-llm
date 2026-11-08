@@ -9,14 +9,15 @@ target-present samples (m = log p(None) - logsumexp over language names, at the 
 The dataset (``objective.paired_lookalike``) gives some online target-present samples a *twin enrollment*:
 the nearest same-corpus look-alike speaker's enrollment, processed like the real one and cut to the same
 length, so the twin shares input ids and mixture features and differs only in the enrollment Mel frames.
-Here each such row is run a second time with those frames swapped, and
+Here each such row is run a second time with those frames swapped, and per pair
 
-    loss = sum over pairs [softplus(margin - m_twin) + w * m_present] / supervised tokens,
-    w = sigmoid(margin - m_twin), no gradient
+    softplus(margin - m_twin) + softplus(gap - (m_twin - m_present))
 
-whose gradient is ``w * (grad m_present - grad m_twin)``: the pair direction, active while the twin is not
-yet confidently ``None``. Plain cross-entropy on the present row would vanish once it is right, which is what
-leaves only the threshold-shifting half (task 12, attempts 005-006).
+summed over pairs and divided by the micro-batch's supervised tokens (the supervised-head token-mean scale).
+The second term pushes the pair apart with one weight on both sides, ``grad m_present - grad m_twin``, until the
+twin's margin is ``gap`` above the real one; plain cross-entropy on the present row vanishes once it is right,
+which leaves only the threshold-shifting half (task 12, attempts 005-006). The bound matters: an unbounded
+``w * m_present`` term (first version) drove m_present to -160 nats and let 10% of present rows say None.
 """
 
 from __future__ import annotations
@@ -67,14 +68,11 @@ def presence_margin(logits, none_id, language_ids):
     return logp[:, none_id] - torch.logsumexp(logp[:, language_ids], -1)
 
 
-def pair_loss(m_present, m_twin, margin, tokens):
-    """Summed over pairs and divided by the micro-batch's supervised tokens, the scale of the supervised-head
-    token-mean loss: with weight 1 a pair counts like one more supervised token on each side."""
-    weight = torch.sigmoid(margin - m_twin).detach()
-    return (F.softplus(margin - m_twin) + weight * m_present).sum() / tokens
+def pair_loss(m_present, m_twin, margin, gap, tokens):
+    return (F.softplus(margin - m_twin) + F.softplus(gap - (m_twin - m_present))).sum() / tokens
 
 
-def enable_paired_lookalike(trainer, weight, margin):
+def enable_paired_lookalike(trainer, weight, margin, gap):
     """Add ``weight`` x the pair loss; install after every other forward wrapper (it takes the twin columns off)."""
     if not weight > 0:
         raise ValueError("paired_lookalike weight must be positive")
@@ -101,7 +99,7 @@ def enable_paired_lookalike(trainer, weight, margin):
         m = presence_margin(pair_outputs.logits, none_id, language_ids)
         m_present, m_twin = m[: len(rows)], m[len(rows):]
         tokens = (labels[:, 1:] != -100).sum().clamp_min(1)
-        loss = pair_loss(m_present, m_twin, margin, tokens)
+        loss = pair_loss(m_present, m_twin, margin, gap, tokens)
         pending.append(torch.stack([loss.detach(), (m_twin > 0).float().mean(), (m_present < 0).float().mean(),
                                     m_twin.detach().mean(), m_present.detach().mean(),
                                     torch.tensor(float(len(rows)), device=m.device)]))
