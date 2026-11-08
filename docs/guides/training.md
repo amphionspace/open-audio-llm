@@ -25,7 +25,7 @@ TS-ASR 样本的 system 来自 `tsasr/ts_prompt.py` 的 `TS_SYSTEM`（"Transcrib
 
 数据配置写 `objective.paired_lookalike: {weight, prob, top: 4, margin: 2.0, gap: 20.0}` 后：
 - **生成孪生题**：在线混音的目标在场样本以 `prob` 的概率得到一条"孪生注册"。它取自相似嗓音表里与原注册最近的前 `top` 个同语料说话人，按原注册的方式处理，并截成与原注册相同的长度。
-- **计算成对损失**：训练时把这些样本的注册 Mel 换成孪生注册，再前向一次，只读决定出不出字的那个 token。损失要求同一混合段在孪生注册下输出 ` None`（margin `margin`），并且孪生的 None 领先量比真注册高出 `gap`；达到后不再继续推开，避免把真注册的 logit 推到失控（`integrations/ms_swift/paired_lookalike.py`）。
+- **计算成对损失**：训练时把这些样本的注册 Mel 换成孪生注册，再前向一次，只读决定出不出字的那个 token。损失要求同一混合段在孪生注册下输出 ` None`、在真注册下出字（两边各留 `margin` 的余量），并且孪生的 None 领先量比真注册高出 `gap`。达到后不再继续推开，避免把真注册的 logit 推到失控（`integrations/ms_swift/paired_lookalike.py`）。
 
 损失按监督 token 数归一，`weight` 为 1 时，每对相当于两边各多一个监督 token。
 

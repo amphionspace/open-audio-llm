@@ -41,9 +41,17 @@ def test_pair_loss_pushes_the_pair_apart_until_the_gap():
     m_twin = torch.tensor([-3.0, 4.0], requires_grad=True)
     pair_loss(m_present, m_twin, 2.0, 20.0, torch.tensor(4)).backward()
     apart = torch.sigmoid(20.0 - (m_twin.detach() - m_present.detach())) / 4
-    assert torch.allclose(m_present.grad, apart)  # descent lowers m_present: speak on the real speaker
+    anchor = torch.sigmoid(2.0 + m_present.detach()) / 4
+    assert torch.allclose(m_present.grad, apart + anchor)  # descent lowers m_present: speak on the real speaker
     assert torch.allclose(m_twin.grad, -apart - torch.sigmoid(2.0 - m_twin.detach()) / 4)  # and raises m_twin
-    assert m_present.grad[1] < 1e-3  # 34 nats apart: the real speaker is not pushed further
+    assert m_present.grad[1] < 1e-3  # 34 nats apart and far from a tie: the real speaker is not pushed further
+
+
+def test_a_real_enrollment_drifting_to_none_is_pulled_back_even_when_the_twin_is_far_above():
+    m_present = torch.tensor([1.0], requires_grad=True)  # the real speaker now says None
+    m_twin = torch.tensor([30.0], requires_grad=True)  # gap 29 > 20: the gap term is saturated
+    pair_loss(m_present, m_twin, 2.0, 20.0, torch.tensor(1)).backward()
+    assert m_present.grad[0] > 0.9
 
 
 def test_presence_margin_against_the_language_names():
