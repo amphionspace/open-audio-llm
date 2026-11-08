@@ -26,6 +26,7 @@ from .augment import (
 from .catalog_resolver import LhotseCatalogAudioResolver
 from .interference_pool import PoolClip, pool_clips
 from .lance_source import SAMPLES_ROLE, lance_records, open_lance_release, read_lance_audio
+from .lookalike import LookalikeTable, item_key, lookalike_loader
 from .meeting_online import (
     OnlineMeetingConfig,
     group_rooms,
@@ -101,9 +102,10 @@ def read_data_config(path):
                 source[key] = str(selected if selected.is_absolute() else path.parent / selected)
     for source in (config.get("noise_sources", []) + config.get("rir_sources", [])
                    + config.get("interference_sources", [])):
-        if source.get("exclude_media"):
-            selected = Path(source["exclude_media"]).expanduser()
-            source["exclude_media"] = str(selected if selected.is_absolute() else path.parent / selected)
+        for key in ("exclude_media", "lookalike_table"):
+            if source.get(key):
+                selected = Path(source[key]).expanduser()
+                source[key] = str(selected if selected.is_absolute() else path.parent / selected)
     if not config.get("train"):
         raise ValueError("data config requires at least one train source")
     return config
@@ -481,10 +483,16 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         self.floor_weights = source_weights(floor_sources) if self.floor_groups else None
         # Other speakers for online target-speaker mixing, grouped by language.
         self.interference = {}
+        self.lookalike = {}
         if augmenting:
             for language in sorted({s["language"] for s in config.get("interference_sources", [])}):
                 sources = [s for s in config["interference_sources"] if s["language"] == language]
-                self.interference[language] = (self._resource_groups(sources, clips=True), source_weights(sources))
+                groups = self._resource_groups(sources, clips=True)
+                self.interference[language] = (groups, source_weights(sources))
+                # Look-alike tables are keyed by enrollment clip and name clips of their own source.
+                self.lookalike[language] = [
+                    (LookalikeTable(source["lookalike_table"]), {item_key(item): item for item in group})
+                    for source, group in zip(sources, groups) if source.get("lookalike_table")]
         self.far_rir_groups = []
         online_far = any(
             OnlineMixConfig(**s["online_mix"]).speaker_rir_prob * OnlineMixConfig(**s["online_mix"]).speaker_far_rir_prob
@@ -977,11 +985,21 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                               load_rir=lambda item: load_rir_item(item, rate), noise_loader=noise,
                               sampling_rate=rate)
 
-    def _speech_loader(self, language):
+    def _speech_loader(self, language, enroll_id=None, lookalike_prob=0.0):
         if language not in self.interference:
             raise ValueError(f"online_mix needs interference_sources for language {language!r}")
         groups, weights = self.interference[language]
-        return lambda r, sr: load_mono(choose_from_groups(r, groups, weights), sr)
+        base = lambda r, sr: load_mono(choose_from_groups(r, groups, weights), sr)
+        if not lookalike_prob:
+            return base
+        tables = self.lookalike.get(language)
+        if not tables:
+            raise ValueError(f"lookalike_prob needs a lookalike_table on a {language!r} interference source")
+        for table, items in tables:
+            loader = lookalike_loader(base, table, items, enroll_id, lookalike_prob, load_mono)
+            if loader is not base:
+                return loader
+        return base
 
     def _rir_loader(self):
         if not self.rir_groups:
@@ -1051,6 +1069,8 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             audio = degrade_enrollment(rng, audio, config, floor, self.sampling_rate)
             return audio, self.augmentation
         absent = bool(record.metadata.get("online_absent"))
+        if config.lookalike_prob:
+            speech = self._speech_loader(record.language, record.slot("enrollment").ref.cut_id, config.lookalike_prob)
         # Speakers were reverberated one by one; only noise is left to add.
         augmentation = replace(self.augmentation, speed_prob=0.0, rir_prob=0.0, far_rir_prob=0.0)
         if record.metadata.get("online_nonspeech"):

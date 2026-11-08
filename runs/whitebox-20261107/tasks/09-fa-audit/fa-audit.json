@@ -1,0 +1,1790 @@
+{
+ "model": "whitebox-merge-sum-full",
+ "run": "/workspace/data/ae-runs/whitebox-merge-sum-full/runs/run-20261107T054755Z-b3a6683a",
+ "states": "runs/whitebox-20261107/tasks/08-none-bias/states-sumfull-v12.npz",
+ "speaker_embedding": "WeSpeaker ECAPA-TDNN512-LM ONNX (/workspace/model/wespeaker-ecapa-tdnn512-LM, same model the benchmark generator used for hard_cosine); enrollment = served 5 s, voiced frames; interferer = mixture cropped to that interferer's metadata utt spans; sim_int_max = max over interferers",
+ "vad": "energy VAD, 25/10 ms frames, active if > max(-55 dBFS, p95-25 dB); speech durations include noise-floor frames when the floor is loud (enrollment VAD unreliable for short1/len2)",
+ "auc_definition": "P(FA value > correctly-rejected value) within split; pooled = weighted by n_fa*n_cr over the 10 hotspot splits",
+ "construction": {
+  "enroll-clean-neg": {
+   "n": 150,
+   "fa": 3,
+   "n_interferers": {
+    "2": 71,
+    "1": 79
+   },
+   "mix_dur_median": 10.355,
+   "mix_speech_meta_median": 7.801,
+   "enroll_speech_vad_median_in_5s": 4.19,
+   "hard_cosine_median": null,
+   "target_in_mixture": 0,
+   "contam_speaker_in_mixture": 0
+  },
+  "enroll-short1-neg": {
+   "n": 150,
+   "fa": 28,
+   "n_interferers": {
+    "2": 71,
+    "1": 79
+   },
+   "mix_dur_median": 10.355,
+   "mix_speech_meta_median": 7.801,
+   "enroll_speech_vad_median_in_5s": 1.6600000000000001,
+   "hard_cosine_median": null,
+   "target_in_mixture": 0,
+   "contam_speaker_in_mixture": 0
+  },
+  "enroll-contam10-neg": {
+   "n": 150,
+   "fa": 13,
+   "n_interferers": {
+    "2": 71,
+    "1": 79
+   },
+   "mix_dur_median": 10.355,
+   "mix_speech_meta_median": 7.801,
+   "enroll_speech_vad_median_in_5s": 4.58,
+   "hard_cosine_median": null,
+   "target_in_mixture": 0,
+   "contam_speaker_in_mixture": 1
+  },
+  "enroll-contam0-neg": {
+   "n": 150,
+   "fa": 18,
+   "n_interferers": {
+    "2": 71,
+    "1": 79
+   },
+   "mix_dur_median": 10.355,
+   "mix_speech_meta_median": 7.801,
+   "enroll_speech_vad_median_in_5s": 4.6000000000000005,
+   "hard_cosine_median": null,
+   "target_in_mixture": 0,
+   "contam_speaker_in_mixture": 1
+  },
+  "enroll-len2-neg": {
+   "n": 150,
+   "fa": 9,
+   "n_interferers": {
+    "2": 71,
+    "1": 79
+   },
+   "mix_dur_median": 10.355,
+   "mix_speech_meta_median": 7.801,
+   "enroll_speech_vad_median_in_5s": 1.8800000000000001,
+   "hard_cosine_median": null,
+   "target_in_mixture": 0,
+   "contam_speaker_in_mixture": 0
+  },
+  "abs-k2": {
+   "n": 120,
+   "fa": 3,
+   "n_interferers": {
+    "2": 120
+   },
+   "mix_dur_median": 12.528500000000001,
+   "mix_speech_meta_median": 10.9535,
+   "enroll_speech_vad_median_in_5s": 3.935,
+   "hard_cosine_median": null,
+   "target_in_mixture": 0,
+   "contam_speaker_in_mixture": 0
+  },
+  "abs-hard": {
+   "n": 120,
+   "fa": 19,
+   "n_interferers": {
+    "2": 120
+   },
+   "mix_dur_median": 12.528500000000001,
+   "mix_speech_meta_median": 10.9535,
+   "enroll_speech_vad_median_in_5s": 4.095,
+   "hard_cosine_median": 0.532,
+   "target_in_mixture": 0,
+   "contam_speaker_in_mixture": 0
+  },
+  "abs-rand-k1": {
+   "n": 120,
+   "fa": 1,
+   "n_interferers": {
+    "1": 120
+   },
+   "mix_dur_median": 11.869,
+   "mix_speech_meta_median": 8.752500000000001,
+   "enroll_speech_vad_median_in_5s": 4.115,
+   "hard_cosine_median": null,
+   "target_in_mixture": 0,
+   "contam_speaker_in_mixture": 0
+  },
+  "abs-hard-k1": {
+   "n": 120,
+   "fa": 12,
+   "n_interferers": {
+    "1": 120
+   },
+   "mix_dur_median": 11.869,
+   "mix_speech_meta_median": 8.752500000000001,
+   "enroll_speech_vad_median_in_5s": 4.01,
+   "hard_cosine_median": 0.51275,
+   "target_in_mixture": 0,
+   "contam_speaker_in_mixture": 0
+  },
+  "realreg3-neg": {
+   "n": 200,
+   "fa": 1,
+   "n_interferers": {
+    "1": 104,
+    "2": 96
+   },
+   "mix_dur_median": 12.6445,
+   "mix_speech_meta_median": 9.631499999999999,
+   "enroll_speech_vad_median_in_5s": 2.7600000000000002,
+   "hard_cosine_median": null,
+   "target_in_mixture": 0,
+   "contam_speaker_in_mixture": 0
+  },
+  "realreg3-hard-neg": {
+   "n": 200,
+   "fa": 26,
+   "n_interferers": {
+    "1": 104,
+    "2": 96
+   },
+   "mix_dur_median": 12.6445,
+   "mix_speech_meta_median": 9.894,
+   "enroll_speech_vad_median_in_5s": 2.7600000000000002,
+   "hard_cosine_median": 0.2434,
+   "target_in_mixture": 0,
+   "contam_speaker_in_mixture": 0
+  },
+  "realreg3-mid2-neg": {
+   "n": 200,
+   "fa": 5,
+   "n_interferers": {
+    "1": 112,
+    "2": 88
+   },
+   "mix_dur_median": 4.3580000000000005,
+   "mix_speech_meta_median": 3.774,
+   "enroll_speech_vad_median_in_5s": 2.77,
+   "hard_cosine_median": null,
+   "target_in_mixture": 0,
+   "contam_speaker_in_mixture": 0
+  },
+  "short-rand-neg": {
+   "n": 300,
+   "fa": 13,
+   "n_interferers": {
+    "1": 300
+   },
+   "mix_dur_median": 2.301,
+   "mix_speech_meta_median": 1.4415,
+   "enroll_speech_vad_median_in_5s": 3.9850000000000003,
+   "hard_cosine_median": null,
+   "target_in_mixture": 0,
+   "contam_speaker_in_mixture": 0
+  },
+  "short-hard-neg": {
+   "n": 300,
+   "fa": 65,
+   "n_interferers": {
+    "1": 300
+   },
+   "mix_dur_median": 2.301,
+   "mix_speech_meta_median": 1.4415,
+   "enroll_speech_vad_median_in_5s": 4.04,
+   "hard_cosine_median": 0.5634,
+   "target_in_mixture": 0,
+   "contam_speaker_in_mixture": 0
+  }
+ },
+ "auc_pooled_hot": {
+  "sim_int_max": 0.556,
+  "sim_mix": 0.543,
+  "tower_cos24": 0.783,
+  "hard_cosine": 0.602,
+  "mix_dur": 0.462,
+  "mix_speech_vad": 0.467,
+  "mix_speech_meta": 0.47,
+  "enroll_speech_vad": 0.508,
+  "mix_level_db": 0.505,
+  "enroll_level_db": 0.435,
+  "int_gain": 0.499,
+  "noise_floor_db": 0.505,
+  "snr_db": 0.498,
+  "margin": 0.0
+ },
+ "auc_within_split": {
+  "short-hard-neg": {
+   "n_fa": 65,
+   "n_cr": 235,
+   "sim_int_max": {
+    "auc": 0.604,
+    "fa_median": 0.308,
+    "cr_median": 0.261
+   },
+   "sim_mix": {
+    "auc": 0.571,
+    "fa_median": 0.286,
+    "cr_median": 0.244
+   },
+   "tower_cos24": {
+    "auc": 0.85,
+    "fa_median": 0.896,
+    "cr_median": 0.84
+   },
+   "hard_cosine": {
+    "auc": 0.639,
+    "fa_median": 0.595,
+    "cr_median": 0.559
+   },
+   "mix_dur": {
+    "auc": 0.5,
+    "fa_median": 2.297,
+    "cr_median": 2.305
+   },
+   "mix_speech_vad": {
+    "auc": 0.451,
+    "fa_median": 0.83,
+    "cr_median": 0.9
+   },
+   "mix_speech_meta": {
+    "auc": 0.48,
+    "fa_median": 1.413,
+    "cr_median": 1.454
+   },
+   "enroll_speech_vad": {
+    "auc": 0.484,
+    "fa_median": 3.99,
+    "cr_median": 4.07
+   },
+   "mix_level_db": {
+    "auc": 0.552,
+    "fa_median": -20.112,
+    "cr_median": -20.445
+   },
+   "enroll_level_db": {
+    "auc": 0.458,
+    "fa_median": -24.114,
+    "cr_median": -24.021
+   },
+   "int_gain": {
+    "auc": 0.48,
+    "fa_median": -0.21,
+    "cr_median": 0.22
+   },
+   "noise_floor_db": {
+    "auc": 0.491,
+    "fa_median": -50.53,
+    "cr_median": -49.84
+   },
+   "snr_db": {
+    "auc": 0.526,
+    "fa_median": 31.908,
+    "cr_median": 30.052
+   },
+   "margin": {
+    "auc": 0.0,
+    "fa_median": -4.25,
+    "cr_median": 9.5
+   }
+  },
+  "enroll-short1-neg": {
+   "n_fa": 28,
+   "n_cr": 122,
+   "sim_int_max": {
+    "auc": 0.307,
+    "fa_median": 0.034,
+    "cr_median": 0.123
+   },
+   "sim_mix": {
+    "auc": 0.289,
+    "fa_median": 0.013,
+    "cr_median": 0.123
+   },
+   "tower_cos24": {
+    "auc": 0.44,
+    "fa_median": 0.876,
+    "cr_median": 0.883
+   },
+   "mix_dur": {
+    "auc": 0.553,
+    "fa_median": 10.705,
+    "cr_median": 10.284
+   },
+   "mix_speech_vad": {
+    "auc": 0.561,
+    "fa_median": 7.69,
+    "cr_median": 7.09
+   },
+   "mix_speech_meta": {
+    "auc": 0.59,
+    "fa_median": 8.585,
+    "cr_median": 7.696
+   },
+   "enroll_speech_vad": {
+    "auc": 0.663,
+    "fa_median": 4.97,
+    "cr_median": 1.17
+   },
+   "mix_level_db": {
+    "auc": 0.514,
+    "fa_median": -23.783,
+    "cr_median": -24.259
+   },
+   "enroll_level_db": {
+    "auc": 0.131,
+    "fa_median": -37.125,
+    "cr_median": -25.461
+   },
+   "int_gain": {
+    "auc": 0.542,
+    "fa_median": -0.12,
+    "cr_median": -0.2
+   },
+   "noise_floor_db": {
+    "auc": 0.519,
+    "fa_median": -47.87,
+    "cr_median": -48.875
+   },
+   "snr_db": {
+    "auc": 0.492,
+    "fa_median": 23.234,
+    "cr_median": 23.598
+   },
+   "margin": {
+    "auc": 0.0,
+    "fa_median": -3.75,
+    "cr_median": 8.625
+   }
+  },
+  "realreg3-hard-neg": {
+   "n_fa": 26,
+   "n_cr": 174,
+   "sim_int_max": {
+    "auc": 0.473,
+    "fa_median": 0.213,
+    "cr_median": 0.221
+   },
+   "sim_mix": {
+    "auc": 0.494,
+    "fa_median": 0.196,
+    "cr_median": 0.205
+   },
+   "tower_cos24": {
+    "auc": 0.71,
+    "fa_median": 0.889,
+    "cr_median": 0.868
+   },
+   "hard_cosine": {
+    "auc": 0.448,
+    "fa_median": 0.233,
+    "cr_median": 0.243
+   },
+   "mix_dur": {
+    "auc": 0.427,
+    "fa_median": 11.543,
+    "cr_median": 12.764
+   },
+   "mix_speech_vad": {
+    "auc": 0.621,
+    "fa_median": 10.565,
+    "cr_median": 8.2
+   },
+   "mix_speech_meta": {
+    "auc": 0.502,
+    "fa_median": 9.968,
+    "cr_median": 9.894
+   },
+   "enroll_speech_vad": {
+    "auc": 0.589,
+    "fa_median": 2.8,
+    "cr_median": 2.76
+   },
+   "mix_level_db": {
+    "auc": 0.263,
+    "fa_median": -29.334,
+    "cr_median": -25.176
+   },
+   "enroll_level_db": {
+    "auc": 0.434,
+    "fa_median": -19.891,
+    "cr_median": -19.867
+   },
+   "int_gain": {
+    "auc": 0.419,
+    "fa_median": -1.12,
+    "cr_median": -0.14
+   },
+   "noise_floor_db": {
+    "auc": 0.584,
+    "fa_median": -45.51,
+    "cr_median": -49.925
+   },
+   "snr_db": {
+    "auc": 0.349,
+    "fa_median": 15.65,
+    "cr_median": 24.338
+   },
+   "margin": {
+    "auc": 0.0,
+    "fa_median": -3.562,
+    "cr_median": 7.25
+   }
+  },
+  "abs-hard": {
+   "n_fa": 19,
+   "n_cr": 101,
+   "sim_int_max": {
+    "auc": 0.384,
+    "fa_median": 0.358,
+    "cr_median": 0.396
+   },
+   "sim_mix": {
+    "auc": 0.371,
+    "fa_median": 0.314,
+    "cr_median": 0.388
+   },
+   "tower_cos24": {
+    "auc": 0.84,
+    "fa_median": 0.87,
+    "cr_median": 0.781
+   },
+   "hard_cosine": {
+    "auc": 0.641,
+    "fa_median": 0.564,
+    "cr_median": 0.52
+   },
+   "mix_dur": {
+    "auc": 0.443,
+    "fa_median": 10.779,
+    "cr_median": 12.753
+   },
+   "mix_speech_vad": {
+    "auc": 0.483,
+    "fa_median": 10.08,
+    "cr_median": 9.76
+   },
+   "mix_speech_meta": {
+    "auc": 0.473,
+    "fa_median": 10.002,
+    "cr_median": 11.09
+   },
+   "enroll_speech_vad": {
+    "auc": 0.441,
+    "fa_median": 3.75,
+    "cr_median": 4.1
+   },
+   "mix_level_db": {
+    "auc": 0.59,
+    "fa_median": -23.965,
+    "cr_median": -24.406
+   },
+   "enroll_level_db": {
+    "auc": 0.512,
+    "fa_median": -24.02,
+    "cr_median": -24.083
+   },
+   "int_gain": {
+    "auc": 0.391,
+    "fa_median": -0.35,
+    "cr_median": 0.18
+   },
+   "noise_floor_db": {
+    "auc": 0.543,
+    "fa_median": -48.92,
+    "cr_median": -49.23
+   },
+   "snr_db": {
+    "auc": 0.484,
+    "fa_median": 26.228,
+    "cr_median": 25.632
+   },
+   "margin": {
+    "auc": 0.0,
+    "fa_median": -3.25,
+    "cr_median": 8.0
+   }
+  },
+  "enroll-contam0-neg": {
+   "n_fa": 18,
+   "n_cr": 132,
+   "sim_int_max": {
+    "auc": 0.509,
+    "fa_median": 0.236,
+    "cr_median": 0.223
+   },
+   "sim_mix": {
+    "auc": 0.527,
+    "fa_median": 0.246,
+    "cr_median": 0.212
+   },
+   "tower_cos24": {
+    "auc": 0.825,
+    "fa_median": 0.896,
+    "cr_median": 0.842
+   },
+   "mix_dur": {
+    "auc": 0.378,
+    "fa_median": 8.494,
+    "cr_median": 10.552
+   },
+   "mix_speech_vad": {
+    "auc": 0.515,
+    "fa_median": 6.835,
+    "cr_median": 7.11
+   },
+   "mix_speech_meta": {
+    "auc": 0.421,
+    "fa_median": 6.589,
+    "cr_median": 7.888
+   },
+   "enroll_speech_vad": {
+    "auc": 0.46,
+    "fa_median": 4.61,
+    "cr_median": 4.595
+   },
+   "mix_level_db": {
+    "auc": 0.448,
+    "fa_median": -24.859,
+    "cr_median": -23.803
+   },
+   "enroll_level_db": {
+    "auc": 0.585,
+    "fa_median": -21.477,
+    "cr_median": -21.588
+   },
+   "int_gain": {
+    "auc": 0.547,
+    "fa_median": -0.275,
+    "cr_median": -0.15
+   },
+   "noise_floor_db": {
+    "auc": 0.632,
+    "fa_median": -43.185,
+    "cr_median": -48.875
+   },
+   "snr_db": {
+    "auc": 0.368,
+    "fa_median": 20.184,
+    "cr_median": 24.633
+   },
+   "margin": {
+    "auc": 0.0,
+    "fa_median": -2.875,
+    "cr_median": 7.75
+   }
+  },
+  "enroll-contam10-neg": {
+   "n_fa": 13,
+   "n_cr": 137,
+   "sim_int_max": {
+    "auc": 0.408,
+    "fa_median": 0.191,
+    "cr_median": 0.229
+   },
+   "sim_mix": {
+    "auc": 0.439,
+    "fa_median": 0.176,
+    "cr_median": 0.2
+   },
+   "tower_cos24": {
+    "auc": 0.821,
+    "fa_median": 0.891,
+    "cr_median": 0.842
+   },
+   "mix_dur": {
+    "auc": 0.303,
+    "fa_median": 7.517,
+    "cr_median": 10.737
+   },
+   "mix_speech_vad": {
+    "auc": 0.446,
+    "fa_median": 6.17,
+    "cr_median": 7.19
+   },
+   "mix_speech_meta": {
+    "auc": 0.321,
+    "fa_median": 5.886,
+    "cr_median": 7.898
+   },
+   "enroll_speech_vad": {
+    "auc": 0.419,
+    "fa_median": 4.41,
+    "cr_median": 4.58
+   },
+   "mix_level_db": {
+    "auc": 0.468,
+    "fa_median": -25.011,
+    "cr_median": -24.13
+   },
+   "enroll_level_db": {
+    "auc": 0.578,
+    "fa_median": -24.109,
+    "cr_median": -24.236
+   },
+   "int_gain": {
+    "auc": 0.556,
+    "fa_median": -0.24,
+    "cr_median": -0.17
+   },
+   "noise_floor_db": {
+    "auc": 0.622,
+    "fa_median": -41.99,
+    "cr_median": -48.8
+   },
+   "snr_db": {
+    "auc": 0.37,
+    "fa_median": 20.064,
+    "cr_median": 23.949
+   },
+   "margin": {
+    "auc": 0.0,
+    "fa_median": -3.5,
+    "cr_median": 8.75
+   }
+  },
+  "short-rand-neg": {
+   "n_fa": 13,
+   "n_cr": 287,
+   "sim_int_max": {
+    "auc": 0.847,
+    "fa_median": 0.299,
+    "cr_median": 0.127
+   },
+   "sim_mix": {
+    "auc": 0.844,
+    "fa_median": 0.292,
+    "cr_median": 0.115
+   },
+   "tower_cos24": {
+    "auc": 0.886,
+    "fa_median": 0.898,
+    "cr_median": 0.818
+   },
+   "mix_dur": {
+    "auc": 0.44,
+    "fa_median": 2.24,
+    "cr_median": 2.305
+   },
+   "mix_speech_vad": {
+    "auc": 0.272,
+    "fa_median": 0.63,
+    "cr_median": 0.89
+   },
+   "mix_speech_meta": {
+    "auc": 0.418,
+    "fa_median": 1.423,
+    "cr_median": 1.443
+   },
+   "enroll_speech_vad": {
+    "auc": 0.497,
+    "fa_median": 3.96,
+    "cr_median": 3.99
+   },
+   "mix_level_db": {
+    "auc": 0.66,
+    "fa_median": -19.243,
+    "cr_median": -20.403
+   },
+   "enroll_level_db": {
+    "auc": 0.479,
+    "fa_median": -24.128,
+    "cr_median": -23.967
+   },
+   "int_gain": {
+    "auc": 0.618,
+    "fa_median": 0.78,
+    "cr_median": -0.05
+   },
+   "noise_floor_db": {
+    "auc": 0.357,
+    "fa_median": -55.31,
+    "cr_median": -49.69
+   },
+   "snr_db": {
+    "auc": 0.673,
+    "fa_median": 35.978,
+    "cr_median": 29.888
+   },
+   "margin": {
+    "auc": 0.0,
+    "fa_median": -2.75,
+    "cr_median": 13.875
+   }
+  },
+  "abs-hard-k1": {
+   "n_fa": 12,
+   "n_cr": 108,
+   "sim_int_max": {
+    "auc": 0.796,
+    "fa_median": 0.577,
+    "cr_median": 0.389
+   },
+   "sim_mix": {
+    "auc": 0.799,
+    "fa_median": 0.574,
+    "cr_median": 0.381
+   },
+   "tower_cos24": {
+    "auc": 0.832,
+    "fa_median": 0.918,
+    "cr_median": 0.84
+   },
+   "hard_cosine": {
+    "auc": 0.653,
+    "fa_median": 0.535,
+    "cr_median": 0.512
+   },
+   "mix_dur": {
+    "auc": 0.271,
+    "fa_median": 8.006,
+    "cr_median": 12.111
+   },
+   "mix_speech_vad": {
+    "auc": 0.311,
+    "fa_median": 4.72,
+    "cr_median": 7.67
+   },
+   "mix_speech_meta": {
+    "auc": 0.252,
+    "fa_median": 6.242,
+    "cr_median": 9.082
+   },
+   "enroll_speech_vad": {
+    "auc": 0.58,
+    "fa_median": 4.29,
+    "cr_median": 3.975
+   },
+   "mix_level_db": {
+    "auc": 0.562,
+    "fa_median": -23.7,
+    "cr_median": -24.003
+   },
+   "enroll_level_db": {
+    "auc": 0.388,
+    "fa_median": -24.248,
+    "cr_median": -23.983
+   },
+   "int_gain": {
+    "auc": 0.423,
+    "fa_median": -1.36,
+    "cr_median": 0.275
+   },
+   "noise_floor_db": {
+    "auc": 0.49,
+    "fa_median": -49.675,
+    "cr_median": -50.65
+   },
+   "snr_db": {
+    "auc": 0.529,
+    "fa_median": 26.131,
+    "cr_median": 25.888
+   },
+   "margin": {
+    "auc": 0.0,
+    "fa_median": -4.125,
+    "cr_median": 11.375
+   }
+  },
+  "realreg3-mid2-neg": {
+   "n_fa": 5,
+   "n_cr": 195,
+   "sim_int_max": {
+    "auc": 0.77,
+    "fa_median": 0.165,
+    "cr_median": 0.095
+   },
+   "sim_mix": {
+    "auc": 0.693,
+    "fa_median": 0.164,
+    "cr_median": 0.087
+   },
+   "tower_cos24": {
+    "auc": 0.836,
+    "fa_median": 0.89,
+    "cr_median": 0.833
+   },
+   "mix_dur": {
+    "auc": 0.59,
+    "fa_median": 4.983,
+    "cr_median": 4.348
+   },
+   "mix_speech_vad": {
+    "auc": 0.532,
+    "fa_median": 3.94,
+    "cr_median": 3.41
+   },
+   "mix_speech_meta": {
+    "auc": 0.591,
+    "fa_median": 4.095,
+    "cr_median": 3.768
+   },
+   "enroll_speech_vad": {
+    "auc": 0.462,
+    "fa_median": 2.75,
+    "cr_median": 2.77
+   },
+   "mix_level_db": {
+    "auc": 0.321,
+    "fa_median": -24.536,
+    "cr_median": -22.975
+   },
+   "enroll_level_db": {
+    "auc": 0.498,
+    "fa_median": -19.855,
+    "cr_median": -19.88
+   },
+   "int_gain": {
+    "auc": 0.443,
+    "fa_median": 0.36,
+    "cr_median": 0.11
+   },
+   "noise_floor_db": {
+    "auc": 0.428,
+    "fa_median": -48.07,
+    "cr_median": -49.83
+   },
+   "snr_db": {
+    "auc": 0.532,
+    "fa_median": 25.933,
+    "cr_median": 26.467
+   },
+   "margin": {
+    "auc": 0.001,
+    "fa_median": -2.875,
+    "cr_median": 9.25
+   }
+  },
+  "enroll-len2-neg": {
+   "n_fa": 9,
+   "n_cr": 141,
+   "sim_int_max": {
+    "auc": 0.243,
+    "fa_median": 0.009,
+    "cr_median": 0.153
+   },
+   "sim_mix": {
+    "auc": 0.25,
+    "fa_median": 0.013,
+    "cr_median": 0.142
+   },
+   "tower_cos24": {
+    "auc": 0.548,
+    "fa_median": 0.856,
+    "cr_median": 0.865
+   },
+   "mix_dur": {
+    "auc": 0.441,
+    "fa_median": 9.836,
+    "cr_median": 10.414
+   },
+   "mix_speech_vad": {
+    "auc": 0.46,
+    "fa_median": 6.3,
+    "cr_median": 7.19
+   },
+   "mix_speech_meta": {
+    "auc": 0.485,
+    "fa_median": 8.396,
+    "cr_median": 7.8
+   },
+   "enroll_speech_vad": {
+    "auc": 0.393,
+    "fa_median": 1.65,
+    "cr_median": 1.9
+   },
+   "mix_level_db": {
+    "auc": 0.429,
+    "fa_median": -25.501,
+    "cr_median": -23.819
+   },
+   "enroll_level_db": {
+    "auc": 0.254,
+    "fa_median": -34.522,
+    "cr_median": -23.508
+   },
+   "int_gain": {
+    "auc": 0.671,
+    "fa_median": 0.85,
+    "cr_median": -0.23
+   },
+   "noise_floor_db": {
+    "auc": 0.392,
+    "fa_median": -52.72,
+    "cr_median": -48.51
+   },
+   "snr_db": {
+    "auc": 0.591,
+    "fa_median": 29.299,
+    "cr_median": 23.586
+   },
+   "margin": {
+    "auc": 0.002,
+    "fa_median": -1.25,
+    "cr_median": 9.75
+   }
+  },
+  "enroll-clean-neg": {
+   "n_fa": 3,
+   "n_cr": 147,
+   "sim_int_max": {
+    "auc": 0.735,
+    "fa_median": 0.266,
+    "cr_median": 0.209
+   },
+   "sim_mix": {
+    "auc": 0.753,
+    "fa_median": 0.246,
+    "cr_median": 0.195
+   },
+   "tower_cos24": {
+    "auc": 0.562,
+    "fa_median": 0.804,
+    "cr_median": 0.805
+   },
+   "mix_dur": {
+    "auc": 0.263,
+    "fa_median": 8.154,
+    "cr_median": 10.436
+   },
+   "mix_speech_vad": {
+    "auc": 0.376,
+    "fa_median": 5.85,
+    "cr_median": 7.12
+   },
+   "mix_speech_meta": {
+    "auc": 0.256,
+    "fa_median": 6.305,
+    "cr_median": 7.816
+   },
+   "enroll_speech_vad": {
+    "auc": 0.713,
+    "fa_median": 4.85,
+    "cr_median": 4.14
+   },
+   "mix_level_db": {
+    "auc": 0.376,
+    "fa_median": -25.59,
+    "cr_median": -24.13
+   },
+   "enroll_level_db": {
+    "auc": 0.551,
+    "fa_median": -24.088,
+    "cr_median": -24.278
+   },
+   "int_gain": {
+    "auc": 0.626,
+    "fa_median": 0.49,
+    "cr_median": -0.2
+   },
+   "noise_floor_db": {
+    "auc": 0.652,
+    "fa_median": -47.75,
+    "cr_median": -48.53
+   },
+   "snr_db": {
+    "auc": 0.331,
+    "fa_median": 20.064,
+    "cr_median": 23.61
+   },
+   "margin": {
+    "auc": 0.0,
+    "fa_median": -0.5,
+    "cr_median": 13.25
+   }
+  },
+  "realreg3-neg": {
+   "n_fa": 1,
+   "n_cr": 199,
+   "sim_int_max": {
+    "auc": 1.0,
+    "fa_median": 0.377,
+    "cr_median": 0.108
+   },
+   "sim_mix": {
+    "auc": 1.0,
+    "fa_median": 0.371,
+    "cr_median": 0.1
+   },
+   "tower_cos24": {
+    "auc": 0.975,
+    "fa_median": 0.908,
+    "cr_median": 0.836
+   },
+   "mix_dur": {
+    "auc": 0.191,
+    "fa_median": 8.887,
+    "cr_median": 12.654
+   },
+   "mix_speech_vad": {
+    "auc": 0.518,
+    "fa_median": 8.87,
+    "cr_median": 8.55
+   },
+   "mix_speech_meta": {
+    "auc": 0.412,
+    "fa_median": 8.574,
+    "cr_median": 9.639
+   },
+   "enroll_speech_vad": {
+    "auc": 0.48,
+    "fa_median": 2.76,
+    "cr_median": 2.76
+   },
+   "mix_level_db": {
+    "auc": 0.337,
+    "fa_median": -25.219,
+    "cr_median": -24.094
+   },
+   "enroll_level_db": {
+    "auc": 0.563,
+    "fa_median": -19.861,
+    "cr_median": -19.867
+   },
+   "int_gain": {
+    "auc": 0.935,
+    "fa_median": 2.65,
+    "cr_median": -0.05
+   },
+   "noise_floor_db": {
+    "auc": 0.985,
+    "fa_median": -35.77,
+    "cr_median": -49.86
+   },
+   "snr_db": {
+    "auc": 0.06,
+    "fa_median": 10.551,
+    "cr_median": 25.362
+   },
+   "margin": {
+    "auc": 0.0,
+    "fa_median": -3.5,
+    "cr_median": 9.5
+   }
+  },
+  "abs-rand-k1": {
+   "n_fa": 1,
+   "n_cr": 119,
+   "sim_int_max": {
+    "auc": 0.546,
+    "fa_median": 0.229,
+    "cr_median": 0.215
+   },
+   "sim_mix": {
+    "auc": 0.613,
+    "fa_median": 0.231,
+    "cr_median": 0.207
+   },
+   "tower_cos24": {
+    "auc": 0.782,
+    "fa_median": 0.861,
+    "cr_median": 0.819
+   },
+   "mix_dur": {
+    "auc": 0.244,
+    "fa_median": 8.989,
+    "cr_median": 11.894
+   },
+   "mix_speech_vad": {
+    "auc": 0.101,
+    "fa_median": 3.07,
+    "cr_median": 7.57
+   },
+   "mix_speech_meta": {
+    "auc": 0.445,
+    "fa_median": 8.343,
+    "cr_median": 8.755
+   },
+   "enroll_speech_vad": {
+    "auc": 0.79,
+    "fa_median": 4.88,
+    "cr_median": 4.1
+   },
+   "mix_level_db": {
+    "auc": 0.529,
+    "fa_median": -23.832,
+    "cr_median": -24.011
+   },
+   "enroll_level_db": {
+    "auc": 0.176,
+    "fa_median": -24.723,
+    "cr_median": -24.092
+   },
+   "int_gain": {
+    "auc": 0.042,
+    "fa_median": -3.3,
+    "cr_median": 0.26
+   },
+   "noise_floor_db": {
+    "auc": 0.286,
+    "fa_median": -56.38,
+    "cr_median": -50.55
+   },
+   "snr_db": {
+    "auc": 0.714,
+    "fa_median": 32.548,
+    "cr_median": 25.624
+   },
+   "margin": {
+    "auc": 0.0,
+    "fa_median": -1.25,
+    "cr_median": 12.875
+   }
+  },
+  "abs-k2": {
+   "n_fa": 3,
+   "n_cr": 117,
+   "sim_int_max": {
+    "auc": 0.775,
+    "fa_median": 0.365,
+    "cr_median": 0.245
+   },
+   "sim_mix": {
+    "auc": 0.615,
+    "fa_median": 0.248,
+    "cr_median": 0.222
+   },
+   "tower_cos24": {
+    "auc": 0.897,
+    "fa_median": 0.83,
+    "cr_median": 0.743
+   },
+   "mix_dur": {
+    "auc": 0.399,
+    "fa_median": 9.39,
+    "cr_median": 12.609
+   },
+   "mix_speech_vad": {
+    "auc": 0.447,
+    "fa_median": 8.22,
+    "cr_median": 10.04
+   },
+   "mix_speech_meta": {
+    "auc": 0.425,
+    "fa_median": 8.765,
+    "cr_median": 11.067
+   },
+   "enroll_speech_vad": {
+    "auc": 0.57,
+    "fa_median": 4.3,
+    "cr_median": 3.9
+   },
+   "mix_level_db": {
+    "auc": 0.516,
+    "fa_median": -25.79,
+    "cr_median": -24.214
+   },
+   "enroll_level_db": {
+    "auc": 0.447,
+    "fa_median": -23.861,
+    "cr_median": -23.91
+   },
+   "int_gain": {
+    "auc": 0.566,
+    "fa_median": 0.39,
+    "cr_median": 0.07
+   },
+   "noise_floor_db": {
+    "auc": 0.664,
+    "fa_median": -42.94,
+    "cr_median": -49.23
+   },
+   "snr_db": {
+    "auc": 0.365,
+    "fa_median": 16.987,
+    "cr_median": 26.032
+   },
+   "margin": {
+    "auc": 0.0,
+    "fa_median": -5.5,
+    "cr_median": 10.375
+   }
+  }
+ },
+ "paired_same_mixture": {
+  "short-hard-neg vs short-rand-neg": {
+   "n_common": 224,
+   "both_fa": 1,
+   "only_first": 50,
+   "only_second": 10,
+   "neither": 163
+  },
+  "enroll-short1-neg vs enroll-clean-neg": {
+   "n_common": 149,
+   "both_fa": 1,
+   "only_first": 27,
+   "only_second": 2,
+   "neither": 119
+  },
+  "enroll-len2-neg vs enroll-clean-neg": {
+   "n_common": 149,
+   "both_fa": 1,
+   "only_first": 8,
+   "only_second": 2,
+   "neither": 138
+  },
+  "enroll-contam0-neg vs enroll-clean-neg": {
+   "n_common": 149,
+   "both_fa": 2,
+   "only_first": 16,
+   "only_second": 1,
+   "neither": 130
+  },
+  "enroll-contam10-neg vs enroll-clean-neg": {
+   "n_common": 149,
+   "both_fa": 2,
+   "only_first": 11,
+   "only_second": 1,
+   "neither": 135
+  },
+  "realreg3-hard-neg vs realreg3-neg": {
+   "n_common": 0,
+   "both_fa": 0,
+   "only_first": 0,
+   "only_second": 0,
+   "neither": 0
+  },
+  "abs-hard-k1 vs abs-rand-k1": {
+   "n_common": 120,
+   "both_fa": 0,
+   "only_first": 12,
+   "only_second": 1,
+   "neither": 107
+  },
+  "abs-hard vs abs-k2": {
+   "n_common": 120,
+   "both_fa": 1,
+   "only_first": 18,
+   "only_second": 2,
+   "neither": 99
+  }
+ },
+ "fa_transcript_categories": {
+  "short-hard-neg": {
+   "interferer words": 64,
+   "unrelated/partial": 1
+  },
+  "enroll-short1-neg": {
+   "interferer words": 27,
+   "unrelated/partial": 1
+  },
+  "realreg3-hard-neg": {
+   "interferer words": 22,
+   "unrelated/partial": 4
+  },
+  "abs-hard": {
+   "interferer words": 19
+  },
+  "enroll-contam0-neg": {
+   "interferer words": 17,
+   "unrelated/partial": 1
+  },
+  "enroll-contam10-neg": {
+   "interferer words": 12,
+   "unrelated/partial": 1
+  },
+  "short-rand-neg": {
+   "interferer words": 13
+  },
+  "abs-hard-k1": {
+   "interferer words": 12
+  },
+  "realreg3-mid2-neg": {
+   "short other (<=4 chars)": 2,
+   "interferer words": 3
+  },
+  "enroll-len2-neg": {
+   "interferer words": 8,
+   "short other (<=4 chars)": 1
+  },
+  "ALL_HOT": {
+   "interferer words": 197,
+   "unrelated/partial": 8,
+   "short other (<=4 chars)": 3
+  }
+ },
+ "fa_pred_len_chars_median": 10.0,
+ "fa_cov_int_median": 1.0,
+ "margin_fa": {
+  "median": -3.5,
+  "near_tie_abs_lt_2": 50,
+  "n": 208
+ },
+ "short_words_interferer_le2chars": 51,
+ "auc_across_splits_all_analyzed": {
+  "sim_int_max": 0.599,
+  "tower_cos24": 0.79,
+  "mix_speech_vad": 0.446,
+  "enroll_speech_vad": 0.578
+ },
+ "sample30": [
+  {
+   "id": "enroll-short1-neg:0033",
+   "split": "enroll-short1-neg",
+   "mix_dur": 12.79,
+   "mix_speech": 8.01,
+   "enroll_speech": 4.98,
+   "sim": -0.027,
+   "hard_cosine": null,
+   "margin": -3.75,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "中央和地方对房地产去库存化的支持力度不不减，现在这项专利被公",
+   "int_text": "中央和地方对房地产去库存化的支持力度不不减现在这项专利被公开"
+  },
+  {
+   "id": "enroll-short1-neg:0055",
+   "split": "enroll-short1-neg",
+   "mix_dur": 11.11,
+   "mix_speech": 4.49,
+   "enroll_speech": 4.97,
+   "sim": 0.137,
+   "hard_cosine": null,
+   "margin": -4.0,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "给我亲爱的发条短信。帮我找一下，不说再见。",
+   "int_text": "给我亲爱的发条短信帮我找一下不说再见请来一个费玉清的歌"
+  },
+  {
+   "id": "enroll-short1-neg:0085",
+   "split": "enroll-short1-neg",
+   "mix_dur": 6.16,
+   "mix_speech": 5.4,
+   "enroll_speech": 4.92,
+   "sim": 0.054,
+   "hard_cosine": null,
+   "margin": -0.75,
+   "cat": "unrelated/partial",
+   "cov_int": 0.0,
+   "pred": "别选了，别选了。",
+   "int_text": "大陆最西开始的受害者多是做外贸的人群两千六百七十二"
+  },
+  {
+   "id": "enroll-short1-neg:0110",
+   "split": "enroll-short1-neg",
+   "mix_dur": 14.79,
+   "mix_speech": 12.64,
+   "enroll_speech": 4.98,
+   "sim": 0.021,
+   "hard_cosine": null,
+   "margin": -2.25,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "一三七六八六一二四五一百安居热风嘉里城店一三四一九三三零一六",
+   "int_text": "一三七六八六一二四五一百安居热风嘉里城店一三四一九三三零一六"
+  },
+  {
+   "id": "enroll-short1-neg:0115",
+   "split": "enroll-short1-neg",
+   "mix_dur": 13.82,
+   "mix_speech": 11.22,
+   "enroll_speech": 0.17,
+   "sim": 0.013,
+   "hard_cosine": null,
+   "margin": -5.0,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "李开复被医生宣判为第四期淋巴癌，成飞集成的其他主营业务中，不",
+   "int_text": "李开复被医生宣判为第四期淋巴癌成飞集成的其他主营业务中不应从"
+  },
+  {
+   "id": "enroll-short1-neg:0141",
+   "split": "enroll-short1-neg",
+   "mix_dur": 7.16,
+   "mix_speech": 5.1,
+   "enroll_speech": 4.57,
+   "sim": -0.016,
+   "hard_cosine": null,
+   "margin": -3.5,
+   "cat": "interferer words",
+   "cov_int": 0.89,
+   "pred": "玫瑰人生公共厕所北科大展示羽毛球技术。",
+   "int_text": "玫瑰人生公共厕所北科大展示羽毛球机器人与新生进行比赛"
+  },
+  {
+   "id": "enroll-short1-neg:0145",
+   "split": "enroll-short1-neg",
+   "mix_dur": 14.62,
+   "mix_speech": 13.65,
+   "enroll_speech": 4.92,
+   "sim": 0.006,
+   "hard_cosine": null,
+   "margin": -5.25,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "走私瑞士表运进英国。第三届委员候选人共四十二名。第一届委员候",
+   "int_text": "走私瑞士表运进英国第三届委员候选人共四十二名第一届委员候选人"
+  },
+  {
+   "id": "short-hard-neg:0026",
+   "split": "short-hard-neg",
+   "mix_dur": 1.57,
+   "mix_speech": 0.53,
+   "enroll_speech": 3.65,
+   "sim": 0.244,
+   "hard_cosine": 0.5533,
+   "margin": -4.75,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "李玟。",
+   "int_text": "李玟"
+  },
+  {
+   "id": "short-hard-neg:0033",
+   "split": "short-hard-neg",
+   "mix_dur": 2.62,
+   "mix_speech": 0.83,
+   "enroll_speech": 4.97,
+   "sim": 0.087,
+   "hard_cosine": 0.6494,
+   "margin": -8.0,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "草蜢。",
+   "int_text": "草蜢"
+  },
+  {
+   "id": "short-hard-neg:0045",
+   "split": "short-hard-neg",
+   "mix_dur": 2.69,
+   "mix_speech": 0.58,
+   "enroll_speech": 2.32,
+   "sim": 0.197,
+   "hard_cosine": 0.5232,
+   "margin": -3.5,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "继续。",
+   "int_text": "继续"
+  },
+  {
+   "id": "short-hard-neg:0064",
+   "split": "short-hard-neg",
+   "mix_dur": 2.75,
+   "mix_speech": 0.93,
+   "enroll_speech": 3.38,
+   "sim": 0.32,
+   "hard_cosine": 0.6222,
+   "margin": -5.0,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "往上。",
+   "int_text": "往上"
+  },
+  {
+   "id": "short-hard-neg:0071",
+   "split": "short-hard-neg",
+   "mix_dur": 2.44,
+   "mix_speech": 0.67,
+   "enroll_speech": 4.54,
+   "sim": 0.226,
+   "hard_cosine": 0.5588,
+   "margin": -3.75,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "完美。",
+   "int_text": "完美"
+  },
+  {
+   "id": "short-hard-neg:0073",
+   "split": "short-hard-neg",
+   "mix_dur": 2.65,
+   "mix_speech": 2.63,
+   "enroll_speech": 4.36,
+   "sim": 0.308,
+   "hard_cosine": 0.5579,
+   "margin": -1.0,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "我要你。",
+   "int_text": "我要你"
+  },
+  {
+   "id": "short-hard-neg:0078",
+   "split": "short-hard-neg",
+   "mix_dur": 2.19,
+   "mix_speech": 0.98,
+   "enroll_speech": 3.58,
+   "sim": 0.524,
+   "hard_cosine": 0.6241,
+   "margin": -3.0,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "天使的赠礼。",
+   "int_text": "天使的赠礼"
+  },
+  {
+   "id": "short-hard-neg:0086",
+   "split": "short-hard-neg",
+   "mix_dur": 1.96,
+   "mix_speech": 0.68,
+   "enroll_speech": 3.66,
+   "sim": 0.156,
+   "hard_cosine": 0.6684,
+   "margin": -7.88,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "丝路。",
+   "int_text": "丝路"
+  },
+  {
+   "id": "short-hard-neg:0112",
+   "split": "short-hard-neg",
+   "mix_dur": 1.83,
+   "mix_speech": 0.86,
+   "enroll_speech": 4.64,
+   "sim": 0.297,
+   "hard_cosine": 0.5674,
+   "margin": -6.0,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "爱十年。",
+   "int_text": "爱十年"
+  },
+  {
+   "id": "short-hard-neg:0123",
+   "split": "short-hard-neg",
+   "mix_dur": 2.5,
+   "mix_speech": 1.09,
+   "enroll_speech": 2.89,
+   "sim": 0.205,
+   "hard_cosine": 0.4822,
+   "margin": -2.0,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "周杰伦。",
+   "int_text": "周杰伦"
+  },
+  {
+   "id": "short-hard-neg:0131",
+   "split": "short-hard-neg",
+   "mix_dur": 2.39,
+   "mix_speech": 0.91,
+   "enroll_speech": 3.87,
+   "sim": 0.359,
+   "hard_cosine": 0.6347,
+   "margin": -6.38,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "我想救他们。",
+   "int_text": "我想救他们"
+  },
+  {
+   "id": "short-hard-neg:0137",
+   "split": "short-hard-neg",
+   "mix_dur": 1.97,
+   "mix_speech": 0.61,
+   "enroll_speech": 3.72,
+   "sim": 0.247,
+   "hard_cosine": 0.5356,
+   "margin": -4.5,
+   "cat": "unrelated/partial",
+   "cov_int": 0.0,
+   "pred": "ALLIN",
+   "int_text": "阿兰"
+  },
+  {
+   "id": "short-hard-neg:0156",
+   "split": "short-hard-neg",
+   "mix_dur": 1.84,
+   "mix_speech": 1.22,
+   "enroll_speech": 3.68,
+   "sim": 0.41,
+   "hard_cosine": 0.59,
+   "margin": -19.5,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "错过。",
+   "int_text": "错过"
+  },
+  {
+   "id": "short-hard-neg:0164",
+   "split": "short-hard-neg",
+   "mix_dur": 2.15,
+   "mix_speech": 0.62,
+   "enroll_speech": 3.77,
+   "sim": 0.094,
+   "hard_cosine": 0.4394,
+   "margin": -1.75,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "指控。",
+   "int_text": "指控"
+  },
+  {
+   "id": "short-hard-neg:0165",
+   "split": "short-hard-neg",
+   "mix_dur": 2.3,
+   "mix_speech": 0.74,
+   "enroll_speech": 3.29,
+   "sim": 0.272,
+   "hard_cosine": 0.5947,
+   "margin": -6.0,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "最近。",
+   "int_text": "最近"
+  },
+  {
+   "id": "short-hard-neg:0178",
+   "split": "short-hard-neg",
+   "mix_dur": 2.49,
+   "mix_speech": 0.89,
+   "enroll_speech": 3.49,
+   "sim": 0.184,
+   "hard_cosine": 0.5954,
+   "margin": -3.25,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "五十三。",
+   "int_text": "五十三"
+  },
+  {
+   "id": "short-hard-neg:0179",
+   "split": "short-hard-neg",
+   "mix_dur": 2.65,
+   "mix_speech": 0.95,
+   "enroll_speech": 3.51,
+   "sim": 0.423,
+   "hard_cosine": 0.5415,
+   "margin": -2.0,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "小苹果。",
+   "int_text": "小苹果"
+  },
+  {
+   "id": "short-hard-neg:0185",
+   "split": "short-hard-neg",
+   "mix_dur": 2.24,
+   "mix_speech": 2.15,
+   "enroll_speech": 4.97,
+   "sim": 0.5,
+   "hard_cosine": 0.6715,
+   "margin": -3.0,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "野花。",
+   "int_text": "野花"
+  },
+  {
+   "id": "short-hard-neg:0197",
+   "split": "short-hard-neg",
+   "mix_dur": 2.2,
+   "mix_speech": 0.54,
+   "enroll_speech": 4.03,
+   "sim": 0.184,
+   "hard_cosine": 0.5152,
+   "margin": -10.25,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "倍儿爽！",
+   "int_text": "倍儿爽"
+  },
+  {
+   "id": "short-hard-neg:0219",
+   "split": "short-hard-neg",
+   "mix_dur": 2.48,
+   "mix_speech": 2.46,
+   "enroll_speech": 3.99,
+   "sim": 0.374,
+   "hard_cosine": 0.5413,
+   "margin": -2.75,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "枪声。",
+   "int_text": "枪声"
+  },
+  {
+   "id": "short-hard-neg:0229",
+   "split": "short-hard-neg",
+   "mix_dur": 2.26,
+   "mix_speech": 0.93,
+   "enroll_speech": 4.97,
+   "sim": 0.215,
+   "hard_cosine": 0.4521,
+   "margin": -2.5,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "公共厕所。",
+   "int_text": "公共厕所"
+  },
+  {
+   "id": "short-hard-neg:0236",
+   "split": "short-hard-neg",
+   "mix_dur": 2.1,
+   "mix_speech": 0.6,
+   "enroll_speech": 3.3,
+   "sim": 0.362,
+   "hard_cosine": 0.5751,
+   "margin": -9.75,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "黑龙。",
+   "int_text": "黑龙"
+  },
+  {
+   "id": "short-hard-neg:0240",
+   "split": "short-hard-neg",
+   "mix_dur": 2.56,
+   "mix_speech": 0.94,
+   "enroll_speech": 3.21,
+   "sim": 0.327,
+   "hard_cosine": 0.4642,
+   "margin": -2.25,
+   "cat": "interferer words",
+   "cov_int": 1.0,
+   "pred": "再婚。",
+   "int_text": "再婚"
+  }
+ ],
+ "same_speaker_calibration_short": {
+  "solo_short_pos_n": 300,
+  "solo_short_pos_ecapa_median": 0.3910810500383377,
+  "solo_short_pos_ecapa_p10": 0.2332585781812668,
+  "short-hard-neg": {
+   "auc_ecapa_same_vs_this": 0.8125,
+   "auc_tower_same_vs_this": 0.8841444444444444,
+   "auc_ecapa_same_vs_FA_only": 0.7642051282051282,
+   "auc_tower_same_vs_FA_only": 0.7102564102564103,
+   "ecapa_FA_median": 0.28576749563217163,
+   "FA_above_pos_p10": 40,
+   "n_fa": 65
+  },
+  "short-rand-neg": {
+   "auc_ecapa_same_vs_this": 0.9404222222222223,
+   "auc_tower_same_vs_this": 0.9498444444444445,
+   "auc_ecapa_same_vs_FA_only": 0.7515384615384615,
+   "auc_tower_same_vs_FA_only": 0.786923076923077,
+   "ecapa_FA_median": 0.2923320531845093,
+   "FA_above_pos_p10": 10,
+   "n_fa": 13
+  }
+ },
+ "cause_shares": {
+  "basis": "208 FAs in the 10 hotspot splits; excess over the matched control split (same mixtures where available) assigned to the split's manipulation; control-split rate counted as baseline",
+  "lookalike_voice": {
+   "n": 104,
+   "detail": "short-hard 65-13 (vs short-rand, same mixtures) + abs-hard 19-3 (vs abs-k2) + abs-hard-k1 12-1 (vs abs-rand-k1) + realreg3-hard 26-1 (vs realreg3-neg)"
+  },
+  "thin_enrollment": {
+   "n": 31,
+   "detail": "enroll-short1 28-3 + enroll-len2 9-3 (vs enroll-clean, same mixtures)"
+  },
+  "contaminated_enrollment": {
+   "n": 25,
+   "detail": "enroll-contam0 18-3 + enroll-contam10 13-3"
+  },
+  "short_mixture": {
+   "n": 19,
+   "detail": "short-rand 13 + realreg3-mid2 5 + short-hard matched baseline 13, minus ~12 expected at the ~1.5% long-mixture base rate"
+  },
+  "baseline_like_control": {
+   "n": 29
+  },
+  "label_or_construction_error": {
+   "n_estimate": "<=11 (5%) upper bound: FAs whose text does not match the interferer; target speaker is never in any mixture (0/2430), contaminating enrollment voice in the mixture in 1 item per contam split"
+  }
+ }
+}

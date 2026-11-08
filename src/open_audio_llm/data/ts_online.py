@@ -51,6 +51,12 @@ class OnlineMixConfig:
     # 3-speaker room recording where every release followed whoever spoke first).
     other_first_prob: float = 0.0
     other_first_gap_seconds: tuple[float, float] = (0.2, 1.0)
+    # Each interferer of the mixture is drawn among the enrollment's look-alike pool clips (nearest
+    # speaker embeddings below a same-speaker cosine, data/lookalike.py) with this probability. Half
+    # the false alarms on target-absent windows transcribe a look-alike interferer (2026-11-07 white-box
+    # audit), and random pool clips almost never sound alike. Needs a lookalike table on the language's
+    # interference source.
+    lookalike_prob: float = 0.0
     trail_seconds: tuple[float, float] = (0.5, 6.0)
     # A speech-free window (noise, music) with an empty transcript replaces the mixture.
     nonspeech_prob: float = 0.0
@@ -95,7 +101,7 @@ class OnlineMixConfig:
             raise ValueError("floor_kinds must be three non-negative weights that sum to 1")
         for name in ("entry_prob", "nonspeech_prob", "floor_prob", "enrollment_lowpass_prob",
                      "enrollment_lead_silence_prob", "enrollment_quiet_prob", "telephony_prob", "clip_prob",
-                     "other_first_prob", "enrollment_channel_prob"):
+                     "other_first_prob", "enrollment_channel_prob", "lookalike_prob"):
             if not 0 <= getattr(self, name) <= 1:
                 raise ValueError(f"{name} must be between 0 and 1")
         for name in ("lead_seconds", "trail_seconds", "nonspeech_seconds", "nonspeech_level_dbfs",
