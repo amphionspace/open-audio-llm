@@ -385,6 +385,13 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             raise ValueError("objective.ts_activity_weight needs speed_prob 0: time warping moves the speakers")
         self._activity = None
         self._mix_info = {}
+        # Twin enrollments for the paired look-alike loss (integrations.ms_swift.paired_lookalike).
+        self.paired_lookalike = config.get("objective", {}).get("paired_lookalike") if training and not grpo else None
+        if self.paired_lookalike is not None:
+            prob, top = self.paired_lookalike.get("prob"), self.paired_lookalike.get("top", 4)
+            if not isinstance(prob, (int, float)) or not 0 < prob <= 1 or not isinstance(top, int) or top < 1:
+                raise ValueError("objective.paired_lookalike needs prob in (0, 1] and top >= 1")
+        self._twin = None
         self.source_ranges = []
         records = []
         sources = config["train" if training else "validation"]
@@ -883,6 +890,8 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             if online:
                 audio = set_level(rng, audio, slot_level(
                     OnlineMixConfig(**online), resolved.record.metadata.get("online_nonspeech"), slot.name))
+                if slot.name == "enrollment" and self.paired_lookalike is not None:
+                    self._twin = self._twin_enrollment(resolved.record, audio, augmentation, rng)
                 if slot.name != "enrollment" and self._activity is not None:
                     # Only noise and level changes follow the mix, so the labels must still fit.
                     hop = round(ACTIVITY_FRAME_SECONDS * self.sampling_rate)
@@ -1066,6 +1075,42 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             raise ValueError(f"{record.id}: a target-absent mixture cannot have target speech")
         self._activity = activity_codes(length, target_spans, other_spans, self.sampling_rate)
 
+    def _twin_enrollment(self, record, enrollment, augmentation, rng):
+        """The enrollment of the nearest look-alike speaker, cut to ``enrollment``'s length and processed like it.
+
+        Only target-present online mixtures get one, with ``objective.paired_lookalike.prob``. It draws from a
+        copy of ``rng``, so the sample itself is the same with or without the twin.
+        """
+        meta = record.metadata
+        if meta.get("online_absent") or meta.get("online_nonspeech") or meta.get("scene"):
+            return None
+        twin_rng = random.Random()
+        twin_rng.setstate(rng.getstate())
+        if twin_rng.random() >= self.paired_lookalike["prob"]:
+            return None
+        top = self.paired_lookalike.get("top", 4)
+        enroll_id = record.slot("enrollment").ref.cut_id
+        length, rate = len(enrollment), self.sampling_rate
+        for table, items in self.lookalike.get(record.language, []):
+            found = [items[p] for p in table.pool_ids[table.candidates(enroll_id)][:top] if p in items]
+            twin_rng.shuffle(found)
+            for item in found:
+                audio = load_mono(item, rate)
+                if len(audio) < length:
+                    continue  # a shorter clip would need padding the real enrollment does not have
+                start = twin_rng.randrange(len(audio) - length + 1)
+                audio = audio[start:start + length]
+                config = OnlineMixConfig(**meta["online_mix"])
+                audio = degrade_enrollment(twin_rng, audio, config, self._nonspeech_loader(floor=True), rate)
+                audio = augment_waveform(
+                    audio, rate, twin_rng, augmentation,
+                    noise_loader=lambda r, sr: load_mono(choose_from_groups(r, self.noise_groups, self.noise_weights), sr),
+                    rir_loader=self._rir_loader())
+                audio = set_level(twin_rng, audio, slot_level(config, None, "enrollment"))
+                audio = np.pad(audio[:length], (0, max(0, length - len(audio))))  # speed perturbation
+                return np.ascontiguousarray(limit_peak(audio), dtype=np.float32)
+        return None
+
     def _online_slot(self, record, name, audio, rng):
         """Rebuild one slot of an online-mixed sample; return audio and the slot's augmentation."""
         config = OnlineMixConfig(**record.metadata["online_mix"])
@@ -1136,7 +1181,14 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         self._activity = None
         # Filled by _online_slot for analysis (GRPO rollout logs); never reaches the model.
         self._mix_info = {}
+        self._twin = None
         sample = super().__getitem__(idx)
+        if self._twin is not None:
+            from .qwen3_asr import MEL_HOP_SECONDS
+
+            # Hop-padded like the enrollment (prepare_ts_clips), so both give the same Mel frames.
+            hop = int(self.sampling_rate * MEL_HOP_SECONDS)
+            sample["twin_enroll_wav"] = np.pad(self._twin, (0, -len(self._twin) % hop))
         if self._activity is not None:
             # Read by the template, which turns it into per-Mel-frame labels of the mixture.
             sample["ts_activity"] = self._activity

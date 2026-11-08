@@ -448,6 +448,21 @@ class Qwen3ASRTemplate(Template):
             feat = torch.cat([enroll_feat, mix_feat], dim=-1)
         inputs._ts_sep_mel = (feat, mask, int(enroll_n))
 
+    def _twin_enroll_mel(self, inputs, twin, mix_wav, enroll_n) -> torch.Tensor:
+        """Enrollment Mel frames of the twin, extracted and augmented exactly like the real enrollment's."""
+        from open_audio_llm.tsasr.sep_token import extract_enroll_mix_mel
+
+        feat, _mask, twin_n = extract_enroll_mix_mel(
+            self.feature_extractor, self._waveform(twin, enroll=True), mix_wav, self.sampling_rate,
+            device=self._feature_device)
+        if int(twin_n) != enroll_n:
+            raise ValueError(f'twin enrollment has {int(twin_n)} Mel frames, the enrollment {enroll_n}')
+        policy = (getattr(inputs, 'extra_kwargs', None) or {}).get('audio_augmentation')
+        feat = feat[..., :enroll_n]
+        if policy:
+            feat = augment_features(feat, torch.tensor([enroll_n]), policy)
+        return feat.contiguous()
+
     def replace_tag(
         self,
         media_type: Literal['image', 'video', 'audio'],
@@ -489,7 +504,10 @@ class Qwen3ASRTemplate(Template):
             enroll = self._waveform(inputs.audios[0], enroll=True)
             # Mixture speaker activity per 10 ms from catalog online mixing, for the auxiliary loss.
             activity = (getattr(inputs, 'extra_kwargs', None) or {}).get('ts_activity')
+            # The same mixture with a look-alike speaker's enrollment, for the paired look-alike loss.
+            twin = (getattr(inputs, 'extra_kwargs', None) or {}).get('twin_enroll_wav')
             inputs._ts_mix_wav = self._waveform(self._mix_source(inputs), enroll=False)
+            mix_wav = inputs._ts_mix_wav
             inputs._audio_llm_waveforms = [enroll]
             self._drop_mix_source(inputs)
             try:
@@ -502,6 +520,8 @@ class Qwen3ASRTemplate(Template):
             encoded['input_features'] = feat.contiguous()
             encoded['feature_attention_mask'] = mask.contiguous()
             encoded['enroll_n_frames'] = int(enroll_n)
+            if twin is not None:
+                encoded['twin_enroll_features'] = self._twin_enroll_mel(inputs, twin, mix_wav, int(enroll_n))
             if activity is not None:
                 # One code per mixture Mel frame (same 10 ms hop); -1 where the mixture has none.
                 mix_frames = int(feat.shape[-1]) - int(enroll_n)
@@ -623,6 +643,16 @@ class Qwen3ASRTemplate(Template):
             ]
             res['input_features'] = torch.concat(input_features)
             res['feature_attention_mask'] = torch.concat(feature_attention_mask)
+        if any(b.get('twin_enroll_features') is not None for b in batch):
+            twins = [b.get('twin_enroll_features') for b in batch]
+            reference = next(t for t in twins if t is not None)
+            width = max(t.shape[-1] for t in twins if t is not None)
+            res['twin_enroll_features'] = torch.cat([
+                F.pad(t, (0, width - t.shape[-1])) if t is not None
+                else reference.new_zeros((1, reference.shape[1], width))
+                for t in twins
+            ])
+            res['twin_rows'] = torch.tensor([t is not None for b, t in zip(batch, twins)])
         if any(b.get('ts_activity') is not None for b in batch):
             width = max(len(b['ts_activity']) for b in batch if b.get('ts_activity') is not None)
             res['ts_activity'] = torch.stack([
