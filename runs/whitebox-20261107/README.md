@@ -20,6 +20,7 @@
 | [08-none-bias](tasks/08-none-bias/README.md) | 两轮相加加 ` None` 偏置的误报–漏识曲线，对照 v17 / v18 | 完成：v17 只是挪门槛 |
 | [09-fa-audit](tasks/09-fa-audit/README.md) | 两轮相加在 v12 热点负样本集上的误出字来源：构造、说话人相似度（ECAPA / 编码器）、时长、电平、margin、转写文本 | 完成：95% 是转写了干扰者原话；约 50% 来自声音相近、约 27% 来自注册太短或被污染、约 9% 来自混合段太短，标注问题 ≤5% |
 | [10-ecapa-check](tasks/10-ecapa-check/README.md) | 外部 ECAPA 验证分 vs 模型自身 margin：v12 各 pos/neg 家族 AUC、交叉验证组合、模型判错样本、后置门控上限，加 first-other v3 | 完成：不值得接入。难家族合并 AUC：ECAPA 0.81、margin 0.980、组合 0.980；0.5% 正样本预算下组合去掉 74/452 误出字（margin 73） |
+| [12-grad-attribution](tasks/12-grad-attribution/README.md) | 把一步 GRPO 的梯度按提示类型 × token（语言名决策 / 其余）拆开，连同 v15–v25、v17/v18 的实际更新，看它们在 v12 留出样本上怎么移动出不出字的 margin | 完成：缺席题的决策梯度推正样本和推难负样本一样多（比值 1.0–1.1），只挪门槛；实际更新的区分集中在 LLM 第 10–19 层，编码器几乎不动 |
 
 ## 结论（04）
 
