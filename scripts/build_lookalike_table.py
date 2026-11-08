@@ -112,27 +112,40 @@ def _pool_tasks(catalog, roots, pool):
     return tasks
 
 
-def _enrollment_tasks(catalog, roots, splits):
+def _enrollment_tasks(catalog, roots, splits, speaker_pattern=None):
+    """Enrollment tasks, and with ``speaker_pattern`` each clip's speaker: group 1 of the pattern searched in
+    the record's ``metadata.source_record_id`` (or its id)."""
+    import re
+
     from audio_data_contract import resolve_split
 
     from open_audio_llm.data.catalog_resolver import LhotseCatalogAudioResolver
 
     resolver = LhotseCatalogAudioResolver(catalog, roots)
-    tasks = {}
+    tasks, speakers = {}, {}
+    pattern = re.compile(speaker_pattern) if speaker_pattern else None
     for split in splits:
         for path in resolve_split(resolver.catalog, *split, "records", resolver.roots):
             with (gzip.open if path.suffix == ".gz" else open)(path, "rt", encoding="utf-8") as stream:
                 for line in stream:
                     if not line.strip():
                         continue
-                    slots = {slot["name"]: slot["ref"] for slot in json.loads(line)["audio_slots"]}
+                    record = json.loads(line)
+                    slots = {slot["name"]: slot["ref"] for slot in record["audio_slots"]}
                     ref = slots["enrollment"]
+                    if pattern:
+                        name = record.get("metadata", {}).get("source_record_id") or record["id"]
+                        match = pattern.search(name)
+                        if not match:
+                            raise ValueError(f"speaker pattern does not match record {name!r}")
+                        if speakers.setdefault(ref["cut_id"], match.group(1)) != match.group(1):
+                            raise ValueError(f"enrollment {ref['cut_id']} belongs to two speakers")
                     if ref.get("start") is not None or ref.get("duration") is not None:
                         raise ValueError("enrollment spans are not supported: the table is keyed by cut id")
                     tasks.setdefault(ref["cut_id"], ("enrollment", ref["cut_id"],
                                                      (ref["dataset_id"], ref["version"], ref["split"]),
                                                      None, None, ref["cut_id"]))
-    return list(tasks.values())
+    return list(tasks.values()), speakers
 
 
 def _embed_all(tasks, args, label):
@@ -158,7 +171,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--catalog", default="/workspace/data/registry/catalog")
     parser.add_argument("--roots", default="/workspace/data/registry/roots.json")
-    parser.add_argument("--pool", type=_split, required=True, help="interference pool dataset:version:split")
+    parser.add_argument("--pool", type=_split, help="interference pool dataset:version:split")
+    parser.add_argument("--same-corpus", action="store_true",
+                        help="the pool is the enrollment clips themselves (register their audio release as the "
+                             "interference source); needs --speaker-pattern so no speaker is its own look-alike")
+    parser.add_argument("--speaker-pattern",
+                        help="regex whose group 1 is the speaker in a record's source_record_id; same-speaker pairs "
+                             "are skipped")
     parser.add_argument("--records", type=_split, nargs="+", required=True,
                         help="record splits whose enrollment clips get look-alikes")
     parser.add_argument("--model", required=True, help="WeSpeaker ECAPA ONNX model")
@@ -171,12 +190,23 @@ def main():
     parser.add_argument("--limit", type=int, default=0, help="only the first N pool and enrollment clips (smoke test)")
     args = parser.parse_args()
 
-    pool_tasks = _pool_tasks(args.catalog, args.roots, args.pool)
-    enroll_tasks = _enrollment_tasks(args.catalog, args.roots, args.records)
+    if args.same_corpus == bool(args.pool):
+        parser.error("give exactly one of --pool and --same-corpus")
+    if args.same_corpus and not args.speaker_pattern:
+        parser.error("--same-corpus needs --speaker-pattern")
+    enroll_tasks, speakers = _enrollment_tasks(args.catalog, args.roots, args.records, args.speaker_pattern)
     if args.limit:
-        pool_tasks, enroll_tasks = pool_tasks[:args.limit], enroll_tasks[:args.limit]
-    pool_ids, pool_vectors = _embed_all(pool_tasks, args, "pool")
+        enroll_tasks = enroll_tasks[:args.limit]
     enroll_ids, enroll_vectors = _embed_all(enroll_tasks, args, "enrollment")
+    if args.same_corpus:
+        pool_ids, pool_vectors = enroll_ids, enroll_vectors
+    else:
+        pool_tasks = _pool_tasks(args.catalog, args.roots, args.pool)
+        if args.limit:
+            pool_tasks = pool_tasks[:args.limit]
+        pool_ids, pool_vectors = _embed_all(pool_tasks, args, "pool")
+    if len(set(pool_ids.tolist())) != len(pool_ids):
+        raise ValueError("pool clips must have unique keys")
 
     import torch
 
@@ -186,16 +216,26 @@ def main():
     enroll_ids, enroll_vectors = enroll_ids[order], enroll_vectors[order]
     neighbors = np.full((len(enroll_ids), args.top_k), -1, dtype=np.int32)
     cosines = np.zeros((len(enroll_ids), args.top_k), dtype=np.float16)
+    if args.speaker_pattern:
+        # Same-speaker pairs are skipped by id; a pool clip of an unknown speaker gets its own index.
+        index_of = {}
+        code = lambda key: index_of.setdefault(speakers.get(key, f"?{key}"), len(index_of))
+        pool_speaker = torch.tensor([code(k) for k in pool_ids.tolist()], device=device)
+        enroll_speaker = np.array([code(k) for k in enroll_ids.tolist()])
     for begin in range(0, len(enroll_ids), 4096):
         block = torch.from_numpy(enroll_vectors[begin:begin + 4096]).to(device, pool_matrix.dtype)
         scores = (block @ pool_matrix.T).float()
         scores[scores >= args.max_cos] = float("-inf")
+        if args.speaker_pattern:
+            own = torch.from_numpy(enroll_speaker[begin:begin + len(block)]).to(device)
+            scores[own[:, None] == pool_speaker[None, :]] = float("-inf")
         values, index = scores.topk(min(args.top_k, scores.shape[1]), dim=1)
         index[torch.isinf(values)] = -1
         neighbors[begin:begin + len(block), :index.shape[1]] = index.cpu().numpy()
         cosines[begin:begin + len(block), :values.shape[1]] = values.clamp(min=-1).cpu().numpy()
     meta = {"model": args.model, "top_k": args.top_k, "max_cos": args.max_cos, "max_seconds": args.max_seconds,
-            "pool": ":".join(args.pool), "records": [":".join(s) for s in args.records],
+            "pool": "same-corpus" if args.same_corpus else ":".join(args.pool),
+            "speaker_pattern": args.speaker_pattern, "records": [":".join(s) for s in args.records],
             "pool_clips": len(pool_ids), "enrollments": len(enroll_ids)}
     args.out.parent.mkdir(parents=True, exist_ok=True)
     np.savez(args.out, enroll_ids=enroll_ids, pool_ids=pool_ids, neighbors=neighbors, cosines=cosines,
