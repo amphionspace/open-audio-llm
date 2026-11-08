@@ -36,14 +36,14 @@ def test_pair_inputs_repeat_rows_and_swap_only_the_twin_enrollment_frames():
     assert pair_labels.tolist() == [[-100, -100, 9], [-100, -100, 10]] * 2
 
 
-def test_pair_loss_pushes_the_pair_apart_with_one_weight():
-    m_present = torch.tensor([-5.0, -1.0], requires_grad=True)
+def test_pair_loss_pushes_the_pair_apart_until_the_gap():
+    m_present = torch.tensor([-5.0, -30.0], requires_grad=True)
     m_twin = torch.tensor([-3.0, 4.0], requires_grad=True)
-    pair_loss(m_present, m_twin, 2.0, torch.tensor(4)).backward()
-    weight = torch.sigmoid(2.0 - m_twin.detach()) / 4  # per supervised token of the micro-batch
-    assert torch.allclose(m_present.grad, weight)  # descent lowers m_present: speak on the real speaker
-    assert torch.allclose(m_twin.grad, -weight)  # and raises m_twin: None for the look-alike
-    assert m_present.grad[0] > m_present.grad[1]  # a twin still speaking weighs more than a settled one
+    pair_loss(m_present, m_twin, 2.0, 20.0, torch.tensor(4)).backward()
+    apart = torch.sigmoid(20.0 - (m_twin.detach() - m_present.detach())) / 4
+    assert torch.allclose(m_present.grad, apart)  # descent lowers m_present: speak on the real speaker
+    assert torch.allclose(m_twin.grad, -apart - torch.sigmoid(2.0 - m_twin.detach()) / 4)  # and raises m_twin
+    assert m_present.grad[1] < 1e-3  # 34 nats apart: the real speaker is not pushed further
 
 
 def test_presence_margin_against_the_language_names():
