@@ -56,11 +56,12 @@ class LookalikeTable:
         return found[found >= 0]
 
 
-def lookalike_loader(base, table, items, enroll_id, prob, load):
+def lookalike_loader(base, table, items, enroll_id, prob, load, trace=None):
     """A speech loader that, with ``prob``, draws one of ``enroll_id``'s look-alikes instead.
 
     ``base(rng, sr)`` is the ordinary random interferer loader; ``items`` maps a ``pool_clip_key`` to the
     pool item ``load(item, sr)`` reads. Enrollments missing from the table fall back to ``base``.
+    ``trace`` (a list) receives ``{"clip", "lookalike": True}`` per look-alike drawn.
     """
     if not prob:
         return base
@@ -70,7 +71,10 @@ def lookalike_loader(base, table, items, enroll_id, prob, load):
 
     def draw(rng, sampling_rate):
         if rng.random() < prob:
-            return load(found[rng.randrange(len(found))], sampling_rate)
+            item = found[rng.randrange(len(found))]
+            if trace is not None:
+                trace.append({"clip": item_key(item), "lookalike": True})
+            return load(item, sampling_rate)
         return base(rng, sampling_rate)
 
     return draw

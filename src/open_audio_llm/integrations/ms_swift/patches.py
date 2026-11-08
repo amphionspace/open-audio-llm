@@ -25,6 +25,7 @@ GRPO_NON_MODEL_KEYS = frozenset(
         "dataset_id",
         "duration",
         "audio_slot_count",
+        "grpo_meta",
     }
 )
 
@@ -45,6 +46,42 @@ def apply_patches() -> None:
 
     _patch_prepare_generate_kwargs()
     _patch_qwen25_omni_position_ids()
+    _patch_grpo_rollout_log()
+
+
+def _patch_grpo_rollout_log() -> None:
+    try:
+        from swift.rlhf_trainers.grpo_trainer import GRPOTrainer
+    except ImportError:
+        return
+    if getattr(GRPOTrainer._log_rollout, "_open_audio_llm_patched", False):
+        return
+    GRPOTrainer._log_rollout = log_rollout_with_meta(GRPOTrainer._log_rollout)
+
+
+def log_rollout_with_meta(original):
+    """Wrap ``GRPOTrainer._log_rollout`` to add each prompt's ``grpo_meta`` as a log column.
+
+    ms-swift writes every ``self._logs`` column to completions.jsonl and the W&B table but gathers only
+    ``solution`` from the samples. ``grpo_meta`` (origin plan, source, record, online-mix build; see
+    grpo_prompts.GRPOPromptPlan) lets a later analysis split rollouts by plan, source, look-alike
+    interferers or durations without re-rendering the audio. Every rank gathers it, so it is added only
+    when all local samples carry it (they do whenever the prompts come from GRPOPromptPlan).
+    """
+
+    def _log_rollout(self, samples):
+        original(self, samples)
+        if not self.log_completions or not samples or not all("grpo_meta" in s.extra for s in samples):
+            return
+        from collections import deque
+
+        if "grpo_meta" not in self._logs:
+            self._logs["grpo_meta"] = deque(maxlen=self.args.generation_batch_size)
+        self._logs["grpo_meta"].extend(
+            self._gather_and_flatten([s.extra["grpo_meta"] for s in samples], flatten_level=0))
+
+    _log_rollout._open_audio_llm_patched = True
+    return _log_rollout
 
 
 def _patch_prepare_generate_kwargs() -> None:

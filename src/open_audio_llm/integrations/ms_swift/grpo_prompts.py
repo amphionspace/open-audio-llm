@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import json
 import random
+from bisect import bisect_right
 from itertools import islice
 from pathlib import Path
 
@@ -41,6 +42,8 @@ class GRPOPromptPlan(Dataset):
             raise ValueError("grpo.prompts must be a positive integer and grpo.epoch a non-negative integer")
         self.dataset = dataset
         ranges = {source_key(s): r for s, r in zip(dataset.sources, dataset.source_ranges)}
+        self._source_starts = [r.start for r in dataset.source_ranges]
+        self._source_keys = [source_key(s) for s in dataset.sources]
         skipped = [ranges[key] for key in mined_only or []]
         plans, total_share = [], 0.0
         # Record ids are checked when read in a worker: a Lance read here would make forked workers crash or hang.
@@ -68,11 +71,15 @@ class GRPOPromptPlan(Dataset):
         self.plan = list(islice(draws, replay))
         if len(self.plan) < replay:
             raise ValueError(f"replay epoch yields {len(self.plan)} prompts, fewer than {replay}")
+        # Where each prompt came from, for the rollout log: "replay" or the mined plan's task/plan name.
+        self.origin = ["replay"] * len(self.plan)
         rng = random.Random(f"{dataset.seed}:grpo-mined:{seed}")
-        for entries, share in plans:
+        for (entries, share), item in zip(plans, mined or []):
             # Small mined sets repeat; each repetition is the same prompt.
             count = round(prompts * share)
             self.plan += [tuple(rng.choice(entries)["index"]) for _ in range(count)]
+            path = Path(item["plan"])
+            self.origin += [f"{path.parent.parent.name}/{path.stem}"] * count
 
     def __len__(self) -> int:
         return len(self.plan)
@@ -88,6 +95,15 @@ class GRPOPromptPlan(Dataset):
         if mix is not None:
             sample["chat_template_kwargs"] = {**(sample.get("chat_template_kwargs") or {}), "mix_wav": mix}
         sample.pop("ts_activity", None)
+        # One JSON string per prompt (every sample carries it, as ms-swift's gathered log columns need), for
+        # completions.jsonl / the W&B table: where the prompt came from and how its audio was built.
+        source = self._source_keys[bisect_right(self._source_starts, record) - 1]
+        target = str(sample.get("solution", "")).split("<asr_text>", 1)[-1]
+        sample["grpo_meta"] = json.dumps({
+            "origin": self.origin[index], "source": source, "record_id": self.dataset.records[record].record.id,
+            "draw": list(self.plan[index]), "task": sample.get("task"), "target_empty": not target.strip(),
+            **(sample.pop("online_mix_info", None) or {}),
+        }, ensure_ascii=False)
         # Rollout requests type-check audios as strings: send decoded clips as base64 float WAV.
         sample["audios"] = [
             audio if isinstance(audio, str) else base64.b64encode(

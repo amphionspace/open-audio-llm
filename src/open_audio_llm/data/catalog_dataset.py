@@ -384,6 +384,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         if self.activity_labels and self.augmentation.speed_prob:
             raise ValueError("objective.ts_activity_weight needs speed_prob 0: time warping moves the speakers")
         self._activity = None
+        self._mix_info = {}
         self.source_ranges = []
         records = []
         sources = config["train" if training else "validation"]
@@ -985,18 +986,25 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                               load_rir=lambda item: load_rir_item(item, rate), noise_loader=noise,
                               sampling_rate=rate)
 
-    def _speech_loader(self, language, enroll_id=None, lookalike_prob=0.0):
+    def _speech_loader(self, language, enroll_id=None, lookalike_prob=0.0, trace=None):
+        """Interferer loader; ``trace`` (a list) receives ``{"clip", "lookalike"}`` for every clip drawn."""
         if language not in self.interference:
             raise ValueError(f"online_mix needs interference_sources for language {language!r}")
         groups, weights = self.interference[language]
-        base = lambda r, sr: load_mono(choose_from_groups(r, groups, weights), sr)
+
+        def base(r, sr):
+            item = choose_from_groups(r, groups, weights)
+            if trace is not None:
+                trace.append({"clip": item_key(item), "lookalike": False})
+            return load_mono(item, sr)
+
         if not lookalike_prob:
             return base
         tables = self.lookalike.get(language)
         if not tables:
             raise ValueError(f"lookalike_prob needs a lookalike_table on a {language!r} interference source")
         for table, items in tables:
-            loader = lookalike_loader(base, table, items, enroll_id, lookalike_prob, load_mono)
+            loader = lookalike_loader(base, table, items, enroll_id, lookalike_prob, load_mono, trace)
             if loader is not base:
                 return loader
         return base
@@ -1061,33 +1069,45 @@ class CatalogSwiftDataset(OnlineAudioDataset):
     def _online_slot(self, record, name, audio, rng):
         """Rebuild one slot of an online-mixed sample; return audio and the slot's augmentation."""
         config = OnlineMixConfig(**record.metadata["online_mix"])
-        speech = self._speech_loader(record.language)
+        trace = []
+        speech = self._speech_loader(record.language, trace=trace)
         noise, floor = self._nonspeech_loader(), self._nonspeech_loader(floor=True)
+        rate = self.sampling_rate
         if name == "enrollment":
             audio = crop_enrollment(rng, audio, config, self.sampling_rate)
             audio = contaminate_enrollment(rng, audio, config, speech, self.sampling_rate)
             audio = degrade_enrollment(rng, audio, config, floor, self.sampling_rate)
+            self._mix_info["enrollment"] = {"seconds": round(len(audio) / rate, 3),
+                                            "contamination": [t["clip"] for t in trace]}
             return audio, self.augmentation
         absent = bool(record.metadata.get("online_absent"))
         if config.lookalike_prob:
-            speech = self._speech_loader(record.language, record.slot("enrollment").ref.cut_id, config.lookalike_prob)
+            speech = self._speech_loader(record.language, record.slot("enrollment").ref.cut_id, config.lookalike_prob,
+                                         trace=trace)
         # Speakers were reverberated one by one; only noise is left to add.
         augmentation = replace(self.augmentation, speed_prob=0.0, rir_prob=0.0, far_rir_prob=0.0)
         if record.metadata.get("online_nonspeech"):
             # Nobody talks and the transcript is empty: noise or music of its own length.
             audio = nonspeech_window(rng, config, noise, self.sampling_rate)
             self._set_activity(record, len(audio), [], [])
+            self._mix_info["mixture"] = {"kind": "nonspeech", "seconds": round(len(audio) / rate, 3)}
             return audio, replace(augmentation, noise_prob=0.0)
         info = {}
         scene = record.metadata.get("scene")
         if scene:
             audio = self._scene_mixture(record, scene, config, rng, info)
             self._set_activity(record, len(audio), info["target_spans"], info["other_spans"])
+            self._mix_info["mixture"] = {"kind": f"scene-{scene['mode']}", "seconds": round(len(audio) / rate, 3),
+                                         "overlap": round(info.get("overlap", 0.0), 3)}
             return degrade_mixture(rng, audio, config, floor, self.sampling_rate), augmentation
         audio, count = build_mixture(
             rng, audio, config, absent=absent, speech_loader=speech,
             rir_loader=self._rir_loader(), sampling_rate=self.sampling_rate, info=info,
         )
+        self._mix_info["mixture"] = {
+            "kind": "absent" if absent else "present", "seconds": round(len(audio) / rate, 3),
+            "lead_s": round(info["lead"], 3), "trail_s": round(info["trail"], 3), "interferers": trace,
+            "other_speech_s": round(sum(e - b for b, e in info["other_spans"]) / rate, 3)}
         if absent and count == 0:
             # Nobody talks: the window is the noise itself (digital silence never
             # occurs in use). SNR is undefined here; set_level picks the level.
@@ -1114,6 +1134,8 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         if self.collect_metrics:
             self._sample_metrics = dict(decode_s=0.0, wave_augment_s=0.0, audio_seconds=0.0)
         self._activity = None
+        # Filled by _online_slot for analysis (GRPO rollout logs); never reaches the model.
+        self._mix_info = {}
         sample = super().__getitem__(idx)
         if self._activity is not None:
             # Read by the template, which turns it into per-Mel-frame labels of the mixture.
@@ -1131,6 +1153,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             sample["messages"] = [
                 m for m in sample["messages"] if m["role"] != "assistant"
             ]
+            sample["online_mix_info"] = dict(self._mix_info)
         elif self.training and self.augmentation.spec_aug_prob:
             sample["audio_augmentation"] = {
                 "seed": f"{self.seed}:{idx if isinstance(idx, tuple) else (self.epoch, idx)}:features",
