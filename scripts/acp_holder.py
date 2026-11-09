@@ -3,7 +3,7 @@
 Polls the pool; when this project's jobs hold fewer than --nodes nodes and a whole node is idle, submits one
 GPU-burning holder job (scripts/gpu_hold.py) (display name AmphionASR-<--name-stem>-h<HHMM>, an ordinary experiment-style name) and exits. Real or debug jobs are queued first and the holder
 is stopped afterwards (`sco acp jobs stop`). Cluster settings (image, spec, mounts) come from the `cluster:` section
-of any train config. Usage: acp_holder.py --config <train.yaml> [--nodes 2] [--interval 120] [--once]
+of any train config. Usage: acp_holder.py --config <train.yaml> [--nodes 1] [--interval 120] [--once]
 """
 import argparse
 import shutil
@@ -69,7 +69,7 @@ def submit_holder(cluster, python, stem):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True)
-    parser.add_argument("--nodes", type=int, default=2)
+    parser.add_argument("--nodes", type=int, default=1)
     parser.add_argument("--interval", type=int, default=120)
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--name-stem", default="ts-robust-v7set-continue-from016-ckpt15000-1node")
