@@ -1,0 +1,51 @@
+# sum-full plain-ASR server with the presence-decision None bias -2.0 (open_audio_llm.integrations.vllm.presence_bias, main branch feat/presence-decision-bias dc40d75): from eval-whitebox-sum-full-asrfull/serve-asr.yaml, only bias, logits processor, code, port, name, GPU and records changed. Moved to acp-dev GPU 1 when dev2 was released (2026-11-09).
+version: 1
+runtime:
+  python:
+    path: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+  cwd:
+    path: ../../../..
+  pythonpath:
+  - path: ../../shared/code-presence-bias/src
+  gpus:
+  - 1
+  threads:
+    omp: 4
+    openblas: 1
+  environment:
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    HF_HUB_OFFLINE: '1'
+    VLLM_ENGINE_READY_TIMEOUT_S: '1800'
+    PYTHONUNBUFFERED: '1'
+    AMPHION_TSASR_INSERT_SEP: '0'
+    AMPHION_TSASR_ENROLL_SEC: '5'
+    AMPHION_TSASR_ENROLL_NOPAD: '0'
+    COT_TSASR_ENROLL_RANDOM: '0'
+    COT_AUDIO_CHUNKED_ATTN: '0'
+    AMPHION_PRESENCE_BIAS: '-2.0'
+task:
+  kind: serve
+  backend: vllm
+  model:
+    path: /workspace/data/ae-runs/whitebox-merge-sum-full/checkpoint
+  arguments:
+    --host: 127.0.0.1
+    --port: 19612
+    --served-model-name: sumfull-presencebias-m2-asr
+    --dtype: bfloat16
+    --tensor-parallel-size: 1
+    --limit-mm-per-prompt:
+      audio: 1
+    --gpu-memory-utilization: 0.2
+    --max-model-len: 8192
+    --hf-overrides:
+      thinker_config:
+        audio_config:
+          n_window_infer: 1000000000
+    --logits-processors: open_audio_llm.integrations.vllm.presence_bias:PresenceBias
+  flags:
+  - --trust-remote-code
+  - --no-enable-prefix-caching
+recording:
+  attempts_dir:
+    path: ../../tasks/02-eval/amphionasr2-grpo-whitebox-sum-full-presencebias-m2/serve-asr/attempts

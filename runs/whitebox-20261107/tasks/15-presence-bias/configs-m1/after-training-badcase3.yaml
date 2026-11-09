@@ -1,0 +1,25 @@
+# presence bias -1.0: asrfull/badcase3 with model, server and output changed.
+# eval-whitebox-sum-full-asrfull：鼎桥回退 v3；模型与服务取本目录 after-training-asrfull.yaml。
+suite_id: asr-regression-native@1
+model_name: amphionasr2-grpo-whitebox-sum-full-presencebias-m1
+evaluator: hotwords
+eval_set: tdtech/badcase@v3-20261104
+server_url: http://127.0.0.1:19611
+served_model: sumfull-presencebias-m1-asr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/whitebox-merge-sum-full-presencebias-m1
+parameters:
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false
+  model_info:
+    origin: ours
+    mode: offline
+    params: 1.7B
+    license: internal

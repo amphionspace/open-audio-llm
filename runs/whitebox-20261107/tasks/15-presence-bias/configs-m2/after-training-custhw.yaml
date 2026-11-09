@@ -1,0 +1,25 @@
+# presence bias -2.0: core/custhw with model, server and output changed.
+# amphionasr2-grpo-whitebox-sum-full：鼎桥客户真实录音 tdtech/customer-asr@v5 热词（出厂内置热词表 / 人名表），发布前对照（10.28 / v9 插值 / v10 avg3 / v10 插值同一口径）；不发布。
+suite_id: asr-regression-native@1
+model_name: amphionasr2-grpo-whitebox-sum-full-presencebias-m2
+evaluator: hotwords
+data_config: /workspace/workspace/mingdong/repo/oal-grpo/runs/amphionasr2-grpo-20261101/configs/customer-v5/customer-asr-v5-hw-data.yaml
+server_url: http://127.0.0.1:19612
+served_model: sumfull-presencebias-m2-asr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/whitebox-merge-sum-full-presencebias-m2
+parameters:
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false
+  model_info:
+    origin: ours
+    mode: offline
+    params: 1.7B
+    license: internal
