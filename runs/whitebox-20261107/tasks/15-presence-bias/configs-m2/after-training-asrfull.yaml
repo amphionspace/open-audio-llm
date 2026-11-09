@@ -1,0 +1,26 @@
+# presence bias -2.0: asrfull/asrfull with model, server and output changed.
+# whitebox-sum-full：由 /workspace/workspace/mingdong/repo/oal-grpo/runs/amphionasr2-grpo-20261101/configs/eval-enbalavg3-ckpt800/after-training-asrfull.yaml 生成（scripts/make_eval_suite.py），只改模型名、服务地址与输出目录。
+suite_id: asr-regression-native@1
+evaluator: ts-asr
+data_config: /workspace/workspace/mingdong/repo/open-audio-llm-ts-robust/runs/ts-robust-acp-20261015/configs/eval-ckpt15000/asr-benchmark-data.yaml
+model_name: amphionasr2-grpo-whitebox-sum-full-presencebias-m2
+server_url: http://127.0.0.1:19612
+served_model: sumfull-presencebias-m2-asr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/whitebox-merge-sum-full-presencebias-m2
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false
+  model_info:
+    origin: ours
+    mode: offline
+    params: 1.7B
+    license: internal

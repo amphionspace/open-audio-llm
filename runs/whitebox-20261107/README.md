@@ -22,6 +22,7 @@
 | [10-ecapa-check](tasks/10-ecapa-check/README.md) | 外部 ECAPA 验证分 vs 模型自身 margin：v12 各 pos/neg 家族 AUC、交叉验证组合、模型判错样本、后置门控上限，加 first-other v3 | 完成：不值得接入。难家族合并 AUC：ECAPA 0.81、margin 0.980、组合 0.980；0.5% 正样本预算下组合去掉 74/452 误出字（margin 73） |
 | [12-grad-attribution](tasks/12-grad-attribution/README.md) | 把一步 GRPO 的梯度按提示类型 × token（语言名决策 / 其余）拆开，连同 v15–v25、v17/v18 的实际更新，看它们在 v12 留出样本上怎么移动出不出字的 margin | 完成：缺席题的决策梯度推正样本和推难负样本一样多（比值 1.0–1.1），只挪门槛；实际更新的区分集中在 LLM 第 10–19 层，编码器几乎不动 |
 | [13-paired-ab](tasks/13-paired-ab/README.md) | 成对相似嗓音损失的 SFT A/B（v66 对 v64，都从 073 avg3 续训 3000 步），按同等误报逐族对比 | 完成：同等误报下少漏 42 条（约 −6%），但难负样本误报没有专门改善（95 对 97） |
+| [15-presence-bias](tasks/15-presence-bias/README.md) | 普通 ASR 服务给 ` None` 加偏置（−1 / −2），按开发 / 测试切分检查收益是否通用 | 完成：不上线。合计只少错 431 个单位（约 340 万中），客户通用 v5 的 CER +11.7 个点，babble 空参考误报成倍增加 |
 
 ## 结论（04）
 
