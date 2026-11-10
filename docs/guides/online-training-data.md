@@ -290,3 +290,15 @@ Sequence parallel / tensor parallel 未接入这一 batch sampler。
 目前 cut 元数据、样本事实和本轮索引计划仍在内存中，波形按需读取；不具备 icefall
 预切物理 shard 的按片懒加载能力。入口不使用 HF dataset.map 预编码、packing 或
 padding_free。旧离线转换和索引生成脚本已移除。
+
+## TTS 注册（跨语言）
+
+数据配置顶层写 `tts_enrollments: {list: <utterances.jsonl.gz>, prob: 0.3}` 后，在线混音样本会以 `prob` 的概率，把注册换成同一说话人的 TTS 克隆片段。这份片段可能是另一种语言，也可能是本语言。
+
+- **用法**：
+  - 片段清单由 `audio-data-contract` 的 `scripts/ts_benchmark/tts_training_enrollments.py` 生成，数据集为 `tts_crosslingual_enroll`。
+  - 说话人键是 `<注册所在数据集>:<source_record_id 的前缀>`，例如 `aishellmix:C0001`。
+  - 换上的片段照常经过注册的裁剪、污染和降质。
+  - 目标在场与缺席的样本都会换，所以"注册是合成音"不能用来判断目标在不在场。
+  - 抽签用独立的随机数流，换不换注册不影响样本的其余部分。
+- **原因**：训练数据里注册与混合段始终是同一语言。在 `ts-asr-crosslingual` 上，换成跨语言注册后，真人说话人的整句漏识从 1–11% 升到 18–39%（`docs/experiments/2026-11-09-crosslingual-enrollment`）。
