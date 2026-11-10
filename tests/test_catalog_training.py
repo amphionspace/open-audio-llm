@@ -1929,3 +1929,12 @@ def test_train_end_stops_persistent_loader_workers():
     # Without this, torch's per-worker atexit join waits 5 s for each worker.
     callback.on_train_end(None, None, None)
     assert workers and not any(worker.is_alive() for worker in workers)
+
+
+def test_native_language_maps_spanish_to_the_qwen3_asr_label():
+    from qwen_asr.inference.utils import validate_language
+
+    from open_audio_llm.data.qwen3_asr import native_language
+
+    assert native_language("es") == "Spanish"
+    validate_language(native_language("es"))
