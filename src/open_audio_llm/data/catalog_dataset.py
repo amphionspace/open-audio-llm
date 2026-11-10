@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+import re
 import time
 import hashlib
 from dataclasses import asdict, replace
@@ -392,6 +393,10 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             if not isinstance(prob, (int, float)) or not 0 < prob <= 1 or not isinstance(top, int) or top < 1:
                 raise ValueError("objective.paired_lookalike needs prob in (0, 1] and top >= 1")
         self._twin = None
+        # TTS clones of training targets' voices (often in the other language) used as enrollments with
+        # tts_enrollments.prob: the model never sees an enrollment in another language than the mixture otherwise
+        # (docs/experiments/2026-11-09-crosslingual-enrollment).
+        self.tts_enrollments = self._load_tts_enrollments(config.get("tts_enrollments")) if training and not grpo else None
         self.source_ranges = []
         records = []
         sources = config["train" if training else "validation"]
@@ -1111,6 +1116,57 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                 return np.ascontiguousarray(limit_peak(audio), dtype=np.float32)
         return None
 
+    @staticmethod
+    def _load_tts_enrollments(spec):
+        """{speaker key ``<dataset_id>:<speaker>``: [clip path]} from a tts_training_enrollments.py list."""
+        if not spec:
+            return None
+        import gzip
+        import json
+
+        prob = spec.get("prob")
+        if not isinstance(prob, (int, float)) or not 0 < prob <= 1:
+            raise ValueError("tts_enrollments needs prob in (0, 1]")
+        path = Path(spec["list"])
+        clips = {}
+        with gzip.open(path, "rt") as handle:
+            for line in handle:
+                row = json.loads(line)
+                clips.setdefault(row["speaker"], []).append(str(path.parent / row["path"]))
+        if not clips:
+            raise ValueError(f"tts_enrollments list {path} is empty")
+        return {"prob": float(prob), "clips": clips}
+
+    def _tts_enrollment(self, record, audio, rng):
+        """With tts_enrollments.prob, the enrollment becomes a TTS clone of the same speaker (any language).
+
+        Target-present and target-absent records alike, so a synthetic enrollment says nothing about presence.
+        Draws from a copy of ``rng``: the rest of the sample is the same with or without the swap.
+        """
+        source = record.metadata.get("source_record_id")
+        if self.tts_enrollments is None or not source:
+            return audio
+        speaker = f"{record.slot('enrollment').ref.dataset_id}:{re.split(r'[_-]', source, maxsplit=1)[0]}"
+        clips = self.tts_enrollments["clips"].get(speaker)
+        if not clips:
+            return audio
+        own = random.Random()
+        own.setstate(rng.getstate())
+        if own.random() >= self.tts_enrollments["prob"]:
+            return audio
+        import soundfile as sf
+
+        clip, rate = sf.read(clips[own.randrange(len(clips))], dtype="float32", always_2d=False)
+        clip = clip.mean(axis=-1) if clip.ndim > 1 else clip
+        if rate != self.sampling_rate:
+            from math import gcd
+
+            from scipy.signal import resample_poly
+
+            g = gcd(self.sampling_rate, rate)
+            clip = resample_poly(clip, self.sampling_rate // g, rate // g).astype(np.float32)
+        return np.ascontiguousarray(clip, dtype=np.float32)
+
     def _online_slot(self, record, name, audio, rng):
         """Rebuild one slot of an online-mixed sample; return audio and the slot's augmentation."""
         config = OnlineMixConfig(**record.metadata["online_mix"])
@@ -1119,6 +1175,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         noise, floor = self._nonspeech_loader(), self._nonspeech_loader(floor=True)
         rate = self.sampling_rate
         if name == "enrollment":
+            audio = self._tts_enrollment(record, audio, rng)
             audio = crop_enrollment(rng, audio, config, self.sampling_rate)
             audio = contaminate_enrollment(rng, audio, config, speech, self.sampling_rate)
             audio = degrade_enrollment(rng, audio, config, floor, self.sampling_rate)
