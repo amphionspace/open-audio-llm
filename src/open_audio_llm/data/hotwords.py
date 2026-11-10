@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import random
+import re
+
+_CJK = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]")
 
 
 def is_valid_hotword(value: str, max_len: int = 8, min_len: int = 2) -> bool:
@@ -17,6 +20,27 @@ def build_hotword_pool(records, max_len: int = 8) -> list[str]:
             if isinstance(hotword, str) and is_valid_hotword(hotword, max_len=max_len):
                 pool.add(hotword)
     return sorted(pool)
+
+
+def hotword_language(word: str, languages) -> str:
+    """Native language label of a hotword from a source of ``languages`` (catalog codes): the source's language,
+    or for a zh/en source the script of the word."""
+    from .qwen3_asr import native_language
+
+    names = {native_language(language) for language in languages}
+    if len(names) == 1:
+        return names.pop()
+    return "Chinese" if _CJK.search(word) else "English"
+
+
+def build_hotword_pools(records, max_len: int = 8) -> dict[str, list[str]]:
+    """``build_hotword_pool`` split by the native language of each record."""
+    pools: dict[str, set[str]] = {}
+    for record in records:
+        for hotword in record.record.hotwords:
+            if isinstance(hotword, str) and is_valid_hotword(hotword, max_len=max_len):
+                pools.setdefault(hotword_language(hotword, [record.record.language]), set()).add(hotword)
+    return {language: sorted(words) for language, words in pools.items()}
 
 
 def sample_hotwords(

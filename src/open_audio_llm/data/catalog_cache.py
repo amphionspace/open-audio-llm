@@ -432,6 +432,14 @@ class CatalogRecordIndex:
         self.sources = open_source_indexes(dataset, self.root)
         self.ends = np.cumsum([len(s) for s in self.sources]).tolist()
         self.hotword_pool = sorted({h for s in self.sources for h in s.hotwords})
+        from .hotwords import hotword_language
+
+        pools = {}
+        for source, index in zip(dataset.sources, self.sources):
+            languages = dataset.resolver.catalog.get(source["dataset_id"], source["version"]).languages
+            for word in index.hotwords:
+                pools.setdefault(hotword_language(word, languages), set()).add(word)
+        self.hotword_pools = {language: sorted(words) for language, words in pools.items()}
         self.durations = np.concatenate([s.metadata["duration"] for s in self.sources])
         self.slots = np.concatenate([s.metadata["slots"] for s in self.sources])
 

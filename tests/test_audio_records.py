@@ -58,3 +58,21 @@ def test_catalog_record_hotwords_populate_distractor_pool():
         hotwords=("hello", "world"),
     )
     assert build_hotword_pool([ResolvedAudioRecord(record)]) == ["hello", "world"]
+
+
+def test_hotword_pools_are_split_by_language():
+    from open_audio_llm.data.hotwords import build_hotword_pools, hotword_language
+    from open_audio_llm.data.records import ResolvedAudioRecord
+
+    def record(language, words):
+        return ResolvedAudioRecord(AudioRecord(
+            id=f"r-{language}", task="asr_hotwords", language=language,
+            audio_slots=(AudioSlot("primary", AudioRef("demo", "1", "train", language)),),
+            target=" ".join(words), hotwords=tuple(words)))
+
+    pools = build_hotword_pools([record("es", ["hola", "mundo"]), record("zh", ["你好"]), record("en", ["hello"])])
+    assert pools == {"Spanish": ["hola", "mundo"], "Chinese": ["你好"], "English": ["hello"]}
+    # A zh/en source names the language of each word by its script.
+    assert hotword_language("你好", ["zh", "en"]) == "Chinese"
+    assert hotword_language("hello", ["zh", "en"]) == "English"
+    assert hotword_language("hola", ["es"]) == "Spanish"

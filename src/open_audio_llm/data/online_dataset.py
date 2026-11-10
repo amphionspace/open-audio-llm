@@ -16,7 +16,7 @@ from audio_data_contract import (
 )
 from torch.utils.data import Dataset
 
-from .hotwords import build_hotword_pool, sample_hotwords, sample_ts_hotwords
+from .hotwords import build_hotword_pool, build_hotword_pools, sample_hotwords, sample_ts_hotwords
 from .records import ResolvedAudioRecord, to_swift_record
 
 TASK_TEMPLATES = {
@@ -156,6 +156,7 @@ class OnlineAudioDataset(Dataset):
         hotword_miss_prob: float = 0.0,
         ts_hotword_prompt_prob: float = 0.0,
         hotword_confusable_prob: float = 0.0,
+        same_language_distractor_prob: float = 0.0,
         training: bool = True,
         message_format: str = "generic",
     ):
@@ -177,6 +178,14 @@ class OnlineAudioDataset(Dataset):
         self.hotword_pool = (
             records.hotword_pool if hasattr(records, "hotword_pool")
             else build_hotword_pool(self.records)
+        )
+        # Share of listed samples whose distractors (words nobody says) come from the pool of the record's own
+        # language instead of the pool of every language. One pool is mostly Chinese and English, so a list for
+        # a less frequent language (Spanish) would hardly ever hold a word of its language that nobody says.
+        self.same_language_distractor_prob = same_language_distractor_prob
+        self.hotword_pools = (
+            (records.hotword_pools if hasattr(records, "hotword_pools") else build_hotword_pools(self.records))
+            if same_language_distractor_prob > 0 else {}
         )
 
     def set_epoch(self, epoch: int) -> None:
@@ -262,10 +271,17 @@ class OnlineAudioDataset(Dataset):
             and confusable_rng.random() < self.hotword_confusable_prob
             else []
         )
+        distractor_pool = self.hotword_pool
+        if self.training and self.same_language_distractor_prob > 0:
+            from .qwen3_asr import native_language
+
+            own = self.hotword_pools.get(native_language(record.language))
+            if own and random.Random(f"{seed}:distractor-language").random() < self.same_language_distractor_prob:
+                distractor_pool = own
         hotwords = (
             sample_hotwords(
                 list(record.hotwords),
-                self.hotword_pool,
+                distractor_pool,
                 max_hotwords=self.max_hotwords,
                 prompt_prob=self.hotword_prompt_prob,
                 miss_prob=self.hotword_miss_prob,
@@ -283,7 +299,7 @@ class OnlineAudioDataset(Dataset):
                 sample_ts_hotwords(
                     list(record.hotwords) if record.target.strip() else [],
                     list(record.metadata.get("interferer_hotwords", ())),
-                    self.hotword_pool,
+                    distractor_pool,
                     max_hotwords=self.max_hotwords,
                     prompt_prob=self.ts_hotword_prompt_prob,
                     miss_prob=self.hotword_miss_prob,
