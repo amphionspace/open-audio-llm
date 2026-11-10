@@ -185,7 +185,9 @@ class OnlineAudioDataset(Dataset):
         self.same_language_distractor_prob = same_language_distractor_prob
         self.hotword_pools = (
             (records.hotword_pools if hasattr(records, "hotword_pools") else build_hotword_pools(self.records))
-            if same_language_distractor_prob > 0 else {}
+            # Only training draws distractors. Building the pools from the rows reads every record in this
+            # process, which opens the Lance tables before the loader workers fork (they then crash).
+            if training and same_language_distractor_prob > 0 else {}
         )
 
     def set_epoch(self, epoch: int) -> None:

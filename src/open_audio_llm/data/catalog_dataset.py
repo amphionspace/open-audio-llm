@@ -214,6 +214,8 @@ class _IndexedRecords:
             self.slots = np.asarray(records.slots)[self.indices]
         if hasattr(records, "hotword_pool"):
             self.hotword_pool = records.hotword_pool
+        if hasattr(records, "hotword_pools"):
+            self.hotword_pools = records.hotword_pools
 
     def __len__(self):
         return int(self.indices.shape[0])

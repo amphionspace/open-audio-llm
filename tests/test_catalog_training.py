@@ -1938,3 +1938,15 @@ def test_native_language_maps_spanish_to_the_qwen3_asr_label():
 
     assert native_language("es") == "Spanish"
     validate_language(native_language("es"))
+
+
+def test_indexed_records_forward_the_language_hotword_pools():
+    from open_audio_llm.data.catalog_dataset import _IndexedRecords
+
+    class Index:
+        durations = [1.0, 2.0]
+        hotword_pool = ["hola", "你好"]
+        hotword_pools = {"Spanish": ["hola"], "Chinese": ["你好"]}
+
+    view = _IndexedRecords(Index(), [1])
+    assert view.hotword_pools == {"Spanish": ["hola"], "Chinese": ["你好"]}
