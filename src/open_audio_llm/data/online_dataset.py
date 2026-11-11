@@ -156,6 +156,7 @@ class OnlineAudioDataset(Dataset):
         hotword_miss_prob: float = 0.0,
         ts_hotword_prompt_prob: float = 0.0,
         hotword_confusable_prob: float = 0.0,
+        hotword_confusable_miss_prob: float | None = None,
         same_language_distractor_prob: float = 0.0,
         training: bool = True,
         message_format: str = "generic",
@@ -175,6 +176,10 @@ class OnlineAudioDataset(Dataset):
         # Share of listed samples whose record names sound-alike words (metadata.confusable_hotwords) that join the
         # list as distractors (0 keeps every list as before).
         self.hotword_confusable_prob = hotword_confusable_prob
+        # Plain-ASR lists that carry sound-alikes leave out each real word with this probability instead of
+        # hotword_miss_prob, so "sound-alike listed, real word not" is common enough to learn (None keeps
+        # hotword_miss_prob). TS lists keep hotword_miss_prob.
+        self.hotword_confusable_miss_prob = hotword_confusable_miss_prob
         self.hotword_pool = (
             records.hotword_pool if hasattr(records, "hotword_pool")
             else build_hotword_pool(self.records)
@@ -286,7 +291,11 @@ class OnlineAudioDataset(Dataset):
                 distractor_pool,
                 max_hotwords=self.max_hotwords,
                 prompt_prob=self.hotword_prompt_prob,
-                miss_prob=self.hotword_miss_prob,
+                miss_prob=(
+                    self.hotword_confusable_miss_prob
+                    if confusables and self.hotword_confusable_miss_prob is not None
+                    else self.hotword_miss_prob
+                ),
                 rng=rng,
                 confusables=confusables,
                 confusable_rng=confusable_rng,
