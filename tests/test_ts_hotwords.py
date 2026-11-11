@@ -100,3 +100,29 @@ def test_confusables_leave_the_rng_stream_unchanged():
     sample_hotwords(["x"], POOL, prompt_prob=1.0, rng=a)
     sample_hotwords(["x"], POOL, prompt_prob=1.0, rng=b, confusables=["y"], confusable_rng=random.Random(1))
     assert a.random() == b.random()
+
+
+class _AsrDataset(OnlineAudioDataset):
+    sampling_rate = 16000
+
+    def _resolve_audio(self, resolved, rng):
+        return {"primary": np.zeros(16000, np.float32)}
+
+
+def _asr_hotword_record():
+    return AudioRecord(
+        id="hw", task="asr_hotwords", language="es", target="la obra de Ensor.",
+        audio_slots=(AudioSlot("primary", AudioRef("p", "1", "es", "a")),),
+        hotwords=("Ensor",), metadata={"confusable_hotwords": ["Enzo"]},
+    )
+
+
+@pytest.mark.parametrize("confusable_prob, listed", [(1.0, False), (0.0, True)])
+def test_confusable_miss_prob_applies_only_to_lists_with_sound_alikes(confusable_prob, listed):
+    pytest.importorskip("qwen_asr")
+    data = _AsrDataset([ResolvedAudioRecord(_asr_hotword_record())], message_format="qwen3_asr",
+                       hotword_prompt_prob=1.0, hotword_confusable_prob=confusable_prob,
+                       hotword_confusable_miss_prob=1.0)
+    lists = [data[(epoch, 0, None)]["candidate_hotwords"].split(",") for epoch in range(20)]
+    assert all(("Ensor" in words) == listed for words in lists)
+    assert all(("Enzo" in words) == (not listed) for words in lists)
