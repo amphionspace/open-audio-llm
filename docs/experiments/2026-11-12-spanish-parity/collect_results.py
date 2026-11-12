@@ -13,9 +13,10 @@ MODELS = {  # label: (ae model dir, description)
     "v74": ("ts-robust-087-avg3", "v74：v73 数据，6000 步"),
     "v76": ("ts-robust-089-avg3", "v76：v74 + 西语近音热词数据 + hotword_miss_prob 0.15"),
     "v77": ("ts-robust-090-avg3", "v77：v76 + hotword_confusable_miss_prob 0.5"),
-    # v78 (attempt 091) is still being evaluated; add it here once its runs are complete.
+    "v78": ("ts-robust-091-avg3", "v78：v77 + 西语近音热词数据权重 1.0→3.0"),
     "es081": ("whitebox-merge-sumfull-es081", "两轮相加 + (v69 − SFT076)"),
     "es086": ("whitebox-merge-sumfull-es086", "两轮相加 + (v73 − SFT076)"),
+    "es091": ("whitebox-merge-sumfull-es091", "两轮相加 + (v78 − SFT076)"),
 }
 ES_ASR_CFG = "configs/es/es-asr-test-data.yaml"
 
