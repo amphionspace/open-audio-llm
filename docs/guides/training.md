@@ -21,6 +21,27 @@ open-audio-llm model --config examples/configs/model/merge-lora.yaml
 
 TS-ASR 样本的 system 来自 `tsasr/ts_prompt.py` 的 `TS_SYSTEM`（"Transcribe only the enrolled speaker. Output nothing if they do not speak."，2026-11-06 起），有热词时另起一行 `Hotwords: ...`。注册长度不写进提示，由请求的 `enroll_seconds` 决定。
 
+### 说字写法 think（SFT）
+
+数据配置写 `think: {files: [...], explained_prob: 0.5, ordinary_prob: ...}` 后，Qwen3-ASR SFT 的部分中文样本在答案前带一段 think（`data/think.py`）。
+
+- **数据来源**：`files` 列出 `context_correction_clean_zh@think-v1-20261112` 中各来源的 `think.jsonl.gz`。
+  - 每行按 `(dataset, record_id)` 对应一条训练记录，`dataset` 必须是某个训练来源的 `<dataset>@<version>`（清洗后的派生版本）。名字对不上时直接报错，以免指错版本。
+  - 有 think 文本的记录以 `explained_prob` 的概率开 think，例如 `zha 这个音，说话人说是「这是山楂的楂」，写作「楂」。`。
+  - `think_on: false` 的记录只按 think 关训练：说明不确定，或扫描标出、可能仍在讲写法的。
+  - 这些来源里文件没列出的中文 ASR / TS-ASR 记录，以 `ordinary_prob` 的概率开 think，内容是固定句 `这段没有说明字怎么写。`。
+  - 没有 think 文件的来源从不开 think，因为没扫描过说明。
+- **格式**：think 关的样本与原来完全相同，答案是 `language X<asr_text>文本`；think 开时答案前加 `<think>\n…\n</think>\n\n`。
+  开头的 `<think>\n` 不计 loss，相当于预填在提示里。所以模型只在提示以 `<think>\n` 结尾时才写 think，不预填时照旧直接转写，现有服务和评测不受影响。
+- **取值**：`ordinary_prob` 按"普通 think 开样本数 ≈ 说明样本数的几倍"来定，不要和 `explained_prob` 取一样的值。
+  有说明的记录只有约 2,200 条，普通中文记录有上千万条；概率相同时，think 开的几乎全是固定句，模型会学成一律写固定句。
+  这样定也让"开 think"本身不等于"有说明"。
+- **训练目标**：用 sample-mean 目标（`objective.sample_mean`）时：
+  - 带 think 的样本不做 replay KL，因为冻结的基座没见过 think；
+  - `separate_prefix` 的前缀只含 `language X<asr_text>`，think 与转写一起平均；
+  - 日志多一项 `ce_think`。
+- **适用范围**：只用于 SFT 训练集，验证集和 GRPO 不加 think。
+
 ### 成对相似嗓音损失（SFT）
 
 数据配置写 `objective.paired_lookalike: {weight, prob, top: 4, margin: 2.0, gap: 20.0}` 后：

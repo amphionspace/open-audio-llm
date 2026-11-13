@@ -107,6 +107,21 @@ def sample_losses(logits, targets, rows, counts, teacher_logits=None, ordinary=N
     return ce + kl_weight * kl, ce, kl
 
 
+def answer_parts(labels, asr_text_id, think_end_id):
+    """(think rows, header mask over supervised tokens) for ``separate_prefix``.
+
+    The header is ``language X<asr_text>``. A think block before it (data/think.py) is answer
+    content: it is averaged with the transcript, not with the header.
+    """
+    shifted = labels[:, 1:]
+    closed = shifted == think_end_id
+    think_rows = closed.any(-1)
+    after_think = (closed.cumsum(-1) > 0) & ~closed
+    boundary = shifted == asr_text_id
+    header = (~think_rows[:, None] | after_think) & ((boundary.cumsum(-1) == 0) | boundary)
+    return think_rows, header[shifted != -100]
+
+
 def select_examples(inputs, indexes):
     result = {}
     for key, value in inputs.items():
@@ -135,6 +150,7 @@ def install_retention_objective(trainer, args):
         # Prefix/body averages cannot be recovered as a token sum.
         raise ValueError("separate_prefix requires reduction=example_mean")
     asr_text_id = trainer.template.tokenizer.convert_tokens_to_ids("<asr_text>")
+    think_end_id = trainer.template.tokenizer.convert_tokens_to_ids("</think>")
     if not math.isfinite(coefficient) or coefficient < 0:
         raise ValueError("replay_kl_weight must be finite and nonnegative")
     if coefficient and not args.retention_teacher:
@@ -191,14 +207,14 @@ def install_retention_objective(trainer, args):
         if inputs.pop("loss_scale", None) is not None:
             raise ValueError("Token loss_scale cannot be combined with the retention objective")
         outputs, targets, rows, counts = supervised_forward(model, thinker.lm_head, inputs, labels)
-        prefix = None
-        if separate_prefix:
-            shifted = labels[:, 1:]
-            boundary = shifted == asr_text_id
-            prefix = ((boundary.cumsum(-1) == 0) | boundary)[shifted != -100]
-        indexes = (tasks == 0).nonzero().flatten()
+        think_rows, prefix = answer_parts(labels, asr_text_id, think_end_id)
+        if not separate_prefix:
+            prefix = None
+        # The frozen base has never seen a think block: replay KL covers think-off ASR only.
+        plain = (tasks == 0) & ~think_rows
+        indexes = plain.nonzero().flatten()
         teacher_logits = None
-        ordinary = tasks[rows] == 0
+        ordinary = plain[rows]
         if coefficient and indexes.numel():
             # Accelerate wraps only the student forward in autocast.
             with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16):
@@ -222,6 +238,10 @@ def install_retention_objective(trainer, args):
             selected = ce.detach()[tasks == task]
             if selected.numel():
                 metric.update(selected)
+        metric = metrics["ce_think"]
+        selected = ce.detach()[think_rows]
+        if selected.numel():
+            metric.update(selected)
         metric = metrics["replay_kl"]
         if coefficient and indexes.numel():
             metric.update(kl.detach()[indexes])

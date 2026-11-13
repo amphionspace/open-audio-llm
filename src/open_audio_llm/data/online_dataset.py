@@ -205,6 +205,10 @@ class OnlineAudioDataset(Dataset):
     def _resolve_audio(self, resolved, rng):
         raise NotImplementedError("The Catalog dataset resolves audio slots on demand")
 
+    def _think(self, record_idx, record, seed):
+        """Think text for a Qwen3-ASR example, or None for think off (data/think.py)."""
+        return None
+
     def _plan_meeting(self, record, rng):
         raise NotImplementedError("The Catalog dataset plans online meetings")
 
@@ -336,7 +340,7 @@ class OnlineAudioDataset(Dataset):
         if self.message_format == "qwen3_asr":
             from .qwen3_asr import native_messages, prepare_ts_clips
 
-            sample["messages"] = native_messages(record, hotwords)
+            sample["messages"] = native_messages(record, hotwords, self._think(record_idx, record, seed))
             sample["solution"] = sample["messages"][-1]["content"]
             if record.task == "ts_asr":
                 enroll, mix = prepare_ts_clips(sample["audios"], self.sampling_rate)

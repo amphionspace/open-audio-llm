@@ -13,7 +13,7 @@ from pathlib import Path
 
 
 TRAIN_KEYS = (
-    "loss", "grad_norm", "learning_rate", "ce_asr", "ce_sot", "replay_kl",
+    "loss", "grad_norm", "learning_rate", "ce_asr", "ce_sot", "ce_think", "replay_kl",
     "ts_activity_loss", "ts_activity_acc", "ts_activity_frames",
     "memory(GiB)", "train_speed(s/it)",
     "reward", "reward_std", "kl", "frac_reward_zero_std",
