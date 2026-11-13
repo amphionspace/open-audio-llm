@@ -83,6 +83,12 @@ open-audio-llm serve --config examples/configs/serve/tsasr.yaml
 
 Qwen3-ASR embedding bypass 在 `serve/vllm.yaml` 中通过 `--enable-mm-embeds` 和对应插件运行时设置开启，仍使用根项目的 `vllm.general_plugins`，无需单独安装插件子目录。原理见 [vLLM Triton Audio Embedding Bypass](../reference/vllm-triton-bypass.md)。
 
+用说字写法 think 训练过的模型（[训练指南](training.md)）要在推理时开 think，就在 serve YAML 的 `task.arguments` 加
+`--chat-template: {path: <仓库>/src/open_audio_llm/integrations/vllm/qwen3_asr_think.jinja}`，请求带 `chat_template_kwargs.enable_thinking: true`。
+- 不带该参数的请求与原模板逐字相同，所以普通 ASR 和 TS-ASR 服务都可以加这个参数。
+- 请求和输出格式见[评测协议](evaluation.md)。
+- 上线前还要加一道校验：think 里的原话和写作的字都要出现在转写里，不满足就改用 think 关重解。这一步尚未实现。
+
 ### 目标说话人 ASR（TS-ASR）
 
 TS-ASR 使用独立服务配置 [serve/tsasr.yaml](../../examples/configs/serve/tsasr.yaml)：在注册音和混合音之间插入可学习 `[SEP]`，音频注意力使用全局窗口 `n_window_infer=1000000000`。普通 ASR 配置保持 SEP 关闭。需要分块注意力时，在 TS-ASR YAML 中设置 `COT_AUDIO_CHUNKED_ATTN: '1'` 并移除 `--hf-overrides`。实现位于 `src/open_audio_llm/tsasr/`。checkpoint-34479 的服务方式见 [评测结果](../models/ckpt34479-evaluation.md)。
