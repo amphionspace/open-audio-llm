@@ -120,3 +120,23 @@ def test_catalog_dataset_reads_think_paths_and_finds_the_source_of_a_record(tabl
     dataset._source_starts, dataset._source_keys = [0, 5], ["other@1", KEY]
     assert dataset._think(7, record(), "s") == THINK
     assert dataset._think(3, record(), "s") is None
+
+
+def test_serving_chat_template_opens_a_think_block_only_when_asked():
+    from pathlib import Path
+
+    import jinja2.sandbox
+
+    import open_audio_llm.integrations.vllm as vllm_integration
+
+    path = Path(vllm_integration.__file__).with_name("qwen3_asr_think.jinja")
+    # The environment transformers and vLLM render chat templates with.
+    env = jinja2.sandbox.ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True)
+    template = env.from_string(path.read_text())
+    messages = [{"role": "system", "content": "Hotwords: 楂"},
+                {"role": "user", "content": [{"type": "audio", "audio": "a.wav"}]}]
+    plain = template.render(messages=messages, add_generation_prompt=True)
+    assert plain.endswith("<|im_start|>system\nHotwords: 楂<|im_end|>\n<|im_start|>user\n"
+                          "<|audio_start|><|audio_pad|><|audio_end|><|im_end|>\n<|im_start|>assistant\n")
+    assert template.render(messages=messages, add_generation_prompt=True, enable_thinking=False) == plain
+    assert template.render(messages=messages, add_generation_prompt=True, enable_thinking=True) == plain + "<think>\n"

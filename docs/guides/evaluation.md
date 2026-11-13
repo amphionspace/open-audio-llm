@@ -48,6 +48,12 @@ v2 相对 v1 的变化：`checkpoint` 不再保证存在于本地，新增 `chec
 
 - TS-ASR 服务必须用 `serve/tsasr.yaml` 启动（`AMPHION_TSASR_INSERT_SEP=1`），由服务端在两段之间插入可学习的 `[SEP]`。拼接的参考实现是 `open_audio_llm.tsasr.concat_audio.pack_ts_transport_b64`。客户端按本节规则自行实现，不 import 这个函数。
 - 模型原始输出形如 `language Chinese<asr_text>转写文本`。打分前去掉 `<asr_text>` 前面的语言前缀。
+- **think 开**（可选，用 think 数据训练过的模型，见[训练指南](training.md)"说字写法 think"）：
+  - 请求顶层带 `"chat_template_kwargs": {"enable_thinking": true}`，提示末尾会加上 `<think>\n`。
+  - 服务启动参数要加 `--chat-template src/open_audio_llm/integrations/vllm/qwen3_asr_think.jinja`。这个模板不带该参数时与 Qwen3-ASR 原模板逐字相同，所以普通请求不受影响。
+  - 输出形如 `说明…\n</think>\n\nlanguage Chinese<asr_text>转写文本`。打分前去掉 `</think>` 及其之前的 think 文本；think 没有闭合的，按无转写处理。
+  - AmphionEval 用 `--think` 开启这一模式，think 文本另存在预测的 `think` 字段。
+  - 不带该参数时为 think 关，请求和输出与上面完全相同。
 
 修改以上任何一项（system 文本、拼接时长、输出格式）都属于协议变更：先在本文件更新并说明版本，再同步修改 AmphionEval。
 
