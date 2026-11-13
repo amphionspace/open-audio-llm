@@ -800,6 +800,22 @@ def test_sot_catalog_uses_mixture_without_enrollment_and_excludes_teacher_kl(cat
     assert not ordinary.any() and kl.item() == 0 and torch.equal(losses, ce)
 
 
+def test_hotword_asr_catalog_excludes_teacher_kl(catalog_config, tmp_path):
+    record = AudioRecord('hw-example', 'asr_hotwords',
+        (AudioSlot('primary', AudioRef('speech', '1', 'train', 's0', duration=.25)),), 'la obra de Ensor',
+        language='es', hotwords=('Ensor',))
+    write_records([record], tmp_path / 'hw.jsonl.gz')
+    spec = DatasetSpec('hw', '1', ('es',), ('asr_hotwords',),
+        (ArtifactRef('records', 'audio-records', 'data', 'hw.jsonl.gz'),),
+        {'train': Split({'records': ('records',)})})
+    with Path(catalog_config['catalog']).open('a') as stream:
+        stream.write('\n' + json.dumps(spec.to_dict()))
+    catalog_config.update(train=[{'dataset_id': 'hw', 'version': '1', 'split': 'train', 'task': 'asr_hotwords'}],
+                          augmentation={}, objective={'sample_mean': True})
+    sample = CatalogSwiftDataset(catalog_config, message_format='qwen3_asr')[0]
+    assert sample['catalog_task'] == 4
+
+
 def test_catalog_audio_is_lazy_and_never_writes_intermediates(
     catalog_config, tmp_path, monkeypatch
 ):
