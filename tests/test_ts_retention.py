@@ -249,3 +249,27 @@ def test_invalid_reduction_settings_are_rejected(objective):
                            use_logits_to_keep=False, _catalog_config={'objective': objective})
     with pytest.raises(ValueError, match='reduction'):
         install_retention_objective(trainer, args)
+
+
+def test_plain_asr_check_prefers_declared_tasks_over_reading_records():
+    from open_audio_llm.integrations.ms_swift.retention import has_plain_asr_source
+
+    class Records:
+        def __init__(self, tasks):
+            self.tasks, self.reads = tasks, 0
+
+        def __getitem__(self, index):
+            self.reads += 1
+            return SimpleNamespace(record=SimpleNamespace(task=self.tasks[index]))
+
+    records = Records(['ts_asr', 'asr'])
+    dataset = SimpleNamespace(sources=[{}, {'task': 'asr'}], source_ranges=[range(0, 1), range(1, 2)],
+                              records=records)
+    assert has_plain_asr_source(dataset) and records.reads == 0
+    records = Records(['speaker_attributed_asr', 'asr'])
+    dataset = SimpleNamespace(sources=[{}, {'single_speaker_format': True, 'task': 'asr'}],
+                              source_ranges=[range(0, 1), range(1, 2)], records=records)
+    assert not has_plain_asr_source(dataset) and records.reads == 1
+    records = Records(['ts_asr'])
+    dataset = SimpleNamespace(sources=[{}], source_ranges=[range(0, 1)], records=records)
+    assert has_plain_asr_source(dataset) and records.reads == 1

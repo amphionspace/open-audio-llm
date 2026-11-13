@@ -134,6 +134,22 @@ def select_examples(inputs, indexes):
     return result
 
 
+def has_plain_asr_source(dataset):
+    """Whether any training source still yields plain ASR after task conversion.
+
+    Sources that declare ``task`` are decided from the config first. Reading a record opens the
+    Lance index in the trainer process, and the train DataLoader then forks its workers from a
+    process holding Lance's threads; those workers crash with a segmentation fault.
+    """
+    candidates = [(source, indices) for source, indices in zip(dataset.sources, dataset.source_ranges)
+                  if not (source.get('single_speaker_format') or source.get('sot_timestamps'))]
+    if any(source.get('task') not in (None, 'speaker_attributed_asr') for source, _ in candidates):
+        return True
+    return any('task' not in source
+               and dataset.records[indices.start].record.task != 'speaker_attributed_asr'
+               for source, indices in candidates)
+
+
 def install_retention_objective(trainer, args):
     from qwen_asr import Qwen3ASRModel
 
@@ -155,10 +171,7 @@ def install_retention_objective(trainer, args):
         raise ValueError("replay_kl_weight must be finite and nonnegative")
     if coefficient and not args.retention_teacher:
         raise ValueError("Positive replay_kl_weight requires retention_teacher")
-    if coefficient and all(source.get('single_speaker_format') or source.get('sot_timestamps')
-                           or trainer.train_dataset.records[indices.start].record.task == 'speaker_attributed_asr'
-                           for source, indices in zip(trainer.train_dataset.sources,
-                                                      trainer.train_dataset.source_ranges)):
+    if coefficient and not has_plain_asr_source(trainer.train_dataset):
         raise ValueError("ASR replay KL has no plain-ASR examples after task conversion; "
                          "set replay_kl_weight=0 for supervised diarization replay")
     student = trainer.model
