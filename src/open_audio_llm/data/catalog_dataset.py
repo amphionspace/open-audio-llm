@@ -1339,8 +1339,12 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                 result["catalog_task"] = 1 if target.strip() else 2
             elif sample["task"] == "speaker_attributed_asr":
                 result["catalog_task"] = 3
+            elif sample["task"] == "asr_hotwords":
+                # CE only: the base teacher never saw this hotword prompt, so its KL target would be off-task.
+                result["catalog_task"] = 4
             else:
-                raise ValueError("Replay objective supports ordinary, target-speaker and speaker-attributed ASR")
+                raise ValueError("Replay objective supports ordinary (with or without hotwords), "
+                                 "target-speaker and speaker-attributed ASR")
         if self.collect_metrics:
             enrollment = sample.get("enrollment_view", {}).get("enrollments", [])
             result["_performance"] = {
