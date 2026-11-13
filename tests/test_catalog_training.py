@@ -749,6 +749,19 @@ def test_cache_preparation_preserves_unfiltered_validation(catalog_config):
     assert _prepare_source(catalog_config, source, "qwen3_asr", training=True) == ("speech", "dev", 2)
 
 
+def test_index_preparation_of_one_source_ignores_think_files_of_other_sources(catalog_config, tmp_path):
+    import gzip
+
+    from open_audio_llm.data.catalog_cache import _prepare_source
+
+    path = tmp_path / "think.jsonl.gz"
+    with gzip.open(path, "wt", encoding="utf-8") as stream:
+        stream.write(json.dumps({"dataset": "other@1", "record_id": "x", "think_on": False, "think": None}) + "\n")
+    catalog_config["think"] = {"files": [str(path)], "explained_prob": 0.5, "ordinary_prob": 0.0}
+    source = {**catalog_config["validation"][0], "require_clean_pass": False}
+    assert _prepare_source(catalog_config, source, "qwen3_asr", training=True) == ("speech", "dev", 2)
+
+
 def test_index_preparation_skips_augmentation_resources(catalog_config):
     full = CatalogSwiftDataset(catalog_config)
     index_only = CatalogSwiftDataset(catalog_config, resources=False)
