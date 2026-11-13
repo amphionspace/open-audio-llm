@@ -1,0 +1,103 @@
+# think 组：从 11.06 交付版（GRPO v10 插值 50%）起训 3000 步，数据 = 交付配方 v7set34 换成说字清洗后的版本 + 说明记录上采样 + think 开关。
+# 与 control 组只差数据配置的 think 一节。不带联合 MTP：交付版没有 MTP 模块，MTP 也不是本轮要比的变量。
+version: 1
+runtime:
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  cwd: /workspace/workspace/mingdong/repo/oal-think-exp
+  pythonpath:
+  - /workspace/workspace/mingdong/repo/oal-think-exp/runs/zh-spelling-think-20261113/shared/code-v1/src
+  - /workspace/workspace/mingdong/repo/oal-think-exp/runs/zh-spelling-think-20261113/shared/code-v1/audio-data-contract-src
+  gpus: [0, 1, 2, 3, 4, 5, 6, 7]
+  threads: {omp: 2, openblas: 1}
+  environment:
+    TOKENIZERS_PARALLELISM: false
+    HF_HUB_OFFLINE: '1'
+    PYTHONUNBUFFERED: '1'
+    PYTORCH_ALLOC_CONF: expandable_segments:True
+    # ACP 出口被 api.wandb.ai 封禁：经开发容器转发（10.119.17.252:17920，只放行 GRPO 开发节点 IP）走海外代理，实时上传。
+    WANDB_HTTP_PROXY: http://10.119.17.252:17920
+    WANDB_HTTPS_PROXY: http://10.119.17.252:17920
+    # Emilia2 m4a 经 lhotse 调用 PATH 上的 ffmpeg（上一轮已在 ACP 上验证的静态版本）。
+    PATH: /workspace/workspace/mingdong/.local-tools/ffmpeg-7.0.2-static/bin:/workspace/workspace/mingdong/miniconda3/envs/oal-train/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  distributed: {processes: 8, port: 29816}
+data:
+  config: /workspace/workspace/mingdong/repo/oal-think-exp/runs/zh-spelling-think-20261113/configs/train-data-think.yaml
+task:
+  kind: train
+  module: open_audio_llm.integrations.ms_swift.train
+  positional: [sft]
+  arguments:
+    --model: /workspace/data/ae-runs/amphionasr2-grpo-v10interp050/checkpoint
+    --model_type: amphion_asr_1.7b
+    --external_plugins:
+    - /workspace/workspace/mingdong/repo/oal-think-exp/runs/zh-spelling-think-20261113/shared/code-v1/src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py
+    --tuner_type: full
+    --freeze_vit: false
+    --freeze_aligner: false
+    --freeze_llm: false
+    --freeze_parameters:
+    - thinker.model.embed_tokens
+    - thinker.audio_tower.conv2d1
+    - thinker.audio_tower.conv2d2
+    - thinker.audio_tower.conv2d3
+    - thinker.audio_tower.conv_out
+    --deepspeed: /workspace/workspace/mingdong/repo/oal-think-exp/runs/zh-spelling-think-20261113/configs/zero1-bf16-no-overflow-check.json
+    --torch_dtype: bfloat16
+    --attn_impl: sdpa
+    --max_length: 2048
+    --per_device_train_batch_size: 12
+    --per_device_eval_batch_size: 4
+    --gradient_accumulation_steps: 2
+    --learning_rate: 3.55e-06
+    --weight_decay: 0.1
+    --max_steps: 3000
+    --lr_scheduler_type: cosine_with_min_lr
+    --lr_scheduler_kwargs: {"min_lr": 0.000001}
+    --warmup_ratio: 0.0
+    --warmup_steps: 300
+    --gradient_checkpointing: false
+    --vit_gradient_checkpointing: false
+    --audio_encoder_batching: true
+    --supervised_head_loss: true
+    --ddp_find_unused_parameters: false
+    --dataloader_num_workers: 12
+    --dataloader_eval_num_workers: 12
+    --dataloader_eval_prefetch_factor: 4
+    --performance_logging: true
+    --save_steps: 500
+    --eval_strategy: 'no'
+    --logging_steps: 10
+    --report_to: none
+    --seed: 42
+    --check_model: false
+    --load_args: false
+    --add_version: false
+    --output_dir: {path: '{attempt}/artifacts/training'}
+    --ddp_timeout: 1800
+    --max_grad_norm: 1.0
+preflight:
+- kind: prepare
+  module: open_audio_llm.data.catalog_cache
+  arguments:
+    --data_config: /workspace/workspace/mingdong/repo/oal-think-exp/runs/zh-spelling-think-20261113/configs/train-data-think.yaml
+    --batch-size: 12
+    --world-size: 8
+    --preflight-report: {path: '{attempt}/artifacts/data-preflight.json'}
+recording:
+  attempts_dir: {path: ../tasks/01-train-think/attempts}
+tracking:
+  pythonpath:
+  - /workspace/workspace/mingdong/repo/oal-think-exp/runs/zh-spelling-think-20261113/shared/code-v1/src
+  enabled: true
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  credentials_file: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: AmphionASR-spelling-think-from-v10interp050-v7set34ctxclean-3k-1node-codev1
+  interval: 5
+  startup_timeout: 180
+  finish_timeout: 300
+storage:
+  executable: /workspace/workspace/mingdong/.local/share/amphion-bucket/cluster-venv/bin/ab
+  remote: whai:open-audio-llm
+  local_root: /workspace/workspace/mingdong/repo/oal-think-exp
