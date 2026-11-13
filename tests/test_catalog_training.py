@@ -1828,6 +1828,23 @@ def test_exclude_records_drops_listed_ids_and_keys_the_cache(catalog_config, tmp
         CatalogSwiftDataset(catalog_config)
 
 
+def test_include_records_keeps_only_listed_ids_and_keys_the_cache(catalog_config, tmp_path):
+    catalog_config['metadata_cache'] = str(tmp_path / 'cache')
+    full = CatalogSwiftDataset(catalog_config)
+    ids = [full.records[i].record.id for i in range(len(full))]
+    listed = tmp_path / 'included.txt'
+    listed.write_text(ids[-1] + '\n')
+    catalog_config['train'][0]['include_records'] = str(listed)
+    kept = CatalogSwiftDataset(catalog_config)
+    assert [kept.records[i].record.id for i in range(len(kept))] == ids[-1:]
+    listed.write_text('none\n')
+    with pytest.raises(ValueError, match='Empty source'):
+        CatalogSwiftDataset(catalog_config)
+    catalog_config['train'][0]['include_records'] = str(tmp_path / 'missing.txt')
+    with pytest.raises(ValueError, match='include_records'):
+        CatalogSwiftDataset(catalog_config)
+
+
 def test_exclude_media_drops_listed_augmentation_files(catalog_config, tmp_path):
     from open_audio_llm.data.far_rir import media_path
 

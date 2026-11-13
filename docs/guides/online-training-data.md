@@ -114,6 +114,13 @@ augmentation:
 音频槽位按照契约渲染顺序传入。来源可配置 `task`；在线热词参数放在顶层
 `hotwords`，例如 `max_hotwords`、`hotword_prompt_prob`。
 
+- 按记录筛选：
+  - `exclude_records` 写一个记录 ID 文件（每行一个），去掉其中的记录；
+  - `include_records` 写法相同，只保留其中的记录。
+- `include_records` 的典型用法：同一个版本再写一个来源，只含少数记录，用自己的 `weight` 提高这些记录的采样比例，例如说字写法 think 的说明记录。
+- ID 写法与加载器一致：Lhotse 分段写 `<数据集>@<版本>:<划分>:<分段 ID>`，audio-record 写记录自己的 `id`。
+- 两个文件都计入 `metadata_cache` 和 Lance 扫描缓存的身份，改了内容会重新读取；筛完一条不剩时报 `Empty source`。
+
 ### Lance 来源
 
 Catalog 中 `tts-lance-release` 产物（split 角色 `samples`，如 DATA-TTS-UNIFIED 的

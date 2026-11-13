@@ -30,7 +30,7 @@ ROLE = "records_lance"
 # Source keys this reader implements; any other key keeps the JSONL path.
 SUPPORTED_KEYS = {
     "dataset_id", "version", "split", "weight", "task",
-    "exclude_records", "min_duration", "max_duration", "online_mix", "nonspeech",
+    "exclude_records", "include_records", "min_duration", "max_duration", "online_mix", "nonspeech",
 }
 # Accepted on top of SUPPORTED_KEYS when the version declares every row clean-pass.
 CLEAN_PASS_ONLY_KEYS = {"require_clean_pass"}
@@ -158,7 +158,7 @@ def spec_sha(catalog, dataset_id, version, artifact):
 SCAN_CACHE_VERSION = 1
 
 
-def _scan_cache_path(dataset, spec, request, excluded):
+def _scan_cache_path(dataset, spec, request, excluded, included=None):
     """Where one split's scan is kept; the key pins the index content and every filter."""
     if not dataset.metadata_cache:
         return None
@@ -167,6 +167,8 @@ def _scan_cache_path(dataset, spec, request, excluded):
         SCAN_CACHE_VERSION, dataset_id, version, artifact, spec.artifact(artifact).sha256, split,
         min_duration, max_duration, online_mix,
         None if excluded is None else hashlib.sha256(excluded.encode()).hexdigest(),
+        # Appended only when set, so that the keys of existing scans stay the same.
+        *([hashlib.sha256(included.encode()).hexdigest()] if included is not None else []),
     ], sort_keys=True).encode()).hexdigest()
     return Path(dataset.metadata_cache).expanduser().resolve() / f"lance-scan-{key}.pkl"
 
@@ -205,16 +207,18 @@ class LanceSourceIndex:
             spec = dataset.resolver.catalog.get(source["dataset_id"], source["version"])
             names = spec.splits[source["split"]].artifacts.get(ROLE)
             if names and not set(source) - _served_keys(spec) and not dataset.augmentation.speed_prob:
-                excluded_path = source.get("exclude_records")
-                allowed, excluded = None, None
-                if excluded_path:
-                    excluded = Path(excluded_path).read_text()
+                excluded_path, included_path = source.get("exclude_records"), source.get("include_records")
+                allowed, excluded, included = None, None, None
+                if excluded_path or included_path:
+                    excluded = Path(excluded_path).read_text() if excluded_path else None
+                    included = Path(included_path).read_text() if included_path else None
                     # Lhotse rows are listed with their prefixed ID, like the JSONL path names them.
-                    allowed = _Allowed(set(excluded.split()), f"{spec.key}:{source['split']}:")
+                    allowed = _Allowed(set((excluded or "").split()), f"{spec.key}:{source['split']}:",
+                                       None if included is None else set(included.split()))
                 request = (spec.dataset_id, spec.version, names[0], source["split"],
                            source.get("min_duration", 0), source.get("max_duration"), allowed,
                            source.get("online_mix"))
-                cached = _scan_cache_path(dataset, spec, request, excluded)
+                cached = _scan_cache_path(dataset, spec, request, excluded, included)
                 scan = _read_scan(cached)
                 if scan is not None:
                     found[number] = cls(dataset, source, spec, scan)
@@ -240,7 +244,7 @@ class LanceSourceIndex:
         self.source, self.spec, self.split = source, spec, source["split"]
         self.roots = {k: Path(v) for k, v in dataset.resolver.roots.items()}
         self.task = source.get("task", "asr")
-        excluded_path = source.get("exclude_records")
+        excluded_path, included_path = source.get("exclude_records"), source.get("include_records")
         if not len(scan["positions"]):
             raise ValueError(f"Empty source: {source}")
         self.kind, self.hotwords = scan["kind"], scan["hotwords"]
@@ -259,6 +263,7 @@ class LanceSourceIndex:
             "sha256": scan["sha256"], "snapshot": self.snapshot, "split": self.split,
             "source": {k: v for k, v in source.items() if k != "weight"},
             "exclude": [str(excluded_path), Path(excluded_path).stat().st_size] if excluded_path else None,
+            **({"include": [str(included_path), Path(included_path).stat().st_size]} if included_path else {}),
             "sampling_rate": sampling_rate, "message_format": dataset.message_format}
         digest = hashlib.sha256(json.dumps(identity, sort_keys=True).encode())
         digest.update(self.metadata["duration"].tobytes())
@@ -345,10 +350,13 @@ def supervision_cut(row, path):
 
 
 class _Allowed:
-    """True for IDs not in the exclusion list; Lhotse rows are listed with their prefixed ID."""
+    """True for IDs not in the exclusion list and, when there is one, in the inclusion list;
+    Lhotse rows are listed with their prefixed ID."""
 
-    def __init__(self, blocked, prefix):
-        self.blocked, self.prefix = blocked, prefix
+    def __init__(self, blocked, prefix, required=None):
+        self.blocked, self.prefix, self.required = blocked, prefix, required
 
     def __call__(self, ident):
-        return ident not in self.blocked and self.prefix + ident not in self.blocked
+        if ident in self.blocked or self.prefix + ident in self.blocked:
+            return False
+        return self.required is None or ident in self.required or self.prefix + ident in self.required
