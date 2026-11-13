@@ -519,7 +519,9 @@ class CatalogRecordIndex:
 def _prepare_source(config, source, message_format, training=True):
     from .catalog_dataset import CatalogSwiftDataset
 
-    selected = {**config, "train" if training else "validation": [source]}
+    # One source at a time and no examples drawn: the think table, which must match all train
+    # sources, is checked when the whole dataset is built.
+    selected = {**config, "train" if training else "validation": [source], "think": None}
     dataset = CatalogSwiftDataset(selected, training=training, message_format=message_format, resources=False)
     return source["dataset_id"], source["split"], len(dataset)
 
