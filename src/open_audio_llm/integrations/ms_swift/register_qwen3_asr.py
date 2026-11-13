@@ -114,6 +114,7 @@ from swift.template.vision_utils import load_audio, load_batch
 from swift.utils import get_env_args, get_logger
 
 from open_audio_llm.data.augment import augment_features
+from open_audio_llm.data.think import THINK_OPEN
 
 # ---------------------------------------------------------------------------
 # Audio token count helpers (mirrors Qwen3ASRProcessor logic)
@@ -496,6 +497,28 @@ class Qwen3ASRTemplate(Template):
         return ['<|audio_start|>'] + ['<|audio_pad|>'] * n_tokens + ['<|audio_end|>']
 
     def _encode(self, inputs) -> Dict[str, Any]:
+        encoded = self._encode_audio(inputs)
+        self._prefill_think_open(encoded)
+        return encoded
+
+    def _prefill_think_open(self, encoded) -> None:
+        """Leave an answer's opening ``<think>\n`` unsupervised, as if the prompt held it (data/think.py).
+
+        The model then opens a think block only when the prompt does, and answers without one
+        (the existing ``language X<asr_text>`` output) otherwise.
+        """
+        labels = encoded.get('labels')
+        if labels is None:
+            return
+        first = next((i for i, label in enumerate(labels) if label != -100), None)
+        opening = self.tokenizer.encode(THINK_OPEN, add_special_tokens=False)
+        if first is None or encoded['input_ids'][first:first + len(opening)] != opening:
+            return
+        labels[first:first + len(opening)] = [-100] * len(opening)
+        if isinstance(encoded.get('loss_scale'), list):
+            encoded['loss_scale'][first:first + len(opening)] = [0] * len(opening)
+
+    def _encode_audio(self, inputs) -> Dict[str, Any]:
         if not inputs.audios:
             return super()._encode(inputs)
         if self._mix_source(inputs) is not None:

@@ -6,6 +6,7 @@ from open_audio_llm.tsasr.ts_prompt import TS_SYSTEM, ts_system  # noqa: F401 - 
 
 from .sot import TIMESTAMP_FORMAT, TIMESTAMP_SYSTEM
 from .target_sot import TARGET_FORMAT, target_prompt
+from .think import think_answer
 
 # Whisper Mel hop (160 samples at 16 kHz).
 MEL_HOP_SECONDS = 0.01
@@ -81,7 +82,8 @@ def prepare_ts_clips(audios, sampling_rate):
     return _wav_bytes(enrollment, sampling_rate), _wav_bytes(mixture, sampling_rate)
 
 
-def native_messages(record: AudioRecord, hotwords: str) -> list[dict[str, str]]:
+def native_messages(record: AudioRecord, hotwords: str, think: str | None = None) -> list[dict[str, str]]:
+    """``think`` puts a think block before the answer (data/think.py)."""
     if record.task == "ts_asr":
         if [s.name for s in record.audio_slots] != ["enrollment", "mixture"]:
             raise ValueError("Native TS-ASR requires enrollment then mixture slots")
@@ -119,8 +121,9 @@ def native_messages(record: AudioRecord, hotwords: str) -> list[dict[str, str]]:
             context += ' Keep each speaker\'s original language, including Chinese and English. Do not translate.'
     if record.task == "asr_hotwords" and hotwords != "N/A":
         context = f"Hotwords: {hotwords}"
+    answer = f"language {language}<asr_text>{record.target}"
     return [
         {"role": "system", "content": context},
         {"role": "user", "content": "<audio>"},
-        {"role": "assistant", "content": f"language {language}<asr_text>{record.target}"},
+        {"role": "assistant", "content": answer if think is None else think_answer(think, answer)},
     ]

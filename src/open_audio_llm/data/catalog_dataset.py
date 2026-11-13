@@ -7,6 +7,7 @@ import random
 import re
 import time
 import hashlib
+from bisect import bisect_right
 from dataclasses import asdict, replace
 from fractions import Fraction
 from io import BytesIO
@@ -47,6 +48,7 @@ from .records import ResolvedAudioRecord
 from .sot import TIMESTAMP_FORMAT, scale_timestamps, with_sot_timestamps
 from .sot_alignment import AlignmentIndex
 from .target_sot import EnrollmentConfig, TARGET_FORMAT, eligible_candidates
+from .think import ThinkConfig, ThinkTable
 from .ts_online import (
     ACTIVITY_FRAME_SECONDS,
     OnlineMixConfig,
@@ -107,6 +109,13 @@ def read_data_config(path):
         for key, value in holdouts.items():
             selected = Path(value).expanduser()
             holdouts[key] = str(selected if selected.is_absolute() else path.parent / selected)
+    think = config.get("think")
+    if think is not None:
+        if not isinstance(think, dict) or not isinstance(think.get("files"), list):
+            raise ValueError("think takes files (a list of think.jsonl.gz paths) and probabilities")
+        for index, value in enumerate(think["files"]):
+            selected = Path(value).expanduser()
+            think["files"][index] = str(selected if selected.is_absolute() else path.parent / selected)
     for source in config.get("train", []) + config.get("validation", []) + config.get('evaluation', []):
         for key in ("sot_alignment_index", "exclude_records"):
             if source.get(key):
@@ -489,6 +498,15 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             records, self.source_ranges = limit_validation_records(
                 records, self.source_ranges, config
             )
+        # Spelling-explanation think text, SFT only: validation and GRPO keep the plain answer.
+        self.think = None
+        if training and config.get("think") is not None:
+            if message_format != "qwen3_asr" or grpo:
+                raise ValueError("think needs Qwen3-ASR SFT")
+            self._source_keys = [self.resolver.catalog.get(s["dataset_id"], s["version"]).key for s in sources]
+            self._source_starts = [r.start for r in self.source_ranges]
+            self.think = ThinkTable(ThinkConfig(**{**config["think"], "files": tuple(config["think"]["files"])}),
+                                    set(self._source_keys))
         # Building the index needs no augmentation files; scanning them for each of the
         # ~80 sources took most of a preflight, so index preparation passes resources=False.
         augmenting = training and resources
@@ -865,6 +883,12 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         if dataset_id in augmentation.noise_exclude_datasets:
             augmentation = replace(augmentation, noise_prob=0.0)
         return augmentation
+
+    def _think(self, record_idx, record, seed):
+        if self.think is None:
+            return None
+        source = bisect_right(self._source_starts, record_idx) - 1
+        return self.think.choose(self._source_keys[source], record, seed)
 
     def _resolve_audio(self, resolved, rng):
         import soundfile as sf
