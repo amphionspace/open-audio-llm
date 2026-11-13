@@ -1,0 +1,13 @@
+version: 1
+name: zh-spelling-think-20261113
+purpose: 说字写法 think（CoT）第一轮：同一起点、同一数据下，think 开关训练是否比不加 think 更会按说话人的说明写字；think 关时普通识别不劣于对照
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training_coverage: replay_quota
+  training_steps: 3000
+inputs:
+  init_model: /workspace/data/ae-runs/amphionasr2-grpo-v10interp050/checkpoint
+tasks:
+- {id: train-think, name: think 组 1 节点 8 卡全参 3000 步, config: configs/train-think.yaml, depends_on: []}
+- {id: train-control, name: 对照组 1 节点 8 卡全参 3000 步, config: configs/train-control.yaml, depends_on: []}
