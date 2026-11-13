@@ -1950,3 +1950,72 @@ def test_indexed_records_forward_the_language_hotword_pools():
 
     view = _IndexedRecords(Index(), [1])
     assert view.hotword_pools == {"Spanish": ["hola"], "Chinese": ["你好"]}
+
+
+def _declare_holdout(catalog_config, tmp_path, held, *, holdout_catalog=None):
+    """Declare source keys (the record ID) on ``speech`` and hold out ``held`` in an eval dataset."""
+    catalog = Path(catalog_config['catalog'])
+    specs = [json.loads(line) for line in catalog.read_text().splitlines()]
+    specs[0]['provenance'] = {'source_keys': [{'namespace': 'corpus', 'fields': ['id']}]}
+    catalog.write_text('\n'.join(json.dumps(s) for s in specs))
+    if held is None:
+        return
+    (tmp_path / 'held.txt').write_text('\n'.join(held) + '\n')
+    evaluation = DatasetSpec(
+        dataset_id='evalset', version='1', languages=('en',), tasks=('asr',),
+        artifacts=(ArtifactRef('held', 'source-keys', 'data', 'held.txt'),),
+        splits={'test': Split({'keys': ('held',)})},
+        provenance={'holdout': [{'namespace': 'corpus', 'artifact': 'held'}]},
+    ).to_dict()
+    target = Path(holdout_catalog) if holdout_catalog else catalog
+    lines = target.read_text().splitlines() if target.exists() else []
+    target.write_text('\n'.join(lines + [json.dumps(evaluation)]))
+
+
+@pytest.mark.parametrize('cached', [False, True])
+def test_holdout_leaves_out_records_sharing_a_source_key(catalog_config, tmp_path, cached):
+    from open_audio_llm.data.catalog_cache import source_identity
+
+    if cached:
+        catalog_config['metadata_cache'] = str(tmp_path / 'cache')
+    full = CatalogSwiftDataset(catalog_config)
+    ids = [full.records[i].record.id for i in range(len(full))]
+    _declare_holdout(catalog_config, tmp_path, ids[:1])
+    kept = CatalogSwiftDataset(catalog_config)
+    assert [kept.records[i].record.id for i in range(len(kept))] == ids[1:]
+    before = source_identity(kept, catalog_config['train'][0])
+    # A changed holdout changes the indexed records, so it must change the cache key.
+    (tmp_path / 'held.txt').write_text(ids[1] + '\n')
+    changed = CatalogSwiftDataset(catalog_config)
+    assert [changed.records[i].record.id for i in range(len(changed))] == [ids[0]]
+    assert source_identity(changed, catalog_config['train'][0]) != before
+
+
+def test_declared_source_keys_require_a_holdout_declaration(catalog_config, tmp_path):
+    full = CatalogSwiftDataset(catalog_config)
+    ids = [full.records[i].record.id for i in range(len(full))]
+    _declare_holdout(catalog_config, tmp_path, None)
+    with pytest.raises(ValueError, match='declares no holdout'):
+        CatalogSwiftDataset(catalog_config)
+    # Holdouts may come from another catalog, such as the registry.
+    elsewhere = tmp_path / 'registry.jsonl'
+    _declare_holdout(catalog_config, tmp_path, ids[:1], holdout_catalog=elsewhere)
+    catalog_config['holdouts'] = {'catalog': str(elsewhere)}
+    kept = CatalogSwiftDataset(catalog_config)
+    assert [kept.records[i].record.id for i in range(len(kept))] == ids[1:]
+
+
+def test_holdout_paths_resolve_against_the_data_config(catalog_config, tmp_path):
+    import yaml
+
+    config = {**catalog_config, 'holdouts': {'catalog': 'registry', 'roots': 'registry-roots.json'}}
+    path = tmp_path / 'sub' / 'data.yaml'
+    path.parent.mkdir()
+    path.write_text(yaml.safe_dump(config))
+    assert read_data_config(path)['holdouts'] == {
+        'catalog': str(tmp_path / 'sub' / 'registry'),
+        'roots': str(tmp_path / 'sub' / 'registry-roots.json'),
+    }
+    path.write_text(yaml.safe_dump({**catalog_config, 'holdouts': {'catalogue': 'x'}}))
+    with pytest.raises(ValueError, match='holdouts'):
+        read_data_config(path)

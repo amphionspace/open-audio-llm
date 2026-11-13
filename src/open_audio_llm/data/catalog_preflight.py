@@ -8,6 +8,7 @@ import random
 
 import numpy as np
 import soundfile as sf
+from audio_data_contract import source_key_specs
 
 from .augment import speed_ratio
 from .catalog_dataset import CatalogSwiftDataset
@@ -149,6 +150,11 @@ def check_data(config, *, message_format="qwen3_asr", batch_size=8, world_size=2
                 examples.append({"selection": split, "dataset_id": source["dataset_id"],
                                  "split": source["split"], "id": row.record.id,
                                  "duration": sample["duration"]})
+    # Which sources were checked against evaluation holdouts, and against which.
+    checked = [f"{s['dataset_id']}@{s['version']}:{s['split']}" for s in dataset.sources
+               if source_key_specs(dataset.resolver.catalog.get(s["dataset_id"], s["version"]), s["split"])]
+    holdouts = ({"sources": list(dataset.holdouts().sources), "keys": len(dataset.holdouts().keys),
+                 "checked_sources": checked} if checked else None)
     levels = None
     if level_samples:
         shares = [s["samples_per_epoch"] if s["samples_per_epoch"] is not None else s["records"] for s in sources]
@@ -158,6 +164,6 @@ def check_data(config, *, message_format="qwen3_asr", batch_size=8, world_size=2
                 json.dumps(config, sort_keys=True).encode()).hexdigest(),
             "world_size": world_size, "batch_size": batch_size,
             "replay": sampler.replay, "full_coverage": sampler.full_coverage,
-            "sources": sources,
+            "sources": sources, "holdouts": holdouts,
             "quotas_by_dataset": dict(quotas), "decoded_examples": examples, "levels": levels,
             "sampler_state": sampler.state_dict()}

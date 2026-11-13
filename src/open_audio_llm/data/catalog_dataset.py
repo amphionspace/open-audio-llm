@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import random
 import re
 import time
@@ -18,13 +19,16 @@ from audio_data_contract import (
     AudioRef,
     AudioSlot,
     load_records,
+    record_source_keys,
     resolve_split,
+    source_key_specs,
 )
 
 from .augment import (
     AugmentConfig, augment_waveform, direct_to_reverberant_db, for_slot, limit_peak, speed_ratio,
 )
 from .catalog_resolver import LhotseCatalogAudioResolver
+from .holdouts import config_holdouts, require_holdouts
 from .interference_pool import PoolClip, pool_clips
 from .lance_source import SAMPLES_ROLE, lance_records, open_lance_release, read_lance_audio
 from .lookalike import LookalikeTable, item_key, lookalike_loader
@@ -96,6 +100,13 @@ def read_data_config(path):
         config[field] = str(
             selected if selected.is_absolute() else path.parent / selected
         )
+    holdouts = config.get("holdouts")
+    if holdouts is not None:
+        if not isinstance(holdouts, dict) or not holdouts or set(holdouts) - {"catalog", "roots"}:
+            raise ValueError("holdouts takes a catalog and/or roots path")
+        for key, value in holdouts.items():
+            selected = Path(value).expanduser()
+            holdouts[key] = str(selected if selected.is_absolute() else path.parent / selected)
     for source in config.get("train", []) + config.get("validation", []) + config.get('evaluation', []):
         for key in ("sot_alignment_index", "exclude_records"):
             if source.get(key):
@@ -380,6 +391,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         self.message_format = message_format
         self._audio_cuts = {}
         self._sot_alignments = {}
+        self._holdouts = None
         self.config = config
         # Online mixtures, and recorded windows with an annotation, carry frame-level speaker activity
         # for the auxiliary loss.
@@ -603,9 +615,20 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             self.resolver.catalog, self.resolver.roots, spec.dataset_id, spec.version, names[0]
         )
 
+    def holdouts(self):
+        """Source keys evaluation holds out (see ``holdouts``), loaded once."""
+        if self._holdouts is None:
+            self._holdouts = config_holdouts(self.config, self.resolver)
+        return self._holdouts
+
     def _source_records(self, source):
         spec = self.resolver.catalog.get(source["dataset_id"], source["version"])
         split_name = source["split"]
+        key_specs = source_key_specs(spec, split_name)
+        held_out = (
+            require_holdouts(self.holdouts(), self.config, f"{spec.key}:{split_name}").keys
+            if key_specs else None
+        )
         record_paths = resolve_split(
             self.resolver.catalog, spec.dataset_id, spec.version, split_name,
             "records", self.resolver.roots,
@@ -645,9 +668,12 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         excluded_ids = set()
         if source.get("exclude_records"):
             excluded_ids = set(Path(source["exclude_records"]).read_text().split())
-        count = 0
+        count = left_out = 0
         for row in rows:
             if row.record.id in excluded_ids:
+                continue
+            if held_out is not None and record_source_keys(row.record, key_specs) & held_out:
+                left_out += 1
                 continue
             if source.get("ts_holdout") and not in_ts_partition(row.record, source["ts_holdout"]):
                 continue
@@ -702,6 +728,11 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                 limit = source.get("samples", limit)
             if limit is not None and count >= limit:
                 break
+        if left_out:
+            logging.getLogger(__name__).warning(
+                "%s:%s: left out %d records built from held-out evaluation recordings (%s)",
+                spec.key, split_name, left_out, ", ".join(self.holdouts().sources),
+            )
 
     def _cut_records(self, cuts, source, spec):
         excluded = set(source.get("exclude_speakers", []))

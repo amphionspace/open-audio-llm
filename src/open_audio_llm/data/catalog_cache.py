@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import fcntl
+import functools
 import gzip
 import hashlib
 import json
@@ -18,9 +19,10 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import numpy as np
-from audio_data_contract import AudioRecord, resolve_artifact
+from audio_data_contract import AudioRecord, resolve_artifact, source_key_specs
 from lhotse.serialization import deserialize_item
 
+from .holdouts import config_holdouts
 from .hotwords import is_valid_hotword
 from .records import ResolvedAudioRecord
 from .sot import TIMESTAMP_FORMAT
@@ -156,6 +158,8 @@ READ_ROLES = ("cuts", "recordings", "supervisions", "records", "audio_index", "s
 def _legacy_source_identity(dataset, source):
     spec = dataset.resolver.catalog.get(source["dataset_id"], source["version"])
     split = spec.splits[source["split"]]
+    # Records sharing a source key with a holdout are left out of the index.
+    checked = bool(source_key_specs(spec, source["split"]))
     paths = []
     if source.get("sot_timestamps"):
         paths.append(Path(source["sot_alignment_index"]))
@@ -182,6 +186,7 @@ def _legacy_source_identity(dataset, source):
         **({"clean_record_filter": 1} if source.get("require_clean_pass") and
            "records" in split.artifacts else {}),
         "spec": spec.to_dict(),
+        **({"holdouts": dataset.holdouts().digest} if checked else {}),
         # Replay quotas do not change the indexed records or their audio cost.
         "source": {k: v for k, v in source.items() if k != "weight"},
         "roots": {k: str(v) for k, v in dataset.resolver.roots.items()},
@@ -237,11 +242,13 @@ def reuse_indexes(config, previous_config, root, message_format="qwen3_asr"):
     from .catalog_resolver import LhotseCatalogAudioResolver
 
     def context(recipe):
+        resolver = LhotseCatalogAudioResolver(recipe["catalog"], recipe["roots"])
         return SimpleNamespace(
-            resolver=LhotseCatalogAudioResolver(recipe["catalog"], recipe["roots"]),
+            resolver=resolver,
             sampling_rate=int(recipe.get("sampling_rate", 16000)),
             message_format=message_format,
             augmentation=AugmentConfig(**recipe.get("augmentation", {})),
+            holdouts=functools.cache(lambda: config_holdouts(recipe, resolver)),
         )
 
     previous, current = context(previous_config), context(config)

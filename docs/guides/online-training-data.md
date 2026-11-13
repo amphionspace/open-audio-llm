@@ -22,6 +22,27 @@ JSONL 缓存；只有 Catalog `recipe_parameters.clean_pass_only: true`（版本
 显式 clean 过滤不会复用旧的未过滤 AudioRecord 缓存。此策略同样适用于 SFT 和 GRPO。
 固定开发/测试集保留原样用于能力对照，缓存预构建区分训练和验证模式。
 
+## 评测留出
+
+评测集从训练语料里切出来时（如 `ts_asr_real@v2` 用了 260 段 Emilia2 对话录音），训练不能再看到这些录音。
+Catalog 声明了两边：评测数据集的 `provenance.holdout` 列出留出的来源键，训练数据集的
+`provenance.source_keys` 说明记录的来源键在哪些字段（格式见 audio-data-contract `catalog/README.md`
+“评测留出与来源键”）。声明了来源键的训练、验证来源在读取时自动去掉与任一留出键重叠的记录，
+日志打印每个来源去掉了多少条，`data-preflight.json` 的 `holdouts` 记录用到的留出声明和被检查的来源。
+不需要再在每份配置里写 `exclude_records`。
+
+数据配置的 `catalog` 常常只指向一个 YAML 或 prepare 生成的子集，里面不一定有评测数据集。这时用
+`holdouts` 指定从哪里读留出声明（相对路径以数据配置为基准）：
+
+```yaml
+holdouts:
+  catalog: /workspace/data/registry/catalog
+  roots: /workspace/data/registry/roots.json
+```
+
+来源声明了来源键、却一条留出声明都没读到时直接报错，不当作检查通过。留出清单变化会改变记录缓存的键，
+相关来源的缓存会重建。
+
 ```text
 Catalog + roots → Lhotse cut / AudioRecord 元数据
 → 按来源限量、重复、epoch 分片轮换 → 加权交织
