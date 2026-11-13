@@ -117,7 +117,7 @@ def read_data_config(path):
             selected = Path(value).expanduser()
             think["files"][index] = str(selected if selected.is_absolute() else path.parent / selected)
     for source in config.get("train", []) + config.get("validation", []) + config.get('evaluation', []):
-        for key in ("sot_alignment_index", "exclude_records"):
+        for key in ("sot_alignment_index", "exclude_records", "include_records"):
             if source.get(key):
                 selected = Path(source[key]).expanduser()
                 source[key] = str(selected if selected.is_absolute() else path.parent / selected)
@@ -464,8 +464,9 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                 raise ValueError("exclude_speakers must be a list of speaker IDs")
             if type(source.get("require_clean_pass", False)) is not bool:
                 raise ValueError("require_clean_pass must be a boolean")
-            if source.get("exclude_records") is not None and not Path(source["exclude_records"]).is_file():
-                raise ValueError("exclude_records must name an existing file of record IDs")
+            for key in ("exclude_records", "include_records"):
+                if source.get(key) is not None and not Path(source[key]).is_file():
+                    raise ValueError(f"{key} must name an existing file of record IDs")
             for key in ("samples", "reps", "max_samples"):
                 value = source.get(key)
                 if value is not None and (type(value) is not int or value <= 0):
@@ -686,9 +687,11 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         excluded_ids = set()
         if source.get("exclude_records"):
             excluded_ids = set(Path(source["exclude_records"]).read_text().split())
+        # Only the listed records, e.g. a second source that samples a few records of a version more often.
+        included_ids = set(Path(source["include_records"]).read_text().split()) if source.get("include_records") else None
         count = left_out = 0
         for row in rows:
-            if row.record.id in excluded_ids:
+            if row.record.id in excluded_ids or (included_ids is not None and row.record.id not in included_ids):
                 continue
             if held_out is not None and record_source_keys(row.record, key_specs) & held_out:
                 left_out += 1

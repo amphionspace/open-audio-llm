@@ -64,6 +64,21 @@ def test_a_cached_scan_is_reused_until_the_index_or_a_filter_changes(tmp_path, m
     assert not list((tmp_path / "cache").glob("*.tmp"))
 
 
+def test_an_inclusion_list_filters_rows_and_keys_the_scan(tmp_path, monkeypatch):
+    (tmp_path / "cache").mkdir()
+    included = tmp_path / "included.txt"
+    included.write_text("demo@v1:train:b\n")
+    source = {"dataset_id": "demo", "version": "v1", "split": "train"}
+    scanned = []
+    _open(_dataset(tmp_path), [source], monkeypatch, scanned)
+    _open(_dataset(tmp_path), [{**source, "include_records": str(included)}], monkeypatch, scanned)
+    included.write_text("demo@v1:train:b\nc\n")
+    _open(_dataset(tmp_path), [{**source, "include_records": str(included)}], monkeypatch, scanned)
+    assert scanned == ["train"] * 3
+    allowed = lance_index._Allowed({"c"}, "demo@v1:train:", {"demo@v1:train:b", "c"})
+    assert [allowed(i) for i in "abc"] == [False, True, False]
+
+
 def test_without_a_metadata_cache_every_open_scans(tmp_path, monkeypatch):
     sources = [{"dataset_id": "demo", "version": "v1", "split": "train"}]
     scanned = []
