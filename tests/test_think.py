@@ -50,6 +50,20 @@ def test_only_chinese_asr_with_a_transcript_in_a_source_with_a_think_file_can_th
     assert always.choose(KEY, record("train_2spk:c", language="Chinese", task="ts_asr"), "s") == NO_EXPLANATION
 
 
+def test_empty_answers_of_any_source_and_language_think_with_empty_prob(table, tmp_path):
+    path = tmp_path / "think.jsonl.gz"
+    table()  # writes the think file
+    empty = ThinkTable(ThinkConfig((str(path),), 0.0, 0.0, empty_prob=1.0), {KEY, "nonspeech@1"})
+    assert empty.choose("nonspeech@1", record("n", target="", language="en"), "s") == NO_EXPLANATION
+    assert empty.choose(KEY, record("train_2spk:c", target="", task="ts_asr"), "s") == NO_EXPLANATION
+    assert empty.choose("nonspeech@1", record("n", target="", task="speaker_attributed_asr"), "s") is None
+    # Transcribed records keep their own rules.
+    assert empty.choose(KEY, record(), "s") is None
+    assert empty.choose("nonspeech@1", record("n"), "s") is None
+    with pytest.raises(ValueError, match="probability"):
+        ThinkConfig(("x",), 0.5, 0.0, empty_prob=-0.1)
+
+
 def test_draws_are_fixed_by_the_example_seed(table):
     half = table(explained_prob=0.5, ordinary_prob=0.5)
     draws = [half.choose(KEY, record(), f"7:0:{i}") for i in range(200)]
