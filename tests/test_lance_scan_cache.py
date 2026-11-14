@@ -100,3 +100,12 @@ def test_require_clean_pass_uses_the_index_only_for_a_clean_pass_only_version(tm
     found = _open(_dataset(tmp_path, cache=False, recipe_parameters={"clean_pass_only": True}),
                   sources, monkeypatch, scanned)
     assert found[0] is not None and scanned == ["train"]
+
+
+def test_the_replay_kl_opt_out_keeps_the_lance_index(tmp_path, monkeypatch):
+    (tmp_path / "cache").mkdir()
+    source = {"dataset_id": "demo", "version": "v1", "split": "train"}
+    scanned = []
+    _open(_dataset(tmp_path), [source], monkeypatch, scanned)
+    (opted,) = _open(_dataset(tmp_path), [{**source, "replay_kl": False}], monkeypatch, scanned)
+    assert opted is not None and scanned == ["train"]
