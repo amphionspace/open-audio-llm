@@ -142,7 +142,8 @@ def has_plain_asr_source(dataset):
     process holding Lance's threads; those workers crash with a segmentation fault.
     """
     candidates = [(source, indices) for source, indices in zip(dataset.sources, dataset.source_ranges)
-                  if not (source.get('single_speaker_format') or source.get('sot_timestamps'))]
+                  if source.get('replay_kl', True)
+                  and not (source.get('single_speaker_format') or source.get('sot_timestamps'))]
     if any(source.get('task') not in (None, 'speaker_attributed_asr') for source, _ in candidates):
         return True
     return any('task' not in source
@@ -246,7 +247,7 @@ def install_retention_objective(trainer, args):
         mode = "train" if model.training else "eval"
         metrics = self.custom_metrics[mode]
         # Create the same metrics on every rank even when a batch lacks a task.
-        for task, name in enumerate(("asr", "ts_positive", "ts_negative", "sot", "asr_hotwords")):
+        for task, name in enumerate(("asr", "ts_positive", "ts_negative", "sot", "asr_hotwords", "asr_no_kl")):
             metric = metrics[f"ce_{name}"]
             selected = ce.detach()[tasks == task]
             if selected.numel():

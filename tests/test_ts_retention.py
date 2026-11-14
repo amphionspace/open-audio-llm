@@ -273,3 +273,6 @@ def test_plain_asr_check_prefers_declared_tasks_over_reading_records():
     records = Records(['ts_asr'])
     dataset = SimpleNamespace(sources=[{}], source_ranges=[range(0, 1)], records=records)
     assert has_plain_asr_source(dataset) and records.reads == 1
+    dataset = SimpleNamespace(sources=[{'task': 'asr', 'replay_kl': False}], source_ranges=[range(0, 1)],
+                              records=Records(['asr']))
+    assert not has_plain_asr_source(dataset)
