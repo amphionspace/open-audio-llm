@@ -1,6 +1,6 @@
 # 说字写法 think 第一轮（2026-11-13 准备，2026-11-14 启动）
 
-**状态**：2026-11-14 两组都训完 3000 步并评测完毕。按判定条件 think 有用；但两组续训都让几项守门指标比交付版变差，按条件先排查续训本身（见"结果与结论"）。执行细节见文末"执行记录"。
+**状态**：2026-11-14 两组都训完 3000 步并评测完毕。按判定条件 think 有用；但两组续训都让几项守门指标比交付版变差，按条件先排查续训本身。另外，think 开时无语音误触发大增、英文不可用，见"结果与结论"。执行细节见文末"执行记录"。
 
 **要回答的问题**：数据和步数相同时，加入 think 开关训练，能不能让模型在 think 开时更会照说话人的说明写字（"zha 这个音，说话人说是「山楂的楂」，写作「楂」"）；think 关时，普通识别不劣于不加 think 的对照组。
 
@@ -91,6 +91,10 @@
 - **两点说明。**
   - 对照组和交付版 think 开都不可用：模型在预填的 `<think>` 之后不闭合，答案为空，CER 100%。所以 think 开只能和对照组 think 关比。
   - think 开的合并 CER 降了 2.77，大部分来自合成 TS 子集漏识别减少（miss 5.36 → 2.40）。照说明改字本身的提升是纠正成功率 +3.8 个点，绝对值仍然低。`ae open-audio-llm compare` 不给纠正成功率的置信区间，这里只报条数。
+- **think 开只在训练覆盖到的中文有声样本上可用**（见"think 开检查"）。
+  - think 开时，无语音和目标缺席的误触发大幅上升：中文 TS-ASR 测试集 3.25 → 11.10，GigaSpeech 无语音片段 35.88 → 79.54。
+  - 英文和 Common Voice 中文出现大量空答案。
+  - 空答案的覆盖已由 open-audio-llm #158 的 `think.empty_prob` 补上；非中文和其他中文来源还要再改加载器。
 
 ### 上下文纠偏
 
@@ -148,6 +152,40 @@
   - 也就是说，续训后模型在英文噪声片段上更容易凭空写出中文。
   - 待查：训练数据里无语音、空参考样本的覆盖；中间 checkpoint（每 500 步一个，已在对象存储）从哪一步开始退化。
 
+### think 开检查（think 组 checkpoint-3000）
+
+**为什么查**：训练时只有答案非空的中文 ASR / TS-ASR 记录会开 think，而且只限有 think 文件的 11 个来源。目标缺席、无语音、非中文和其他中文来源，从没在 think 开时训练过。
+
+配置用 `scripts/make_gate_configs.py think-3000 v12 customer-ts asr-benchmark` 生成（`after-training-gate-*-think.yaml`），与 think 关同一 checkpoint、同一服务；think 关的数字就是上面"守门（think 关）"表里 think 组那一列。
+
+| 评测 | 指标 | think 关 | think 开 | 差 [95% CI] |
+|---|---|---|---|---|
+| 中文 TS-ASR 测试集 | 误触发率 | 3.25 | 11.10 | +7.84 [+7.42, +8.28]* |
+| 〃 | 漏识别率 | 2.96 | 1.81 | −1.15 [−1.36, −0.96]* |
+| 〃 | CER | 13.41 | 13.38 | −0.03 [−0.26, +0.18] |
+| asrreg（中文、方言） | CER | 3.72 | 4.10 | +0.38 [+0.25, +0.46]* |
+| 〃 Common Voice 中文 | CER / 漏识别率 | 5.23 / 0.02 | 14.57 / 11.16 | CER +9.34 [+8.75, +9.90]* |
+| asrreg（英文） | WER | 7.44 | 31.20 | +23.76 [+23.32, +24.20]* |
+| 〃 GigaSpeech 无语音片段 | 误触发率 | 35.88 | 79.54 | +43.67 [+42.25, +45.15]* |
+| 〃 LibriSpeech test-clean | WER / 漏识别率 | 1.66 / 0.00 | 23.72 / 14.31 | WER +22.06 [+20.04, +24.09]* |
+| 〃 Common Voice 英文 | WER / 漏识别率 | 7.91 / 0.12 | 47.59 / 37.20 | WER +39.68 [+38.91, +40.44]* |
+| 鼎桥客户机主识别 `customer-ts@v4` | 误触发 | 0 / 1 | 1 / 1 | 只有 1 条负样本，不作判断 |
+
+- **无语音、目标缺席：think 开以后几乎一律写字。**
+  - 中文 TS-ASR 测试集的 1,531 条误触发里，1,529 条的 think 是固定句"这段没有说明字怎么写。"，后面接着写了文字。
+  - 增加主要在纯噪声和音乐上，例如 nonspeech-short 从 0/120 到 60/120，realreg3-music 从 4/200 到 78/200。
+  - 原因是训练里 think 开从没配过空答案。已由 open-audio-llm #158 的 `think.empty_prob` 补上：答案为空的样本按概率开 think，写固定句，答案仍为空。
+- **英文：think 不会写。**
+  - Common Voice 英文 5,329 条、LibriSpeech 413 条把转写写进了 think（`language English<asr_text>…`），think 结束后不再输出。
+  - 另有几百条在 think 里写英文评论（"This is an int…""This passage…"）。
+- **Common Voice 中文：11% 写完固定句后答案为空**（10,647 条中 1,188 条，这些在 think 关时都有输出），原因未查明。
+  - 这类朗读录音不在 think 开的训练来源里。
+  - 训练覆盖到的中文来源（WenetSpeech、AISHELL、KeSpeech、警务）think 开和 think 关持平。
+- **结论**
+  - think 开目前只在训练覆盖到的中文有声样本上可用。
+  - 交付 think 开之前，训练要覆盖空答案（`empty_prob`），还要覆盖非中文和其他中文来源（写固定句）。
+  - 后者现在的加载器还不支持：`ordinary_prob` 只作用于有 think 文件的来源里的中文记录。
+
 ### 证据
 
 - 训练：think 组 <https://wandb.ai/1016097967-amphion/open-audio-llm/runs/AmphionASR-spelling-think-from-v10interp050-v7set34ctxclean-3k-1node-codev1-001>，对照组 <https://wandb.ai/1016097967-amphion/open-audio-llm/runs/AmphionASR-spelling-control-from-v10interp050-v7set34ctxclean-3k-1node-codev1-001>。
@@ -158,7 +196,7 @@
 |---|---|---|---|---|---|---|---|
 | `release-v10interp050`、`amphionasr2-grpo-v10interp050`（交付版） | `run-20261114T100542Z-f99aafd9` / `run-20261114T100728Z-3662588c`（`release-v10interp050-think`） | `run-20261105T182838Z-fd77aed9` | `run-20261106T021048Z-4a3e3c39` | `run-20261106T062642Z-77949f35` | `run-20261106T021103Z-24d7e316` | `run-20261106T040023Z-6d445026` / `run-20261106T040238Z-022113fb` / `run-20261106T041330Z-10e76b87` | `run-20261105T182837Z-f1fca950` |
 | `control-3000` | `run-20261114T121919Z-0f1385ac` / `run-20261114T122204Z-e5b6f6ee`（`control-3000-think`） | `run-20261114T121919Z-7dd5a306` | `run-20261114T122433Z-a7fd1ba1` | `run-20261114T132125Z-596c79aa` | `run-20261114T132553Z-4ce4bd6f` | `run-20261114T132658Z-ffcb24a7` / `run-20261114T122757Z-199e98b1` / `run-20261114T132759Z-739b4064` | `run-20261114T132916Z-8d90ec37` |
-| `think-3000` | `run-20261114T110535Z-510a0308` / `run-20261114T110828Z-c1c1dbb9`（`think-3000-think`） | `run-20261114T110535Z-bf5b1393` | `run-20261114T111128Z-b5ab97d1` | `run-20261114T121958Z-17c178f6` | `run-20261114T122456Z-6e7acbe2` | `run-20261114T122604Z-1032461c` / `run-20261114T111544Z-eb81a072` / `run-20261114T122713Z-0619571b` | `run-20261114T122838Z-71d83197` |
+| `think-3000` | `run-20261114T110535Z-510a0308` / `run-20261114T110828Z-c1c1dbb9`（`think-3000-think`） | `run-20261114T110535Z-bf5b1393`；think 开 `run-20261114T174512Z-b8573b1b` | `run-20261114T111128Z-b5ab97d1`；think 开 `run-20261114T174510Z-86e0d28c` | `run-20261114T121958Z-17c178f6` | `run-20261114T122456Z-6e7acbe2` | `run-20261114T122604Z-1032461c` / `run-20261114T111544Z-eb81a072`（think 开 `run-20261114T184102Z-f6ac0866`） / `run-20261114T122713Z-0619571b` | `run-20261114T122838Z-71d83197` |
 
 交付版上下文纠偏的两个 run 在 `ae-runs/release-v10interp050{,-think}/` 下，守门 run 在 `ae-runs/amphionasr2-grpo-v10interp050/` 下；两组 think 开的 run 在 `ae-runs/<模型>-think/` 下。
 

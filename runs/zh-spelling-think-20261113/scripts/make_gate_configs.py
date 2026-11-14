@@ -4,7 +4,10 @@ Each config copies the release run's recorded config (run.json) and changes only
 and the output directory, so the release numbers are the baseline on the same data, normalization and scoring.
 Run after make_eval_configs.py: the servers (ports, served names) come from configs/eval-<name>/serve-*.yaml.
 
-usage: make_gate_configs.py <name>   (writes configs/eval-<name>/after-training-gate-<key>.yaml)
+usage: make_gate_configs.py <name> [key ...]
+  writes configs/eval-<name>/after-training-gate-<key>.yaml for every gate; each key listed also gets
+  after-training-gate-<key>-think.yaml (think on, model <name>-think), e.g. to see what think on does to target-absent
+  and non-speech records.
 """
 import json
 import sys
@@ -28,7 +31,10 @@ GATES = {
 
 
 def main():
-    name = sys.argv[1]
+    name, think_keys = sys.argv[1], sys.argv[2:]
+    unknown = set(think_keys) - set(GATES)
+    if unknown:
+        sys.exit(f"unknown gate keys: {sorted(unknown)}")
     out = HERE / "configs" / f"eval-{name}"
     serve = {route: yaml.safe_load((out / f"serve-{route}.yaml").read_text())["task"]["arguments"]
              for route in ("asr", "tsasr")}
@@ -41,11 +47,16 @@ def main():
             if config.get(url_key):
                 config[url_key] = f"http://127.0.0.1:{serve[route]['--port']}"
                 config[model_key] = serve[route]["--served-model-name"]
-        config.update(model_name=name, output_root=f"/workspace/data/ae-runs/spelling-think-20261113-{name}",
-                      wandb={"entity": "1016097967-amphion", "project": "open-audio-llm"}, publish={"enabled": False})
-        header = f"# 守门（think 关）：交付版 {run} 的配置，只换模型、服务与输出目录（make_gate_configs.py）。\n"
-        (out / f"after-training-gate-{key}.yaml").write_text(
-            header + yaml.safe_dump(config, allow_unicode=True, sort_keys=False))
+        for think in (False, True) if key in think_keys else (False,):
+            model = f"{name}-think" if think else name
+            variant = dict(config, model_name=model, output_root=f"/workspace/data/ae-runs/spelling-think-20261113-{model}",
+                           wandb={"entity": "1016097967-amphion", "project": "open-audio-llm"}, publish={"enabled": False})
+            if think:
+                variant["parameters"] = {**config["parameters"], "think": True}
+            mode = "think 开" if think else "think 关"
+            header = f"# 守门（{mode}）：交付版 {run} 的配置，只换模型、服务与输出目录（make_gate_configs.py）。\n"
+            (out / f"after-training-gate-{key}{'-think' if think else ''}.yaml").write_text(
+                header + yaml.safe_dump(variant, allow_unicode=True, sort_keys=False))
     print(out)
 
 
