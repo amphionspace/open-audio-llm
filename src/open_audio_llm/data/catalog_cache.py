@@ -188,8 +188,8 @@ def _legacy_source_identity(dataset, source):
            "records" in split.artifacts else {}),
         "spec": spec.to_dict(),
         **({"holdouts": dataset.holdouts().digest} if checked else {}),
-        # Replay quotas do not change the indexed records or their audio cost.
-        "source": {k: v for k, v in source.items() if k != "weight"},
+        # Replay quotas and the replay KL opt-out do not change the indexed records or their audio cost.
+        "source": {k: v for k, v in source.items() if k not in ("weight", "replay_kl")},
         "roots": {k: str(v) for k, v in dataset.resolver.roots.items()},
         "files": [(str(p), p.stat().st_size, p.stat().st_mtime_ns) for p in paths],
         "sampling_rate": dataset.sampling_rate,

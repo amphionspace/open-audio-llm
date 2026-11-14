@@ -499,13 +499,13 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             records, self.source_ranges = limit_validation_records(
                 records, self.source_ranges, config
             )
+        self._source_starts = [r.start for r in self.source_ranges]
         # Spelling-explanation think text, SFT only: validation and GRPO keep the plain answer.
         self.think = None
         if training and config.get("think") is not None:
             if message_format != "qwen3_asr" or grpo:
                 raise ValueError("think needs Qwen3-ASR SFT")
             self._source_keys = [self.resolver.catalog.get(s["dataset_id"], s["version"]).key for s in sources]
-            self._source_starts = [r.start for r in self.source_ranges]
             self.think = ThinkTable(ThinkConfig(**{**config["think"], "files": tuple(config["think"]["files"])}),
                                     set(self._source_keys))
         # Building the index needs no augmentation files; scanning them for each of the
@@ -1333,7 +1333,11 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         if self.config.get("objective", {}).get("sample_mean"):
             # Metadata is consumed by the training loss, never model.forward.
             if sample["task"] == "asr":
-                result["catalog_task"] = 0
+                # replay_kl: false keeps a source's plain ASR on CE only (task 5), e.g. languages the
+                # student already does better than the frozen base, so the teacher does not pull them back.
+                record_idx = idx[1] if isinstance(idx, tuple) else idx
+                source = self.sources[bisect_right(self._source_starts, record_idx) - 1]
+                result["catalog_task"] = 0 if source.get("replay_kl", True) else 5
             elif sample["task"] == "ts_asr":
                 target = sample["solution"].split("<asr_text>", 1)[1]
                 result["catalog_task"] = 1 if target.strip() else 2

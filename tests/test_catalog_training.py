@@ -829,6 +829,13 @@ def test_hotword_asr_catalog_excludes_teacher_kl(catalog_config, tmp_path):
     assert sample['catalog_task'] == 4
 
 
+def test_replay_kl_opt_out_keeps_plain_asr_on_ce_only(catalog_config):
+    catalog_config.update(augmentation={}, objective={'sample_mean': True})
+    assert CatalogSwiftDataset(catalog_config, message_format='qwen3_asr')[0]['catalog_task'] == 0
+    catalog_config['train'] = [dict(source, replay_kl=False) for source in catalog_config['train']]
+    assert CatalogSwiftDataset(catalog_config, message_format='qwen3_asr')[0]['catalog_task'] == 5
+
+
 def test_catalog_audio_is_lazy_and_never_writes_intermediates(
     catalog_config, tmp_path, monkeypatch
 ):
