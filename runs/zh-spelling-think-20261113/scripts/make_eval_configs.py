@@ -4,8 +4,10 @@ Both servers load the think chat template (src/open_audio_llm/integrations/vllm/
 without chat_template_kwargs render exactly the official Qwen3-ASR prompt, so the same servers answer both modes.
 
 usage: make_eval_configs.py <name> <checkpoint dir> <asr gpu> <ts gpu> <asr port>
-       (writes configs/eval-<name>/: serve-asr.yaml, serve-tsasr.yaml, after-training-context-correction{,-think}.yaml)
+       (writes configs/eval-<name>/: serve-asr.yaml, serve-tsasr.yaml, after-training-context-correction{,-think}.yaml,
+        handoff.json for `ae open-audio-llm after-training --handoff`)
 """
+import json
 import sys
 from pathlib import Path
 
@@ -60,6 +62,14 @@ def evaluation(name, port, think):
     }
 
 
+def handoff(checkpoint):
+    # checkpoint-<step> under a training output dir; any other directory (e.g. the release) records step 0.
+    step = checkpoint.name.rpartition("-")[2]
+    return {"framework": "open-audio-llm", "schema_version": 2, "checkpoint": str(checkpoint), "base_model": "",
+            "tuner_type": "full", "selection": "final", "global_step": int(step) if step.isdigit() else 0,
+            "training_run": str(checkpoint.parent)}
+
+
 def main():
     name, checkpoint, asr_gpu, ts_gpu, port = sys.argv[1], Path(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5])
     out = HERE / "configs" / f"eval-{name}"
@@ -69,6 +79,7 @@ def main():
     (out / "serve-tsasr.yaml").write_text(dump(serve(name, checkpoint, ts_gpu, port, True)))
     (out / "after-training-context-correction.yaml").write_text(dump(evaluation(name, port, False)))
     (out / "after-training-context-correction-think.yaml").write_text(dump(evaluation(name, port, True)))
+    (out / "handoff.json").write_text(json.dumps(handoff(checkpoint)) + "\n")
     print(out)
 
 

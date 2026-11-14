@@ -1,0 +1,23 @@
+# 只用于核对带 think 模板的服务：AmphionEval 0.13.3 旧 TS 提示客户端（交付版训练时的提示），think 关，应复现 11-06 的合并 CER 8.88。
+suite_id: asr-regression-native@1
+model_name: release-v10interp050-oldprompt
+evaluator: ts-asr
+eval_set: open-audio-llm/context-correction-zh@v1-20261018
+server_url: http://127.0.0.1:18960
+served_model: release-v10interp050-asr
+tsasr_server_url: http://127.0.0.1:18961
+tsasr_served_model: release-v10interp050-tsasr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/spelling-think-20261113-release-v10interp050
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+  enroll_seconds: 5
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false

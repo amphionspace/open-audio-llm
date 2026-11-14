@@ -1,0 +1,21 @@
+# 守门（think 关）：交付版 run-20261106T040238Z-022113fb 的配置，只换模型、服务与输出目录（make_gate_configs.py）。
+suite_id: asr-regression-native@1
+model_name: think-3000
+evaluator: ts-asr
+eval_set: tdtech/customer-ts@v4-20261104
+tsasr_server_url: http://127.0.0.1:18963
+tsasr_served_model: think-3000-tsasr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/spelling-think-20261113-think-3000
+parameters:
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+  split_group: evaluation
+  enroll_seconds: 5
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false

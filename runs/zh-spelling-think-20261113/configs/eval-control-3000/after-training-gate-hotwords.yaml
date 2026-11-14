@@ -1,0 +1,19 @@
+# 守门（think 关）：交付版 run-20261106T062642Z-77949f35 的配置，只换模型、服务与输出目录（make_gate_configs.py）。
+suite_id: asr-regression-native@1
+model_name: control-3000
+evaluator: hotwords
+eval_set: open-audio-llm/qwen3-asr-hotwords@20261001
+server_url: http://127.0.0.1:18964
+served_model: control-3000-asr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/spelling-think-20261113-control-3000
+parameters:
+  samples_per_source: 2000
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false

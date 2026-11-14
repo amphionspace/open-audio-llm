@@ -1,0 +1,19 @@
+# 守门（think 关）：交付版 run-20261106T041330Z-10e76b87 的配置，只换模型、服务与输出目录（make_gate_configs.py）。
+suite_id: asr-regression-native@1
+model_name: think-3000
+evaluator: hotwords
+data_config: /workspace/workspace/mingdong/repo/oal-grpo/runs/amphionasr2-grpo-20261101/configs/customer-v5/customer-asr-v5-hw-data.yaml
+server_url: http://127.0.0.1:18962
+served_model: think-3000-asr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/spelling-think-20261113-think-3000
+parameters:
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false
