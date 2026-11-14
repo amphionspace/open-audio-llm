@@ -29,7 +29,7 @@ import numpy as np
 ROLE = "records_lance"
 # Source keys this reader implements; any other key keeps the JSONL path.
 SUPPORTED_KEYS = {
-    "dataset_id", "version", "split", "weight", "task",
+    "dataset_id", "version", "split", "weight", "task", "replay_kl",
     "exclude_records", "include_records", "min_duration", "max_duration", "online_mix", "nonspeech",
 }
 # Accepted on top of SUPPORTED_KEYS when the version declares every row clean-pass.
@@ -261,7 +261,8 @@ class LanceSourceIndex:
         self.count = len(self.positions)
         identity = {
             "sha256": scan["sha256"], "snapshot": self.snapshot, "split": self.split,
-            "source": {k: v for k, v in source.items() if k != "weight"},
+            # Like the JSONL cache: the replay quota and replay KL opt-out leave the rows unchanged.
+            "source": {k: v for k, v in source.items() if k not in ("weight", "replay_kl")},
             "exclude": [str(excluded_path), Path(excluded_path).stat().st_size] if excluded_path else None,
             **({"include": [str(included_path), Path(included_path).stat().st_size]} if included_path else {}),
             "sampling_rate": sampling_rate, "message_format": dataset.message_format}
