@@ -23,14 +23,16 @@ TS-ASR 样本的 system 来自 `tsasr/ts_prompt.py` 的 `TS_SYSTEM`（"Transcrib
 
 ### 说字写法 think（SFT）
 
-数据配置写 `think: {files: [...], explained_prob: 0.5, ordinary_prob: ..., empty_prob: ...}` 后，Qwen3-ASR SFT 的部分中文样本在答案前带一段 think（`data/think.py`）。
+数据配置写 `think: {files: [...], explained_prob: 0.5, ordinary_prob: ..., empty_prob: ..., uncovered_prob: ...}` 后，Qwen3-ASR SFT 的部分样本在答案前带一段 think（`data/think.py`）。
 
 - **数据来源**：`files` 列出 `context_correction_clean_zh@think-v1-20261112` 中各来源的 `think.jsonl.gz`。
   - 每行按 `(dataset, record_id)` 对应一条训练记录，`dataset` 必须是某个训练来源的 `<dataset>@<version>`（清洗后的派生版本）。名字对不上时直接报错，以免指错版本。
   - 有 think 文本的记录以 `explained_prob` 的概率开 think，例如 `zha 这个音，说话人说是「这是山楂的楂」，写作「楂」。`。
   - `think_on: false` 的记录只按 think 关训练：说明不确定，或扫描标出、可能仍在讲写法的。
   - 这些来源里文件没列出的中文 ASR / TS-ASR 记录，以 `ordinary_prob` 的概率开 think，内容是固定句 `这段没有说明字怎么写。`。
-  - 没有 think 文件的来源从不开 think，因为没扫描过说明。
+  - 扫描没覆盖的 ASR / TS-ASR 记录（没有 think 文件的来源，以及中文以外的语种）以 `uncovered_prob` 的概率开 think，内容同样是固定句，答案照常转写。
+    默认 0。不开的话，think 开时模型只见过扫描过的中文来源：think 开检查里英文把转写写进 think、答案留空，Common Voice 中文 11% 答案为空。
+    只在没有 think 文件的中文来源不会讲字怎么写时使用（扫描没覆盖朗读类就是这个原因），否则会教模型对真有说明的录音写"没有说明"。
   - 例外是答案为空的 ASR / TS-ASR 样本（在线混音的目标缺席和纯噪声，以及无语音数据池）：任何来源、任何语种都以 `empty_prob` 的概率开 think，内容是同一固定句，答案仍为空。
     默认 0。不开的话，think 开时模型从没见过"想完以后不输出"，遇到静音和目标缺席会更倾向于写出文字。
 - **格式**：think 关的样本与原来完全相同，答案是 `language X<asr_text>文本`；think 开时答案前加 `<think>\n…\n</think>\n\n`。
