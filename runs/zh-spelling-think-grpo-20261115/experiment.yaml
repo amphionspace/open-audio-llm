@@ -1,0 +1,12 @@
+version: 1
+name: zh-spelling-think-grpo-20261115
+purpose: 在说字 think 第二轮 checkpoint-3000 上按交付版那一轮（GRPO 第十轮）的配方做 GRPO，把续训 SFT 冲掉的无语音误触发等收益拿回来，同时保住 think 开的说字能力
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training_coverage: replay_quota
+  training_steps: 400
+inputs:
+  init_model: /workspace/data/ae-state/model-cache/entries/checkpoint-3000-927844461eb1
+tasks:
+- {id: grpo, name: GRPO 400 步（1 节点 8 卡，第十轮配方，计划在起点上重挖）, config: configs/train-grpo.yaml, depends_on: []}

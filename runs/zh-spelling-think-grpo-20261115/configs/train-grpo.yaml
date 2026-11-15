@@ -1,0 +1,102 @@
+# 【说字 think GRPO】由 oal-grpo 的 train-grpo-v10.yaml（交付版那一轮）经 scripts/make_configs.py 复制。
+# 与第十轮只差：起点为第二轮 think checkpoint-3000（whai:open-audio-llm/runs/zh-spelling-think-r2-20261115/tasks/01-train-think/attempts/001/artifacts/training/checkpoint-3000/，经 ae 模型缓存），代码 code-v2（main f68e180），
+# 数据 train-data-grpo.yaml（在起点上重挖）。奖励、学习率、KL（参考模型 = 起点）、400 步、只存权重、种子都同第十轮。
+version: 1
+runtime:
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train-vllm/bin/python
+  cwd: {path: ../../..}
+  pythonpath:
+    - {path: ../shared/code-v2/src}
+    - {path: ../shared/code-v2/audio-data-contract-src}
+  gpus: [0, 1, 2, 3, 4, 5, 6, 7]
+  threads: {omp: 2, openblas: 1}
+  environment:
+    TOKENIZERS_PARALLELISM: false
+    HF_HUB_OFFLINE: '1'
+    PYTHONUNBUFFERED: '1'
+    PYTORCH_ALLOC_CONF: expandable_segments:True
+    # 训练与 rollout 都走 SEP 感知的批量音频编码器（与 054 的 --audio_encoder_batching 相同实现）。
+    AUDIO_ENCODER_BATCHING: '1'
+    # log-Mel STFT on this rank's GPU (since code-v9); CPU extraction was 4–6% of the step on 4 GPUs.
+    AUDIO_FEATURE_DEVICE: cuda
+    # 同组 8 条按共享前缀打成一条序列打分，在线策略时不再单独算旧策略 logprob（tasks/14-grpo-sharedprefix-ab：
+    # 与原路径的 logprob 差和原路径自身逐行 / 整批的差同量级；同条件下每步快约 16%，显存少约 5 GiB）。
+    GRPO_EFFICIENT_LOGPS: '1'
+    GRPO_EFFICIENT_LOGPS_VERIFY: '4'
+    # api.wandb.ai 封了 ACP 出口：只让 W&B 经本机内网转发（只放行开发节点 IP）走海外代理，权重与对象存储直连。
+    WANDB_HTTP_PROXY: http://10.119.17.252:17920
+    WANDB_HTTPS_PROXY: http://10.119.17.252:17920
+    PATH: /workspace/workspace/mingdong/.local-tools/ffmpeg-7.0.2-static/bin:/workspace/workspace/mingdong/miniconda3/envs/oal-train-vllm/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  distributed: {processes: 8, port: 29719}
+data:
+  config: {path: train-data-grpo.yaml}
+task:
+  kind: train
+  module: open_audio_llm.integrations.ms_swift.train
+  positional: [grpo]
+  arguments:
+    --rlhf_type: grpo
+    --model: /workspace/data/ae-state/model-cache/entries/checkpoint-3000-927844461eb1
+    --model_type: amphion_asr_1.7b
+    --external_plugins:
+      - {path: ../shared/code-v2/src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py}
+      - {path: ../shared/code-v2/src/open_audio_llm/integrations/ms_swift/rewards/plugin.py}
+    --tuner_type: full
+    --freeze_vit: false
+    --freeze_aligner: false
+    --freeze_llm: false
+    --freeze_parameters:
+      - thinker.model.embed_tokens
+      - thinker.audio_tower.conv2d1
+      - thinker.audio_tower.conv2d2
+      - thinker.audio_tower.conv2d3
+      - thinker.audio_tower.conv_out
+    --deepspeed: {path: zero1-bf16-no-overflow-check.json}
+    --torch_dtype: bfloat16
+    --attn_impl: sdpa
+    --max_length: 2048
+    --max_completion_length: 512
+    --num_generations: 8
+    --per_device_train_batch_size: 8
+    --gradient_accumulation_steps: 4
+    --temperature: 1.0
+    --beta: 0.04
+    --learning_rate: 1.0e-06
+    --lr_scheduler_type: constant_with_warmup
+    --warmup_steps: 20
+    --max_steps: 400
+    --max_grad_norm: 1.0
+    --reward_funcs: [qwen3_asr_accuracy, qwen3_asr_presence, qwen3_asr_hotword, qwen3_asr_format]
+    --reward_weights: [1.0, 1.0, 1.0, 0.25]
+    --use_vllm: false
+    --log_completions: true
+    --log_rollout_offpolicy_metrics: true
+    --logging_steps: 1
+    --save_steps: 100
+    --save_only_model: true
+    --report_to: none
+    --seed: 42
+    # 训练侧变快后 3 卡剖析里主线程 20–40% 在等 dataloader（tasks/14 attempt 003）；Pod 配额 94 核，8 × 8 个 worker 在内。
+    --dataloader_num_workers: 8
+    --check_model: false
+    --load_args: false
+    --add_version: false
+    --ddp_timeout: 1800
+    --output_dir: {path: "{attempt}/artifacts/training"}
+recording:
+  attempts_dir: {path: ../tasks/02-grpo/attempts}
+tracking:
+  pythonpath: [{path: ../shared/code-v2/src}]
+  enabled: true
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train-vllm/bin/python
+  credentials_file: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: AmphionASR-spelling-think-grpo-v10recipe-from-r2think3000-8gpu-400steps
+  interval: 5
+  startup_timeout: 600
+  finish_timeout: 300
+storage:
+  executable: /workspace/workspace/mingdong/.local/share/amphion-bucket/cluster-venv/bin/ab
+  remote: whai:open-audio-llm
+  local_root: {path: ../../..}
