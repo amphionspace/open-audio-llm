@@ -18,7 +18,7 @@ for m in asr tsasr; do
   [ -f "$DIR/serve-$m.yaml" ] || continue
   PORT[$m]=$(port "$DIR/serve-$m.yaml")
   curl -s --noproxy '*' -m 3 "http://127.0.0.1:${PORT[$m]}/v1/models" >/dev/null && { echo "port ${PORT[$m]} busy" >> "$LOG/status.txt"; exit 1; }
-  env PYTHONPATH="$EXP/shared/code-v1/src" $PY -m open_audio_llm.cli serve --config "$DIR/serve-$m.yaml" > "$LOG/serve-$m.log" 2>&1 &
+  env PYTHONPATH="$EXP/shared/code-v2/src" $PY -m open_audio_llm.cli serve --config "$DIR/serve-$m.yaml" > "$LOG/serve-$m.log" 2>&1 &
   PID[$m]=$!
 done
 stop() { for m in "${!PID[@]}"; do kill -TERM "${PID[$m]}" 2>/dev/null; done; wait; }

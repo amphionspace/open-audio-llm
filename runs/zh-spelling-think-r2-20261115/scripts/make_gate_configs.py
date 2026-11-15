@@ -49,7 +49,7 @@ def main():
                 config[model_key] = serve[route]["--served-model-name"]
         for think in (False, True) if key in think_keys else (False,):
             model = f"{name}-think" if think else name
-            variant = dict(config, model_name=model, output_root=f"/workspace/data/ae-runs/spelling-think-20261113-{model}",
+            variant = dict(config, model_name=model, output_root=f"/workspace/data/ae-runs/spelling-think-r2-20261115-{model}",
                            wandb={"entity": "1016097967-amphion", "project": "open-audio-llm"}, publish={"enabled": False})
             if think:
                 variant["parameters"] = {**config["parameters"], "think": True}

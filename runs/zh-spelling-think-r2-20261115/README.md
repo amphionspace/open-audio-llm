@@ -100,3 +100,13 @@ open-audio-llm experiment run --config runs/zh-spelling-think-r2-20261115/experi
   - 合成数据：`explained_prob` 设为 1 时，5,862 条拿到自己的 think，与 think 文件里 think_on 的条数相同；其余 39 条只按 think 关训练。
   - 英文、空答案、没扫描的中文 TS 三类：按配置抽 2 万次，写固定句的比例都是 2.9%，与设定的 0.03 一致。
 - **训练**：06:03Z 投递 `10-train-think.sh`，attempt 001 开始训练。
+  - W&B：<https://wandb.ai/1016097967-amphion/open-audio-llm/runs/AmphionASR-spelling-think-r2-synth-empty-uncovered-from-v10interp050-3k-1node-codev2-001>，远端已有 `train/loss`。
+  - 前期 loss 比第一轮高：第 10 步 0.55，第一轮同一步 0.22。到第 100 步是 0.24（第一轮 0.18），第 340 步 0.13，回到第一轮的水平。
+  - 原因是 think 开的样本约为第一轮的 4 倍，think 文本一开始是新内容。没有 NaN；grad_norm 前 50 步最高 9.5，之后在 3 以下。
+  - 速度约 1.2 秒/步。
+- **评测**：训练结束后，由 `scripts/eval_after_training.sh` 自动接着做（inbox `11-eval-after-training.sh`）。
+  - 用模型缓存取回 checkpoint-3000（`ae-models.sh fetch`），不再 `ab pull` 进 ae-runs。
+  - 用 `scripts/interp_release.py` 与交付版做 50% 插值，放进缓存，名字是 `spelling-think-r2-think-3000-interp050`。
+    - 插值前已核对：第一轮的 think-3000 与交付版有 709 个张量，名字和形状逐个一致。
+  - 两个模型同时测：上下文纠偏（think 关、开）、8 项守门（think 关），以及中文 TS-ASR 测试集、鼎桥机主识别、asrreg 三项的 think 开。
+  - 评测脚本从第一轮复制，只改了代码快照（code-v2）和输出目录（`/workspace/data/ae-runs/spelling-think-r2-20261115-<模型>`）。

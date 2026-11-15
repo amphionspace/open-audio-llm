@@ -14,7 +14,7 @@ from pathlib import Path
 import yaml
 
 HERE = Path(__file__).resolve().parents[1]
-TEMPLATE = {"path": "../../shared/code-v1/src/open_audio_llm/integrations/vllm/qwen3_asr_think.jinja"}
+TEMPLATE = {"path": "../../shared/code-v2/src/open_audio_llm/integrations/vllm/qwen3_asr_think.jinja"}
 
 
 def serve(name, checkpoint, gpu, port, ts):
@@ -24,7 +24,7 @@ def serve(name, checkpoint, gpu, port, ts):
         "runtime": {
             "python": {"path": "/workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python"},
             "cwd": {"path": "../../../.."},
-            "pythonpath": [{"path": "../../shared/code-v1/src"}],
+            "pythonpath": [{"path": "../../shared/code-v2/src"}],
             "gpus": [gpu],
             "threads": {"omp": 4, "openblas": 1},
             "environment": {
@@ -54,7 +54,7 @@ def evaluation(name, port, think):
         "server_url": f"http://127.0.0.1:{port}", "served_model": f"{name}-asr",
         "tsasr_server_url": f"http://127.0.0.1:{port + 1}", "tsasr_served_model": f"{name}-tsasr",
         "worker_timeout": 600,
-        "output_root": f"/workspace/data/ae-runs/spelling-think-20261113-{name}{'-think' if think else ''}",
+        "output_root": f"/workspace/data/ae-runs/spelling-think-r2-20261115-{name}{'-think' if think else ''}",
         "parameters": {"split_group": "evaluation", "samples_per_source": 0, "batch_size": 32,
                        "max_new_tokens": 512, "seed": 42, "enroll_seconds": 5, **({"think": True} if think else {})},
         "wandb": {"entity": "1016097967-amphion", "project": "open-audio-llm"},
