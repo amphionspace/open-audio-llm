@@ -64,6 +64,23 @@ def test_empty_answers_of_any_source_and_language_think_with_empty_prob(table, t
         ThinkConfig(("x",), 0.5, 0.0, empty_prob=-0.1)
 
 
+def test_records_the_scan_did_not_cover_think_with_uncovered_prob(table, tmp_path):
+    path = tmp_path / "think.jsonl.gz"
+    table()  # writes the think file
+    uncovered = ThinkTable(ThinkConfig((str(path),), 0.0, 0.0, uncovered_prob=1.0), {KEY, "librispeech@1"})
+    assert uncovered.choose("librispeech@1", record("l", target="hello", language="en"), "s") == NO_EXPLANATION
+    assert uncovered.choose("librispeech@1", record("l", language="zh", task="ts_asr"), "s") == NO_EXPLANATION
+    assert uncovered.choose(KEY, record("train_2spk:c", target="hello", language="en"), "s") == NO_EXPLANATION
+    assert uncovered.choose("librispeech@1", record("l", task="speaker_attributed_asr"), "s") is None
+    # Records the scan covered keep their own rules.
+    assert uncovered.choose(KEY, record(), "s") is None
+    assert uncovered.choose(KEY, record("train_2spk:b"), "s") is None
+    assert uncovered.choose(KEY, record("train_2spk:c"), "s") is None
+    assert uncovered.choose("librispeech@1", record("l", target=""), "s") is None
+    with pytest.raises(ValueError, match="probability"):
+        ThinkConfig(("x",), 0.5, 0.0, uncovered_prob=2)
+
+
 def test_draws_are_fixed_by_the_example_seed(table):
     half = table(explained_prob=0.5, ordinary_prob=0.5)
     draws = [half.choose(KEY, record(), f"7:0:{i}") for i in range(200)]

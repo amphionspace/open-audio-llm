@@ -4,7 +4,8 @@ A think file (``think.jsonl.gz`` of ``context_correction_clean_zh@think-v1-20261
 the cleaned sources as ``{dataset, record_id, think_on, think}``. ``think_on: false`` marks records that may only
 train with think off: their explanation is uncertain, or the scan flagged them and they may still explain a
 spelling. A record of such a source that the file does not list is ordinary; when it trains with think on, its
-think is ``NO_EXPLANATION``. Other sources train with think off, except examples with an empty answer (``empty_prob``).
+think is ``NO_EXPLANATION``. Records the scan did not cover (other sources, other languages) and examples with an
+empty answer think with ``NO_EXPLANATION`` too, at their own probabilities (``uncovered_prob``, ``empty_prob``).
 
 Think off keeps the existing target, ``language X<asr_text>text``. Think on prefixes it with
 ``<think>\\n...\\n</think>\\n\\n``; the template does not supervise the opening ``<think>\\n``, so the model opens a
@@ -40,11 +41,17 @@ class ThinkConfig:
     # from any source and in any language: nothing is said, so nothing explains a spelling. Without it think on never
     # sees an empty answer and leans towards writing text for silence and absent targets.
     empty_prob: float = 0.0
+    # Probability that an ASR / TS-ASR example with a transcript that the scan did not cover (a source without a think
+    # file, or a language other than Chinese) trains with think on. Without it think on only ever saw Chinese records
+    # of the scanned sources, and on English or unscanned Chinese it put the transcript inside the think or left the
+    # answer empty. Only for configs whose Chinese sources without a think file do not explain spellings (the scan
+    # left out read speech for that reason): their records are taught that nothing explained one.
+    uncovered_prob: float = 0.0
 
     def __post_init__(self):
         if not self.files:
             raise ValueError("think.files must list at least one think file")
-        for name in ("explained_prob", "ordinary_prob", "empty_prob"):
+        for name in ("explained_prob", "ordinary_prob", "empty_prob", "uncovered_prob"):
             value = getattr(self, name)
             if type(value) not in (int, float) or not 0 <= value <= 1:
                 raise ValueError(f"think.{name} must be a probability")
@@ -79,13 +86,14 @@ class ThinkTable:
         draw = random.Random(f"{seed}:think").random()
         if not record.target.strip():
             return NO_EXPLANATION if draw < self.config.empty_prob else None
-        if source_key not in self.datasets or record.language.lower() not in CHINESE:
-            return None
         key = (source_key, record.id)
+        chinese = record.language.lower() in CHINESE
         if key in self.rows:
             think = self.rows[key]
-            return think if think is not None and draw < self.config.explained_prob else None
-        return NO_EXPLANATION if draw < self.config.ordinary_prob else None
+            return think if chinese and think is not None and draw < self.config.explained_prob else None
+        if source_key in self.datasets and chinese:
+            return NO_EXPLANATION if draw < self.config.ordinary_prob else None
+        return NO_EXPLANATION if draw < self.config.uncovered_prob else None
 
 
 def think_answer(think: str, answer: str) -> str:
