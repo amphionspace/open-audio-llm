@@ -1,0 +1,12 @@
+version: 1
+name: zh-spelling-think-r2-20261115
+purpose: 说字写法 think 第二轮：在第一轮 think 组上加合成说字数据，并让空答案和扫描没覆盖的记录（英文等其他语种、其他中文来源）也按 think 开训练，修 think 开时的误触发和空答案
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training_coverage: replay_quota
+  training_steps: 3000
+inputs:
+  init_model: /workspace/data/ae-runs/amphionasr2-grpo-v10interp050/checkpoint
+tasks:
+- {id: train-think, name: think 组 1 节点 8 卡全参 3000 步, config: configs/train-think.yaml, depends_on: []}
