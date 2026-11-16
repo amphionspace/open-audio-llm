@@ -1,0 +1,55 @@
+# 05-delivery-eval 第 d 组服务：avg3 + 借 v16 avg3 的 MTP 草稿（k=2），其余同 configs/eval-grpo-avg3/serve-tsasr.yaml（make_eval_configs.py 生成后加 --speculative-config）。
+version: 1
+runtime:
+  python:
+    path: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+  cwd:
+    path: ../../../..
+  pythonpath:
+  - path: ../../shared/code-v2/src
+  gpus:
+  - 7
+  threads:
+    omp: 4
+    openblas: 1
+  environment:
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    HF_HUB_OFFLINE: '1'
+    VLLM_ENGINE_READY_TIMEOUT_S: '1800'
+    PYTHONUNBUFFERED: '1'
+    AMPHION_TSASR_INSERT_SEP: '1'
+    AMPHION_TSASR_ENROLL_SEC: '5'
+    AMPHION_TSASR_ENROLL_NOPAD: '0'
+    COT_TSASR_ENROLL_RANDOM: '0'
+    COT_AUDIO_CHUNKED_ATTN: '0'
+task:
+  kind: serve
+  backend: vllm
+  model:
+    path: /workspace/data/ae-state/model-cache/entries/model-377c0d630417ca1fc281e847
+  arguments:
+    --host: 127.0.0.1
+    --port: 18977
+    --served-model-name: grpo-avg3-mtp-d-tsasr
+    --dtype: bfloat16
+    --tensor-parallel-size: 1
+    --limit-mm-per-prompt:
+      audio: 1
+    --gpu-memory-utilization: 0.2
+    --max-model-len: 8192
+    --chat-template:
+      path: ../../shared/code-v2/src/open_audio_llm/integrations/vllm/qwen3_asr_think.jinja
+    --hf-overrides:
+      thinker_config:
+        audio_config:
+          n_window_infer: 1000000000
+    --speculative-config:
+      method: eagle
+      model: /workspace/workspace/mingdong/repo/oal-joint-mtp/runs/joint-mtp-spec-20261107/shared/draft-v16avg3
+      num_speculative_tokens: 2
+  flags:
+  - --trust-remote-code
+  - --no-enable-prefix-caching
+recording:
+  attempts_dir:
+    path: ../../tasks/05-delivery-eval/d-serve-tsasr/attempts

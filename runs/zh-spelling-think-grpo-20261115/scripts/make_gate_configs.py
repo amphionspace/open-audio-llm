@@ -4,10 +4,10 @@ Each config copies the release run's recorded config (run.json) and changes only
 and the output directory, so the release numbers are the baseline on the same data, normalization and scoring.
 Run after make_eval_configs.py: the servers (ports, served names) come from configs/eval-<name>/serve-*.yaml.
 
-usage: make_gate_configs.py <name> [key ...]
+usage: make_gate_configs.py <name> [--model <model name>] [key ...]
   writes configs/eval-<name>/after-training-gate-<key>.yaml for every gate; each key listed also gets
   after-training-gate-<key>-think.yaml (think on, model <name>-think), e.g. to see what think on does to target-absent
-  and non-speech records.
+  and non-speech records. --model (default <name>) lets several config dirs, i.e. several server pairs, write one model.
 """
 import json
 import sys
@@ -27,11 +27,24 @@ GATES = {
     "customer-asr": "run-20261106T040023Z-6d445026",  # 鼎桥客户录音 customer-asr@v5 普通识别
     "customer-hotwords": "run-20261106T041330Z-10e76b87",  # 鼎桥客户录音 customer-asr@v5 热词
     "customer-ts": "run-20261106T040238Z-022113fb",  # 鼎桥客户录音 customer-ts@v4 机主识别
+    # the rest of the 11.06 package's validation (validation/results/results.md), for the delivery evaluation
+    "babble4": "run-20261105T185355Z-b5256f15",  # 背景人声与空白 asr-babble-bench@v4-20261104
+    "ts-en": "run-20261105T183124Z-a3273891",  # 英文 TS ts-asr-benchmark-en@v1-20261031
+    "ts-hotwords": "run-20261105T184337Z-1127dc9d",  # TS + 热词 ts-asr-hotwords@v1-20261102
+    "badcase": "run-20261105T185507Z-64038efc",  # 鼎桥 e警保 回退集 tdtech/badcase@v3-20261104
+    "first-other": "run-20261105T185559Z-9b91bc4f",  # 跟错人 ts-asr-first-other@v3-20261105
+    "hotword-bench": "run-20261106T021048Z-47cca8d9",  # hotword-bench@v3-20261020
+    "police-single": "run-20261106T021520Z-b93e11b0",  # 警务单说术语
+    "scene-asr": "run-20261106T021635Z-0e77fcaf",  # 鼎桥场景普通识别
+    "scene-ts": "run-20261106T021900Z-53c44b85",  # 鼎桥场景 TS tdtech/scene-ts@v1-20261028
 }
 
 
 def main():
     name, think_keys = sys.argv[1], sys.argv[2:]
+    model_name = name
+    if think_keys[:1] == ["--model"]:
+        model_name, think_keys = think_keys[1], think_keys[2:]
     unknown = set(think_keys) - set(GATES)
     if unknown:
         sys.exit(f"unknown gate keys: {sorted(unknown)}")
@@ -48,7 +61,7 @@ def main():
                 config[url_key] = f"http://127.0.0.1:{serve[route]['--port']}"
                 config[model_key] = serve[route]["--served-model-name"]
         for think in (False, True) if key in think_keys else (False,):
-            model = f"{name}-think" if think else name
+            model = f"{model_name}-think" if think else model_name
             variant = dict(config, model_name=model, output_root=f"/workspace/data/ae-runs/spelling-think-grpo-20261115-{model}",
                            wandb={"entity": "1016097967-amphion", "project": "open-audio-llm"}, publish={"enabled": False})
             if think:
