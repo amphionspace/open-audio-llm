@@ -343,7 +343,20 @@ think 开的 run 在 `<模型>-think` 目录下。
 - **出在哪一步**：
   - GRPO 起点已经更差（误出字 57 条、多转写 97 条），这轮 GRPO 只降了一点（57 → 49）。
   - 退步来自两轮说字 SFT。这和第二轮 README 记的“续训 SFT 把交付版 GRPO 压下来的误触发又冲了回去”是同一件事。场景 TS 的分开讲话切片把它放大了：只听声纹分不清时，模型干脆把两个人都转写。
-- **下一步**：第一轮的 think 组和同数据同步数的对照组（不加 think）各跑一遍（`configs/eval-diag-scene-ts-r1-{think,control}-new/`），分清是 think 造成的，还是续训 SFT 本身。已排在 Emilia 扫描之后，与草稿头续训同时跑。
+- **第一轮两组也测了**（`configs/eval-diag-scene-ts-r1-{think,control}-new/`，10:49Z）。两组都正常，所以退步是第二轮才带进来的：
+
+  | 模型 + 新提示 | CER | 误出字 | 其中分开讲话 / 重叠 | 分开讲话里多转写别人整句 |
+  |---|---|---|---|---|
+  | 第一轮 think 组 checkpoint-3000 | 3.41 | 21 | 7 / 14 | 14 |
+  | 第一轮对照组（不加 think）checkpoint-3000 | 3.28 | 16 | 6 / 10 | 13 |
+
+  - 不是 think 造成的，也不是续训 SFT 本身造成的。
+  - 第二轮比第一轮多三处：
+    1. 合成说字数据：`train` 2,984 条，`train_ts` 2,917 条，约占样本 3.1%，每条约见 3 次；
+    2. 空答案、扫描没覆盖的样本也以 0.03 写固定 think 句（#158、#159，只改 think 分配）；
+    3. 代码只差这两个 PR。
+  - 最可疑的是 `train_ts`：注册音频是 AISHELL-3 / KeSpeech 的真实录音，识别片段是 Qwen3-TTS 的克隆声音，音色不完全一样；而且目标每条都在场、没有别人。模型可能因此学会了把“有点像”的声音当成目标。
+  - 正在用 ECAPA 说话人向量核对：比较 `train_ts` 里注册音频和克隆声音的相似度，与真实 TS 训练数据里目标在场的相似度、场景 TS 里“另一个人”与注册音频的相似度。
 - run（`/workspace/data/ae-runs/spelling-think-grpo-20261115-diag-scene-ts-<名>/runs/`）：avg3-new `run-20261116T074205Z-d16a96e9`，avg3-old `c4c1c814`，release-new `4e16cca8`，r2-new `1d1c0264`（后三个是同一时刻、只写后缀）。
 
 ### 06-train-draft：给 avg3 补训草稿头
