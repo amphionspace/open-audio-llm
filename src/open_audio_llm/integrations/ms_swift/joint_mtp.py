@@ -203,11 +203,15 @@ def _own_lr_groups(trainer, module, lr):
         raise ValueError("joint_mtp_lr must be positive")
     # The module starts from the backbone-based init while the backbone fine-tunes at a few
     # 1e-6; its own parameter groups keep the scheduler's shape at this peak instead.
-    create_optimizer = trainer.create_optimizer
+    # ms-swift 4 builds the optimizer in trainer.optimizer_callback, which calls
+    # HfTrainer.create_optimizer on the class and never sees a patched trainer.create_optimizer
+    # (the module trained at the backbone lr in attempts 117/120).
+    owner = getattr(trainer, "optimizer_callback", None) or trainer
+    create_optimizer = owner.create_optimizer
     own = {id(p) for p in module.parameters()}
 
-    def create_optimizer_with_mtp():
-        optimizer = create_optimizer()
+    def create_optimizer_with_mtp(*args, **kwargs):
+        optimizer = create_optimizer(*args, **kwargs)
         if any(group.get("joint_mtp") for group in optimizer.param_groups):
             return optimizer
         extra = []
@@ -222,7 +226,7 @@ def _own_lr_groups(trainer, module, lr):
             optimizer.add_param_group(group)
         return optimizer
 
-    trainer.create_optimizer = create_optimizer_with_mtp
+    owner.create_optimizer = create_optimizer_with_mtp
 
 
 def _save_split(trainer, module, model, thinker, weight, steps, decay, init):
