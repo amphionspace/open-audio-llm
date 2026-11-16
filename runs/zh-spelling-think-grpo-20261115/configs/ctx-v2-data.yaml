@@ -1,0 +1,95 @@
+# 09-ctx-v2-eval：上下文纠偏评测集 v2 的定义（audio-data-contract eval_set.py 生成），catalog 用登记 v2 的提交；由 scripts/make_ctx_v2_configs.py 生成
+catalog: /workspace/workspace/mingdong/repo/adc-ctx-v2-9f8af4c/catalog
+roots: /workspace/data/registry/roots.json
+tags:
+- zh
+- context-correction
+groups:
+- name: 上下文纠偏 · 合成 · 同源
+  section: 上下文纠偏
+  labels:
+  - synthetic
+  description: 看 summary 的 context_correction：纠正成功率、保持率（误改率）、说明识别率、条件纠正率、成对正确率
+- name: 上下文纠偏 · TS 模式 · 同源
+  section: 上下文纠偏
+  labels:
+  - synthetic_ts
+  description: 同上，TS-ASR 请求（注册音频 + 识别片段）
+- name: 上下文纠偏 · 合成 · 独立
+  section: 上下文纠偏
+  labels:
+  - synthetic_indep
+  description: 同上；与同源组的差距就是只学会训练模板的程度
+- name: 上下文纠偏 · TS 模式 · 独立
+  section: 上下文纠偏
+  labels:
+  - synthetic_indep_ts
+  description: 同上，TS-ASR 请求
+- name: 上下文纠偏 · 真实录音
+  section: 上下文纠偏
+  labels:
+  - mined_real
+  - mined_real_emilia
+  description: 真实录音；每条单独成题（没有成对的确认题），看 mined_accuracy，按 source 和 train_overlap 分开看
+sampling_rate: 16000
+evaluation:
+- dataset_id: context_correction_zh
+  version: v1-20261018
+  split: synthetic
+  task: asr
+  label: synthetic
+  tags:
+  - zh
+  - context-correction
+  display: 合成 · 同源 · 普通 ASR
+  description: LLM 生成的成对题目，Qwen3-TTS 用测试划分说话人的声音合成；显式说字、同名一致性、隐式语义。与训练数据同一生成器，只当同分布参考
+- dataset_id: context_correction_zh
+  version: v1-20261018
+  split: synthetic_ts
+  task: ts_asr
+  label: synthetic_ts
+  tags:
+  - zh
+  - context-correction
+  display: 合成 · 同源 · TS 模式
+  description: 同一批题目中不超过 26.5 秒的部分，配同一说话人的真实注册音频（客户实际使用的模式）
+- dataset_id: context_correction_zh
+  version: v1-20261018
+  split: mined_real
+  task: asr
+  label: mined_real
+  tags:
+  - zh
+  - context-correction
+  display: 真实录音 · 播客 · 普通 ASR
+  description: 从 WenetSpeech 播客挖掘、两个 LLM 一致标注的真实录音
+- dataset_id: context_correction_zh
+  version: v2-20261116
+  split: synthetic_indep
+  task: asr
+  label: synthetic_indep
+  tags:
+  - zh
+  - context-correction
+  display: 合成 · 独立 · 普通 ASR
+  description: 另一套生成器出题、两家复核，CosyVoice3 用训练没用过的说话人合成；含训练没有的题型（专名指代、字义说明、逐字说明、对话问答）
+- dataset_id: context_correction_zh
+  version: v2-20261116
+  split: synthetic_indep_ts
+  task: ts_asr
+  label: synthetic_indep_ts
+  tags:
+  - zh
+  - context-correction
+  display: 合成 · 独立 · TS 模式
+  description: 同一批独立题中不超过 26.5 秒的单人题，配同一说话人的真实注册音频
+- dataset_id: context_correction_zh
+  version: v2-20261116
+  split: mined_real
+  task: asr
+  label: mined_real_emilia
+  tags:
+  - zh
+  - context-correction
+  display: 真实录音 · Emilia · 普通 ASR
+  description: 从原版 Emilia-ZH 挖掘、两个 LLM 一致标注的真实录音（该语料不在训练配方里）

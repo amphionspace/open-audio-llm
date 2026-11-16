@@ -1,0 +1,22 @@
+suite_id: asr-regression-native@1
+model_name: ctxv2-release
+evaluator: ts-asr
+data_config: ../ctx-v2-data.yaml
+server_url: http://127.0.0.1:19010
+served_model: ctxv2-release-asr
+tsasr_server_url: http://127.0.0.1:19011
+tsasr_served_model: ctxv2-release-tsasr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/spelling-think-grpo-20261115-ctxv2-release
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+  enroll_seconds: 5
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false
