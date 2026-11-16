@@ -92,6 +92,8 @@ Qwen3-ASR（`--model_type amphion_asr_1.7b`）用 `--reward_funcs qwen3_asr_accu
 --speculative-config '{"method": "eagle", "model": "<checkpoint>/mtp", "num_speculative_tokens": 2}'
 ```
 
+用 `open-audio-llm serve` 起普通识别服务（`AMPHION_TSASR_INSERT_SEP` 关）时，还要设 `OPEN_AUDIO_LLM_ENABLE_MTP_DRAFT=1`：插件注册草稿，并把目标换成仓库里的 Qwen3-ASR 类（带 EAGLE 提议器需要的接口，SEP 关时就是普通识别，与交付包的运行时相同）。TS 服务（SEP 开）已经会注册，不用另设。
+
 走 EAGLE 提议器而不是 vLLM 的 `mtp` 方法：后者只认 `MTPModelTypes` 和 Qwen3-Next 的层。embed_tokens 与 lm_head 共享目标模型的，草稿只用文本 embedding，与训练一致。v16 avg3 实测（`runs/joint-mtp-spec-20261107/`）：k3 每次校验接受 3.62 个 token，单路普通 ASR 均值 103→63 ms，推荐 k2。
 
 ### 投机解码草稿头（MTP）
