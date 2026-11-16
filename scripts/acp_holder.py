@@ -19,10 +19,10 @@ import yaml
 from open_audio_llm.cluster import JOB_PREFIX, LEGACY_JOB_PREFIX, refresh_sco, sco_environment
 
 GPUS_PER_NODE = 8
-# User, 2026-11-16: holder jobs end in -free so they read as idle capacity at a glance, and holding never
-# exceeds two nodes; AmphionASR as a whole takes at most two.
+# User, 2026-11-16: holder jobs end in -free so they read as idle capacity at a glance; AmphionASR as a whole
+# takes at most three nodes (raised from two the same day).
 FREE_SUFFIX = "-free"
-MAX_NODES = 2
+MAX_NODES = 3
 
 
 def run_sco(cluster, *args):

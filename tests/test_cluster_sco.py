@@ -93,7 +93,7 @@ def test_holder_counts_project_nodes_of_either_prefix_and_reads_idle_gpus():
     assert holder.idle_gpus(usage) == 8
 
 
-def test_holder_names_end_in_free_and_holding_is_capped_at_two_nodes(monkeypatch):
+def test_holder_names_end_in_free_and_holding_is_capped_at_three_nodes(monkeypatch):
     import importlib.util
     import sys
     from datetime import datetime, timezone
@@ -103,6 +103,6 @@ def test_holder_names_end_in_free_and_holding_is_capped_at_two_nodes(monkeypatch
     spec.loader.exec_module(holder)
     now = datetime(2026, 11, 16, 7, 45, tzinfo=timezone.utc)
     assert holder.holder_name("ts-robust-1node", now) == "AmphionASR-ts-robust-1node-h0745-free"
-    monkeypatch.setattr(sys, "argv", ["acp_holder.py", "--config", "unused.yaml", "--nodes", "3"])
+    monkeypatch.setattr(sys, "argv", ["acp_holder.py", "--config", "unused.yaml", "--nodes", "4"])
     with pytest.raises(SystemExit):
         holder.main()
