@@ -333,7 +333,10 @@ think 开的 run 在 `<模型>-think` 目录下。
 - **运行**：排在交付节点上（`scripts/train_draft.sh`），05 的 6 组都结束、GPU 空出后开始。
   - attempt 001 在训练前退出：脚本没加载对象存储凭证，节点上的 root 没有 whai 的凭证。脚本改为和 `train.sh` 一样经 `load.sh sensecore` 启动。
   - attempt 002 06:01Z 开始，约 1.2 步/秒，预计 07:45Z 结束。W&B：<https://wandb.ai/1016097967-amphion/open-audio-llm/runs/AmphionASR-spelling-think-avg3-draft-eagle3-3step-10k-1node-002>，远端已有指标。
-  - 第 1270 步时各位置的草稿命中率是 0.62 / 0.40 / 0.29。
+  - 第 1270 步时各位置的草稿命中率是 0.62 / 0.40 / 0.29；第 6690 步时 0.87 / 0.85 / 0.83，每次平均接受 2.30 个（3 步展开）。
+  - **07:31Z 节点被暂停**：用户规定 AmphionASR 最多占两个节点，暂停了 `pt-kva8cue7`。attempt 002 停在 7210 步，最近的 checkpoint 是 6000 步（`status.json` 仍写着 running，进程已随节点停止）。07、08 都还没开始。
+  - 只剩 `pt-cgyin2on` 在跑，于是重新提交 1 节点 `pt-1blli2zm`（合计 2 个）。新节点上依次跑：08 场景 TS 定位 → Emilia 扫描（上下文纠偏评测集 v2）→ 草稿头 attempt 003 → 07。
+  - attempt 003 用 `configs/train-draft-resume.yaml`：与 `train-draft.yaml` 只差 `--resume_from_checkpoint`，从 attempt 002 的 checkpoint-6000 续训到 10000 步。07 的配置已改指 attempt 003 的草稿。
 - **完成后（07）**：用新草稿复测接受长度，与 04 同法，k=3 和 k=2 两路同时跑。配置 `configs/eval-grpo-avg3-eagle3-k{3,2}/`（`scripts/make_draft_accept_configs.py`），详见 `tasks/07-draft-accept/README.md`。交付包用 `method: eagle3`；mtp-draft-head-20261031 测速选定 k=3。
 
 ## 启动

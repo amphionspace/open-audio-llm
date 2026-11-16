@@ -1,0 +1,118 @@
+# 06-train-draft 续训（attempt 003）：attempt 002 训到 7210 步时 ACP 任务 pt-kva8cue7 被暂停（AmphionASR 最多占两个节点），
+# 从它最近的 checkpoint-6000 接着训到 10000 步（优化器、学习率、随机数和采样器状态都在 checkpoint 里）。
+# 与 train-draft.yaml 只差 --resume_from_checkpoint 和这段说明；attempt 002 原样保留。
+# 06-train-draft：avg3 的投机解码草稿头（MTP 规定：avg3 没有 mtp/，借 v16 avg3 的草稿接受长度只有 1.64（k=2），所以补训）。
+# 由 mtp-draft-head-20261031 的 configs/train-draft.yaml（已备好的正式草稿头训练）复制，只改：
+#   骨干 = avg3（冻结，识别结果不变）；数据 = 第二轮 think 数据配置（train-data-draft.yaml，含 think 开样本）；
+#   代码 = code-v3；10000 步（全局 batch 192，192 万条，是已验证预算 96 万条的 2 倍）；去掉 cluster，在交付节点的 inbox 里跑。
+# 结构：EAGLE-3，融合骨干第 2 / 14 / 25 层，3 步展开，目标是对冻结模型下下个 token 分布的 KL（依据见原实验 02）。
+version: 1
+runtime:
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  cwd:
+    path: ../../..
+  pythonpath:
+  - path: ../shared/code-v3/src
+  gpus:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  threads:
+    omp: 2
+    openblas: 1
+  environment:
+    TOKENIZERS_PARALLELISM: false
+    HF_HUB_OFFLINE: '1'
+    PYTHONUNBUFFERED: '1'
+    PYTORCH_ALLOC_CONF: expandable_segments:True
+    PATH: /workspace/workspace/mingdong/.local-tools/ffmpeg-7.0.2-static/bin:/workspace/workspace/mingdong/miniconda3/envs/oal-train/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  distributed:
+    processes: 8
+    port: 29871
+data:
+  config:
+    path: train-data-draft.yaml
+task:
+  kind: train
+  module: open_audio_llm.integrations.ms_swift.train
+  positional:
+  - sft
+  arguments:
+    --model: /workspace/data/ae-state/model-cache/entries/model-377c0d630417ca1fc281e847
+    --model_type: amphion_asr_1.7b
+    --external_plugins:
+    - path: ../shared/code-v3/src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py
+    --tuner_type: full
+    --draft_head_arch: eagle3
+    --draft_head_targets: reference
+    --draft_head_steps: 3
+    --draft_head_step_decay: 0.8
+    --torch_dtype: bfloat16
+    --attn_impl: sdpa
+    --max_length: 2048
+    --per_device_train_batch_size: 12
+    --per_device_eval_batch_size: 4
+    --gradient_accumulation_steps: 2
+    --learning_rate: 0.0001
+    --weight_decay: 0.0
+    --max_steps: 10000
+    --lr_scheduler_type: cosine_with_min_lr
+    --lr_scheduler_kwargs:
+      min_lr: 1.0e-05
+    --warmup_ratio: 0.0
+    --warmup_steps: 300
+    --gradient_checkpointing: false
+    --vit_gradient_checkpointing: false
+    --audio_encoder_batching: true
+    --ddp_find_unused_parameters: false
+    --dataloader_num_workers: 12
+    --performance_logging: true
+    --save_steps: 2000
+    --resume_from_checkpoint:
+      path: ../tasks/06-train-draft/attempts/002/artifacts/training/checkpoint-6000
+    --eval_strategy: 'no'
+    --logging_steps: 10
+    --report_to: none
+    --seed: 42
+    --check_model: false
+    --load_args: false
+    --add_version: false
+    --output_dir:
+      path: '{attempt}/artifacts/training'
+    --ddp_timeout: 1800
+    --max_grad_norm: 1.0
+preflight:
+- kind: prepare
+  module: open_audio_llm.data.catalog_cache
+  arguments:
+    --data_config:
+      path: train-data-draft.yaml
+    --batch-size: 12
+    --world-size: 8
+    --preflight-report:
+      path: '{attempt}/artifacts/data-preflight.json'
+recording:
+  attempts_dir:
+    path: ../tasks/06-train-draft/attempts
+tracking:
+  pythonpath:
+  - path: ../shared/code-v3/src
+  enabled: true
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  credentials_file: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: AmphionASR-spelling-think-avg3-draft-eagle3-3step-10k-1node
+  interval: 5
+  startup_timeout: 180
+  finish_timeout: 300
+storage:
+  executable: /workspace/workspace/mingdong/.local/share/amphion-bucket/cluster-venv/bin/ab
+  remote: whai:open-audio-llm
+  local_root:
+    path: ../../..
