@@ -16,5 +16,7 @@
 
 - **入口**：inbox 脚本 `61-scene-ts-diag.sh`，06 训练结束后与 07 同时跑，`scripts/run_eval.sh <配置> <W&B 代理> <ae> gate-scene-ts`。
 - **完成条件**：四项 run 完整；按切片与交付版 run `run-20261106T021900Z-53c44b85` 配对比较。
-- **进展**：2026-11-16 已排队。
-- **结果**：待填。
+- **进展**：
+  - 2026-11-16 原节点被暂停前没开始；在新节点 `pt-1blli2zm` 上 07:44Z 跑完，四项完整。
+  - 追加第一轮 think 组 / 对照组两项（`r1-think-new`、`r1-control-new`），排在 Emilia 扫描之后。
+- **结果**：退步在这轮 GRPO 之前就有，出在两轮说字 SFT；MTP 不是原因，提示变化只是次要因素。数字见实验 README 的“08-scene-ts-diag”。

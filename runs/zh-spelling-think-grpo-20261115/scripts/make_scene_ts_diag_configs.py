@@ -14,6 +14,9 @@ MODELS = {  # name: (checkpoint, GPU, port)
     "avg3-old": (f"{CACHE}/model-377c0d630417ca1fc281e847", 5, 18991),
     "release-new": ("/workspace/data/ae-runs/amphionasr2-grpo-v10interp050/checkpoint", 6, 18992),
     "r2-new": (f"{CACHE}/checkpoint-3000-927844461eb1", 7, 18993),
+    # 第一轮 think 组与同数据同步数的对照组（不加 think）：分清退步来自 think 还是续训 SFT 本身
+    "r1-think-new": (f"{CACHE}/model-ed62ac895df4e79890df2a42", 6, 18994),
+    "r1-control-new": (f"{CACHE}/model-c2f5f2dfaa8faaa5c7267ddb", 7, 18995),
 }
 
 
