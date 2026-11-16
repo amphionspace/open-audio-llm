@@ -259,6 +259,28 @@ def test_joint_mtp_lr_moves_module_parameters_into_their_own_groups(tmp_path):
     assert all(not (ids & own) for lr, _, ids in groups if lr == 3e-6)
 
 
+
+def test_joint_mtp_lr_applies_when_ms_swift_builds_the_optimizer_in_its_callback(tmp_path):
+    model = _TinyASR().train()
+    trainer = SimpleNamespace(model=model, args=SimpleNamespace(output_dir=str(tmp_path), acc_strategy="token",
+                                                                should_save=True),
+                              state=SimpleNamespace(global_step=1), custom_metrics={"train": defaultdict(_Metric)})
+    trainer.log = MethodType(lambda self, logs: None, trainer)
+    trainer._save_model = MethodType(lambda self, output_dir=None, state_dict=None: None, trainer)
+
+    def hf_create_optimizer(self, model=None):  # stands in for HfTrainer.create_optimizer(trainer)
+        return torch.optim.AdamW([p for p in self.model.parameters() if p.requires_grad], lr=2e-6)
+
+    # Like swift.optimizers.base.OptimizerCallback: the class method, not trainer.create_optimizer.
+    trainer.optimizer_callback = SimpleNamespace(create_optimizer=lambda model=None: hf_create_optimizer(trainer))
+    trainer.create_optimizer = lambda model=None: trainer.optimizer_callback.create_optimizer(model=model)
+    module = enable_joint_mtp(trainer, 0.1, lr=1e-4)
+    for p in model.thinker.parameters():
+        p.requires_grad_(False)  # frozen backbone: the module is all the optimizer holds
+    optimizer = trainer.optimizer_callback.create_optimizer()
+    assert [g["lr"] for g in optimizer.param_groups] == [1e-4]
+    assert {id(p) for p in optimizer.param_groups[0]["params"]} == {id(p) for p in module.parameters()}
+
 def _grpo_trainer(model, tmp_path):
     trainer = SimpleNamespace(model=model, args=SimpleNamespace(output_dir=str(tmp_path), should_save=True),
                               state=SimpleNamespace(global_step=2), _metrics={"train": defaultdict(list)})
