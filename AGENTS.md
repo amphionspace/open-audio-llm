@@ -38,6 +38,17 @@
 - 模型推理在模型自己的环境中以独立进程运行（HTTP 服务或 JSONL worker），评测环境不加载模型权重。
 - 跨后端的结果必须使用同一套数据、归一化和打分口径，报告中注明后端。同一模型有多种实现时，先做一致性核对。
 
+## MTP
+
+- 2026-11-15 起，MTP 是本项目训练和交付的必选配置，不再作为可选项或实验变量。
+- 训练：SFT 和 GRPO 都开联合 MTP，产出的 checkpoint 带 `mtp/`。参数沿用已验证的配方：
+  - SFT 用 `--joint_mtp_weight 0.1`、`--joint_mtp_steps 3`、`--joint_mtp_step_decay 0.8`、`--joint_mtp_lr 1e-4`（v61 起），需要 `--supervised_head_loss`；
+  - GRPO 同样的权重、步数和衰减，`--joint_mtp_lr 1e-5`（v16），不能开 Liger。
+- 起点带 `mtp/` 时用 `--joint_mtp_init` 接上；起点没有时，从最近的带 MTP 的 checkpoint 借 `mtp/` 初始化。
+- 交付包带 `model/mtp/`，服务默认开投机解码（EAGLE 提议器，`num_speculative_tokens` 2）。部署 checkpoint 的评测用同一服务配置。
+- 校验是贪心的，分数不应改变。交付前要实测接受长度，明显低于来源模型时补训 MTP。
+- 用法与限制见 `docs/guides/training.md` 的"联合训练 MTP 的投机解码"。
+
 ## Listening Review
 
 - 用户已要求后续不再发起人工听审。沿用已确认的反馈，使用自动质检继续推进；存疑项隔离，不伪称人工通过，也不再以等待听审为由暂停。只有用户重新主动要求时才恢复听审。
