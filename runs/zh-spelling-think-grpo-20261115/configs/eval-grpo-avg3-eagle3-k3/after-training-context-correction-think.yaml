@@ -1,0 +1,23 @@
+suite_id: asr-regression-native@1
+model_name: grpo-avg3-eagle3-k3-think
+evaluator: ts-asr
+eval_set: open-audio-llm/context-correction-zh@v1-20261018
+server_url: http://127.0.0.1:18980
+served_model: grpo-avg3-eagle3-k3-asr
+tsasr_server_url: http://127.0.0.1:18981
+tsasr_served_model: grpo-avg3-eagle3-k3-tsasr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/spelling-think-grpo-20261115-grpo-avg3-eagle3-k3-think
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+  enroll_seconds: 5
+  think: true
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false

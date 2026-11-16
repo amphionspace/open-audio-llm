@@ -1,6 +1,6 @@
 # 说字 think 的 GRPO（2026-11-15）
 
-**状态**：2026-11-15 GRPO 完成，两个候选都没有满足全部判定；ACP 任务 `pt-uf80hisv` 已停止。同日用户接受 avg3 的小幅退步，avg3 进入交付评估，见"交付评估"。
+**状态**：2026-11-15 GRPO 完成，两个候选都没有满足全部判定；ACP 任务 `pt-uf80hisv` 已停止。同日用户接受 avg3 的小幅退步，avg3 进入交付评估，见"交付评估"。2026-11-16 交付评测发现鼎桥场景 TS 在“分开讲话”时会连另一个人一起转写（CER 3.35 → 9.24），正在定位（08）。
 
 **要回答的问题**：说字 think 第二轮的 checkpoint-3000，think 开已经可用，说字也明显变强；但续训 SFT 把交付版 GRPO 压下来的误触发又冲了回去，和交付版做插值后 think 开又坏掉。照交付版的做法在它上面做一轮 GRPO，能不能同时做到下面两点？
 - 守门回到交付版水平；
@@ -283,14 +283,58 @@ think 开的 run 在 `<模型>-think` 目录下。
   - 普通识别路由（换了类）和 TS 路由（没换类）的不同条数相近，差异来自批量校验的数值路径。
 - run：think 关 `run-20261116T040141Z-1dd3f6eb`，think 开 `run-20261116T040409Z-17637f2d`（`/workspace/data/ae-runs/spelling-think-grpo-20261115-grpo-avg3-mtp{,-think}/`）。
 
+### 05 结果：鼎桥场景 TS 明显退步，其余 8 项持平（2026-11-16）
+
+9 项都完整，没有失败样本。差 = avg3 − 交付版，配对 bootstrap（`ae open-audio-llm compare`），* 表示 95% CI 不含 0。热词三项不在 `compare` 范围内，按交付包的口径合并（`scripts/hotword_pool.py`）。跟错人按交付包的定义另算（`scripts/follow_wrong.py`），两个脚本在交付版 run 上都与交付包的数字逐位相同。
+
+| 评测 | 指标 | 交付版 | avg3（开 MTP） | 差 |
+|---|---|---|---|---|
+| 鼎桥场景 TS `tdtech/scene-ts@v1-20261028` | CER | 3.35 | **9.24** | +5.89 [+4.43, +7.34]* |
+| 〃 | 误触发率（目标不在场 70 条） | 22.86 | **68.57** | +45.71 [+33.33, +57.58]* |
+| 〃 | 漏识别率 | 0.33 | 0.05 | −0.27 [−0.54, −0.05]* |
+| 跟错人 `ts-asr-first-other@v3-20261105` | CER | 20.20 | 20.35 | +0.15 [−0.08, +0.39] |
+| 〃 | 误触发率 / 漏识别率 | 2.86 / 1.28 | 2.86 / 1.16 | +0.00 / −0.12，都不显著 |
+| 〃 跟错人：人多、目标说得少（3,252 条） | % | 5.14 | 5.69 | 新错 63 条、改对 45 条，符号检验 p=0.10 |
+| 〃 其中注册相似度低（978 条） | % | 8.90 | 8.90 | 19 / 19 |
+| 〃 低重叠对照（774 条） | % | 0.00 | 0.00 | — |
+| 英文 TS `ts-asr-benchmark-en@v1-20261031` | WER | 13.63 | 13.50 | −0.13 [−0.38, +0.11] |
+| 〃 | 误触发率 | 6.75 | 7.58 | +0.83 [+0.53, +1.13]* |
+| 〃 | 漏识别率 | 2.90 | 2.35 | −0.55 [−0.73, −0.37]* |
+| TS + 热词 `ts-asr-hotwords@v1-20261102` | CER / 召回 | 14.61 / 91.3 | 14.97 / 90.6 | — |
+| 鼎桥场景普通识别（scene-asr-asronly） | CER | 4.89 | 4.30 | −0.59 [−0.98, −0.18]* |
+| 背景人声与空白 `asr-babble-bench@v4-20261104` | 中文 CER / 误触发率 | 2.05 / 4.78 | 1.90 / 4.65 | −0.14 / −0.13，都不显著 |
+| 〃 | 英文 WER / 误触发率 | 2.34 / 1.75 | 2.35 / 2.00 | +0.01 / +0.25，都不显著 |
+| 警务单说术语（police-terms-single） | CER / 术语命中率 | 0.35 / 99.14 | 0.42 / 98.99 | +0.07 / −0.15，都不显著 |
+| hotword-bench `@v3-20261020` | CER / 召回 | 3.68 / 86.8 | 3.56 / 86.8 | — |
+| 鼎桥 e警保 回退集 `tdtech/badcase@v3-20261104` | CER / 召回 | 25.56 / 70.0 | 33.33 / 66.7 | 共 60 条，只作参考 |
+
+- 交付版的 TS 项用旧 TS 提示，avg3 用新提示（训练用的就是新提示），TS 项的差里含提示变化。
+- **鼎桥场景 TS 的退步只在“分开讲话”的切片上**：
+  - 例如 owner-light-sep-car CER 0.07 → 34.86、dev-owner-heavy-sep 0.99 → 21.08；重叠切片持平或略好（owner-medium-overlap 1.61 → 1.16*）。
+  - 看输出：884 条目标在场的分开讲话样本里，83 条把另一个人的整句也转写进来；目标不在场时直接转写另一个人。
+  - 这是交付要关心的退步，不在用户已接受的“小退步”范围内。定位见 08。
+- run（`whai:open-audio-llm/runs/zh-spelling-think-grpo-20261115/ae-runs/grpo-avg3-mtp/runs/<run>/`）：
+  - 跟错人 `run-20261116T041122Z-a427cb5e`，英文 TS `78dbb150`，TS + 热词 `6ae4f548`，场景 TS `run-20261116T042550Z-00391fea`；
+  - 背景人声 `aae3e840`，警务单说 `run-20261116T041318Z-74f9955f`，场景普通识别 `run-20261116T055720Z-0cc1de90`，hotword-bench `0f4ea080`，e警保 `39e6686e`（未写全的都是 `run-20261116T041122Z-<后缀>`）。
+  - W&B 远端 9 个 run 都是 finished，指标已上传。日志在 `whai:open-audio-llm/runs/zh-spelling-think-grpo-20261115/configs/eval-grpo-avg3-mtp-<组>/logs/`。
+
+### 08-scene-ts-diag：场景 TS 退步定位
+
+- 要回答：退步来自 MTP、提示变化，还是模型本身；如果是模型，出在 GRPO 还是之前的说字 SFT。
+- 四个不开 MTP 的 TS 服务，各跑一遍场景 TS：avg3 新提示、avg3 旧提示、交付版新提示、GRPO 起点（第二轮 checkpoint-3000）新提示。配置 `configs/eval-diag-scene-ts-*/`，详见 `tasks/08-scene-ts-diag/README.md`。
+- 06 结束后在交付节点 GPU 4–7 上与 07 同时跑。
+
 ### 06-train-draft：给 avg3 补训草稿头
 
 - **为什么不用联合 MTP**：联合 MTP 的损失会回传到骨干，avg3 已经评测过的识别结果会变。avg3 用冻结骨干的草稿头（`--draft_head_steps`）。
 - **配置**：照 mtp-draft-head-20261031 已备好的正式配置（`configs/train-draft.yaml`），EAGLE-3，融合第 2 / 14 / 25 层，3 步展开，KL 对冻结模型。
   - 在 10.28 上，这个结构用 96 万条训练时，k=2 接受 2.72 / 2.66，k=3 接受 3.43 / 3.31。
   - 只改了四处：骨干换成 avg3；数据换成第二轮 think 数据配置（`configs/train-data-draft.yaml`，含 think 开样本）；代码 code-v3；训练 10000 步、192 万条。
-- **运行**：排在交付节点上（`scripts/train_draft.sh`），05 的 6 组都结束、GPU 空出后开始，预计约 1.5 小时。
-- **完成后**：用新草稿复测接受长度，与 04 同法。交付包用 `method: eagle3`，k 按测速定。
+- **运行**：排在交付节点上（`scripts/train_draft.sh`），05 的 6 组都结束、GPU 空出后开始。
+  - attempt 001 在训练前退出：脚本没加载对象存储凭证，节点上的 root 没有 whai 的凭证。脚本改为和 `train.sh` 一样经 `load.sh sensecore` 启动。
+  - attempt 002 06:01Z 开始，约 1.2 步/秒，预计 07:45Z 结束。W&B：<https://wandb.ai/1016097967-amphion/open-audio-llm/runs/AmphionASR-spelling-think-avg3-draft-eagle3-3step-10k-1node-002>，远端已有指标。
+  - 第 1270 步时各位置的草稿命中率是 0.62 / 0.40 / 0.29。
+- **完成后（07）**：用新草稿复测接受长度，与 04 同法，k=3 和 k=2 两路同时跑。配置 `configs/eval-grpo-avg3-eagle3-k{3,2}/`（`scripts/make_draft_accept_configs.py`），详见 `tasks/07-draft-accept/README.md`。交付包用 `method: eagle3`；mtp-draft-head-20261031 测速选定 k=3。
 
 ## 启动
 

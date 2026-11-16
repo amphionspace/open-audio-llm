@@ -14,6 +14,7 @@ nvidia-smi --query-gpu=index,memory.used --format=csv,noheader; echo "GPUs busy:
 export WANDB_HTTP_PROXY=http://10.119.17.252:17920 WANDB_HTTPS_PROXY=http://10.119.17.252:17920
 cd $E; S=shared/code-v3
 echo "start draft $(date -u +%FT%TZ)"
-env -u PYTHONPATH PYTHONPATH=$S/src:$S/audio-data-contract-src /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python \
+env -u PYTHONPATH /workspace/workspace/mingdong/repo/open-audio-llm/third_party/amphionkeys/load.sh sensecore -- \
+  env PYTHONPATH=$S/src:$S/audio-data-contract-src /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python \
   -m open_audio_llm.cli train --config configs/train-draft.yaml
 echo "draft exit $? $(date -u +%FT%TZ)"
