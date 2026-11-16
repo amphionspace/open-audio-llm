@@ -24,11 +24,15 @@ def register():
         "1", "true", "yes", "on",
     }
     enable_target_sot = os.environ.get("OPEN_AUDIO_LLM_TARGET_SOT_VLLM") == "1"
-    if enable_qwen3_asr_embeds and enable_ts_sep:
+    # A plain ASR server (AMPHION_TSASR_INSERT_SEP off) serving an MTP draft: the draft has to be registered, and the
+    # target has to be the in-repo Qwen3-ASR class, which carries the EAGLE proposer's hooks. With the SEP off it
+    # serves plain ASR, as the delivery package's runtime does for both routes.
+    enable_mtp_draft = os.environ.get("OPEN_AUDIO_LLM_ENABLE_MTP_DRAFT") == "1"
+    if enable_qwen3_asr_embeds and (enable_ts_sep or enable_mtp_draft):
         # Both register Qwen3ASRForConditionalGeneration; the later one would win silently.
         raise ValueError(
-            "OPEN_AUDIO_LLM_ENABLE_QWEN3_ASR_EMBEDS and AMPHION_TSASR_INSERT_SEP select "
-            "different Qwen3-ASR vLLM classes; enable one"
+            "OPEN_AUDIO_LLM_ENABLE_QWEN3_ASR_EMBEDS and AMPHION_TSASR_INSERT_SEP / "
+            "OPEN_AUDIO_LLM_ENABLE_MTP_DRAFT select different Qwen3-ASR vLLM classes; enable one"
         )
     if not (
         enable_audio_llm
@@ -37,6 +41,7 @@ def register():
         or enable_funasr
         or enable_ts_sep
         or enable_target_sot
+        or enable_mtp_draft
     ):
         return
 
@@ -76,7 +81,7 @@ def register():
             "open_audio_llm.integrations.vllm.plugin.funasr.funasr_model:"
             "FunASRForVLLM",
         )
-    if enable_ts_sep:
+    if enable_ts_sep or enable_mtp_draft:
         # v3 TS-ASR: one concat waveform, independent Mel/conv, learned SEP.
         ModelRegistry.register_model(
             "Qwen3ASRForConditionalGeneration",
