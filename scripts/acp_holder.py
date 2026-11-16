@@ -1,7 +1,8 @@
 """Hold ACP capacity for this project: keep NODES nodes busy with AmphionASR- jobs (AGENTS.md "ACP Compute").
 
 Polls the pool; when this project's jobs hold fewer than --nodes nodes and a whole node is idle, submits one
-GPU-burning holder job (scripts/gpu_hold.py) (display name AmphionASR-<--name-stem>-h<HHMM>, an ordinary experiment-style name) and exits. Real or debug jobs are queued first and the holder
+GPU-burning holder job (scripts/gpu_hold.py) (display name AmphionASR-<--name-stem>-h<HHMM>-free: the suffix marks it as idle
+capacity at a glance in `sco acp jobs list`) and exits. Real or debug jobs are queued first and the holder
 is stopped afterwards (`sco acp jobs stop`). Cluster settings (image, spec, mounts) come from the `cluster:` section
 of any train config. Usage: acp_holder.py --config <train.yaml> [--nodes 1] [--interval 120] [--once]
 """
@@ -18,6 +19,10 @@ import yaml
 from open_audio_llm.cluster import JOB_PREFIX, LEGACY_JOB_PREFIX, refresh_sco, sco_environment
 
 GPUS_PER_NODE = 8
+# User, 2026-11-16: holder jobs end in -free so they read as idle capacity at a glance, and holding never
+# exceeds two nodes; AmphionASR as a whole takes at most two.
+FREE_SUFFIX = "-free"
+MAX_NODES = 2
 
 
 def run_sco(cluster, *args):
@@ -52,8 +57,12 @@ def holder_command(cluster, python):
     return f"{python} {target}"
 
 
+def holder_name(stem, now):
+    return f"{JOB_PREFIX}{stem}-h{now:%H%M}{FREE_SUFFIX}"
+
+
 def submit_holder(cluster, python, stem):
-    name = f"{JOB_PREFIX}{stem}-h{datetime.now(timezone.utc):%H%M}"
+    name = holder_name(stem, datetime.now(timezone.utc))
     code, output = run_sco(
         cluster, "acp", "jobs", "create", f"--workspace-name={cluster['workspace']}",
         f"--aec2-name={cluster['aec2']}", f"--job-name={name}",
@@ -74,6 +83,8 @@ def main():
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--name-stem", default="ts-robust-v7set-continue-from016-ckpt15000-1node")
     args = parser.parse_args()
+    if not 1 <= args.nodes <= MAX_NODES:
+        parser.error(f"--nodes must be between 1 and {MAX_NODES}")
     config = yaml.safe_load(open(args.config))
     cluster, python = config["cluster"], config["runtime"]["python"]
     while True:
