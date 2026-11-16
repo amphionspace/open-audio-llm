@@ -1,4 +1,4 @@
-# 05-delivery-eval 第 c 组服务：avg3 + 借 v16 avg3 的 MTP 草稿（k=2），其余同 configs/eval-grpo-avg3/serve-asr.yaml（make_eval_configs.py 生成后加 --speculative-config）。
+# 05-delivery-eval 第 c 组服务：avg3 + 借 v16 avg3 的 MTP 草稿（k=2），其余同 configs/eval-grpo-avg3/serve-asr.yaml（make_eval_configs.py 生成后加 --speculative-config）；代码 code-v3（PR #161，普通识别服务设 OPEN_AUDIO_LLM_ENABLE_MTP_DRAFT=1 才能挂草稿）。
 version: 1
 runtime:
   python:
@@ -6,7 +6,7 @@ runtime:
   cwd:
     path: ../../../..
   pythonpath:
-  - path: ../../shared/code-v2/src
+  - path: ../../shared/code-v3/src
   gpus:
   - 4
   threads:
@@ -22,6 +22,7 @@ runtime:
     AMPHION_TSASR_ENROLL_NOPAD: '0'
     COT_TSASR_ENROLL_RANDOM: '0'
     COT_AUDIO_CHUNKED_ATTN: '0'
+    OPEN_AUDIO_LLM_ENABLE_MTP_DRAFT: '1'
 task:
   kind: serve
   backend: vllm
@@ -38,7 +39,7 @@ task:
     --gpu-memory-utilization: 0.2
     --max-model-len: 8192
     --chat-template:
-      path: ../../shared/code-v2/src/open_audio_llm/integrations/vllm/qwen3_asr_think.jinja
+      path: ../../shared/code-v3/src/open_audio_llm/integrations/vllm/qwen3_asr_think.jinja
     --hf-overrides:
       thinker_config:
         audio_config:

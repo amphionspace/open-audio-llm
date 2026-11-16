@@ -252,6 +252,46 @@ think 开的 run 在 `<模型>-think` 目录下。
 - 05 的每项都复制交付版自己那次 run 的配置，只换模型、服务和输出目录。交付版的 TS 项用旧 TS 提示，差值里含提示变化。
 - 已测过的 8 项守门和上下文纠偏不重跑，数字用上面的 avg3 结果。MTP 不改变输出，由 04 逐条核对。
 
+### 执行中发现的问题（2026-11-16）
+
+- **普通识别服务挂不上草稿**：
+  - 第一次在节点上启动时报 `Model architectures ['EagleQwen3ASRMTP'] are not supported`。vLLM 插件只有在 SEP 开（TS 服务）等开关打开时才注册草稿；之前测 MTP 走交付包自带的运行时，所以没暴露。
+  - 修复：open-audio-llm #161（main 2ab82fe）加 `OPEN_AUDIO_LLM_ENABLE_MTP_DRAFT`。打开后插件注册草稿，并把目标换成仓库里的 Qwen3-ASR 类（带 EAGLE 接口；SEP 关时就是普通识别，与交付包运行时相同）。
+  - 本实验的代码快照换成 `shared/code-v3`，普通识别服务设这个变量。
+- **节点被抢占**：
+  - 第一个节点 `pt-ehwnc3gs` 在 03:48:08Z 被暂停，4 秒后同账号另一个项目的任务 `stylebench-flexivoice-v5-step723` 开始运行。
+  - 重新提交为 `pt-kva8cue7`（节点 10.119.18.3），W&B 转发放行名单加上它。
+  - 05 改成 6 组：TS 项和普通识别项分开跑（`configs/eval-grpo-avg3-mtp-{b,c,d}-{ts,asr}/`）。
+- **04 改在本机跑**：本机 GPU 5（两个服务共用），W&B 走本机代理。节点上建的执行记录目录属于 root，本机写不进，所以改用 `tasks/04-mtp-borrow/local-serve-*`。
+
+### 04 结果：借来的草稿在 avg3 上接受率很低（2026-11-16）
+
+每次校验接受的 token 数（MAL，k=2）和逐位置接受率，按每项评测前后的 `/metrics` 差值算：
+
+| | MAL | 位置 1 / 位置 2 |
+|---|---|---|
+| think 关，普通识别 | 1.64 | 0.50 / 0.14 |
+| think 关，TS | 1.63 | 0.49 / 0.14 |
+| think 开，普通识别 | 1.49 | 0.39 / 0.11 |
+| think 开，TS | 1.48 | 0.38 / 0.10 |
+| 对照：同一草稿在 v16 avg3 上（joint-mtp-spec 003） | 2.81 / 2.76 | 0.94 / 0.88 |
+
+- **原因**：草稿读的是骨干隐状态。v16 avg3 是 SFT 073 新提示词线，avg3 来自 10.28 → GRPO v9/v10 → 说字续训 → GRPO，骨干不同。joint-mtp-spec 004 借给的合并模型和 v16 同源，所以那次没掉。
+- **输出与不开 MTP 的 run 逐条比**（上下文纠偏 3,249 条）：
+  - think 关：180 条不同，121 条只差标点；合并 CER 1.35 对 1.35，纠正成功率 64.46 对 64.77。
+  - think 开：170 条答案、46 条 think 不同；合并 CER 1.26 对 1.21，纠正成功率 76.86 对 77.07；真实挖掘都是 106/127。
+  - 普通识别路由（换了类）和 TS 路由（没换类）的不同条数相近，差异来自批量校验的数值路径。
+- run：think 关 `run-20261116T040141Z-1dd3f6eb`，think 开 `run-20261116T040409Z-17637f2d`（`/workspace/data/ae-runs/spelling-think-grpo-20261115-grpo-avg3-mtp{,-think}/`）。
+
+### 06-train-draft：给 avg3 补训草稿头
+
+- **为什么不用联合 MTP**：联合 MTP 的损失会回传到骨干，avg3 已经评测过的识别结果会变。avg3 用冻结骨干的草稿头（`--draft_head_steps`）。
+- **配置**：照 mtp-draft-head-20261031 已备好的正式配置（`configs/train-draft.yaml`），EAGLE-3，融合第 2 / 14 / 25 层，3 步展开，KL 对冻结模型。
+  - 在 10.28 上，这个结构用 96 万条训练时，k=2 接受 2.72 / 2.66，k=3 接受 3.43 / 3.31。
+  - 只改了四处：骨干换成 avg3；数据换成第二轮 think 数据配置（`configs/train-data-draft.yaml`，含 think 开样本）；代码 code-v3；训练 10000 步、192 万条。
+- **运行**：排在交付节点上（`scripts/train_draft.sh`），05 的 6 组都结束、GPU 空出后开始，预计约 1.5 小时。
+- **完成后**：用新草稿复测接受长度，与 04 同法。交付包用 `method: eagle3`，k 按测速定。
+
 ## 启动
 
 ```bash
