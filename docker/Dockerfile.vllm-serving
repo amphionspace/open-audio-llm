@@ -15,86 +15,76 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /opt/open-audio-llm
 COPY constraints/vllm-serving.txt /opt/open-audio-llm/constraints/vllm-serving.txt
 
+# Every pin in constraints/vllm-serving.txt is prefetched as a wheel with resumable,
+# size-checked downloads (large wheels used to arrive truncated) and installed offline
+# without dependency resolution; only the pure-Python rest is resolved from PyPI.
 RUN --mount=type=cache,target=/root/.cache/prefetch-wheels <<'BASH'
 set -eux
 
-fetch_wheel() {
-  pkg="$1"
-  version="$2"
-  pattern="$3"
-  meta="$(
-    python - "$pkg" "$version" "$pattern" <<'PY'
+python - constraints/vllm-serving.txt > /tmp/prefetch.tsv <<'PY'
 import json
 import sys
+import urllib.parse
 import urllib.request
 
-pkg, version, pattern = sys.argv[1:]
-required = [part for part in pattern.split(",") if part]
-with urllib.request.urlopen(f"https://pypi.org/pypi/{pkg}/{version}/json", timeout=60) as resp:
-    data = json.load(resp)
+# Local-version builds (+cu129 / +cpu) are not on PyPI; these URLs are immutable.
+DIRECT = {
+    "vllm": "https://wheels.vllm.ai/5df63a7203cdb9328d824a27b682e77c7b9928be/vllm-0.32.0%2Bcu129-cp38-abi3-manylinux_2_28_x86_64.whl",
+    "torch": "https://download-r2.pytorch.org/whl/cu129/torch-2.13.0%2Bcu129-cp311-cp311-manylinux_2_28_x86_64.whl",
+    "torchaudio": "https://download-r2.pytorch.org/whl/cu129/torchaudio-2.11.0%2Bcu129-cp311-cp311-manylinux_2_28_x86_64.whl",
+    "torchvision": "https://download-r2.pytorch.org/whl/cu129/torchvision-0.28.0%2Bcu129-cp311-cp311-manylinux_2_28_x86_64.whl",
+    "torchcodec": "https://download.pytorch.org/whl/cpu/torchcodec-0.17.0%2Bcpu-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+}
+PYTHON_TAGS = ("-cp311-cp311-", "-abi3-", "-py3-none-", "-py2.py3-none-")
 
-matches = [
-    item for item in data["urls"]
-    if item.get("packagetype") == "bdist_wheel"
-    and all(part in item["filename"] for part in required)
-]
-if not matches:
-    print(f"no wheel for {pkg}=={version} matching {pattern}", file=sys.stderr)
-    sys.exit(1)
-item = matches[0]
-print(item["url"])
-print(item["filename"])
-print(item["size"])
+
+def remote_size(url):
+    request = urllib.request.Request(url, method="HEAD")
+    with urllib.request.urlopen(request, timeout=60) as resp:
+        return int(resp.headers["Content-Length"])
+
+
+for line in open(sys.argv[1], encoding="utf-8"):
+    line = line.strip()
+    if not line or line.startswith("#"):
+        continue
+    name, version = line.split("==")
+    if "+" in version:
+        url = DIRECT[name]
+        filename = urllib.parse.unquote(url.rsplit("/", 1)[1])
+        if f"-{version}-" not in filename:
+            sys.exit(f"{name}=={version} does not match {filename}")
+        print(url, filename, remote_size(url), sep="\t")
+        continue
+    with urllib.request.urlopen(f"https://pypi.org/pypi/{name}/{version}/json", timeout=60) as resp:
+        files = json.load(resp)["urls"]
+    wheels = [
+        item for item in files
+        if item["packagetype"] == "bdist_wheel"
+        and any(tag in item["filename"] for tag in PYTHON_TAGS)
+        and (
+            ("manylinux" in item["filename"] and item["filename"].endswith("x86_64.whl"))
+            or item["filename"].endswith("-any.whl")
+        )
+    ]
+    # A platform wheel (e.g. soundfile with its bundled libsndfile) beats a pure one.
+    wheels.sort(key=lambda item: item["filename"].endswith("-any.whl"))
+    if not wheels:
+        sys.exit(f"no linux x86_64 / py3.11 wheel for {name}=={version}")
+    print(wheels[0]["url"], wheels[0]["filename"], wheels[0]["size"], sep="\t")
 PY
-  )"
-  url="$(printf '%s\n' "$meta" | sed -n '1p')"
-  filename="$(printf '%s\n' "$meta" | sed -n '2p')"
-  expected_size="$(printf '%s\n' "$meta" | sed -n '3p')"
+
+while IFS="$(printf '\t')" read -r url filename expected_size; do
   target="/root/.cache/prefetch-wheels/$filename"
   for attempt in $(seq 1 80); do
-    wget -c --progress=dot:giga --tries=8 --timeout=120 --waitretry=5 -P /root/.cache/prefetch-wheels "$url" || true
     if [ -f "$target" ] && [ "$(stat -c%s "$target")" = "$expected_size" ]; then
-      return 0
+      break
     fi
-    echo "retrying $filename ($attempt/80): have $(stat -c%s "$target" 2>/dev/null || echo 0), want $expected_size" >&2
-    sleep 3
+    echo "fetching $filename ($attempt/80): have $(stat -c%s "$target" 2>/dev/null || echo 0), want $expected_size" >&2
+    wget -c --progress=dot:giga --tries=8 --timeout=120 --waitretry=5 -O "$target" "$url" || sleep 3
   done
-  echo "failed to prefetch complete wheel: $filename" >&2
-  return 1
-}
-
-fetch_wheel vllm 0.18.0 cp38-abi3,manylinux_2_31_x86_64
-fetch_wheel torch 2.10.0 cp311-cp311,manylinux_2_28_x86_64
-fetch_wheel torchaudio 2.10.0 cp311-cp311,manylinux_2_28_x86_64
-fetch_wheel torchvision 0.25.0 cp311-cp311,manylinux_2_28_x86_64
-fetch_wheel triton 3.6.0 cp311-cp311,manylinux_2_27_x86_64
-fetch_wheel opencv-python-headless 4.13.0.92 cp37-abi3,manylinux_2_28_x86_64
-fetch_wheel cuda-bindings 12.9.4 cp311-cp311,x86_64
-fetch_wheel cuda-python 12.9.4 py3-none-any
-fetch_wheel nvidia-cublas-cu12 12.8.4.1 x86_64
-fetch_wheel nvidia-cuda-cupti-cu12 12.8.90 x86_64
-fetch_wheel nvidia-cuda-nvdisasm 13.3.73 x86_64
-fetch_wheel nvidia-cuda-nvrtc-cu12 12.8.93 x86_64
-fetch_wheel nvidia-cuda-runtime-cu12 12.8.90 x86_64
-fetch_wheel nvidia-cudnn-cu12 9.10.2.21 x86_64
-fetch_wheel nvidia-cudnn-frontend 1.18.0 cp311-cp311,x86_64
-fetch_wheel nvidia-cufft-cu12 11.3.3.83 x86_64
-fetch_wheel nvidia-cufile-cu12 1.13.1.3 x86_64
-fetch_wheel nvidia-curand-cu12 10.3.9.90 x86_64
-fetch_wheel nvidia-cusolver-cu12 11.7.3.90 x86_64
-fetch_wheel nvidia-cusparse-cu12 12.5.8.93 x86_64
-fetch_wheel nvidia-cusparselt-cu12 0.7.1 x86_64
-fetch_wheel nvidia-cutlass-dsl 4.6.0 py3-none-any
-fetch_wheel nvidia-cutlass-dsl-libs-base 4.6.0 cp311-cp311,x86_64
-fetch_wheel nvidia-cutlass-dsl-libs-core 4.6.0 py3-none-any
-fetch_wheel nvidia-cutlass-dsl-libs-cu12 4.6.0 cp311-cp311,x86_64
-fetch_wheel nvidia-nccl-cu12 2.27.5 x86_64
-fetch_wheel nvidia-nvjitlink-cu12 12.8.93 x86_64
-fetch_wheel nvidia-nvshmem-cu12 3.4.5 x86_64
-fetch_wheel nvidia-nvtx-cu12 12.8.90 x86_64
-fetch_wheel quack-kernels 0.2.7 py3-none-any
-fetch_wheel torch-c-dlpack-ext 0.1.5 cp311-cp311,x86_64
-fetch_wheel flashinfer-python 0.6.6 py3-none-any
+  [ "$(stat -c%s "$target")" = "$expected_size" ] || { echo "failed to prefetch complete wheel: $filename" >&2; exit 1; }
+done < /tmp/prefetch.tsv
 BASH
 
 RUN --mount=type=cache,target=/root/.cache/pip \
@@ -103,40 +93,9 @@ RUN --mount=type=cache,target=/root/.cache/pip \
       for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do \
         python -m pip install ${PIP_FLAGS} --upgrade pip setuptools wheel && \
         python -m pip install --no-index --find-links=/root/.cache/prefetch-wheels --no-deps \
-          vllm==0.18.0 \
-          torch==2.10.0 \
-          torchaudio==2.10.0 \
-          torchvision==0.25.0 \
-          triton==3.6.0 \
-          opencv-python-headless==4.13.0.92 \
-          cuda-bindings==12.9.4 \
-          cuda-python==12.9.4 \
-          nvidia-cublas-cu12==12.8.4.1 \
-          nvidia-cuda-cupti-cu12==12.8.90 \
-          nvidia-cuda-nvdisasm==13.3.73 \
-          nvidia-cuda-nvrtc-cu12==12.8.93 \
-          nvidia-cuda-runtime-cu12==12.8.90 \
-          nvidia-cudnn-cu12==9.10.2.21 \
-          nvidia-cudnn-frontend==1.18.0 \
-          nvidia-cufft-cu12==11.3.3.83 \
-          nvidia-cufile-cu12==1.13.1.3 \
-          nvidia-curand-cu12==10.3.9.90 \
-          nvidia-cusolver-cu12==11.7.3.90 \
-          nvidia-cusparse-cu12==12.5.8.93 \
-          nvidia-cusparselt-cu12==0.7.1 \
-          nvidia-cutlass-dsl==4.6.0 \
-          nvidia-cutlass-dsl-libs-base==4.6.0 \
-          nvidia-cutlass-dsl-libs-core==4.6.0 \
-          nvidia-cutlass-dsl-libs-cu12==4.6.0 \
-          nvidia-nccl-cu12==2.27.5 \
-          nvidia-nvjitlink-cu12==12.8.93 \
-          nvidia-nvshmem-cu12==3.4.5 \
-          nvidia-nvtx-cu12==12.8.90 \
-          quack-kernels==0.2.7 \
-          torch-c-dlpack-ext==0.1.5 \
-          flashinfer-python==0.6.6 && \
+          -r constraints/vllm-serving.txt && \
         python -m pip install ${PIP_FLAGS} --find-links=/root/.cache/prefetch-wheels -c constraints/vllm-serving.txt \
-          "vllm[audio]==0.18.0" soundfile "tritonclient[http]" && \
+          "vllm[audio]==0.32.0+cu129" soundfile "tritonclient[http]" && \
         exit 0; \
         sleep $((attempt * 5)); \
       done; \
@@ -162,6 +121,8 @@ for needle in ("enable_mm_embeds", "limit_mm_per_prompt"):
         raise SystemExit(f"missing vLLM option implementation: {needle}")
 if not (root / "model_executor" / "models" / "qwen3_asr.py").exists():
     raise SystemExit("missing native vLLM Qwen3-ASR implementation")
+# Imports the multimodal stack, which loads torchcodec: a CUDA 13 torchcodec wheel fails here.
+import vllm.model_executor.models.qwen3_asr  # noqa: F401
 plugins = importlib.metadata.entry_points(group="vllm.general_plugins")
 if not any(ep.name == "open_audio_llm" for ep in plugins):
     raise SystemExit("missing open-audio-llm vLLM general plugin entry point")

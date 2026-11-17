@@ -18,7 +18,10 @@ AmphionSPEC 不能只靠 checkpoint 交给原生 vLLM。启动时还必须设置
 `vllm.general_plugins` entry point 注册 `AmphionASRForConditionalGeneration`。
 自包含镜像已经设置该变量并安装当前仓库，不会在构建时 clone AmphionASR。
 
-Qwen3-ASR 使用 vLLM 0.18 的原生模型实现，不启用 Amphion plugin、热词召回、k2、
+AmphionSPEC 插件按 vLLM 0.18 的处理器接口编写，还没有移植到 0.32，所以它的镜像
+（`docker/Dockerfile.amphion-spec-bundle`）仍基于 `open-audio-llm/vllm-serving:0.18.0`，该 runtime 镜像要用升级前（`52ff579`）的 `docker/Dockerfile.vllm-serving` 构建。
+
+Qwen3-ASR 使用 vLLM 0.32 的原生模型实现，不启用 Amphion plugin、热词召回、k2、
 forced aligner 或副模型。
 
 ## 校验本地模型
@@ -34,7 +37,7 @@ python scripts/verify_deployment_models.py
 ```bash
 docker build \
   -f docker/Dockerfile.vllm-serving \
-  -t open-audio-llm/vllm-serving:0.18.0 .
+  -t open-audio-llm/vllm-serving:0.32.0 .
 
 docker compose -f compose.asr-models.yaml build
 ```
@@ -93,7 +96,7 @@ Qwen3-ASR embedding bypass 在 `serve/vllm.yaml` 中通过 `--enable-mm-embeds` 
 
 TS-ASR 使用独立服务配置 [serve/tsasr.yaml](../../examples/configs/serve/tsasr.yaml)：在注册音和混合音之间插入可学习 `[SEP]`，音频注意力使用全局窗口 `n_window_infer=1000000000`。普通 ASR 配置保持 SEP 关闭。需要分块注意力时，在 TS-ASR YAML 中设置 `COT_AUDIO_CHUNKED_ATTN: '1'` 并移除 `--hf-overrides`。实现位于 `src/open_audio_llm/tsasr/`。checkpoint-34479 的服务方式见 [评测结果](../models/ckpt34479-evaluation.md)。
 
-TS-ASR 原生 PyTorch 推理与 vLLM 0.18 都在提取 Mel 前将拼接波形末尾补零到
+TS-ASR 原生 PyTorch 推理与 vLLM 服务都在提取 Mel 前将拼接波形末尾补零到
 `hop_length` 的整数倍（16 kHz 下为 160 samples，最多补 159 samples），再分别处理注册音与混合音。
 服务配置关闭 prefix cache：BF16 下，同一请求的冷、热缓存计算路径可能改变
 `Chinese/None` 的出字判断。关闭后会失去重复前缀的计算复用；它不保证不同 batch、

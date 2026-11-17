@@ -212,8 +212,8 @@ def install_independent_mel_fe() -> None:
         request_sec = REQUEST_ENROLL_SEC.get()
         first_out = None
         for wav in wavs:
-            # vLLM 0.18 pads the concat waveform before calling the HF processor.
-            # Do the same for native inference, including its final partial hop.
+            # vLLM 0.18 padded the concat waveform to a whole hop before calling the HF
+            # processor; 0.32 does not. Pad here for every caller, including native inference.
             pad = -wav.size % self.hop_length
             if pad:
                 import numpy as np

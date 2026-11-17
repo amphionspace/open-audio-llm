@@ -10,7 +10,7 @@
 | 基础 | `pip install -e .` | 模型组件与 CLI |
 | 训练 / 数据 / 开发 | `pip install -e ".[hf,swift,data,dev]"` | ms-swift SFT/GRPO、Catalog 在线数据、测试 |
 | vLLM 推理 | `pip install -e ".[vllm]" -c constraints/vllm-cu128.txt` | 评测与对比用的 vLLM 0.17 |
-| vLLM serving | 按 `docker/Dockerfile.vllm-serving` 构建，约束 `constraints/vllm-serving.txt` | Qwen3-ASR serving 与 Compose 镜像（vLLM 0.18） |
+| vLLM serving | 见下文“vLLM serving 环境”，约束 `constraints/vllm-serving.txt`；镜像按 `docker/Dockerfile.vllm-serving` 构建 | 交付包、`open-audio-llm serve`、Compose 镜像与部署模型评测（vLLM 0.32，CUDA 12.9） |
 | 实验跟踪 | `pip install -e ".[tracking]"` | W&B 同步 |
 
 ## vLLM 推理环境
@@ -44,9 +44,31 @@ PY
 
 ## vLLM serving 环境
 
-Qwen3-ASR serving 与 Compose 镜像使用 `constraints/vllm-serving.txt` 中的
-vLLM 0.18 已验证线。该路径还需要系统 C 编译器（例如 Debian/Ubuntu 的
-`build-essential`），否则 Torch Inductor/Triton 可能在模型 warmup 时失败。
+交付包、`open-audio-llm serve`、Compose 镜像和要部署模型的评测都使用
+`constraints/vllm-serving.txt` 中的 vLLM 0.32 已验证线（torch 2.13、Transformers 5.19）。
+用 CUDA 12.9 构建：NVIDIA 驱动 570 起可用；PyPI 默认的 vLLM/torch 是 CUDA 13，
+要求驱动 580 起，所以安装时必须带下面的索引和约束。
+
+```bash
+conda create -n vllm-serving-032 python=3.11 -y
+conda activate vllm-serving-032
+cd /path/to/open-audio-llm
+python -m pip install -U pip
+python -m pip install -e ".[vllm-serving]" -c constraints/vllm-serving.txt \
+  --extra-index-url https://wheels.vllm.ai/0.32.0/cu129 \
+  --extra-index-url https://download.pytorch.org/whl/cu129 \
+  --extra-index-url https://download.pytorch.org/whl/cpu
+python -c 'import torch, vllm.model_executor.models.qwen3_asr; print(torch.__version__, torch.version.cuda, vllm.__version__)'
+```
+
+通过标准：输出 `2.13.0+cu129 12.9 0.32.0`。`torchcodec` 固定为 CPU 构建
+（`0.17.0+cpu`）：PyPI 版链接 CUDA 13 的库，会让 `import vllm` 在本环境失败，
+而 0.17 没有 CUDA 12.9 构建；没有 ffmpeg 时 vLLM 改用 soundfile 解码音频。
+该路径还需要系统 C 编译器（例如 Debian/Ubuntu 的 `build-essential`），否则
+Torch Inductor/Triton 可能在模型 warmup 时失败。
+
+GRPO 的训练进程内 rollout 仍在训练环境里用 vLLM 0.18（见
+[训练入口](../guides/training.md)），两边共用的插件代码（`qwen3_asr_embeds.py`）兼容两个版本。
 
 ## 评测环境
 

@@ -56,7 +56,7 @@ PY
 ```
 
 上面的 `.[vllm]` 路径保留远端 CUDA 12.8 通用约束线。Qwen3-ASR serving 和
-Compose 镜像使用 `constraints/vllm-serving.txt` 中的 vLLM 0.18 已验证线。
+Compose 镜像使用 `constraints/vllm-serving.txt` 中的 vLLM 0.32 已验证线。
 constraints 文件只写 canonical
 package pins，不写 extras；需要 HTTP client 时在 install 命令中请求
 `tritonclient[http]`。运行时镜像还必须包含 C 编译器，例如
@@ -142,7 +142,7 @@ python examples/serve/vllm/validate_triton_bypass.py \
 ## 常见失败与根因
 
 - `Transformers does not recognize model_type qwen3_asr`：vLLM 版本过旧；
-  使用 `constraints/vllm-serving.txt` 中的 vLLM 0.18 已验证线。
+  使用 `constraints/vllm-serving.txt` 中的 vLLM 0.32 已验证线。
 - `Failed to find C compiler`：运行时缺少 C 编译器；镜像需要安装
   `build-essential` 或等价包。
 - `You must set --enable-mm-embeds`：服务启动时没有传 `-e`。

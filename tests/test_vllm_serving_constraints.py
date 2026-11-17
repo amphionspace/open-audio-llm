@@ -24,13 +24,14 @@ def _pins() -> dict[str, str]:
 def test_vllm_serving_constraints_pin_verified_runtime():
     pins = _pins()
 
-    assert pins["vllm"] == "0.18.0"
-    assert pins["torch"] == "2.10.0"
-    assert pins["torchaudio"] == "2.10.0"
-    assert pins["torchvision"] == "0.25.0"
-    assert pins["transformers"] == "4.57.6"
-    assert pins["triton"] == "3.6.0"
-    assert pins["tritonclient"] == "2.70.0"
+    assert pins["vllm"] == "0.32.0+cu129"
+    assert pins["torch"] == "2.13.0+cu129"
+    assert pins["torchaudio"] == "2.11.0+cu129"
+    assert pins["torchvision"] == "0.28.0+cu129"
+    assert pins["torchcodec"] == "0.17.0+cpu"
+    assert pins["transformers"] == "5.19.0"
+    assert pins["triton"] == "3.7.1"
+    assert pins["tritonclient"] == "2.74.0"
 
 
 def test_vllm_serving_constraints_do_not_contain_loose_runtime_inputs():

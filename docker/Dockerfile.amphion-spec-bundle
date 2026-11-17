@@ -1,4 +1,7 @@
 # syntax=docker/dockerfile:1.7
+# The AmphionSPEC plugin (legacy_amphion_asr) is written against vLLM 0.18's processor API and
+# has not been ported to 0.32, so this bundle stays on the 0.18.0 runtime image, built from
+# docker/Dockerfile.vllm-serving as of 52ff579 (before the 0.32 upgrade).
 ARG SERVING_IMAGE=open-audio-llm/vllm-serving:0.18.0
 FROM ${SERVING_IMAGE}
 
