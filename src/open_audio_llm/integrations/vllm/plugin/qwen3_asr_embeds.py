@@ -27,15 +27,17 @@ from vllm.model_executor.models.qwen3_asr import (
 from vllm.multimodal import MULTIMODAL_REGISTRY
 from vllm.multimodal.inputs import (
     AudioItem,
-    ModalityData,
-    MultiModalDataDict,
     MultiModalFeatureSpec,
     MultiModalFieldConfig,
     MultiModalKwargsItems,
 )
+# ModalityData and MultiModalDataDict moved from vllm.multimodal.inputs (0.18) to
+# vllm.inputs (0.32); vllm.multimodal.parse imports them in both.
 from vllm.multimodal.parse import (
     DictEmbeddingItems,
+    ModalityData,
     ModalityDataItems,
+    MultiModalDataDict,
     MultiModalDataItems,
     MultiModalDataParser,
 )
@@ -128,21 +130,19 @@ class Qwen3ASREmbedDummyInputsBuilder(Qwen3ASRDummyInputsBuilder):
 
 
 class Qwen3ASREmbedMultiModalProcessor(Qwen3ASRMultiModalProcessor):
-    def _call_hf_processor(
-        self,
-        prompt: str,
-        mm_data: Mapping[str, object],
-        mm_kwargs: Mapping[str, object],
-        tok_kwargs: Mapping[str, object],
-    ) -> BatchFeature:
-        # For pre-computed embeddings there is no raw audio for the HF
-        # processor to featurise. Tokenise the prompt only; multimodal kwargs
-        # are carried separately by vLLM's MultiModalKwargsItems.
-        if not (mm_data.get("audios") or mm_data.get("audio")):
-            tokenizer = self.info.get_tokenizer()
-            prompt_ids = tokenizer.encode(prompt, add_special_tokens=False)
-            return BatchFeature(dict(input_ids=[prompt_ids]), tensor_type="pt")
-        return super()._call_hf_processor(prompt, mm_data, mm_kwargs, tok_kwargs)
+    def _call_hf_processor(self, *args, **kwargs) -> BatchFeature:
+        # vLLM 0.18 (the GRPO training rollout) passes (prompt, mm_data, mm_kwargs,
+        # tok_kwargs) and calls the HF processor even without raw audio. For
+        # pre-computed embeddings, tokenise the prompt only; multimodal kwargs are
+        # carried separately by vLLM's MultiModalKwargsItems. vLLM 0.32 (serving)
+        # passes (hf_data, hf_kwargs) and skips the HF processor for embeddings.
+        if len(args) == 4:
+            prompt, mm_data = args[:2]
+            if not (mm_data.get("audios") or mm_data.get("audio")):
+                tokenizer = self.info.get_tokenizer()
+                prompt_ids = tokenizer.encode(prompt, add_special_tokens=False)
+                return BatchFeature(dict(input_ids=[prompt_ids]), tensor_type="pt")
+        return super()._call_hf_processor(*args, **kwargs)
 
     def _get_mm_fields_config(
         self,
@@ -247,24 +247,9 @@ class Qwen3ASRForVLLMWithEmbeds(Qwen3ASRForConditionalGeneration):
 
         for mm_feature in sorted(mm_features, key=lambda f: f.mm_position.offset):
             offset = mm_feature.mm_position.offset
-            feature_data = mm_feature.data
-
-            if "audio_feature_lengths" in feature_data:
-                audio_feature_length = feature_data["audio_feature_lengths"].data
-                if isinstance(audio_feature_length, torch.Tensor):
-                    audio_feature_length = audio_feature_length.item()
-                from vllm.model_executor.models.qwen3_asr import (
-                    _get_feat_extract_output_lengths,
-                )
-
-                audio_len = _get_feat_extract_output_lengths(
-                    torch.tensor(audio_feature_length)
-                ).item()
-            elif "audio_embeds" in feature_data:
-                audio_embeds = feature_data["audio_embeds"].data
-                audio_len = int(audio_embeds.shape[0])
-            else:
-                raise KeyError("audio_feature_lengths or audio_embeds")
+            # One placeholder token per audio embedding, for features and embeds alike.
+            # vLLM 0.32 drops mm_feature.data for a prefix that is already covered.
+            audio_len = mm_feature.mm_position.length
 
             text_len = offset - st
             st_idx = llm_pos_ids_list[-1].max() + 1 if llm_pos_ids_list else 0

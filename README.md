@@ -10,7 +10,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.x-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
 [![Transformers](https://img.shields.io/badge/Transformers-%E2%89%A54.45-FFD21E?logo=huggingface&logoColor=black)](https://github.com/huggingface/transformers)
 [![ms-swift](https://img.shields.io/badge/ms--swift-4.x-624AFF)](https://github.com/modelscope/ms-swift)
-[![vLLM](https://img.shields.io/badge/vLLM-0.17%20%7C%200.18-30A2FF)](https://github.com/vllm-project/vllm)
+[![vLLM](https://img.shields.io/badge/vLLM-0.32-30A2FF)](https://github.com/vllm-project/vllm)
 [![W&B](https://img.shields.io/badge/tracking-W%26B-FFBE00?logo=weightsandbiases&logoColor=black)](https://wandb.ai/1016097967-amphion/open-audio-llm)
 
 [快速开始](#-快速开始) · [文档](docs/README.md) · [模型与结果](#-模型与结果) · [实验归档](#-最新动态)
@@ -62,7 +62,7 @@ flowchart LR
 | Connector | `mlp_downsample`、`mean_pool` | `qformer`（目前与 `mlp_downsample` 相同，占位） |
 | LLM | `AutoModelForCausalLM`（需支持 `inputs_embeds`） | 其他 LM 需 adapter |
 | 训练 | ms-swift SFT / GRPO，全参 / LoRA，DeepSpeed | — |
-| 推理 | vLLM 0.17（评测）/ 0.18（serving） | HF `generate` |
+| 推理 | vLLM 0.32（serving 与部署评测，CUDA 12.9）；GRPO 训练内 rollout 仍为 0.18 | HF `generate` |
 | 任务 | ASR、热词偏置 ASR、目标说话人 ASR、多说话人 SOT 日志转写 | — |
 
 完整说明见 [兼容矩阵](docs/reference/compatibility-matrix.md)。默认路径不依赖 `k2`。

@@ -1,4 +1,4 @@
-"""vLLM 0.18 speculative-decoding draft for the jointly trained MTP module (``joint_mtp.py``).
+"""vLLM speculative-decoding draft for the jointly trained MTP module (``joint_mtp.py``).
 
 The module is served through vLLM's EAGLE proposer (``method: "eagle"``): vLLM's own MTP path
 only knows the model types in ``MTPModelTypes`` and Qwen3-Next's gated, MoE layer, while ours is
@@ -159,7 +159,7 @@ def _model_classes():
                 process_eagle_weight(self, name)
                 return name, weight
 
-            AutoWeightsLoader(self, skip_prefixes=None).load_weights(map(prefixed, weights))
+            AutoWeightsLoader(self).load_weights(map(prefixed, weights))
 
     return EagleQwen3ASRMTP
 

@@ -88,7 +88,7 @@ Qwen3-ASR（`--model_type amphion_asr_1.7b`）用 `--reward_funcs qwen3_asr_accu
 
 2026-11-15 起，SFT 和 GRPO 都必须开联合 MTP，交付包和服务默认开投机解码，参数见 `AGENTS.md` 的"MTP"一节。
 
-`--joint_mtp_weight` 训出的 checkpoint 带 `mtp/`，它本身就是 vLLM 0.18 的草稿目录（`save_mtp` 写入一层 Qwen3 的配置，架构 `EagleQwen3ASRMTP`，类在 `src/open_audio_llm/tsasr/vllm_mtp.py`，插件注册）。旧 checkpoint 先用 `write_vllm_config` 补配置。服务加：
+`--joint_mtp_weight` 训出的 checkpoint 带 `mtp/`，它本身就是 vLLM 服务（0.32，0.18 同样可用）的草稿目录（`save_mtp` 写入一层 Qwen3 的配置，架构 `EagleQwen3ASRMTP`，类在 `src/open_audio_llm/tsasr/vllm_mtp.py`，插件注册）。旧 checkpoint 先用 `write_vllm_config` 补配置。服务加：
 
 ```
 --speculative-config '{"method": "eagle", "model": "<checkpoint>/mtp", "num_speculative_tokens": 2}'
