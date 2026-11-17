@@ -5,7 +5,9 @@
 - **输入**：
   - 测试集：上下文纠偏评测集 v2 的定义（`configs/ctx-v2-data.yaml`），包含 v1 原有的三个切片，以及 v2 新增的独立合成题、独立合成 TS、Emilia 真实录音。
     - 数据 `context_correction_zh@v2-20261116` 登记在 audio-data-contract #251，catalog 取登记提交 9f8af4c 的快照（`/workspace/workspace/mingdong/repo/adc-ctx-v2-9f8af4c/catalog`）。
-    - #251 合入、评测集发布为 `asr/context-correction-zh@v2-<日期>` 后，改按名字引用。
+    - 2026-11-17：#251 已合入，评测集已发布为 `asr/context-correction-zh@v2-20261117`（AmphionEval !162）。
+      - 它选的切片和 `configs/ctx-v2-data.yaml` 完全相同；快照 9f8af4c 与合入后 main 上的 `catalog/context_correction_zh.yaml` 也没有差别，所以本任务的结果就是这个评测集的结果。
+      - 本任务的配置保留运行时的写法，之后的评测写 `eval_set: asr/context-correction-zh@v2-20261117`。
     - 设计和制作过程见 `/workspace/workspace/mingdong/data/amphiondata/context-correction-zh-v2-20261116/README.md`。
   - 模型：
     - 交付版 `amphionasr2-grpo-v10interp050`，think 关。它没有自己的草稿头，按交付验证时的方式不开 MTP。
@@ -21,4 +23,5 @@
 - **结果**：见实验 README 的“09 结果”。
   - 配对 bootstrap 输出在 `compare/cmp-{release-avg3off,avg3off-avg3on,release-avg3on}.json`，用 AmphionEval !158 的 `ae open-audio-llm compare` 计算。
   - 真实录音按“原转写是否需要纠正”拆开的表由 `scripts/ctx_v2_mined_groups.py` 生成。
+  - think 写了什么：把 think 引用的线索和写出的字，对照记录里的标准 `cot.edits`，表在 `compare/think-clue-target.md`，由 `scripts/ctx_v2_think_clue_target.py <think 开 run> <think 关 run>` 生成。
   - run：交付版 `run-20261116T222524Z-8996a9f7`，avg3 think 关 `run-20261116T222524Z-d5ab0981`，think 开 `run-20261116T222955Z-23902588`。目录 `/workspace/data/ae-runs/spelling-think-grpo-20261115-ctxv2-{release,avg3-eagle3-k3,avg3-eagle3-k3-think}/runs/`。
