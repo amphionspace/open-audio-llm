@@ -1,0 +1,13 @@
+version: 1
+name: zh-ctx-clue-target-20261117
+purpose: 上下文纠偏的 think 改写成“线索 + 目标”（同事反馈的 CoT 格式）：与第二轮的单字模板对照，两组都按第二轮配方加联合 MTP 训 3000 步，只差 think 写法
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training_coverage: replay_quota
+  training_steps: 3000
+inputs:
+  init_model: /workspace/data/ae-runs/amphionasr2-grpo-v10interp050/checkpoint
+tasks:
+- {id: train-template, name: 对照组：第二轮 think 模板 + 联合 MTP，1 节点 8 卡全参 3000 步, config: configs/train-template.yaml, depends_on: []}
+- {id: train-clue-target, name: 线索 + 目标 think + 联合 MTP，1 节点 8 卡全参 3000 步, config: configs/train-clue-target.yaml, depends_on: []}
