@@ -5,8 +5,19 @@ so the module starts from the 11.17 delivery package's). They differ only in the
 - template:     round 2's 12 think files as they are (``<pinyin> 这个音，说话人说是「…」，写作「…」。``);
 - clue-target:  the same rows rewritten by make_think_v3.py (``线索：说话人说「…」。目标：写「…」，不写「…」。``).
 
-usage: make_configs.py   (writes configs/train-data-{arm}.yaml, configs/train-{arm}.yaml)
+With ``--implicit``, once context_correction_synth_zh@implicit-v1-20261117 is built (implicit-semantics items, which
+round 2's data has none of), it also writes two arms on top of clue-target, each adding that data the way round 2
+added its synthetic data (each record seen about EXPLAINED_VIEWS times in the run):
+- clue-target-implicit:            its think file (clue + target, the clue being the semantic context);
+- clue-target-implicit-noexplain:  the same rows with every think-on line replaced by round 2's fixed sentence
+  for records without an explanation (scripts/make_implicit_noexplain_think.py), so the two differ only in
+  whether the think reasons about the implicit item;
+and adds their tasks to experiment.yaml (the experiment refuses a task whose config does not exist yet).
+
+usage: make_configs.py [--implicit]   (writes configs/train-data-{arm}.yaml, configs/train-{arm}.yaml)
 """
+import gzip
+import sys
 from pathlib import Path
 
 import yaml
@@ -22,6 +33,16 @@ MTP = {"--joint_mtp_weight": 0.1, "--joint_mtp_steps": 3, "--joint_mtp_step_deca
        "--joint_mtp_init": MTP_INIT}
 ARMS = {"template": {"port": 29826, "name": "template-think"},
         "clue-target": {"port": 29836, "name": "clue-target-think"}}
+IMPLICIT_ID, IMPLICIT_VERSION = "context_correction_synth_zh", "implicit-v1-20261117"
+IMPLICIT = Path(f"/workspace/data/datasets/{IMPLICIT_ID}/versions/{IMPLICIT_VERSION}")
+IMPLICIT_ARMS = {
+    "clue-target-implicit": {"port": 29846, "name": "clue-target-implicit-think", "think": "think.jsonl.gz",
+                             "task": "线索 + 目标 think，加隐式题数据（think 写语义线索 + 目标）+ 联合 MTP"},
+    "clue-target-implicit-noexplain": {"port": 29856, "name": "clue-target-implicit-noexplain-think",
+                                       "think": "think-no-explanation.jsonl.gz",
+                                       "task": "线索 + 目标 think，加隐式题数据（think 只写固定句）+ 联合 MTP"},
+}
+STEPS, SAMPLES_PER_STEP, EXPLAINED_VIEWS = 3000, 188, 3  # as round 2 (scripts/make_data_config.py there)
 CODE = EXP / "shared/code-v1"
 
 
@@ -40,18 +61,46 @@ def think_files(files, arm):
     return out
 
 
+def records(split):
+    with gzip.open(IMPLICIT / "records" / f"{split}.jsonl.gz", "rt", encoding="utf-8") as stream:
+        return sum(1 for line in stream if line.strip())
+
+
+def with_implicit(data, think_file):
+    """Round 2's rule for adding its synthetic data: weight so that each record is seen EXPLAINED_VIEWS times."""
+    total = sum(s["weight"] for s in data["train"])
+    counts = {split: records(split) for split in ("train", "train_ts")}
+    share = EXPLAINED_VIEWS * sum(counts.values()) / (STEPS * SAMPLES_PER_STEP)
+    weight = total * share / (1 - share)
+    d = yaml.safe_load(yaml.safe_dump(data))
+    for split, count in counts.items():
+        d["train"].append({"dataset_id": IMPLICIT_ID, "version": IMPLICIT_VERSION, "split": split,
+                           "weight": round(weight * count / sum(counts.values()), 4)})
+    d["think"]["files"].append(str(IMPLICIT / think_file))
+    assert Path(d["think"]["files"][-1]).exists(), d["think"]["files"][-1]
+    return d, counts, share
+
+
 def main():
     data = yaml.safe_load((R2 / "configs/train-data-think.yaml").read_text())
     train = yaml.safe_load((R2 / "configs/train-think.yaml").read_text())
     old_code = str(R2 / "shared/code-v2")
-    for arm, spec in ARMS.items():
-        d = {**data, "think": {**data["think"], "files": think_files(data["think"]["files"], arm)}}
+    arms = dict(ARMS)
+    if "--implicit" in sys.argv[1:]:
+        arms.update(IMPLICIT_ARMS)
+    for arm, spec in arms.items():
+        base = "template" if arm == "template" else "clue-target"
+        d = {**data, "think": {**data["think"], "files": think_files(data["think"]["files"], base)}}
+        note = ("think 文件与第二轮相同。\n" if arm == "template" else
+                "think 文件换成 context_correction_clean_zh/versions/think-v3-20261117（同一批行，改写成线索 + 目标），其余与第二轮相同。\n")
+        if arm in IMPLICIT_ARMS:
+            d, counts, share = with_implicit(d, spec["think"])
+            note = (note.rstrip("\n") + f"另加 {IMPLICIT_ID}@{IMPLICIT_VERSION} {counts}，约占样本 {share:.2%}，"
+                    f"每条约见 {EXPLAINED_VIEWS} 次，think 文件 {spec['think']}。\n")
         data_path = EXP / f"configs/train-data-{arm}.yaml"
         data_path.write_text(
             f"# 由 scripts/make_configs.py 从 runs/zh-spelling-think-r2-20261115/configs/train-data-think.yaml 生成，不要手改。\n"
-            f"# {arm}：" + ("think 文件与第二轮相同。\n" if arm == "template" else
-                           "think 文件换成 context_correction_clean_zh/versions/think-v3-20261117（同一批行，改写成线索 + 目标），其余与第二轮相同。\n")
-            + yaml.safe_dump(d, allow_unicode=True, sort_keys=False, width=1000))
+            f"# {arm}：" + note + yaml.safe_dump(d, allow_unicode=True, sort_keys=False, width=1000))
         t = yaml.safe_load(yaml.safe_dump(train))
         rt = t["runtime"]
         rt["cwd"] = str(EXP.parents[1])
@@ -74,6 +123,14 @@ def main():
             f"# {arm} 组：第二轮的训练参数，加联合 MTP（权重 0.1、3 步、衰减 0.8、lr 1e-4，从 11.17 交付包的 mtp/ 初始化），"
             f"代码 shared/code-v1（main 0a1b117），数据 configs/train-data-{arm}.yaml。\n" + text)
         print(arm, data_path)
+    if "--implicit" in sys.argv[1:]:
+        experiment = EXP / "experiment.yaml"
+        text = experiment.read_text()
+        for arm, spec in IMPLICIT_ARMS.items():
+            if f"id: train-{arm}," not in text:
+                text += (f"- {{id: train-{arm}, name: {spec['task']}，1 节点 8 卡全参 3000 步, "
+                         f"config: configs/train-{arm}.yaml, depends_on: []}}\n")
+        experiment.write_text(text)
 
 
 if __name__ == "__main__":
