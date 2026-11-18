@@ -52,8 +52,12 @@ train() {
 }
 
 evaluate() {  # arm asr-gpu ts-gpu port
-  local f
-  f=$(bash $MODELS fetch "whai:open-audio-llm/runs/zh-ctx-clue-target-20261117/tasks/01-train-$1/attempts/001/artifacts/training/checkpoint-3000/") || return 5
+  local f a d
+  for d in tasks/01-train-$1/attempts/*/; do  # the latest completed attempt (a failed one leaves an earlier number)
+    grep -q '"execution": "completed"' $d/status.json 2>/dev/null && a=$(basename $d)
+  done
+  [ -n "${a:-}" ] || { echo "no completed training attempt for $1"; return 5; }
+  f=$(bash $MODELS fetch "whai:open-audio-llm/runs/zh-ctx-clue-target-20261117/tasks/01-train-$1/attempts/$a/artifacts/training/checkpoint-3000/") || return 5
   echo "$1 checkpoint $f $(now)"
   $PY scripts/make_eval_configs.py "$1" "$f" "$2" "$3" "$4" || return 6
   bash scripts/run_eval.sh "configs/eval-$1" $PROXY $AE context-correction-v2 context-correction-v2-think

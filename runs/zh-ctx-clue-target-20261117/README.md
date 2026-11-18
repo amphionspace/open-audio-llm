@@ -1,6 +1,8 @@
 # 上下文纠偏 think 改成“线索 + 目标”（2026-11-17）
 
-**状态**：2026-11-17 前两组的配置和数据就绪，隐式题训练数据在生成，等 ACP 空位（AmphionASR 合计最多 2 个节点，当时都被其他会话占用）。
+**状态**：
+- 2026-11-18 第 1 问有结果：主判定不满足，保留第二轮写法，见“结果：第 1 问”。
+- 隐式题两组在等数据正式登记（audio-data-contract #271）后重跑。
 
 **要回答的问题**：同事反馈，纠错时在 CoT 里先定好线索、再指明要改的目标，2B 的文本 LLM 能力也提升很大。
 1. 把第二轮的 think 改成这种写法，只换写法、不加新数据，上下文纠偏能不能在训练没见过的说法和真实录音上更好？
@@ -106,6 +108,67 @@
   - 两组都与 clue-target 比，看补数据的效果；
   - 不能变差：Emilia 原转写已对的准确率、保持率和误改率。隐式题教模型按语义改字，最担心的是乱改。
 
+## 结果：第 1 问（template 与 clue-target，2026-11-18）
+
+**结论：主判定不满足，按训练前写定的规则保留第二轮的写法。**
+- 线索 + 目标让答案更照着 think 写，独立组纠正成功率 +2.5 个点；但成对正确率的提升不显著，Emilia 准确率的 CI 下限低于 −1。
+- 瓶颈仍在 think 写不出对的字，这不是写法能解决的。
+- 没有说明的隐式题被新写法套用得更多，Emilia 隐式题因此变差。第 2 问的两组正是针对这一点。
+
+四个评测 run 都完整：9,892/9,892，没有失败样本。
+- 差 = clue-target − template。
+- 配对 bootstrap 用 AmphionEval !158 的 `ae open-audio-llm compare`，按成对题整对抽样，共 3,821 簇，2,000 次。
+- `*` 表示 95% CI 不含 0。
+
+| think 开 | template | clue-target | 差 [95% CI] |
+|---|---|---|---|
+| 独立合成组 · 纠正成功率 | 49.0 | 51.5 | +2.5 [+0.5, +4.8]* |
+| 独立合成组 · 成对正确率 | 42.0 | 43.8 | +1.8 [−0.3, +4.1] |
+| 与训练文本不重合（unseen）· 纠正成功率 | 47.5 | 50.3 | +2.8 [+0.4, +5.2]* |
+| Emilia · 准确率 | 71.5 | 70.6 | −0.8 [−1.9, +0.3] |
+| 全部 · 保持率 | 86.0 | 86.1 | +0.1 [−1.2, +1.4] |
+| 全部 · 误改率 | 3.3 | 3.6 | +0.4 [−0.4, +1.1] |
+| 全部 · 隐式题准确率 | 59.0 | 57.6 | −1.4 [−2.4, −0.4]* |
+| 同源合成（v1）· 纠正成功率 | 77.8 | 75.9 | −1.9 [−4.8, +1.1] |
+| 播客（127 条，来源在训练里）· 准确率 | 83.5 | 78.0 | −5.5 [−10.2, −1.6]* |
+
+- **think 关不变**：
+  - 纠正成功率 47.2 → 46.9（−0.3 [−1.3, +0.7]）；
+  - 独立组 37.2 → 36.9（−0.4 [−1.6, +0.9]）；
+  - 保持率 84.0 → 84.0。
+
+**机制核对**（think 开；`scripts/ctx_v2_think_clue_target.py`，表在 `tasks/02-eval/compare/think-clue-target-{template,clue-target}.md`）
+- **答案更照着 think 写**：
+  - think 写全目标字时，答案也写对的比例在独立组各子类上从 80–95% 升到 94–100%。例如拆字 88 → 100、专名指代 83 → 99、同名一致性 84 → 100、组词 81 → 96。
+  - 09 发现的“think 写对了、答案不照着写”基本消除。
+- **think 写出对的字的比例没变**：
+  - 拆字 25 → 30%，偏旁结构 44 → 42%。
+  - 线索对上、字全写错的仍多：拆字 70%，偏旁 54%，对话问答 45%。
+  - 这是部件拼字和字形知识的问题，不是写法问题。
+- **逐字说明**：think 写全目标字从 3% 升到 23%，但纠正成功率 25 → 24，没有变化。
+- **隐式题被套用说明格式**：
+  - Emilia 需纠正的隐式题里，think 写说明格式的从 57%（361/629）升到 81%（509/629）。这部分 think 开的准确率 64.3 → 62.9。
+  - 新写法要求先写“目标：写某字”，没有说明时也会硬写一个目标。
+
+**Emilia 按原转写是否需要纠正拆开**（think 开；`scripts/ctx_v2_mined_groups.py`，表在 `tasks/02-eval/compare/mined-groups-ab.md`）
+
+| | 条数 | template | clue-target |
+|---|---|---|---|
+| 需纠正 · 显式说明 | 516 | 52.1 | 52.3 |
+| 需纠正 · 隐式 | 629 | 65.5 | 64.1 |
+| 原转写已对 | 703 | 91.3 | 90.0 |
+
+**证据**
+- **评测 run**：`whai:open-audio-llm/runs/zh-ctx-clue-target-20261117/ae-runs/{template,template-think,clue-target,clue-target-think}/runs/`
+  - template：`run-20261118T110003Z-ab2fd20e`（think 关）、`run-20261118T110622Z-f37d2312`（think 开）
+  - clue-target：`run-20261118T110104Z-c847774a`（think 关）、`run-20261118T110726Z-bee67643`（think 开）
+- **配对 bootstrap**：`tasks/02-eval/compare/cmp-template-cluetarget-{off,on}.json`。
+  - 已装的 ae 0.14.0 和 0.15.0 都还没有 !158 的上下文纠偏指标。
+  - 所以用合入 main 的同一份代码（`amphion-eval-ctx-compare`，beb1f99），配 0.14.0 的环境运行，与 09 相同。
+- **训练**：
+  - [template](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/AmphionASR-ctx-template-think-r2recipe-mtp-from-v10interp050-3k-1node-codev1-001)、[clue-target](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/AmphionASR-ctx-clue-target-think-r2recipe-mtp-from-v10interp050-3k-1node-codev1-001)。
+  - checkpoint 在 `whai:open-audio-llm/runs/zh-ctx-clue-target-20261117/tasks/01-train-{template,clue-target}/attempts/001/artifacts/training/`。
+
 ## 不在本实验里
 
 - **拆字、偏旁结构推错字**：这是部件拼字的知识问题，不是写法问题。
@@ -146,3 +209,23 @@ open-audio-llm experiment run --config runs/zh-ctx-clue-target-20261117/experime
   - 10-chain 退出后，`20-implicit` 按设计在 GPU 4–7 上开始构建隐式题数据（06:36）。如果放着不管，它构建完就会先训隐式题两组。
   - 于是停掉它的父进程，让构建单独跑完，由 `30-chain.sh` 接着依次做：等构建结束 → 训练并评测前两组 → 写隐式题两组配置 → 训练并评测这两组。
   - 构建期间 GPU 0–3 空闲约 1.5 小时。
+
+<!-- execution-status -->
+
+执行状态：partial；质量状态：未核实。
+
+开始：未知；结束：未结束；退出码：未知。
+
+<!-- /execution-status -->
+- **前两组训练完成**：
+  - template 07:58–09:24 UTC，clue-target 09:25–10:54，都是 3000 步、退出码 0，W&B 状态 finished。
+  - checkpoint 500–3000 都已上传 whai，带 `mtp/`。
+  - MTP 学习率：
+    - 日志不按参数组记学习率。
+    - 生效参数是 `joint_mtp_lr=0.0001`，代码给 MTP 单独建参数组。
+    - 第 70 步时骨干学习率还 ≤ 8.3e-7，MTP 第 1 步准确率已从 0.72 升到 0.80，结束时 0.89，与 MTP 用自己的学习率一致。
+- **评测**：10:54–11:12，四个 run 都完整。
+- **隐式题两组没启动**：
+  - clue-target-implicit 的数据预检报“`context_correction_synth_zh@implicit-v1-20261117:train` 没有 Lhotse 产物映射”：catalog 里这一版还只是占位。
+  - 正式登记见 audio-data-contract #271，合入并同步 registry 后重跑。
+  - 重跑是新的执行记录（attempt 002），`evaluate()` 改为取最新一次完成的训练记录，不再写死 `attempts/001`。
