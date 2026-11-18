@@ -1,0 +1,2328 @@
+# 由 scripts/make_configs.py 从 runs/zh-spelling-think-r2-20261115/configs/train-data-think.yaml 生成，不要手改。
+# clue-target-implicit：think 文件换成 context_correction_clean_zh/versions/think-v3-20261117（同一批行，改写成线索 + 目标），其余与第二轮相同。另加 context_correction_synth_zh@implicit-v1-20261117 {'train': 1685, 'train_ts': 1684}，约占样本 1.79%，每条约见 3 次，think 文件 think.jsonl.gz。
+augmentation:
+  enrollment_noise_snr_db:
+  - 10.0
+  - 20.0
+  far_rir_prob: 0.25
+  level_dbfs:
+  - -55.0
+  - -20.0
+  level_prob: 0.8
+  noise_prob: 0.5
+  noise_snr_db:
+  - 0.0
+  - 20.0
+  rir_prob: 0.25
+batching:
+  accumulation: 2
+  buffer_size: 2000
+  drop_last: false
+  max_duration: 480
+  max_samples: 12
+  num_buckets: 30
+  packing: sorted
+catalog: /workspace/data/registry/catalog
+floor_sources:
+- dataset_id: dns5_noise_train
+  split: stationary
+  version: v1-20261016
+  weight: 1
+- dataset_id: wham
+  split: train
+  version: tr-20261014
+  weight: 1
+hotwords:
+  hotword_confusable_prob: 0.5
+  hotword_miss_prob: 0.0
+  hotword_prompt_prob: 1.0
+  max_hotwords: 30
+  ts_hotword_prompt_prob: 0.5
+interference_sources:
+- dataset_id: ts_interference_pool
+  language: zh
+  split: zh
+  version: v3-20261018
+  weight: 1
+- dataset_id: ts_interference_pool
+  language: en
+  split: en
+  version: v3-20261018
+  weight: 1
+metadata_cache: /workspace/workspace/mingdong/repo/open-audio-llm-ts-robust/runs/ts-robust-acp-20261015/shared/metadata-cache
+noise_sources:
+- dataset_id: audioset_road_traffic
+  split: all
+  version: legacy-20260804
+  weight: 10
+- dataset_id: dns5_noise_train
+  split: audioset
+  version: v1-20261016
+  weight: 12
+- dataset_id: dns5_noise_train
+  split: freesound
+  version: v1-20261016
+  weight: 6
+- dataset_id: wham
+  split: train
+  version: tr-20261014
+  weight: 30
+- dataset_id: musan
+  split: noise
+  version: legacy-20260804
+  weight: 17.5
+- dataset_id: farfield_speech_noise_1spk
+  split: train
+  version: '20261014'
+  weight: 17.5
+- dataset_id: farfield_speech_noise_2spk
+  split: train
+  version: '20261014'
+  weight: 17.5
+- dataset_id: farfield_speech_noise_3spk
+  split: train
+  version: '20261014'
+  weight: 17.5
+- dataset_id: musan
+  split: music
+  version: legacy-20260804
+  weight: 15
+- dataset_id: babble_noise_train
+  split: zh
+  version: v1-20261017
+  weight: 12.0
+- dataset_id: babble_noise_train
+  split: en
+  version: v1-20261017
+  weight: 5.5
+- dataset_id: meeting_room_noise
+  split: train
+  version: v2-20261014
+  weight: 17.5
+nonspeech_sources:
+- dataset_id: audioset_road_traffic
+  split: all
+  version: legacy-20260804
+  weight: 1
+- dataset_id: musan
+  split: noise
+  version: legacy-20260804
+  weight: 1
+- dataset_id: musan
+  split: music
+  version: legacy-20260804
+  weight: 1
+- dataset_id: babble_noise_train
+  split: zh
+  version: v1-20261017
+  weight: 0.7
+- dataset_id: babble_noise_train
+  split: en
+  version: v1-20261017
+  weight: 0.3
+record_index: lance
+replay:
+  epoch_samples: 2000000
+  window_samples: 2000
+rir_sources:
+- dataset_id: dns5_noise_train
+  split: rir
+  version: v1-20261016
+- dataset_id: sim_rir_slr26
+  split: all
+  version: legacy-20260804
+- dataset_id: sim_rir_slr28
+  exclude_media: /workspace/data/datasets/ts_asr_benchmark/source/v3-20261013/excluded-media-sim_rir_slr28.txt
+  split: all
+  version: legacy-20260804
+- dataset_id: mit_ir_survey
+  split: all
+  version: flac16k-20261026
+roots: /workspace/data/registry/roots.json
+sampling_rate: 16000
+seed: 20261106
+think:
+  empty_prob: 0.03
+  explained_prob: 0.5
+  files:
+  - /workspace/data/datasets/context_correction_clean_zh/versions/think-v3-20261117/aishell4_punc/think.jsonl.gz
+  - /workspace/data/datasets/context_correction_clean_zh/versions/think-v3-20261117/aishell4_tt_punc/think.jsonl.gz
+  - /workspace/data/datasets/context_correction_clean_zh/versions/think-v3-20261117/alimeeting_sdm_punc/think.jsonl.gz
+  - /workspace/data/datasets/context_correction_clean_zh/versions/think-v3-20261117/alimeeting_sdm_tt_punc/think.jsonl.gz
+  - /workspace/data/datasets/context_correction_clean_zh/versions/think-v3-20261117/emilia2_dialog/think.jsonl.gz
+  - /workspace/data/datasets/context_correction_clean_zh/versions/think-v3-20261117/emilia2_mix_utts/think.jsonl.gz
+  - /workspace/data/datasets/context_correction_clean_zh/versions/think-v3-20261117/emilia2_short/think.jsonl.gz
+  - /workspace/data/datasets/context_correction_clean_zh/versions/think-v3-20261117/magicdata_ramc_punc/think.jsonl.gz
+  - /workspace/data/datasets/context_correction_clean_zh/versions/think-v3-20261117/magicdata_ramc_tt_punc/think.jsonl.gz
+  - /workspace/data/datasets/context_correction_clean_zh/versions/think-v3-20261117/vitw/think.jsonl.gz
+  - /workspace/data/datasets/context_correction_clean_zh/versions/think-v3-20261117/wenetspeech_clean/think.jsonl.gz
+  - /workspace/data/datasets/context_correction_clean_zh/versions/think-v3-20261117/context_correction_synth_zh/think.jsonl.gz
+  - /workspace/data/datasets/context_correction_synth_zh/versions/implicit-v1-20261117/think.jsonl.gz
+  ordinary_prob: 0.03
+  uncovered_prob: 0.03
+train:
+- dataset_id: aishellmix
+  online_mix:
+    absent_interferer_probs:
+    - 0.2
+    - 0.4
+    - 0.3
+    - 0.1
+    absent_prob: 0.05
+    clip_gain_db:
+    - 6.0
+    - 18.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lead_silence_seconds:
+    - 0.3
+    - 2.0
+    enrollment_lowpass_hz: 4000.0
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    entry_prob: 0.5
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 0.2
+    - 0.3
+    - 0.25
+    - 0.15
+    - 0.1
+    lead_seconds:
+    - 0.5
+    - 8.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    nonspeech_level_dbfs:
+    - -60.0
+    - -20.0
+    nonspeech_prob: 0.075
+    nonspeech_seconds:
+    - 0.3
+    - 26.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+    trail_seconds:
+    - 0.5
+    - 6.0
+  split: train_1spk
+  version: pack3-current-audio-record-20260910-punc-20261102
+  weight: 8.1818
+- dataset_id: librimix
+  online_mix:
+    absent_interferer_probs:
+    - 0.2
+    - 0.4
+    - 0.3
+    - 0.1
+    absent_prob: 0.05
+    clip_gain_db:
+    - 6.0
+    - 18.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lead_silence_seconds:
+    - 0.3
+    - 2.0
+    enrollment_lowpass_hz: 4000.0
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    entry_prob: 0.5
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 0.2
+    - 0.3
+    - 0.25
+    - 0.15
+    - 0.1
+    lead_seconds:
+    - 0.5
+    - 8.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    nonspeech_level_dbfs:
+    - -60.0
+    - -20.0
+    nonspeech_prob: 0.075
+    nonspeech_seconds:
+    - 0.3
+    - 26.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+    trail_seconds:
+    - 0.5
+    - 6.0
+  split: train_1spk
+  version: 960-current-audio-record-20260910-punc-20261102
+  weight: 3.8182
+- dataset_id: ts_scene_pool
+  online_mix: &id003
+    absent_prob: 0.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+  split: zh
+  version: hard-20261016-punchw-20261102
+  weight: 1.0
+- dataset_id: ts_scene_pool
+  online_mix:
+    absent_prob: 0.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+  split: en
+  version: hard-20261016-punchw2-20261102
+  weight: 0.5
+- dataset_id: emilia2_mix
+  exclude_records: /workspace/data/datasets/emilia2_mix/versions/mix-20261013-utts/excluded-records-emilia2_mix-train_2spk-v7set3.txt
+  split: train_2spk
+  version: mix-20261013-utts-ctxclean-20261110
+  weight: 1.6094
+- dataset_id: emilia2_mix
+  exclude_records: /workspace/data/datasets/emilia2_mix/versions/mix-20261013-utts/excluded-records-emilia2_mix-train_3spk-v7set3.txt
+  split: train_3spk
+  version: mix-20261013-utts-ctxclean-20261110
+  weight: 1.6062
+- dataset_id: emilia2_dialog
+  exclude_records: /workspace/data/datasets/ts_asr_real/source/v2-20261013/excluded-records-emilia2_dialog-train_2spk.txt
+  split: train_2spk
+  version: dialog-turn-taking-20261013-enroll-ctxclean-20261110
+  weight: 4.6292
+- dataset_id: emilia2_dialog
+  exclude_records: /workspace/data/datasets/ts_asr_real/source/v2-20261013/excluded-records-emilia2_dialog-train_3spk.txt
+  split: train_3spk
+  version: dialog-turn-taking-20261013-enroll-ctxclean-20261110
+  weight: 1.8021
+- dataset_id: emilia2_dialog
+  exclude_records: /workspace/data/datasets/ts_asr_real/source/v2-20261013/excluded-records-emilia2_dialog-train_neg.txt
+  split: train_neg
+  version: dialog-turn-taking-20261013-enroll-ctxclean-20261110
+  weight: 0.8889
+- dataset_id: aishellmix
+  split: train_2spk
+  version: pack3-current-audio-record-20260910-punc-20261102
+  weight: 0.8778
+- dataset_id: aishellmix
+  split: train_3spk
+  version: pack3-current-audio-record-20260910-punc-20261102
+  weight: 1.3167
+- dataset_id: librimix
+  split: train_2spk
+  version: 960-current-audio-record-20260910-punc-20261102
+  weight: 0.732
+- dataset_id: librimix
+  split: train_3spk
+  version: 960-current-audio-record-20260910-punc-20261102
+  weight: 1.0932
+- dataset_id: aishellmix
+  split: train_neg
+  version: pack3-current-audio-record-20260910-punc-20261102
+  weight: 0.2418
+- dataset_id: librimix
+  split: train_neg
+  version: 960-current-audio-record-20260910-punc-20261102
+  weight: 0.2027
+- dataset_id: alimeeting_sdm
+  split: train_2spk
+  version: turn-taking-20261014-utts-punc-20261102
+  weight: 0.392
+- dataset_id: alimeeting_sdm
+  split: train_3spk
+  version: turn-taking-20261014-utts-punc-20261102
+  weight: 1.8522
+- dataset_id: aishell4
+  split: train_2spk
+  version: turn-taking-20261014-utts-punc-20261102-ctxclean-20261110
+  weight: 0.411
+- dataset_id: aishell4
+  split: train_3spk
+  version: turn-taking-20261014-utts-punc-20261102-ctxclean-20261110
+  weight: 0.8577
+- dataset_id: ami_sdm
+  split: train_2spk
+  version: turn-taking-20261014-utts-punc-20261102
+  weight: 0.1987
+- dataset_id: ami_sdm
+  split: train_3spk
+  version: turn-taking-20261014-utts-punc-20261102
+  weight: 0.9331
+- dataset_id: magicdata_ramc
+  split: train_2spk
+  version: turn-taking-20261014-utts-punc-20261102-ctxclean-20261110
+  weight: 1.1543
+- dataset_id: chime6
+  split: train_2spk
+  version: turn-taking-20261014
+  weight: 0.0462
+- dataset_id: chime6
+  split: train_3spk
+  version: turn-taking-20261014
+  weight: 0.9881
+- dataset_id: alimeeting_sdm
+  exclude_records: /workspace/data/datasets/alimeeting_sdm/versions/turn-taking-20261014-utts/excluded-records-train_neg.txt
+  split: train_neg
+  version: turn-taking-20261014-utts-punc-20261102
+  weight: 0.2211
+- dataset_id: aishell4
+  exclude_records: /workspace/data/datasets/aishell4/versions/turn-taking-20261014-utts/excluded-records-train_neg.txt
+  split: train_neg
+  version: turn-taking-20261014-utts-punc-20261102-ctxclean-20261110
+  weight: 0.1175
+- dataset_id: ami_sdm
+  exclude_records: /workspace/data/datasets/ami_sdm/versions/turn-taking-20261014-utts/excluded-records-train_neg.txt
+  split: train_neg
+  version: turn-taking-20261014-utts-punc-20261102
+  weight: 0.1091
+- dataset_id: magicdata_ramc
+  split: train_neg
+  version: turn-taking-20261014-utts-punc-20261102-ctxclean-20261110
+  weight: 0.1279
+- dataset_id: chime6
+  split: train_neg
+  version: turn-taking-20261014
+  weight: 0.0912
+- dataset_id: gigaspeech
+  split: train
+  task: asr
+  version: train-punc-v1-20261102
+  weight: 1.9091
+- dataset_id: wenetspeech_clean
+  max_duration: 120
+  require_clean_pass: true
+  split: train
+  task: asr
+  version: train-punc-v1-20261102-ctxclean-20261110
+  weight: 6.6818
+- dataset_id: emilia2_short
+  exclude_records: /workspace/data/datasets/ts_asr_real/source/v2-20261013/excluded-records-emilia2_short-train_zh.txt
+  split: train_zh
+  version: short-lance-20261023-ctxclean-20261110
+  weight: 4.7727
+- dataset_id: emilia2_short
+  exclude_records: /workspace/data/datasets/emilia2_short/versions/short-lance-20261023/excluded-records-emilia2_short-train_en-v7set3.txt
+  split: train_en
+  version: short-lance-20261023-ctxclean-20261110
+  weight: 1.9091
+- dataset_id: common_voice_en
+  split: train
+  task: asr
+  version: train-punc-v1-20261102
+  weight: 1.4318
+- dataset_id: kespeech
+  split: train
+  task: asr
+  version: train-punc-v1-20261102
+  weight: 1.9091
+- dataset_id: police_asr_unified
+  split: train
+  task: asr
+  version: train-punc-v1-20261102
+  weight: 4.7727
+- dataset_id: police_terms_single_train
+  split: train
+  task: asr
+  version: train-punc-v1-20261102
+  weight: 0.75
+- dataset_id: police_terms_single_train
+  split: train
+  task: asr_hotwords
+  version: hotwords-confusable-v1-20261102
+  weight: 0.75
+- dataset_id: vitw
+  split: train
+  task: asr
+  version: 2m-20261013-ctxclean-20261110
+  weight: 1.9091
+- dataset_id: aishell2
+  split: train
+  task: asr
+  version: train-punc-v1-20261102
+  weight: 1.9091
+- dataset_id: librispeech
+  split: train
+  task: asr
+  version: train-punc-v1-20261102
+  weight: 1.4318
+- dataset_id: alimeeting_sdm
+  split: train
+  version: asr-20261014-punc-20261102
+  weight: 1.7847
+- dataset_id: aishell4
+  split: train
+  version: asr-20261014-punc-20261102-ctxclean-20261110
+  weight: 1.1361
+- dataset_id: threed_speaker_zh_far_asr
+  split: train
+  task: asr
+  version: train-punc-v1-20261102
+  weight: 1.0
+- dataset_id: ami_sdm
+  split: train
+  version: asr-20261014-punc-20261102
+  weight: 0.3335
+- dataset_id: magicdata_ramc
+  max_duration: 120
+  require_clean_pass: true
+  split: train
+  task: asr
+  version: train-punc-v1-20261102-ctxclean-20261110
+  weight: 0.602
+- dataset_id: magicdata_ramc
+  split: train
+  task: asr
+  version: allspk-asr-v1-20261103
+  weight: 1.2
+- dataset_id: aishell4
+  split: train
+  task: asr
+  version: allspk-asr-v1-20261103
+  weight: 0.5
+- dataset_id: alimeeting_sdm
+  split: train
+  task: asr
+  version: allspk-asr-v1-20261103
+  weight: 0.3
+- dataset_id: magicdata_ramc
+  split: train
+  version: allspk-ts-v1-20261104
+  weight: 1.2
+- dataset_id: magicdata_ramc
+  split: train_neg
+  version: allspk-ts-v1-20261104
+  weight: 0.2
+- dataset_id: aishell4
+  split: train
+  version: allspk-ts-v1-20261104
+  weight: 0.5
+- dataset_id: aishell4
+  split: train_neg
+  version: allspk-ts-v1-20261104
+  weight: 0.4
+- dataset_id: alimeeting_sdm
+  split: train
+  version: allspk-ts-v1-20261104
+  weight: 0.3
+- dataset_id: alimeeting_sdm
+  split: train_neg
+  version: allspk-ts-v1-20261104
+  weight: 0.05
+- dataset_id: common_voice_zh
+  split: train
+  task: asr
+  version: train-punc-v1-20261102
+  weight: 0.4773
+- dataset_id: fleurs_zh
+  split: train
+  task: asr
+  version: legacy-20260804
+  weight: 0.2386
+- dataset_id: fleurs_en
+  split: train
+  task: asr
+  version: legacy
+  weight: 0.2386
+- dataset_id: ts_nonspeech_pool
+  nonspeech:
+    level_dbfs:
+    - -60.0
+    - -20.0
+  split: all
+  task: asr
+  version: v1-20261016
+  weight: 1.5
+- dataset_id: ts_nonspeech_pool
+  nonspeech:
+    level_dbfs:
+    - -60.0
+    - -20.0
+  split: all
+  task: asr
+  version: babble-20261024
+  weight: 1.5
+- dataset_id: asr_babble_speech_pool
+  split: zh
+  task: asr
+  version: v1-20261024-punc-20261102
+  weight: 0.75
+- dataset_id: asr_babble_speech_pool
+  split: en
+  task: asr
+  version: v1-20261024-punc-20261102
+  weight: 0.75
+- dataset_id: asr_distant_talk_pool
+  nonspeech:
+    level_dbfs: &id001
+    - -45.0
+    - -25.0
+  split: empty_zh
+  task: asr
+  version: v1-20261102-punc-20261102
+  weight: 1.5
+- dataset_id: asr_distant_talk_pool
+  nonspeech:
+    level_dbfs: *id001
+  split: empty_en
+  task: asr
+  version: v1-20261102-punc-20261102
+  weight: 0.75
+- dataset_id: asr_distant_talk_pool
+  split: text_zh
+  task: asr
+  version: v1-20261102-punc-20261102
+  weight: 0.75
+- dataset_id: asr_distant_talk_pool
+  split: text_en
+  task: asr
+  version: v1-20261102
+  weight: 0.1
+- dataset_id: hw_sft
+  split: train_hotwords
+  version: hw-20261014
+  weight: 15.0
+- dataset_id: hard_hw_sft
+  split: train
+  version: hard-20261014
+  weight: 2.0
+- dataset_id: ts_scene_pool
+  online_mix:
+    absent_prob: 0.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+  split: zh
+  version: multi-20261017-punchw-20261102
+  weight: 6.75
+- dataset_id: ts_scene_pool
+  online_mix:
+    absent_prob: 0.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+  split: en
+  version: multi-20261017-punchw2-20261102
+  weight: 2.25
+- dataset_id: aishellmix
+  online_mix:
+    absent_interferer_probs:
+    - 0.2
+    - 0.4
+    - 0.3
+    - 0.1
+    absent_prob: 0.0
+    clip_gain_db:
+    - 6.0
+    - 18.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lead_silence_seconds:
+    - 0.3
+    - 2.0
+    enrollment_lowpass_hz: 4000.0
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    entry_prob: 0.5
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    lead_seconds:
+    - 0.5
+    - 8.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    nonspeech_level_dbfs:
+    - -60.0
+    - -20.0
+    nonspeech_prob: 0.0
+    nonspeech_seconds:
+    - 0.3
+    - 26.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+    trail_seconds:
+    - 0.5
+    - 6.0
+  split: train_1spk
+  version: pack3-current-audio-record-20260910-punc-20261102
+  weight: 1.6
+- dataset_id: aishellmix
+  online_mix:
+    absent_interferer_probs:
+    - 0.0
+    - 0.1
+    - 0.15
+    - 0.15
+    - 0.15
+    - 0.15
+    - 0.15
+    - 0.15
+    absent_prob: 1.0
+    clip_gain_db:
+    - 6.0
+    - 18.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lead_silence_seconds:
+    - 0.3
+    - 2.0
+    enrollment_lowpass_hz: 4000.0
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    entry_prob: 0.5
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 0.2
+    - 0.3
+    - 0.25
+    - 0.15
+    - 0.1
+    lead_seconds:
+    - 0.5
+    - 8.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    nonspeech_level_dbfs:
+    - -60.0
+    - -20.0
+    nonspeech_prob: 0.0
+    nonspeech_seconds:
+    - 0.3
+    - 26.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+    trail_seconds:
+    - 0.5
+    - 6.0
+  split: train_1spk
+  version: pack3-current-audio-record-20260910-punc-20261102
+  weight: 0.78
+- dataset_id: librimix
+  online_mix:
+    absent_interferer_probs:
+    - 0.2
+    - 0.4
+    - 0.3
+    - 0.1
+    absent_prob: 0.0
+    clip_gain_db:
+    - 6.0
+    - 18.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lead_silence_seconds:
+    - 0.3
+    - 2.0
+    enrollment_lowpass_hz: 4000.0
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    entry_prob: 0.5
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    lead_seconds:
+    - 0.5
+    - 8.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    nonspeech_level_dbfs:
+    - -60.0
+    - -20.0
+    nonspeech_prob: 0.0
+    nonspeech_seconds:
+    - 0.3
+    - 26.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+    trail_seconds:
+    - 0.5
+    - 6.0
+  split: train_1spk
+  version: 960-current-audio-record-20260910-punc-20261102
+  weight: 0.9
+- dataset_id: librimix
+  online_mix:
+    absent_interferer_probs:
+    - 0.0
+    - 0.1
+    - 0.15
+    - 0.15
+    - 0.15
+    - 0.15
+    - 0.15
+    - 0.15
+    absent_prob: 1.0
+    clip_gain_db:
+    - 6.0
+    - 18.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lead_silence_seconds:
+    - 0.3
+    - 2.0
+    enrollment_lowpass_hz: 4000.0
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    entry_prob: 0.5
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 0.2
+    - 0.3
+    - 0.25
+    - 0.15
+    - 0.1
+    lead_seconds:
+    - 0.5
+    - 8.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    nonspeech_level_dbfs:
+    - -60.0
+    - -20.0
+    nonspeech_prob: 0.0
+    nonspeech_seconds:
+    - 0.3
+    - 26.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+    trail_seconds:
+    - 0.5
+    - 6.0
+  split: train_1spk
+  version: 960-current-audio-record-20260910-punc-20261102
+  weight: 0.42
+- dataset_id: ts_real_train
+  exclude_records: /workspace/data/datasets/ts_real_train/versions/v1-20261017-utts/excluded-records-v7set11-ts_real_train-v1-20261017-alimeeting.txt
+  online_mix: &id002
+    absent_interferer_probs:
+    - 0.2
+    - 0.4
+    - 0.3
+    - 0.1
+    absent_prob: 0.0
+    clip_gain_db:
+    - 6.0
+    - 18.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lead_silence_seconds:
+    - 0.3
+    - 2.0
+    enrollment_lowpass_hz: 4000.0
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    entry_prob: 0.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    lead_seconds:
+    - 0.5
+    - 8.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    nonspeech_level_dbfs:
+    - -60.0
+    - -20.0
+    nonspeech_prob: 0.0
+    nonspeech_seconds:
+    - 0.3
+    - 26.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.0
+    telephony_prob: 0.05
+    trail_seconds:
+    - 0.5
+    - 6.0
+  split: alimeeting
+  version: v1-20261017-utts-punc-20261102
+  weight: 1.5
+- dataset_id: ts_real_train
+  exclude_records: /workspace/data/datasets/ts_real_train/versions/v2-20261018-utts/excluded-records-v7set11-ts_real_train-v2-20261018-alimeeting.txt
+  online_mix:
+    absent_interferer_probs:
+    - 0.2
+    - 0.4
+    - 0.3
+    - 0.1
+    absent_prob: 0.0
+    clip_gain_db:
+    - 6.0
+    - 18.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lead_silence_seconds:
+    - 0.3
+    - 2.0
+    enrollment_lowpass_hz: 4000.0
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    entry_prob: 0.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    lead_seconds:
+    - 0.5
+    - 8.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    nonspeech_level_dbfs:
+    - -60.0
+    - -20.0
+    nonspeech_prob: 0.0
+    nonspeech_seconds:
+    - 0.3
+    - 26.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.0
+    telephony_prob: 0.05
+    trail_seconds:
+    - 0.5
+    - 6.0
+  split: alimeeting
+  version: v2-20261018-utts-punc-20261102
+  weight: 2.0
+- dataset_id: ts_real_train
+  exclude_records: /workspace/data/datasets/ts_real_train/versions/v1-20261017-utts/excluded-records-ts_real_train-v1-aishell4-enrolled-in-window.txt
+  online_mix:
+    absent_interferer_probs:
+    - 0.2
+    - 0.4
+    - 0.3
+    - 0.1
+    absent_prob: 0.0
+    clip_gain_db:
+    - 6.0
+    - 18.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lead_silence_seconds:
+    - 0.3
+    - 2.0
+    enrollment_lowpass_hz: 4000.0
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    entry_prob: 0.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    lead_seconds:
+    - 0.5
+    - 8.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    nonspeech_level_dbfs:
+    - -60.0
+    - -20.0
+    nonspeech_prob: 0.0
+    nonspeech_seconds:
+    - 0.3
+    - 26.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.0
+    telephony_prob: 0.05
+    trail_seconds:
+    - 0.5
+    - 6.0
+  split: aishell4
+  version: v1-20261017-utts-punc-20261102
+  weight: 1.8
+- dataset_id: ts_real_train
+  exclude_records: /workspace/data/datasets/ts_real_train/versions/v2-20261018-utts/excluded-records-ts_real_train-v2-aishell4-enrolled-in-window.txt
+  online_mix:
+    absent_interferer_probs:
+    - 0.2
+    - 0.4
+    - 0.3
+    - 0.1
+    absent_prob: 0.0
+    clip_gain_db:
+    - 6.0
+    - 18.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lead_silence_seconds:
+    - 0.3
+    - 2.0
+    enrollment_lowpass_hz: 4000.0
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    entry_prob: 0.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    lead_seconds:
+    - 0.5
+    - 8.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    nonspeech_level_dbfs:
+    - -60.0
+    - -20.0
+    nonspeech_prob: 0.0
+    nonspeech_seconds:
+    - 0.3
+    - 26.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.0
+    telephony_prob: 0.05
+    trail_seconds:
+    - 0.5
+    - 6.0
+  split: aishell4
+  version: v2-20261018-utts-punc-20261102
+  weight: 2.0
+- dataset_id: ts_real_train
+  exclude_records: /workspace/data/datasets/ts_real_train/versions/v1-20261017-utts/excluded-records-v7set11-ts_real_train-v1-20261017-ramc.txt
+  online_mix:
+    absent_interferer_probs:
+    - 0.2
+    - 0.4
+    - 0.3
+    - 0.1
+    absent_prob: 0.0
+    clip_gain_db:
+    - 6.0
+    - 18.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lead_silence_seconds:
+    - 0.3
+    - 2.0
+    enrollment_lowpass_hz: 4000.0
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    entry_prob: 0.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    lead_seconds:
+    - 0.5
+    - 8.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    nonspeech_level_dbfs:
+    - -60.0
+    - -20.0
+    nonspeech_prob: 0.0
+    nonspeech_seconds:
+    - 0.3
+    - 26.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.0
+    telephony_prob: 0.05
+    trail_seconds:
+    - 0.5
+    - 6.0
+  split: ramc
+  version: v1-20261017-utts-punc-20261102
+  weight: 1.7
+- dataset_id: ts_real_train
+  online_mix:
+    absent_interferer_probs:
+    - 0.2
+    - 0.4
+    - 0.3
+    - 0.1
+    absent_prob: 0.0
+    clip_gain_db:
+    - 6.0
+    - 18.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lead_silence_seconds:
+    - 0.3
+    - 2.0
+    enrollment_lowpass_hz: 4000.0
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    entry_prob: 0.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    lead_seconds:
+    - 0.5
+    - 8.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    nonspeech_level_dbfs:
+    - -60.0
+    - -20.0
+    nonspeech_prob: 0.0
+    nonspeech_seconds:
+    - 0.3
+    - 26.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.0
+    telephony_prob: 0.05
+    trail_seconds:
+    - 0.5
+    - 6.0
+  split: emilia2_1spk
+  version: v3-20261020-utts-punc-20261102
+  weight: 2.0
+- dataset_id: ts_real_train
+  exclude_records: /workspace/data/datasets/ts_real_train/versions/v3-20261020-utts/excluded-records-v7set11-ts_real_train-v3-20261020-alimeeting_en_mn.txt
+  online_mix:
+    absent_interferer_probs:
+    - 0.2
+    - 0.4
+    - 0.3
+    - 0.1
+    absent_prob: 0.0
+    clip_gain_db:
+    - 6.0
+    - 18.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lead_silence_seconds:
+    - 0.3
+    - 2.0
+    enrollment_lowpass_hz: 4000.0
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    entry_prob: 0.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    lead_seconds:
+    - 0.5
+    - 8.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    nonspeech_level_dbfs:
+    - -60.0
+    - -20.0
+    nonspeech_prob: 0.0
+    nonspeech_seconds:
+    - 0.3
+    - 26.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.0
+    telephony_prob: 0.05
+    trail_seconds:
+    - 0.5
+    - 6.0
+  split: alimeeting_en_mn
+  version: v3-20261020-utts-punc-20261102
+  weight: 1.5
+- dataset_id: ts_real_train
+  exclude_records: /workspace/data/datasets/ts_real_train/versions/v3-20261020-utts/excluded-records-v7set11-ts_real_train-v3-20261020-alimeeting_en_mf.txt
+  online_mix:
+    absent_interferer_probs:
+    - 0.2
+    - 0.4
+    - 0.3
+    - 0.1
+    absent_prob: 0.0
+    clip_gain_db:
+    - 6.0
+    - 18.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lead_silence_seconds:
+    - 0.3
+    - 2.0
+    enrollment_lowpass_hz: 4000.0
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    entry_prob: 0.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    lead_seconds:
+    - 0.5
+    - 8.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    nonspeech_level_dbfs:
+    - -60.0
+    - -20.0
+    nonspeech_prob: 0.0
+    nonspeech_seconds:
+    - 0.3
+    - 26.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.0
+    telephony_prob: 0.05
+    trail_seconds:
+    - 0.5
+    - 6.0
+  split: alimeeting_en_mf
+  version: v3-20261020-utts-punc-20261102
+  weight: 1.0
+- dataset_id: ts_real_train
+  online_mix: *id002
+  split: ami
+  version: en-v1-20261101-utts-punc-20261102
+  weight: 3.0
+- dataset_id: ts_real_train
+  online_mix: *id002
+  split: icsi
+  version: en-v1-20261101-utts
+  weight: 0.5
+- dataset_id: ts_real_train
+  online_mix: *id002
+  split: notsofar
+  version: en-v1-20261101-utts
+  weight: 0.35
+- dataset_id: ts_real_train
+  online_mix: *id002
+  split: dipco
+  version: en-v1-20261101-utts-punc-20261102
+  weight: 0.06
+- dataset_id: ts_scene_pool
+  online_mix:
+    absent_prob: 0.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+  split: zh
+  version: alt-twins-20261024-punchw-20261102
+  weight: 3.8571
+- dataset_id: ts_scene_pool
+  online_mix:
+    absent_prob: 0.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+  split: en
+  version: alt-twins-20261024-punchw2-20261102
+  weight: 1.8571
+- dataset_id: ts_scene_pool
+  online_mix:
+    absent_prob: 0.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+  split: zh
+  version: solo-20261020-punchw-20261102
+  weight: 2.6
+- dataset_id: ts_scene_pool
+  online_mix:
+    absent_prob: 0.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+  split: en
+  version: solo-20261020-punchw2-20261102
+  weight: 0.9
+- dataset_id: ts_scene_pool
+  online_mix:
+    absent_prob: 0.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+  split: zh
+  version: handover-20261021-punchw-20261102
+  weight: 1.5
+- dataset_id: ts_scene_pool
+  online_mix:
+    absent_prob: 0.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+  split: en
+  version: handover-20261021-punchw2-20261102
+  weight: 0.5
+- dataset_id: ts_scene_pool
+  exclude_records: /workspace/data/datasets/ts_scene_pool/versions/xsession-near-20261023/excluded-records-ts_scene_pool-xsession-near-20261023-enrollment-says-target.txt
+  online_mix:
+    absent_prob: 0.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+  split: zh
+  version: xsession-near-20261023-punchw-20261102
+  weight: 4.0
+- dataset_id: ts_scene_pool
+  online_mix:
+    absent_prob: 0.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+  split: zh
+  version: xsession-alt-twins-20261024-punchw-20261102
+  weight: 1.1129
+- dataset_id: ts_scene_pool
+  exclude_records: /workspace/data/datasets/ts_scene_pool/versions/xsession-hard-20261023/excluded-records-ts_scene_pool-xsession-hard-20261023-enrollment-says-target.txt
+  online_mix:
+    absent_prob: 0.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+  split: zh
+  version: xsession-hard-20261023-punchw-20261102
+  weight: 0.288
+- dataset_id: ts_scene_pool
+  exclude_records: /workspace/data/datasets/ts_scene_pool/versions/xsession-handover-20261023/excluded-records-ts_scene_pool-xsession-handover-20261023-enrollment-says-target.txt
+  online_mix:
+    absent_prob: 0.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+  split: zh
+  version: xsession-handover-20261023-punchw-20261102
+  weight: 0.433
+- dataset_id: ts_scene_pool
+  online_mix:
+    absent_prob: 0.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+  split: zh
+  version: magicdata-near-20261023-punchw-20261102
+  weight: 4.0
+- dataset_id: ts_scene_pool
+  online_mix:
+    absent_prob: 0.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+  split: zh
+  version: magicdata-alt-twins-20261024-punchw-20261102
+  weight: 1.1129
+- dataset_id: ts_scene_pool
+  online_mix:
+    absent_prob: 0.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+  split: zh
+  version: magicdata-hard-20261023-punchw-20261102
+  weight: 0.288
+- dataset_id: ts_scene_pool
+  online_mix:
+    absent_prob: 0.0
+    clip_prob: 0.05
+    enrollment_contam_prob: 0.1
+    enrollment_contam_sir_db:
+    - 0.0
+    - 20.0
+    enrollment_lead_silence_prob: 0.1
+    enrollment_lowpass_prob: 0.1
+    enrollment_quiet_db:
+    - -25.0
+    - -10.0
+    enrollment_quiet_prob: 0.1
+    enrollment_seconds:
+    - 1.0
+    - 20.0
+    floor_dbfs:
+    - -65.0
+    - -35.0
+    floor_kinds:
+    - 0.15
+    - 0.15
+    - 0.7
+    floor_prob: 0.5
+    interferer_probs:
+    - 1.0
+    level_dbfs:
+    - -50.0
+    - -15.0
+    sir_db:
+    - -6.0
+    - 10.0
+    speaker_far_rir_prob: 0.5
+    speaker_rir_prob: 0.5
+    telephony_prob: 0.05
+  split: zh
+  version: magicdata-handover-20261023-punchw-20261102
+  weight: 0.433
+- dataset_id: ts_scene_pool
+  online_mix: *id003
+  split: en
+  version: cvaccent-near-20261101-punchw2-20261102
+  weight: 3.4283
+- dataset_id: ts_scene_pool
+  online_mix: *id003
+  split: en
+  version: cvaccent-alt-twins-20261101-punchw2-20261102
+  weight: 0.9538
+- dataset_id: ts_scene_pool
+  online_mix: *id003
+  split: en
+  version: cvaccent-hard-20261101-punchw2-20261102
+  weight: 0.2468
+- dataset_id: ts_scene_pool
+  online_mix: *id003
+  split: en
+  version: cvaccent-handover-20261101-punchw2-20261102
+  weight: 0.3711
+- dataset_id: ts_scene_pool
+  online_mix: *id003
+  split: en
+  version: cvaccent-solo-20261101-punchw2-20261102
+  weight: 1.0
+- dataset_id: ts_scene_pool
+  online_mix: *id003
+  split: en
+  version: csd-near-20261101-punchw2-20261102
+  weight: 0.3428
+- dataset_id: ts_scene_pool
+  online_mix: *id003
+  split: en
+  version: csd-alt-twins-20261101-punchw2-20261102
+  weight: 0.0954
+- dataset_id: ts_scene_pool
+  online_mix: *id003
+  split: en
+  version: csd-hard-20261101-punchw2-20261102
+  weight: 0.08
+- dataset_id: ts_scene_pool
+  online_mix: *id003
+  split: en
+  version: csd-handover-20261101-punchw2-20261102
+  weight: 0.08
+- dataset_id: ts_scene_pool
+  online_mix: *id003
+  split: en
+  version: csd-solo-20261101-punchw2-20261102
+  weight: 0.1
+- dataset_id: emilia2_mix
+  include_records: /workspace/data/datasets/context_correction_clean_zh/versions/think-v2-20261113/emilia2_mix_utts/include-emilia2_mix_mix-20261013-utts-ctxclean-20261110-train_2spk.txt
+  split: train_2spk
+  version: mix-20261013-utts-ctxclean-20261110
+  weight: 0.2821
+- dataset_id: emilia2_mix
+  include_records: /workspace/data/datasets/context_correction_clean_zh/versions/think-v2-20261113/emilia2_mix_utts/include-emilia2_mix_mix-20261013-utts-ctxclean-20261110-train_3spk.txt
+  split: train_3spk
+  version: mix-20261013-utts-ctxclean-20261110
+  weight: 0.2734
+- dataset_id: emilia2_dialog
+  include_records: /workspace/data/datasets/context_correction_clean_zh/versions/think-v2-20261113/emilia2_dialog/include-emilia2_dialog_dialog-turn-taking-20261013-enroll-ctxclean-20261110-train_2spk.txt
+  split: train_2spk
+  version: dialog-turn-taking-20261013-enroll-ctxclean-20261110
+  weight: 0.1982
+- dataset_id: wenetspeech_clean
+  include_records: /workspace/data/datasets/context_correction_clean_zh/versions/think-v2-20261113/wenetspeech_clean/include-wenetspeech_clean_train-punc-v1-20261102-ctxclean-20261110-train.txt
+  max_duration: 120
+  require_clean_pass: true
+  split: train
+  task: asr
+  version: train-punc-v1-20261102-ctxclean-20261110
+  weight: 0.7987
+- dataset_id: emilia2_short
+  include_records: /workspace/data/datasets/context_correction_clean_zh/versions/think-v2-20261113/emilia2_short/include-emilia2_short_short-lance-20261023-ctxclean-20261110-train_zh.txt
+  split: train_zh
+  version: short-lance-20261023-ctxclean-20261110
+  weight: 0.2432
+- dataset_id: context_correction_synth_zh
+  split: train
+  version: train-v1-20261114
+  weight: 2.6658
+- dataset_id: context_correction_synth_zh
+  split: train_ts
+  version: train-v1-20261114
+  weight: 2.606
+- dataset_id: context_correction_synth_zh
+  version: implicit-v1-20261117
+  split: train
+  weight: 1.5328
+- dataset_id: context_correction_synth_zh
+  version: implicit-v1-20261117
+  split: train_ts
+  weight: 1.5319
+validation:
+- dataset_id: emilia2_dialog
+  split: eval_2spk
+  version: dialog-turn-taking-20261013-enroll
+- dataset_id: emilia2_dialog
+  split: eval_3spk
+  version: dialog-turn-taking-20261013-enroll
+- dataset_id: emilia2_dialog
+  split: eval_neg
+  version: dialog-turn-taking-20261013-enroll
+- dataset_id: emilia2_mix
+  split: eval_2spk
+  version: mix-20261013
+- dataset_id: emilia2_mix
+  split: eval_3spk
+  version: mix-20261013
+- dataset_id: emilia2_mix
+  split: eval_neg
+  version: mix-20261013
+- dataset_id: alimeeting_sdm
+  split: eval_2spk
+  version: turn-taking-20261014
+- dataset_id: alimeeting_sdm
+  split: eval_3spk
+  version: turn-taking-20261014
+- dataset_id: alimeeting_sdm
+  split: eval_neg
+  version: turn-taking-20261014
+- dataset_id: ami_sdm
+  split: eval_2spk
+  version: turn-taking-20261014
+- dataset_id: ami_sdm
+  split: eval_3spk
+  version: turn-taking-20261014
+- dataset_id: ami_sdm
+  split: eval_neg
+  version: turn-taking-20261014
+- dataset_id: magicdata_ramc
+  split: eval_2spk
+  version: turn-taking-20261014
+- dataset_id: magicdata_ramc
+  split: eval_neg
+  version: turn-taking-20261014
+- dataset_id: chime6
+  split: eval_2spk
+  version: turn-taking-20261014
+- dataset_id: chime6
+  split: eval_3spk
+  version: turn-taking-20261014
+- dataset_id: chime6
+  split: eval_neg
+  version: turn-taking-20261014
+- dataset_id: alimeeting_sdm
+  split: eval
+  version: asr-20261014
+- dataset_id: ami_sdm
+  split: eval
+  version: asr-20261014
+- dataset_id: magicdata_ramc
+  split: eval
+  version: asr-20261014
+- dataset_id: police_asr_unified
+  split: dev
+  task: asr
+  version: v1-20261009
+- dataset_id: gigaspeech
+  split: dev
+  task: asr
+  version: legacy-20260804
+- dataset_id: common_voice_en
+  split: dev
+  task: asr
+  version: legacy-20260804
+- dataset_id: common_voice_zh
+  split: dev
+  task: asr
+  version: legacy-20260804
+- dataset_id: kespeech
+  split: dev
+  task: asr
+  version: legacy-20260804
+- dataset_id: librispeech
+  split: dev
+  task: asr
+  version: legacy-20260804
+- dataset_id: fleurs_zh
+  split: dev
+  task: asr
+  version: legacy-20260804
+- dataset_id: fleurs_en
+  split: validation
+  task: asr
+  version: legacy
+validation_max_duration: 120
+validation_samples: 54000

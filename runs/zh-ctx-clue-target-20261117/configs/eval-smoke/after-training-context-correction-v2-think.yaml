@@ -1,0 +1,23 @@
+suite_id: asr-regression-native@1
+model_name: ctx-clue-target-smoke-think
+evaluator: ts-asr
+eval_set: asr/context-correction-zh@v2-20261117
+server_url: http://127.0.0.1:18700
+served_model: smoke-asr
+tsasr_server_url: http://127.0.0.1:18701
+tsasr_served_model: smoke-tsasr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/ctx-clue-target-20261117-smoke-think
+parameters:
+  split_group: evaluation
+  samples_per_source: 2
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+  enroll_seconds: 5
+  think: true
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false
