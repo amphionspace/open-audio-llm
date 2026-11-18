@@ -1,8 +1,11 @@
 # 上下文纠偏 think 改成“线索 + 目标”（2026-11-17）
 
-**状态**：
-- 2026-11-18 第 1 问有结果：主判定不满足，保留第二轮写法，见“结果：第 1 问”。
-- 隐式题两组在等数据正式登记（audio-data-contract #271）后重跑。
+**状态**：2026-11-18 四组都训练、评测完成，ACP 节点已释放。
+- **第 1 问**：只换写法，主判定不满足，保留第二轮写法。
+- **第 2 问**：
+  - 补隐式题数据有效，真实录音上也有效。
+  - think 里写语义线索 + 目标只在合成题上更好，真实录音上与固定句没有差别。
+- 见“结果：第 1 问”和“结果：第 2 问”。
 
 **要回答的问题**：同事反馈，纠错时在 CoT 里先定好线索、再指明要改的目标，2B 的文本 LLM 能力也提升很大。
 1. 把第二轮的 think 改成这种写法，只换写法、不加新数据，上下文纠偏能不能在训练没见过的说法和真实录音上更好？
@@ -169,6 +172,79 @@
   - [template](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/AmphionASR-ctx-template-think-r2recipe-mtp-from-v10interp050-3k-1node-codev1-001)、[clue-target](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/AmphionASR-ctx-clue-target-think-r2recipe-mtp-from-v10interp050-3k-1node-codev1-001)。
   - checkpoint 在 `whai:open-audio-llm/runs/zh-ctx-clue-target-20261117/tasks/01-train-{template,clue-target}/attempts/001/artifacts/training/`。
 
+## 结果：第 2 问（隐式题两组，2026-11-18）
+
+**结论**
+- **补隐式题数据有效**：两组都比 clue-target 好，真实录音上也好。
+  - 独立合成组的隐式题准确率：think 写线索的组 +15.2 个点，写固定句的组 +9.8 个点。
+  - Emilia 隐式题准确率：+2.7 和 +2.2 个点。
+  - 原转写已对的 Emilia 条目没有被乱改。
+- **think 写语义线索 + 目标，只在合成题上更好**：
+  - 与固定句组比，独立合成组隐式题准确率 +5.5、成对正确率 +10.9。
+  - Emilia 上没有差别（+0.4，CI 含 0）。
+  - 合成题的语义线索 96% 能写对，Emilia 只有 23%：真实录音的语义线索与合成题差别大。
+
+四个评测 run 都完整（9,892/9,892，无失败），配对 bootstrap 同第 1 问。
+
+**think 开**
+
+| | clue-target（无隐式题数据） | 隐式题 · 固定句 | 隐式题 · 线索 + 目标 | 线索 − 固定句 | 线索 − clue-target |
+|---|---|---|---|---|---|
+| 独立合成组 · 隐式题准确率 | 59.4 | 69.2 | 74.6 | +5.5 [+2.3, +8.6]* | +15.2 [+11.8, +18.7]* |
+| 独立合成组 · 隐式题成对正确率 | 24.1 | 40.1 | 51.0 | +10.9 [+5.0, +17.1]* | +26.9 [+20.5, +33.2]* |
+| 独立合成组 · 纠正成功率（显式说明） | 51.5 | 51.9 | 52.2 | +0.4 [−1.2, +1.9] | +0.7 [−1.2, +2.6] |
+| 独立合成组 · 保持率 | 84.2 | 83.4 | 82.4 | −0.9 [−2.1, +0.5] | −1.8 [−3.2, −0.4]* |
+| 全部 · 误改率 | 3.6 | 3.8 | 3.7 | −0.1 [−0.6, +0.4] | +0.1 [−0.5, +0.6] |
+| Emilia · 隐式题准确率 | 65.6 | 67.9 | 68.3 | +0.4 [−1.1, +2.0] | +2.7 [+0.6, +4.9]* |
+| Emilia · 准确率 | 70.6 | 71.7 | 71.9 | +0.2 [−0.7, +1.1] | +1.3 [+0.2, +2.5]* |
+| Emilia · CER | 5.0 | 4.4 | 4.5 | +0.1 [−0.2, +0.4] | −0.6 [−1.0, −0.2]* |
+
+- **固定句组 − clue-target**：
+  - 独立合成组隐式题 +9.8 [+7.2, +12.8]*；
+  - Emilia 隐式题 +2.2 [+0.3, +4.4]*；
+  - Emilia 准确率 +1.1 [−0.1, +2.2]。
+- **think 关也有效**，补数据的收益不只在 think 开时出现。隐式题 · 线索组 − clue-target：
+  - 全部纠正成功率 +2.3 [+1.2, +3.4]*，成对正确率 +1.8 [+0.4, +3.3]*；
+  - 独立合成组隐式题准确率 +8.4*。
+- **两组隐式题数据的 think 关几乎相同**：线索 − 固定句，全部纠正成功率 +0.1，隐式题准确率 −0.1。数据相同时，think 的写法只影响 think 开。
+
+**Emilia 按原转写是否需要纠正拆开**（think 开；`tasks/02-eval/compare/mined-groups-implicit.md`）
+
+| | 条数 | template | clue-target | 隐式题 · 固定句 | 隐式题 · 线索 + 目标 |
+|---|---|---|---|---|---|
+| 需纠正 · 显式说明 | 516 | 52.1 | 52.3 | 52.3 | 52.3 |
+| 需纠正 · 隐式 | 629 | 65.5 | 64.1 | 66.5 | 67.1 |
+| 原转写已对（不能乱改） | 703 | 91.3 | 90.0 | 91.3 | 90.9 |
+
+**think 写了什么**（`tasks/02-eval/compare/think-clue-target-<组>.md`）
+
+| | template | clue-target | 隐式题 · 固定句 | 隐式题 · 线索 + 目标 |
+|---|---|---|---|---|
+| 独立合成组隐式题：纠正成功率 | 30 | 32 | 48 | 62 |
+| 独立合成组隐式题：think 线索对上 | 5 | 38 | 0 | 96 |
+| Emilia 需纠正隐式题：think 线索对上 | 21 | 36 | 15 | 23 |
+| Emilia 需纠正隐式题：套用说明格式的比例 | 57 | 81 | 40 | 51 |
+
+- **补数据压住了乱套说明格式**：第 1 问里的副作用（81%）降到 40–51%。
+- **线索组在合成题上几乎都能写出语义线索**（96%）。写全目标字时，答案也写对的比例是 98%。
+- **Emilia 上写不出线索**：线索对上的只有 23%，所以和固定句组没有差别。
+
+**与对照组 template 比（训练前没有写定，只作参考）**：隐式题 · 线索 + 目标 − template，think 开。
+- 独立合成组纠正成功率 +3.2 [+0.9, +5.7]*，隐式题准确率 +14.6*。
+- Emilia 准确率 +0.4 [−0.7, +1.5]。
+- 误改率：独立合成组 +0.9 [+0.0, +1.7]*。
+- 播客（127 条）准确率 −5.5 [−11.0, −0.8]*。
+
+**证据**
+- **评测 run**：`whai:open-audio-llm/runs/zh-ctx-clue-target-20261117/ae-runs/{clue-target-implicit,clue-target-implicit-think,clue-target-implicit-noexplain,clue-target-implicit-noexplain-think}/runs/`。
+  - 隐式题 · 线索 + 目标：`run-20261118T144449Z-e5bfcdfa`（think 关）、`run-20261118T145111Z-4973a3d1`（think 开）。
+  - 隐式题 · 固定句：`run-20261118T144535Z-22b5125f`（think 关）、`run-20261118T145159Z-564940dc`（think 开）。
+- **配对 bootstrap**：`tasks/02-eval/compare/cmp-{noexplain-implicit,cluetarget-implicit,cluetarget-noexplain}-{on,off}.json`，以及 `cmp-template-implicit-on.json`。
+- **训练**：
+  - [隐式题 · 线索 + 目标](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/AmphionASR-ctx-clue-target-implicit-think-r2recipe-mtp-from-v10interp050-3k-1node-codev1-002)（执行记录 002）；
+  - [隐式题 · 固定句](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/AmphionASR-ctx-clue-target-implicit-noexplain-think-r2recipe-mtp-from-v10interp050-3k-1node-codev1-001)。
+  - checkpoint 在 `whai:open-audio-llm/runs/zh-ctx-clue-target-20261117/tasks/01-train-clue-target-implicit/attempts/002/` 和 `.../01-train-clue-target-implicit-noexplain/attempts/001/` 下的 `artifacts/training/`。
+
 ## 不在本实验里
 
 - **拆字、偏旁结构推错字**：这是部件拼字的知识问题，不是写法问题。
@@ -212,7 +288,7 @@ open-audio-llm experiment run --config runs/zh-ctx-clue-target-20261117/experime
 
 <!-- execution-status -->
 
-执行状态：partial；质量状态：未核实。
+执行状态：completed；质量状态：未核实。
 
 开始：未知；结束：未结束；退出码：未知。
 
@@ -229,3 +305,9 @@ open-audio-llm experiment run --config runs/zh-ctx-clue-target-20261117/experime
   - clue-target-implicit 的数据预检报“`context_correction_synth_zh@implicit-v1-20261117:train` 没有 Lhotse 产物映射”：catalog 里这一版还只是占位。
   - 正式登记见 audio-data-contract #271，合入并同步 registry 后重跑。
   - 重跑是新的执行记录（attempt 002），`evaluate()` 改为取最新一次完成的训练记录，不再写死 `attempts/001`。
+- **隐式题两组**：
+  - #271 合入、同步 registry 后，`40-implicit.sh` 11:42 起训练：隐式题 · 线索 + 目标 11:42–13:10（执行记录 002），隐式题 · 固定句 13:10–14:39。
+  - 都是 3000 步、退出码 0，W&B finished，checkpoint 500–3000 带 `mtp/` 已上传 whai。
+  - 两组的数据预检都读到隐式题 train 1,685 条、train_ts 1,684 条。
+  - 评测 14:39–14:57，四个 run 完整。
+- **节点**：14:58 停止 `pt-0uwyn5vh`，释放节点。

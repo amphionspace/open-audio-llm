@@ -6,12 +6,13 @@
 - **完成条件**：每组两个 run（think 关、开）都完整，没有失败样本，W&B 远端有指标。按实验 README 的“判定”给出配对 bootstrap 和 think 诊断。
 - **进展**：
   - 2026-11-18 template、clue-target 的四个 run 完整（9,892/9,892，无失败），结论见实验 README“结果：第 1 问”。
-  - 隐式题两组等数据正式登记后再测。
+  - 2026-11-18 隐式题两组的四个 run 也完整，结论见实验 README“结果：第 2 问”。
 - **结果和证据**：
   - 服务记录在 `serve-<组>-<asr|tsasr>/attempts/`。
   - 评测 run 上传在 `whai:open-audio-llm/runs/zh-ctx-clue-target-20261117/ae-runs/<组>[-think]/runs/`，每个 run 带 W&B 链接（`run.json` 的 `wandb_url`）。
   - `compare/` 里是这些文件：
     - 配对 bootstrap：`cmp-template-cluetarget-{off,on}.json`；
     - think 诊断：`think-clue-target-{template,clue-target}.md`；
-    - Emilia 按是否需纠正拆开：`mined-groups-ab.md`。
+    - Emilia 按是否需纠正拆开：`mined-groups-ab.md`（前两组）和 `mined-groups-implicit.md`（含隐式题两组）；
+    - 第 2 问的配对 bootstrap：`cmp-{noexplain-implicit,cluetarget-implicit,cluetarget-noexplain}-{on,off}.json`，与 template 的参考比较 `cmp-template-implicit-on.json`。
   - `compare` 用 AmphionEval !158 的代码（`amphion-eval-ctx-compare` beb1f99，已合入 main）。已装的 ae 0.14.0、0.15.0 都还没有上下文纠偏指标。
