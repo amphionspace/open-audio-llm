@@ -43,6 +43,7 @@ train() {
   wandb_reachable || return 2
   for arm in "${ARMS[@]}"; do
     echo "start train-$arm $(now)"
+    cd $R  # the config path is relative to the repository root
     env -u PYTHONPATH $KEYS sensecore -- env PYTHONPATH=$S/src:$S/audio-data-contract-src \
       $PY -m open_audio_llm.cli experiment run --config runs/zh-ctx-clue-target-20261117/experiment.yaml --task train-$arm \
       </dev/null || { cd $E; echo "train-$arm failed $(now)"; return 3; }
