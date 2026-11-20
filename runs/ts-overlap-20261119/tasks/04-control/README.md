@@ -28,3 +28,25 @@
   - 脚本 `scripts/run_train_eval.sh`：训练 → 第 5000/5500/6000 步平均（`scripts/avg3_cache.sh`）→ 评测（`scripts/eval_lanes.sh`：中文 TS v12、英文 TS、中文普通识别、客户 TS）。
   - W&B 远端已读回训练指标：`AmphionASR-ts-overlap-{cleankl1,control}-audunfrozen-from1117-v96data-6k-4gpu-codev1-004`。
   - 速度：实验组约 3.05 秒/步，预计 5 小时；对照组约 2.69 秒/步，预计 4.4 小时。
+- 2026-11-20 13:43 UTC：训练、平均、评测全部 exit 0，节点 `pt-7h66hzg8` 随即停掉。4 个评测 run 都在 W&B 远端核验过，v12 的 29 个 `breakdown/*` 已读回。
+
+## 结果
+
+**未达标。** 从 11.17 接着用 v96 配方训 6000 步并解冻音频塔，所有测试集都比 11.17 差。重叠转写也变差，和"只解冻音频塔不会改善重叠转写"的历史结论一致。
+
+| | 11.17 | 04 对照 |
+|---|---:|---:|
+| 中文 TS v12 字错率 / 误报 / 漏识（守门 12.88 / 371 / 369） | 12.80 / 342 / 357 | 13.76 / 366 / 439 |
+| 转写错误 重叠 0 / 0–0.6 / 0.6–0.9 / ≥0.9 | 6.11 / 9.44 / 10.29 / 15.64 | 6.46 / 10.45 / 10.73 / 16.68 |
+| 英文 TS 错误率 / 误报 / 漏识 | 13.58 / 655 / 369 | 14.87 / 805 / 326 |
+| 中文普通识别（Chinese 合计） | 4.39 | 4.61 |
+
+- 与 03 的配对比较、训练曲线和原因分析见 [03 的结果](../03-clean-kl/README.md#结果)。
+- 退化的大头来自这个共同设置：11.17 是 GRPO v18 加 es116 的 LLM 增量合并出来的，接着做 SFT 会把这部分收益训掉。音频塔解冻是否也有贡献，这次没有能区分的对照。
+
+## 证据
+
+- 对比表、配对表、拆分：`whai:open-audio-llm/runs/ts-overlap-20261119/tasks/04-control/attempts/004/artifacts/eval/`。
+- 评测原始输出：`whai:open-audio-llm/runs/ts-overlap-20261119/tasks/04-control/ae-runs/<run id>/`。
+  - v12 `run-20261120T123607Z-ac4867f3`、英文 TS `run-20261120T124540Z-791a18a9`、普通识别 `run-20261120T123652Z-fd1f3f40`、客户 TS `run-20261120T134229Z-06fc2f51`。
+- 平均模型：ae 模型缓存 `ts-overlap-control-004-avg3`（`whai:open-audio-llm/ae-models/model-2a1ecf571a5d538ef10385f2/`）。
