@@ -544,6 +544,10 @@ open-audio-llm experiment run --config runs/zh-ctx-clue-target-20261117/experime
   - 结构化比对：F 和 template 只差两个 think 概率；G 的训练来源、think 文件和第一轮 `train-data-think.yaml` 逐项相同，只多了 `empty_prob`、`uncovered_prob` 0.03。
   - 训练配置和 template 只差路径、名字和端口。
   - 两组 dry-run 都通过。
+- **运行**：ACP 作业 `pt-s1me52wc`（`AmphionASR-ctx-scenets-ablation-noempty-vs-nosynth-r2recipe-mtp-3k-x2-eval-1node`），2026-11-20 13:48Z 排上，执行器目录 `/workspace/workspace/mingdong/scratch/acp-ctx-scene-ablation`。
+  - 节点脚本 `scripts/acp-80-scene-ablation.sh`：先训 F 再训 G，各 8 卡；取回两组 checkpoint 后，同时跑 F 的上下文评测（GPU 0/1）和两组场景 TS（GPU 2/3）。
+  - 同一作业先执行 `05-cleanup-ckpt500`：核对文件数和总大小一致后，删除第 3 问本地的 checkpoint-500（root 属主，开发机删不了）。
+  - F 训练 W&B：<https://wandb.ai/1016097967-amphion/open-audio-llm/runs/AmphionASR-ctx-template-no-empty-uncovered-think-r2recipe-mtp-from-v10interp050-3k-1node-codev1-001>。13:51Z 起训，开发机经 API 核验到第 550 步的 `train/loss` 0.174，学习率曲线和 template 同一步一致。
 
 ## 数据登记（2026-11-20）
 
