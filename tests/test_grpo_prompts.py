@@ -95,3 +95,17 @@ def test_every_prompt_carries_its_origin_and_online_mix_build(tmp_path):
     assert meta["mixture"]["interferers"] == [{"clip": f"c{meta['draw'][1]}", "lookalike": True}]
     meta = json.loads(mined_prompt["grpo_meta"])
     assert meta["origin"] == "task-7/plan-ts-absent" and meta["source"] == "hard@v:all" and meta["draw"] == [20, 85, 0]
+
+
+def test_context_targets_reach_the_prompts_of_their_records(tmp_path):
+    ds = _Rendering(recipe())
+    targets = [{"source": "a@v:train", "record_id": str(i), "targets": [{"start": 0, "text": "章", "alt": "张"}]}
+               for i in range(60)]
+    plan = GRPOPromptPlan(ds, prompts=40, epoch=3, context_targets=[write_plan(tmp_path / "t.jsonl", targets)])
+    metas = [json.loads(plan[i]["grpo_meta"]) for i in range(len(plan))]
+    assert any(m["source"] == "a@v:train" for m in metas) and any(m["source"] == "b@v:train" for m in metas)
+    for m in metas:
+        assert ("context_targets" in m) == (m["source"] == "a@v:train")
+    unknown = [{"source": "c@v:train", "record_id": "0", "targets": []}]
+    with pytest.raises(ValueError, match="not in the data config"):
+        GRPOPromptPlan(ds, prompts=40, epoch=3, context_targets=[write_plan(tmp_path / "u.jsonl", unknown)])

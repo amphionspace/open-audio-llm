@@ -32,10 +32,14 @@ class GRPOPromptPlan(Dataset):
     entries (written by ``open_audio_llm.scripts.grpo_mining`` against the same data config) take
     ``share`` of the list. A draw is reproduced exactly from its tuple, so a mined prompt is the very
     audio, prompt and augmentation the miner scored. GRPO's own sampler then shuffles and repeats the list.
+
+    ``context_targets`` lists JSONL files of ``{source, record_id, targets}``: the context-correction targets of those
+    records (see ``rewards.qwen3_asr.context``), copied into the prompt's ``grpo_meta`` for the
+    ``qwen3_asr_context`` reward.
     """
 
     def __init__(self, dataset, *, prompts: int, epoch: int, mined: list[dict] | None = None,
-                 mined_only: list[str] | None = None, seed: int = 0):
+                 mined_only: list[str] | None = None, seed: int = 0, context_targets: list[str] | None = None):
         if dataset.config.get("replay") is None:
             raise ValueError("grpo prompts require a replay recipe")
         if type(prompts) is not int or prompts <= 0 or type(epoch) is not int or epoch < 0:
@@ -45,6 +49,12 @@ class GRPOPromptPlan(Dataset):
         self._source_starts = [r.start for r in dataset.source_ranges]
         self._source_keys = [source_key(s) for s in dataset.sources]
         skipped = [ranges[key] for key in mined_only or []]
+        self.context_targets = {}
+        for path in context_targets or []:
+            for row in read_mined(path):
+                if row["source"] not in ranges:
+                    raise ValueError(f"{path}: source {row['source']} is not in the data config")
+                self.context_targets[(row["source"], row["record_id"])] = row["targets"]
         plans, total_share = [], 0.0
         # Record ids are checked when read in a worker: a Lance read here would make forked workers crash or hang.
         self.mined_ids = {}
@@ -99,9 +109,12 @@ class GRPOPromptPlan(Dataset):
         # completions.jsonl / the W&B table: where the prompt came from and how its audio was built.
         source = self._source_keys[bisect_right(self._source_starts, record) - 1]
         target = str(sample.get("solution", "")).split("<asr_text>", 1)[-1]
+        record_id = self.dataset.records[record].record.id
+        targets = self.context_targets.get((source, record_id))
         sample["grpo_meta"] = json.dumps({
-            "origin": self.origin[index], "source": source, "record_id": self.dataset.records[record].record.id,
+            "origin": self.origin[index], "source": source, "record_id": record_id,
             "draw": list(self.plan[index]), "task": sample.get("task"), "target_empty": not target.strip(),
+            **({"context_targets": targets} if targets else {}),
             **(sample.pop("online_mix_info", None) or {}),
         }, ensure_ascii=False)
         # Rollout requests type-check audios as strings: send decoded clips as base64 float WAV.

@@ -67,6 +67,11 @@ Qwen3-ASR（`--model_type amphion_asr_1.7b`）用 `--reward_funcs qwen3_asr_accu
 - `grpo` 一节：按 SFT 回放配方的来源比例抽 `prompts` 条 prompt。
   - `mined` 列出挖掘计划，格式为 `{plan, share}`，由 `python -m open_audio_llm.scripts.grpo_mining` 生成，按 `share` 混入。
   - `mined_only` 中的来源只经挖掘计划进入训练。
+  - `context_targets`（可选）是一组 JSONL 文件，每行 `{source, record_id, targets}`，给出这条记录的上下文纠偏目标。每个目标写成 `{start, text, alt}`：`text` 在参考转写第 `start` 个字符处，`alt` 是上下文排除的易混写法，不知道时写 null。
+    - 列出的记录在 `grpo_meta` 里多一项 `context_targets`。
+    - 奖励 `qwen3_asr_context` 只给这些 prompt 计分：先把输出和参考答案按单位对齐，再到每个目标所在的位置读输出。写对记 +1，写成 `alt` 记 −1，其他记 0，最后按目标取平均。
+    - 其余 prompt 返回 None，不计分。
+    - 只在目标所在的位置读，是因为说明原话会重复这个字（“织是纺织的织”）；只查“输出里有没有这个字”，转写说明本身就会被算成改对。
   - 开启 `--log_completions` 时，`completions.jsonl` 和 W&B 表多一列 `grpo_meta`（JSON 字符串），记录每条 prompt 的来历，供事后按计划、来源或混音方式切分 rollout：
     - `origin`：`replay` 或挖掘计划（`<任务目录>/<计划名>`）；
     - `source`、`record_id`、`draw`：来源、记录和抽样三元组，可用 `draw` 复现同一段音频；
