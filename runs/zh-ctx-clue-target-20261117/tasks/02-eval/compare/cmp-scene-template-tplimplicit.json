@@ -1,0 +1,515 @@
+{
+  "run_a": "/workspace/data/ae-runs/ctx-clue-target-20261117-scene-template/runs/run-20261120T045233Z-238526ff",
+  "run_b": "/workspace/data/ae-runs/ctx-clue-target-20261117-scene-template-implicit-noexplain/runs/run-20261120T045218Z-bbf3b255",
+  "scoring": {
+    "version": 4,
+    "normalization": "v4: zh varieties and ja by character, others by word (CJK ideographs one each); zh: NFKC, lower, GigaSpeech tags, OpenCC t2s, Arabic numerals read in Chinese (4+ digit runs digit by digit, else cn2an an2cn), punctuation and symbols, SpeechIO fillers 呃啊 and erhua; v3: 幺/两/〇 read as 一/二/零 inside 3+ Chinese digit runs; v4: ja by character on v1 text; en: Whisper EnglishTextNormalizer; presence on v1 text",
+    "normalizers": {
+      "cn2an": "0.5.24",
+      "opencc": "0.1.7",
+      "whisper-normalizer": "0.1.15"
+    }
+  },
+  "resamples": 2000,
+  "confidence": 0.95,
+  "seed": 20261112,
+  "cluster_by": null,
+  "samples": 1900,
+  "clusters": 1900,
+  "protocol_differences": {},
+  "skipped_sources": [],
+  "overall": {
+    "all/CER": {
+      "error_rate": {
+        "a": 0.08483227544120694,
+        "b": 0.08419188970297403,
+        "diff": -0.0006403857382329126,
+        "ci": [
+          -0.010330903159168918,
+          0.009103085039578665
+        ],
+        "significant": false
+      },
+      "false_alarm_rate": {
+        "a": 0.7571428571428571,
+        "b": 0.7714285714285715,
+        "diff": 0.014285714285714346,
+        "ci": [
+          -0.04879048380647743,
+          0.0793650793650793
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.000546448087431694,
+        "b": 0.001639344262295082,
+        "diff": 0.001092896174863388,
+        "ci": [
+          0.0,
+          0.0027412280701754384
+        ],
+        "significant": false
+      }
+    }
+  },
+  "sources": {
+    "police_scene_bench@v1-20261028:dev-owner-heavy-sep-accident/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.08393919365499009,
+        "b": 0.14474553866490417,
+        "diff": 0.06080634500991408,
+        "ci": [
+          0.0,
+          0.15021957887161988
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:far-owner-quiet-sep-reception/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.23430493273542602,
+        "b": 0.19506726457399104,
+        "diff": -0.03923766816143498,
+        "ci": [
+          -0.08879100600149438,
+          0.0014727289272626941
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:owner-extreme-overlap-emergency/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.12938596491228072,
+        "b": 0.1206140350877193,
+        "diff": -0.008771929824561417,
+        "ci": [
+          -0.036720020099908345,
+          0.02128295836302552
+        ],
+        "significant": false
+      },
+      "false_alarm_rate": {
+        "a": 0.7142857142857143,
+        "b": 0.6428571428571429,
+        "diff": -0.0714285714285714,
+        "ci": [
+          -0.24999999999999994,
+          0.0
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:owner-extreme-sep-emergency/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.08353365384615384,
+        "b": 0.07932692307692307,
+        "diff": -0.004206730769230768,
+        "ci": [
+          -0.0728839551607508,
+          0.060698284794494635
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:owner-heavy-overlap-construction/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.023529411764705882,
+        "b": 0.022549019607843137,
+        "diff": -0.000980392156862745,
+        "ci": [
+          -0.005350162355370729,
+          0.0029751566257000474
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:owner-heavy-overlap-crowd/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.03709069834830484,
+        "b": 0.02781802376122863,
+        "diff": -0.009272674587076212,
+        "ci": [
+          -0.02283932060435203,
+          0.0003165407844850623
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:owner-heavy-overlap-main-road/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.031529017857142856,
+        "b": 0.03125,
+        "diff": -0.00027901785714285615,
+        "ci": [
+          -0.005632325989540808,
+          0.0052957621147515085
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:owner-heavy-overlap-security/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.029074215761285386,
+        "b": 0.02754399387911247,
+        "diff": -0.0015302218821729163,
+        "ci": [
+          -0.007024168717308243,
+          0.0036634531113058635
+        ],
+        "significant": false
+      },
+      "false_alarm_rate": {
+        "a": 0.6,
+        "b": 0.65,
+        "diff": 0.050000000000000044,
+        "ci": [
+          -0.12,
+          0.2222222222222222
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:owner-heavy-sep-accident/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.14540647719762062,
+        "b": 0.15399867812293458,
+        "diff": 0.008592200925313959,
+        "ci": [
+          -0.06399355312717259,
+          0.09826142456397723
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:owner-light-overlap-car/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.01195526417277285,
+        "b": 0.01349787890474354,
+        "diff": 0.00154261473197069,
+        "ci": [
+          -0.001361037168490584,
+          0.005525299318031694
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:owner-light-overlap-home-law/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.020493115593980146,
+        "b": 0.023695164905539544,
+        "diff": 0.0032020493115593983,
+        "ci": [
+          -0.003865346167884206,
+          0.012304960010594472
+        ],
+        "significant": false
+      },
+      "false_alarm_rate": {
+        "a": 0.8,
+        "b": 0.85,
+        "diff": 0.04999999999999993,
+        "ci": [
+          0.0,
+          0.15999999999999992
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:owner-light-sep-car/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.3381294964028777,
+        "b": 0.2681491170699804,
+        "diff": -0.0699803793328973,
+        "ci": [
+          -0.2079709764416776,
+          0.05369036973785956
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:owner-light-sep-home-law/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.11120840630472854,
+        "b": 0.1290134267367192,
+        "diff": 0.017805020431990656,
+        "ci": [
+          -0.03891300402539753,
+          0.08204883389166472
+        ],
+        "significant": false
+      },
+      "false_alarm_rate": {
+        "a": 0.9375,
+        "b": 0.9375,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:owner-medium-overlap-shop/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.016051364365971106,
+        "b": 0.01565008025682183,
+        "diff": -0.0004012841091492747,
+        "ci": [
+          -0.0030412386567495583,
+          0.002204182205756213
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.01,
+        "b": 0.01,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:owner-medium-overlap-street/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.014648858250753986,
+        "b": 0.014433433864713486,
+        "diff": -0.00021542438604050043,
+        "ci": [
+          -0.0015481228771529055,
+          0.0012183769480300236
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.01,
+        "diff": 0.01,
+        "ci": [
+          0.0,
+          0.03296703296703297
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:owner-medium-sep-shop/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.1690046760187041,
+        "b": 0.20774883099532399,
+        "diff": 0.0387441549766199,
+        "ci": [
+          -0.001503584662990753,
+          0.09957055172517307
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:owner-medium-sep-street/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.06593159315931593,
+        "b": 0.0846084608460846,
+        "diff": 0.01867686768676867,
+        "ci": [
+          -0.014188488700013947,
+          0.055807613076739794
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.01,
+        "diff": 0.01,
+        "ci": [
+          0.0,
+          0.03296703296703297
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:owner-quiet-overlap-reception/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.018225676762262128,
+        "b": 0.017153578129187885,
+        "diff": -0.0010720986330742428,
+        "ci": [
+          -0.004105387811106408,
+          0.0014650011286195454
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:owner-quiet-sep-reception/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.2564461883408072,
+        "b": 0.24411434977578475,
+        "diff": -0.01233183856502243,
+        "ci": [
+          -0.09320664342617166,
+          0.07179225707236009
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    }
+  }
+}

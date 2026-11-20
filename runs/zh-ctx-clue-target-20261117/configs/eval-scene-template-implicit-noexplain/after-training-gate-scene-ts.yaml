@@ -1,0 +1,21 @@
+# 场景 TS（think 关）：08-scene-ts-diag 的 r1-think-new 配置，只换模型、服务与输出目录（scripts/make_scene_ts_configs.py）。
+suite_id: asr-regression-native@1
+model_name: ctx-clue-target-scene-template-implicit-noexplain
+evaluator: ts-asr
+eval_set: tdtech/scene-ts@v1-20261028
+tsasr_server_url: http://127.0.0.1:18741
+tsasr_served_model: scene-template-implicit-noexplain-tsasr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/ctx-clue-target-20261117-scene-template-implicit-noexplain
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+  enroll_seconds: 5
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false

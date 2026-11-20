@@ -6,7 +6,10 @@
   - 补隐式题数据有效，真实录音上也有效。
   - think 里写语义线索 + 目标只在合成题上更好，真实录音上与固定句没有差别。
 - 见“结果：第 1 问”和“结果：第 2 问”。
-- **第 3 问**（2026-11-20 加）：用户确认隐式题数据进上下文纠偏的 SFT 配方，加第 5 组 template-implicit-noexplain 确认“第二轮写法 + 隐式题固定句”这个组合。判定已在训练前写定，见“判定”的第 3 问；训练、评测进行中。
+- **第 3 问**（2026-11-20 加）：用户确认隐式题数据进上下文纠偏的 SFT 配方，加第 5 组 template-implicit-noexplain 确认“第二轮写法 + 隐式题固定句”这个组合。判定已在训练前写定，见“判定”的第 3 问。
+  - 2026-11-20 训练、评测完成，节点已释放。
+  - 主判定不满足：合成题上的收益都在，真实录音（Emilia）隐式题没有显著提高。按规则不定配方，汇报后再决定，见“结果：第 3 问”。
+  - 第 2 问“真实录音上也有效”要修正：那是和 clue-target 比的；和第二轮配方 template 比，三组补数据在 Emilia 隐式题上都不显著。
 
 **要回答的问题**：同事反馈，纠错时在 CoT 里先定好线索、再指明要改的目标，2B 的文本 LLM 能力也提升很大。
 1. 把第二轮的 think 改成这种写法，只换写法、不加新数据，上下文纠偏能不能在训练没见过的说法和真实录音上更好？
@@ -210,6 +213,14 @@
   - 与固定句组比，独立合成组隐式题准确率 +5.5、成对正确率 +10.9。
   - Emilia 上没有差别（+0.4，CI 含 0）。
   - 合成题的语义线索 96% 能写对，Emilia 只有 23%：真实录音的语义线索与合成题差别大。
+- **2026-11-20 补注（第 3 问之后）**：
+  - 上面 Emilia 隐式题的 +2.7、+2.2 是和 clue-target 比的。clue-target 在这一项上本来就比 template 低 1.2（65.6 对 66.8）。
+  - 和第二轮配方 template 比（think 开，训练前没写定，只作参考），三组补数据的 Emilia 隐式题都不显著：
+    - 线索 + 目标 +1.5 [−0.6, +3.6]（`cmp-template-implicit-on.json`）；
+    - 固定句 +1.0 [−0.9, +2.9]（`cmp-template-noexplain-on.json`）；
+    - 第 5 组 +0.4 [−1.3, +2.1]。
+  - 所以“真实录音上也有效”不成立，只能说真实录音上没有变差。
+  - 当时漏报了一项：固定句组 think 关的全部保持率比 clue-target 低 1.2 [−2.1, −0.2]*。线索组是 −0.5，不显著。
 
 四个评测 run 都完整（9,892/9,892，无失败），配对 bootstrap 同第 1 问。
 
@@ -271,6 +282,83 @@
   - [隐式题 · 线索 + 目标](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/AmphionASR-ctx-clue-target-implicit-think-r2recipe-mtp-from-v10interp050-3k-1node-codev1-002)（执行记录 002）；
   - [隐式题 · 固定句](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/AmphionASR-ctx-clue-target-implicit-noexplain-think-r2recipe-mtp-from-v10interp050-3k-1node-codev1-001)。
   - checkpoint 在 `whai:open-audio-llm/runs/zh-ctx-clue-target-20261117/tasks/01-train-clue-target-implicit/attempts/002/` 和 `.../01-train-clue-target-implicit-noexplain/attempts/001/` 下的 `artifacts/training/`。
+
+## 结果：第 3 问（第二轮写法 + 隐式题固定句，2026-11-20）
+
+**结论：主判定不满足。按训练前写定的规则不定配方，汇报后再决定。**
+- **合成题上补数据的收益都在**：
+  - 独立合成组隐式题准确率 +8.0*，成对正确率 +16.8*；
+  - think 关的全部纠正成功率 +2.5*。
+- **真实录音没有提高**：Emilia 隐式题准确率 +0.4 [−1.3, +2.1]。第 2 问的两组和 template 比也都不显著，见第 2 问的补注。
+- **不变差各项都满足**：保持率、误改率、Emilia 准确率、原转写已对的 Emilia 条目都没有变差，场景 TS 也没有变差。
+- **判定之外的副作用**：think 关的全部保持率 −1.4 [−2.4, −0.4]*，独立合成组 −1.7*。固定句组在第 2 问里也有（−1.2*），来自隐式题数据本身。
+
+四个评测 run 都完整，没有失败样本：上下文纠偏 9,892/9,892 两个，场景 TS 1,900/1,900 两个。差 = 本组 − template，配对 bootstrap 同第 1 问，`*` 表示 95% CI 不含 0。
+
+**判定各项**（think 开，另注明的除外）
+
+| | template | 本组 | 差 [95% CI] | 是否满足 |
+|---|---|---|---|---|
+| 主 · 独立合成组 隐式题准确率 | 60.0 | 68.0 | +8.0 [+5.6, +10.6]* | 满足 |
+| 主 · Emilia 隐式题准确率 | 66.8 | 67.3 | +0.4 [−1.3, +2.1] | **不满足** |
+| 不变差 · Emilia 准确率 | 71.5 | 71.9 | +0.4 [−0.6, +1.4] | 满足 |
+| 不变差 · 全部保持率 | 86.0 | 86.2 | +0.2 [−0.9, +1.2] | 满足 |
+| 不变差 · 全部误改率 | 3.3 | 3.6 | +0.3 [−0.3, +0.9] | 满足 |
+| 不变差 · think 关 全部纠正成功率 | 47.2 | 49.7 | +2.5 [+1.3, +3.7]* | 满足 |
+| 不变差 · Emilia 原转写已对（703 条，点估计） | 91.3 | 90.9 | −0.4 | 满足 |
+| 场景 TS · CER | 8.5 | 8.4 | −0.1 [−1.0, +0.9] | 满足 |
+| 场景 TS · 目标不在场误出字率（70 条） | 75.7 | 77.1 | +1.4 [−4.9, +7.9] | 满足 |
+
+**其他指标**（think 开；固定句组即第 2 问的 clue-target-implicit-noexplain）
+
+| | template | 本组 | 固定句组 | 本组 − template | 本组 − 固定句组 |
+|---|---|---|---|---|---|
+| 独立合成组 · 隐式题成对正确率 | 21.6 | 38.3 | 40.1 | +16.8 [+12.0, +21.8]* | −1.8 [−4.0, +0.3] |
+| 独立合成组 · 纠正成功率 | 49.0 | 51.6 | 51.9 | +2.6 [+0.8, +4.4]* | −0.3 [−2.8, +1.9] |
+| 独立合成组 · 成对正确率 | 42.0 | 44.5 | 44.3 | +2.6 [+0.8, +4.4]* | +0.2 [−2.1, +2.4] |
+| 全部 · 隐式题准确率 | 59.0 | 62.9 | 63.5 | +3.9 [+2.7, +5.1]* | −0.6 [−1.3, +0.2] |
+| 同源合成（v1）· 纠正成功率 | 77.8 | 79.9 | 75.9 | +2.1 [+0.1, +4.0]* | +3.9 [+1.2, +6.5]* |
+| Emilia · 隐式题准确率 | 66.8 | 67.3 | 67.9 | +0.4 [−1.3, +2.1] | −0.6 [−2.5, +1.2] |
+| Emilia · CER | 4.9 | 4.8 | 4.4 | −0.1 [−0.5, +0.3] | +0.5 [+0.1, +0.8]* |
+| 播客（127 条）· 准确率 | 83.5 | 85.0 | 80.3 | +1.6 [−2.4, +6.3] | +4.7 [+0.0, +9.4] |
+
+- **think 关**（本组 − template）：
+  - 全部隐式题准确率 +4.2 [+3.1, +5.3]*，独立合成组隐式题 +7.9*，Emilia 隐式题 +0.9 [−0.3, +2.2]；
+  - 全部保持率 84.0 → 82.6（−1.4 [−2.4, −0.4]*），误改率 4.3 → 4.9（+0.5 [−0.1, +1.1]）。
+- **和固定句组比**，think 写法从线索 + 目标换回第二轮写法：
+  - 合成题、Emilia 准确率都没有显著差别；
+  - 同源合成题 +3.9*，播客 +4.7。第 1 问里线索 + 目标写法让播客显著变差（−5.5*），同源合成也偏低（−1.9）；这里换回第二轮写法后恢复。
+
+**Emilia 按原转写是否需要纠正拆开**（think 开；`tasks/02-eval/compare/mined-groups-tplimplicit.md`）
+
+| | 条数 | template | 本组 | 固定句组 |
+|---|---|---|---|---|
+| 需纠正 · 显式说明 | 516 | 52.1 | 52.7 | 52.3 |
+| 需纠正 · 隐式 | 629 | 65.5 | 66.1 | 66.5 |
+| 原转写已对（不能乱改） | 703 | 91.3 | 90.9 | 91.3 |
+
+**think 写了什么**（`tasks/02-eval/compare/think-clue-target-template-implicit-noexplain.md`）
+- **固定句压住了乱套说明格式**：Emilia 需纠正的隐式题里，think 写说明格式的从 template 的 57% 降到 33%（209/629）。固定句组是 40%。
+- **但准确率没有跟着上来**：
+  - 写固定句的 420 条，think 开、关都是 67.9；
+  - 仍套用说明格式的 209 条，think 开 62.7，比 think 关的 69.9 低。
+  - Emilia 隐式题的瓶颈是模型从真实对话里认不出该改哪个字，think 写法和合成隐式题都没解决这一点。
+- **独立合成组隐式题**：纠正成功率 50%，template 30%，固定句组 48%。
+
+**场景 TS**（`tdtech/scene-ts@v1-20261028`，think 关；`tasks/02-eval/compare/cmp-scene-template-tplimplicit.json`）
+- 本组 CER 8.4，template 8.5。目标不在场的 70 条里，误出字 54 条对 53 条。
+- **合成 `train_ts` 的用量多了 60%，场景 TS 没有变化**：
+  - 第二轮配方里，合成说字 `train_ts` 每轮 30,000 次，占全部 200 万次的 1.5%；
+  - 本组再加隐式题 `train_ts` 18,000 次。
+  - 所以在现有用量以上，这类数据不会线性加重场景 TS 退化。它是不是退化的来源还不能排除：也可能少量就已经足以造成退化。
+- 退化本身还在。同一套测试配置下，交付版 CER 3.67、误出字 34.3%，08 的第二轮 checkpoint-3000 是 9.93、81.4%，本实验的 template 是 8.5、75.7%。
+
+**证据**
+- **评测 run**：`whai:open-audio-llm/runs/zh-ctx-clue-target-20261117/ae-runs/<名>/runs/`，每个 run 的 `run.json` 有 W&B 链接，W&B 状态都是 finished。
+  - template-implicit-noexplain：`run-20261120T044848Z-2f4e92f2`（think 关）、`run-20261120T045423Z-e0118888`（think 开）；
+  - scene-template：`run-20261120T045233Z-238526ff`；scene-template-implicit-noexplain：`run-20261120T045218Z-bbf3b255`。
+- **比较**：`scripts/compare_q3.sh` 生成 `tasks/02-eval/compare/cmp-{template,noexplain}-tplimplicit-{on,off}.json`、`cmp-scene-template-tplimplicit.json`、`mined-groups-tplimplicit.md` 和 think 诊断。`scripts/gate_q3.py` 逐项输出上面的判定表。第 2 问补注用的 `cmp-template-noexplain-on.json` 用同一命令另算。
+- **训练**：[W&B](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/AmphionASR-ctx-template-implicit-noexplain-think-r2recipe-mtp-from-v10interp050-3k-1node-codev1-001)，checkpoint 在 `whai:open-audio-llm/runs/zh-ctx-clue-target-20261117/tasks/01-train-template-implicit-noexplain/attempts/001/artifacts/training/`。
 
 ## 不在本实验里
 
@@ -347,3 +435,13 @@ open-audio-llm experiment run --config runs/zh-ctx-clue-target-20261117/experime
 - **ACP**：`submit_when_free.py`（运行目录 `/workspace/workspace/mingdong/scratch/acp-ctx-template-implicit`）03:06 UTC 提交 `pt-keiwg4yv`，提交时本项目没有运行中的节点。03:07 节点 10.119.17.215 起来，IP 已加进 W&B 转发放行名单。
 - **训练**：`50-template-implicit.sh` 03:07:48 开训，端口 29866；数据预检通过；W&B 远端 running，`train/loss` 已上传。
 - 训练完成后在 GPU 0/1 评测 checkpoint-3000，think 关、开各一遍。链路正常结束后由 `stop_when_done.sh` 停止作业，失败时保留节点排查。
+- **训练完成**：03:07–04:31 UTC，3000 步，退出码 0，W&B finished（`global_step` 3000）。
+  - checkpoint-500 训练中途上传 whai 超时，先留在本地。04:41 执行记录整体同步时，它和其他文件一起传上了 whai。
+  - `status.json` 里 checkpoint-500 的上传问题是中途那次的记录，已经过时。
+  - 1000–3000 训练中正常上传。whai 上 500–3000 都在，带 `mtp/`。
+- **评测**：
+  - 上下文纠偏：think 关 04:48 起，think 开 04:54 起，04:59 结束；
+  - 场景 TS：04:50–04:54，template 和本组同时测；
+  - 四个 run 都完整，已上传 whai，W&B finished，有指标。
+- **节点**：04:59:55 `stop_when_done.sh` 停止 `pt-keiwg4yv`。
+- **分析**：开发机上跑 `scripts/compare_q3.sh` 和 `scripts/gate_q3.py`，结论见“结果：第 3 问”。
