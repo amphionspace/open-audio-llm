@@ -16,8 +16,14 @@ and adds their tasks to experiment.yaml (the experiment refuses a task whose con
 A third implicit arm (question 3, 2026-11-20) puts the same data on top of template instead:
 - template-implicit-noexplain:     round 2's think files plus the implicit data with the fixed sentence, i.e. the
   combination proposed for the context-correction SFT recipe (round-2 think, implicit items without reasoning).
+With ``--ablation`` (question 4, 2026-11-20), two arms that split round 2's scene-TS regression between its two
+additions over round 1 (round 1's data is round 2's minus the two synthetic sources; the code differs only in #158/#159,
+which set think.empty_prob / uncovered_prob; #156/#157 touch the replay KL, which neither round uses):
+- template-no-empty-think:  template with think.empty_prob and uncovered_prob 0, i.e. round 1's think allocation;
+- template-no-synth:        template without the synthetic spelling data (train, train_ts) and its think file, i.e.
+  round 1's data with #158/#159's think allocation.
 
-usage: make_configs.py [--implicit] [arm ...]   (writes configs/train-data-{arm}.yaml, configs/train-{arm}.yaml for
+usage: make_configs.py [--implicit] [--ablation] [arm ...]   (writes configs/train-data-{arm}.yaml, configs/train-{arm}.yaml for
        the named arms, all of them when none is named; configs written on the node are root's and stay as they are)
 """
 import gzip
@@ -48,6 +54,13 @@ IMPLICIT_ARMS = {
     "template-implicit-noexplain": {"port": 29866, "name": "template-implicit-noexplain-think",
                                     "think": "think-no-explanation.jsonl.gz",
                                     "task": "第二轮 think 模板，加隐式题数据（think 只写固定句）+ 联合 MTP"},
+}
+SYNTH = "context_correction_synth_zh"
+ABLATION_ARMS = {
+    "template-no-empty-think": {"port": 29876, "name": "template-no-empty-uncovered-think",
+                                "task": "第二轮 think 模板，think.empty_prob / uncovered_prob 改为 0（第一轮的 think 分配）+ 联合 MTP"},
+    "template-no-synth": {"port": 29886, "name": "template-no-synth-think",
+                          "task": "第二轮 think 模板，去掉合成说字数据（即第一轮数据 + PR 158、159 的 think 分配）+ 联合 MTP"},
 }
 STEPS, SAMPLES_PER_STEP, EXPLAINED_VIEWS = 3000, 188, 3  # as round 2 (scripts/make_data_config.py there)
 CODE = EXP / "shared/code-v1"
@@ -95,6 +108,8 @@ def main():
     arms = dict(ARMS)
     if "--implicit" in sys.argv[1:]:
         arms.update(IMPLICIT_ARMS)
+    if "--ablation" in sys.argv[1:]:
+        arms.update(ABLATION_ARMS)
     only = [a for a in sys.argv[1:] if not a.startswith("--")]
     assert set(only) <= set(arms), set(only) - set(arms)
     arms = {arm: spec for arm, spec in arms.items() if not only or arm in only}
@@ -103,6 +118,17 @@ def main():
         d = {**data, "think": {**data["think"], "files": think_files(data["think"]["files"], base)}}
         note = ("think 文件与第二轮相同。\n" if base == "template" else
                 "think 文件换成 context_correction_clean_zh/versions/think-v3-20261117（同一批行，改写成线索 + 目标），其余与第二轮相同。\n")
+        if arm == "template-no-empty-think":
+            assert d["think"]["empty_prob"] == d["think"]["uncovered_prob"] == 0.03, d["think"]
+            d["think"] = {**d["think"], "empty_prob": 0.0, "uncovered_prob": 0.0}
+            note = "think 文件与第二轮相同；think.empty_prob、uncovered_prob 由 0.03 改为 0（第一轮的 think 分配）。\n"
+        if arm == "template-no-synth":
+            dropped = [s for s in d["train"] if s["dataset_id"] == SYNTH]
+            assert [s["split"] for s in dropped] == ["train", "train_ts"], dropped
+            d = {**d, "train": [s for s in d["train"] if s["dataset_id"] != SYNTH],
+                 "think": {**d["think"], "files": [f for f in d["think"]["files"] if f != OLD_THINK[1]]}}
+            assert len(d["think"]["files"]) == len(data["think"]["files"]) - 1
+            note = "去掉合成说字数据（train、train_ts）和它的 think 文件，即第一轮的数据；think 分配同第二轮。\n"
         if arm in IMPLICIT_ARMS:
             d, counts, share = with_implicit(d, spec["think"])
             note = (note.rstrip("\n") + f"另加 {IMPLICIT_ID}@{IMPLICIT_VERSION} {counts}，约占样本 {share:.2%}，"
@@ -133,10 +159,12 @@ def main():
             f"# {arm} 组：第二轮的训练参数，加联合 MTP（权重 0.1、3 步、衰减 0.8、lr 1e-4，从 11.17 交付包的 mtp/ 初始化），"
             f"代码 shared/code-v1（main 0a1b117），数据 configs/train-data-{arm}.yaml。\n" + text)
         print(arm, data_path)
-    if "--implicit" in sys.argv[1:]:
+    extra = {**(IMPLICIT_ARMS if "--implicit" in sys.argv[1:] else {}),
+             **(ABLATION_ARMS if "--ablation" in sys.argv[1:] else {})}
+    if extra:
         experiment = EXP / "experiment.yaml"
         text = experiment.read_text()
-        for arm, spec in IMPLICIT_ARMS.items():
+        for arm, spec in extra.items():
             if arm in arms and f"id: train-{arm}," not in text:
                 text += (f"- {{id: train-{arm}, name: {spec['task']}，1 节点 8 卡全参 3000 步, "
                          f"config: configs/train-{arm}.yaml, depends_on: []}}\n")
