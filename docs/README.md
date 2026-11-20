@@ -1,6 +1,6 @@
 # 文档
 
-按用途分为五类：**上手**、**指南**（怎么做）、**参考**（是什么 / 为什么）、**模型**（已产出的权重）和 **实验 / 归档**（只读历史记录）。
+按用途分为六类：**上手**、**指南**（怎么做）、**参考**（是什么 / 为什么）、**调研**（外部做法与选型依据）、**模型**（已产出的权重）和 **实验 / 归档**（只读历史记录）。
 
 ## 上手
 
@@ -32,6 +32,15 @@
 | [vLLM Triton Embedding Bypass](reference/vllm-triton-bypass.md) | vLLM 直接消费外部 audio embedding |
 | [Legacy 依赖](reference/legacy-deps.md) | k2 / Zipformer 的处理方式 |
 | [当前限制](reference/limitations.md) | 训练数据链路尚未支持的能力 |
+
+## 调研
+
+记录规则见仓库根目录 `AGENTS.md` 的 Research Records；大文件备份在团队 COS `anfeiweng-audiollm-resource-1373259071:open-audio-llm/research/`。
+
+| 文档 | 内容 |
+| --- | --- |
+| [上下文纠偏相关工作](research/2026-11-20-context-correction-related-work.md) | 说字、上下文偏置、RL 奖励、误改控制与合成到真实迁移；对应上下文纠偏线的下一步（2026-11-20） |
+| [会话级上下文 ASR](research/2026-11-04-context-aware-asr-survey.md) | 会话历史作上下文的方法、数据与评测设计（2026-11-04） |
 
 ## 模型
 
