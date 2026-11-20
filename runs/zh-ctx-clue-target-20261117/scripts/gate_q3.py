@@ -3,7 +3,8 @@
 Main: template-implicit-noexplain vs template, think on, implicit accuracy up with the CI above 0 on the independent
 synthetic group and on Emilia. Must not get worse: Emilia accuracy and overall keep rate (CI low >= -1 point),
 overall over-correction (CI high <= +1 point), think-off overall correction rate (CI low >= -1 point); Emilia items
-whose original transcript was already right (no paired CI) within 1 point of template. Prints one line per check,
+whose original transcript was already right (no paired CI) within 1 point of template; scene TS CER and
+false-alarm rate not significantly worse than template. Prints one line per check,
 then the reference comparison with clue-target-implicit-noexplain.
 usage: python3 gate_q3.py
 """
@@ -53,6 +54,12 @@ def main():
     good = b >= a - POINT * 100
     passed &= good
     print(f"{'通过' if good else '不通过'}  不变差 · Emilia 原转写已对（703 条，点估计）：{a:.1f} → {b:.1f}")
+    scene = json.loads((C / "cmp-scene-template-tplimplicit.json").read_text())["overall"]["all/CER"]
+    for label, key in (("场景 TS CER", "error_rate"), ("场景 TS 目标不在场误出字率（70 条）", "false_alarm_rate")):
+        x = scene[key]
+        good = x["ci"][0] <= 0  # not significantly worse than template
+        passed &= good
+        print(f"{'通过' if good else '不通过'}  不变差 · {label}：{fmt(x)}")
     print(f"第 3 问判定：{'都满足' if passed else '不满足'}")
     ref = load("noexplain-tplimplicit-on")["by"]["source"]["mined:emilia_zh"]
     print("参考（与 clue-target-implicit-noexplain 比，think 开）："

@@ -129,6 +129,10 @@
   - **主判定**：独立合成组的隐式题准确率，以及 Emilia 的隐式题准确率（`ae open-audio-llm compare` 的 `implicit_accuracy`，与第 2 问结果表同一指标），都提高（CI 不含 0）。
   - **不能变差**：Emilia 准确率、全部保持率，CI 下限不低于 −1 个点；全部误改率 CI 上限不高于 +1 个点；think 关的全部纠正成功率 CI 下限不低于 −1 个点。Emilia 原转写已对的 703 条没有配对 CI，看 `ctx_v2_mined_groups.py` 的准确率，不低于 template 1 个点以上。
   - 2026-11-20 03:50 UTC 改了上面两句的措辞，让每一项都对应比较工具实际输出的指标；改时还没有本组的评测结果。
+  - **场景 TS 不能变差**（2026-11-20 04:10 UTC 补写，本组还在训练）：鼎桥场景 TS（`tdtech/scene-ts@v1-20261028`，think 关）上，本组与 template 比，CER 和目标不在场误出字率都不显著变差（CI 下限不高于 0）。
+    - 原因：场景 TS 退化是这条线进交付的卡点（08：第二轮 checkpoint-3000 CER 9.93，交付版 3.35），最可疑的是第二轮的合成 `train_ts`（单人干净录音、目标每条都在场）。隐式题又加了 1,684 条同类的 `train_ts`，所以要确认它不加重退化。
+    - 做法：`scripts/acp-60-scene-ts.sh` 在同一节点的 GPU 2/3 上测 template 和本组的 checkpoint-3000，与本组的上下文纠偏评测同时跑；配置由 `scripts/make_scene_ts_configs.py` 生成，服务同本实验的评测（vLLM 0.32、自带 mtp/），测试配置同 08。
+    - 即使通过，配方仍带着第二轮的场景 TS 退化，进交付前要另外解决。
   - **参考**：与 clue-target-implicit-noexplain 比 Emilia 准确率和 Emilia 隐式题准确率，看真实录音上第二轮写法是否够用；机制核对看 Emilia 需纠正隐式题里套用说明格式的比例（template 57%）。
   - **结论**：
     - 都满足：上下文纠偏 SFT 配方采用“第二轮 think + 隐式题（固定句）”，即本组的数据配置；隐式题的固定句 think 文件随配方登记。
