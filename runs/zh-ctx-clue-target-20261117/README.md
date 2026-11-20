@@ -544,3 +544,13 @@ open-audio-llm experiment run --config runs/zh-ctx-clue-target-20261117/experime
   - 结构化比对：F 和 template 只差两个 think 概率；G 的训练来源、think 文件和第一轮 `train-data-think.yaml` 逐项相同，只多了 `empty_prob`、`uncovered_prob` 0.03。
   - 训练配置和 template 只差路径、名字和端口。
   - 两组 dry-run 都通过。
+
+## 数据登记（2026-11-20）
+
+- 本实验生成、用过的数据都登记在 audio-data-contract，放在 `/workspace/data/datasets/`，并镜像到 COS（`amphion-audio-backup-1373259071:audio-data-contract/`）：
+  - `context_correction_clean_zh@think-v3-20261117`：线索 + 目标写法的 think，clue-target 各组用过。这个写法没有进配方，补登记是为了能复现（#279）。
+  - `context_correction_synth_zh@implicit-v1-20261117`：隐式题数据，含固定句 think（#271）。
+    - 镜像记录写着 11-17 已同步，但那次核对的是数据建好之前的空目录，COS 上实际是空的。
+    - 2026-11-20 已用 `cos_mirror.py push --only` 补传，2,001 个文件、772,588,092 字节，`.packed/` 下核对一致。
+  - 评测集 `context_correction_zh@v2-20261116` 和合成数据 `train-v1-20261114` 在 COS 上都齐全。
+- 实验目录里只放配置、脚本、执行记录和分析结果，不放数据文件。
