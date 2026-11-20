@@ -333,3 +333,12 @@ open-audio-llm experiment run --config runs/zh-ctx-clue-target-20261117/experime
   - 两组的数据预检都读到隐式题 train 1,685 条、train_ts 1,684 条。
   - 评测 14:39–14:57，四个 run 完整。
 - **节点**：14:58 停止 `pt-0uwyn5vh`，释放节点。
+
+## 执行记录：第 3 问（2026-11-20）
+
+- 用户确认：隐式题数据进上下文纠偏的 SFT 配方；加第 5 组确认“第二轮写法 + 隐式题固定句”。
+- 配置由 `scripts/make_configs.py --implicit template-implicit-noexplain` 生成。结构化比对：与 template 只差两份隐式题来源和一个 think 文件；与 clue-target-implicit-noexplain 只差 think-v2 / think-v3。dry-run 通过。
+- 判定在训练前写进“判定”的第 3 问（提交 1e56062）。
+- **ACP**：`submit_when_free.py`（运行目录 `/workspace/workspace/mingdong/scratch/acp-ctx-template-implicit`）03:06 UTC 提交 `pt-keiwg4yv`，提交时本项目没有运行中的节点。03:07 节点 10.119.17.215 起来，IP 已加进 W&B 转发放行名单。
+- **训练**：`50-template-implicit.sh` 03:07:48 开训，端口 29866；数据预检通过；W&B 远端 running，`train/loss` 已上传。
+- 训练完成后在 GPU 0/1 评测 checkpoint-3000，think 关、开各一遍。链路正常结束后由 `stop_when_done.sh` 停止作业，失败时保留节点排查。
