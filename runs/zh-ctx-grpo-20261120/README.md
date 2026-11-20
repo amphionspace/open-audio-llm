@@ -27,7 +27,7 @@
 
 ## 已完成
 
-- `tasks/00-context-targets`：目标表，见该任务 README。
+- `tasks/00-context-targets`：目标表，登记为 `context_correction_clean_zh@grpo-targets-v1-20261120`（audio-data-contract #279），见该任务 README。
 - `scripts/mining_plans.py`：从 08 的 `mining_plans_n16.py` 复制，加了 `ctx` 计划：
   - 先看出字与否，有分歧就归入原来的漏识 / TS 在场；
   - 出字没有分歧时，看 16 次采样里“每个目标都写对”的少数一方是否 ≥ 2 次，是则归入 `ctx`。
@@ -35,6 +35,6 @@
 
 ## 待做（第 4 问之后）
 
-- 定起点和 SFT 配方，生成 GRPO 数据配置：回放、六份计划、`grpo.context_targets`。如果配方变了，要重跑目标表。
+- 定起点和 SFT 配方，生成 GRPO 数据配置：回放、六份计划、`grpo.context_targets`。如果配方变了，要按新配方重建目标表，并登记成新版本。
 - 挖题脚本：交付版的 7 条普通识别线和 7 条 TS 线，加一条 `ctx` 线。普通识别服务挖合成 `train` 和说明录音子集，TS 服务挖合成 `train_ts`。
 - 训练配置：交付版第十轮的参数，奖励加 `qwen3_asr_context`，开联合 MTP（GRPO lr 1e-5）。

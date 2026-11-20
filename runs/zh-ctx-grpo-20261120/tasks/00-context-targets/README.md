@@ -4,12 +4,12 @@
   - SFT 数据配置：上下文纠偏实验的 `configs/train-data-template.yaml`，即第二轮配方加联合 MTP；
   - 合成说字数据的记录标注（`labels.context_correction.segments`）；
   - think 文件里 think 开的行，按单元号连接说字清洗的改动记录（`context_correction_clean_zh@v1-20261110/<来源>/decisions.jsonl`）。
-- **命令**：`python3 scripts/build_context_targets.py <数据配置> tasks/00-context-targets/targets.jsonl`
+- **命令**：`python3 scripts/build_context_targets.py <数据配置> <输出>`。输出写到数据目录，登记为 audio-data-contract 的数据版本，不留在实验目录里。
 - **完成条件**：
   - 每条目标都和所在转写对得上：合成数据核对拼回的全文，真实录音核对改动前的原字；
   - `(来源, 记录)` 不重复；
   - 抽查真实录音的目标位置，和训练记录的原文一致。
-- **结果**（2026-11-20，`targets.jsonl.summary.json`）：
+- **结果**（2026-11-20，数据版本里的 `summary.json`）：
   - 共 7,011 条记录、9,349 个目标，其中 7,381 个知道易混写法。
   - 合成：`train` 2,984 条，`train_ts` 2,917 条，“需纠正”和“保持”各约一半。
   - 真实录音 1,110 条：
@@ -18,6 +18,8 @@
     - 其中约 1,041 条在配方的说明录音子集里，可以挖题。
   - 跳过：说明之外没有出现目标字的录音（1,077 条），这类没有可判分的位置。
   - 抽查 WenetSpeech 的 4 条：目标位置和训练记录的原文逐字一致。
-- **证据**：
-  - `targets.jsonl`（1,732,881 字节）上传在 `whai:open-audio-llm/runs/zh-ctx-grpo-20261120/tasks/00-context-targets/targets.jsonl`；
-  - 统计在同目录的 `targets.jsonl.summary.json`（已入库）。
+- **产物**：登记为 `context_correction_clean_zh@grpo-targets-v1-20261120`（audio-data-contract #279）。
+  - 位置：`/workspace/data/datasets/context_correction_clean_zh/versions/grpo-targets-v1-20261120/`，含 `targets.jsonl`（1,732,881 字节）、`summary.json`、`state.json`。
+  - COS 镜像：`amphion-audio-backup-1373259071:audio-data-contract/datasets/context_correction_clean_zh/versions/grpo-targets-v1-20261120.packed/`（2026-11-20 核对）。
+  - GRPO 配置引用这个版本的 `targets.jsonl`。
+  - 实验目录里的副本已删除。之前传到 `whai:open-audio-llm/runs/zh-ctx-grpo-20261120/tasks/00-context-targets/targets.jsonl` 的那份内容相同，留作历史。
