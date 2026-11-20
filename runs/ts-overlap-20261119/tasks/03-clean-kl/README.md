@@ -41,4 +41,7 @@
     - 两组可训练的音频参数都是 305,461,248；
     - 速度（40 步累计平均）实验组 3.24 秒/步、对照组 2.92 秒/步，显存峰值 73.1 / 71.8 GiB。
   - 执行记录：`whai:open-audio-llm/runs/ts-overlap-20261119/tasks/{03-clean-kl,04-control}/attempts/00{1,2,3}`。
-- 正式 6000 步训练尚未启动，等用户确认。
+- 2026-11-20 07:10 UTC：用户确认后启动正式训练，attempt 004（ACP `pt-7h66hzg8`，与另一组同节点各 4 卡）。
+  - 脚本 `scripts/run_train_eval.sh`：训练 → 第 5000/5500/6000 步平均（`scripts/avg3_cache.sh`）→ 评测（`scripts/eval_lanes.sh`：中文 TS v12、英文 TS、中文普通识别、客户 TS）。
+  - W&B 远端已读回训练指标：`AmphionASR-ts-overlap-{cleankl1,control}-audunfrozen-from1117-v96data-6k-4gpu-codev1-004`。
+  - 速度：实验组约 3.05 秒/步，预计 5 小时；对照组约 2.69 秒/步，预计 4.4 小时。
