@@ -13,8 +13,12 @@ added its synthetic data (each record seen about EXPLAINED_VIEWS times in the ru
   for records without an explanation (scripts/make_implicit_noexplain_think.py), so the two differ only in
   whether the think reasons about the implicit item;
 and adds their tasks to experiment.yaml (the experiment refuses a task whose config does not exist yet).
+A third implicit arm (question 3, 2026-11-20) puts the same data on top of template instead:
+- template-implicit-noexplain:     round 2's think files plus the implicit data with the fixed sentence, i.e. the
+  combination proposed for the context-correction SFT recipe (round-2 think, implicit items without reasoning).
 
-usage: make_configs.py [--implicit]   (writes configs/train-data-{arm}.yaml, configs/train-{arm}.yaml)
+usage: make_configs.py [--implicit] [arm ...]   (writes configs/train-data-{arm}.yaml, configs/train-{arm}.yaml for
+       the named arms, all of them when none is named; configs written on the node are root's and stay as they are)
 """
 import gzip
 import sys
@@ -41,6 +45,9 @@ IMPLICIT_ARMS = {
     "clue-target-implicit-noexplain": {"port": 29856, "name": "clue-target-implicit-noexplain-think",
                                        "think": "think-no-explanation.jsonl.gz",
                                        "task": "线索 + 目标 think，加隐式题数据（think 只写固定句）+ 联合 MTP"},
+    "template-implicit-noexplain": {"port": 29866, "name": "template-implicit-noexplain-think",
+                                    "think": "think-no-explanation.jsonl.gz",
+                                    "task": "第二轮 think 模板，加隐式题数据（think 只写固定句）+ 联合 MTP"},
 }
 STEPS, SAMPLES_PER_STEP, EXPLAINED_VIEWS = 3000, 188, 3  # as round 2 (scripts/make_data_config.py there)
 CODE = EXP / "shared/code-v1"
@@ -88,10 +95,13 @@ def main():
     arms = dict(ARMS)
     if "--implicit" in sys.argv[1:]:
         arms.update(IMPLICIT_ARMS)
+    only = [a for a in sys.argv[1:] if not a.startswith("--")]
+    assert set(only) <= set(arms), set(only) - set(arms)
+    arms = {arm: spec for arm, spec in arms.items() if not only or arm in only}
     for arm, spec in arms.items():
-        base = "template" if arm == "template" else "clue-target"
+        base = "template" if arm.startswith("template") else "clue-target"
         d = {**data, "think": {**data["think"], "files": think_files(data["think"]["files"], base)}}
-        note = ("think 文件与第二轮相同。\n" if arm == "template" else
+        note = ("think 文件与第二轮相同。\n" if base == "template" else
                 "think 文件换成 context_correction_clean_zh/versions/think-v3-20261117（同一批行，改写成线索 + 目标），其余与第二轮相同。\n")
         if arm in IMPLICIT_ARMS:
             d, counts, share = with_implicit(d, spec["think"])
@@ -127,7 +137,7 @@ def main():
         experiment = EXP / "experiment.yaml"
         text = experiment.read_text()
         for arm, spec in IMPLICIT_ARMS.items():
-            if f"id: train-{arm}," not in text:
+            if arm in arms and f"id: train-{arm}," not in text:
                 text += (f"- {{id: train-{arm}, name: {spec['task']}，1 节点 8 卡全参 3000 步, "
                          f"config: configs/train-{arm}.yaml, depends_on: []}}\n")
         experiment.write_text(text)

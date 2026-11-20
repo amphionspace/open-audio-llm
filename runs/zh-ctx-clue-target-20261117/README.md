@@ -6,10 +6,12 @@
   - 补隐式题数据有效，真实录音上也有效。
   - think 里写语义线索 + 目标只在合成题上更好，真实录音上与固定句没有差别。
 - 见“结果：第 1 问”和“结果：第 2 问”。
+- **第 3 问**（2026-11-20 加）：用户确认隐式题数据进上下文纠偏的 SFT 配方，加第 5 组 template-implicit-noexplain 确认“第二轮写法 + 隐式题固定句”这个组合。判定已在训练前写定，见“判定”的第 3 问；训练、评测进行中。
 
 **要回答的问题**：同事反馈，纠错时在 CoT 里先定好线索、再指明要改的目标，2B 的文本 LLM 能力也提升很大。
 1. 把第二轮的 think 改成这种写法，只换写法、不加新数据，上下文纠偏能不能在训练没见过的说法和真实录音上更好？
 2. 补上隐式题训练数据后，think 里写出语义线索和目标，是否比只给数据、think 写固定句更好？
+3. 保留第二轮的 think 写法，只补隐式题数据（think 写固定句），能不能拿到第 2 问里补数据的收益？这是准备进上下文纠偏 SFT 配方的组合。
 
 依据是 09 的诊断（`../zh-spelling-think-grpo-20261115/README.md` 的“think 里写了什么”，在 oal-think-exp 分支上）：
 - 现在的 think 一行只写一个音、一个字：“`<拼音>` 这个音，说话人说是「`<原话>`」，写作「`<字>`」”。不写这个字落在转写的哪个词里，也不写不该写成什么。
@@ -85,6 +87,19 @@
 - **不用盲解筛选**：试跑中盲解拒掉的题一半以上是解题模型自己写错，而且集中在少见写法上，所以只靠复核把关。
 - **语音和 think**：音色、TTS、质检同 train-v1。think 用 amphiondata `think.py --style clue-target`，在 train-v1 上的输出与本实验的 think-v3 合成部分 5,901 行逐条相同。
 
+第 3 问加一组，从第 2 问的结果来：真实录音上语义线索没有额外收益（Emilia 线索只写对 23%），所以试最简单的组合。
+
+| | template-implicit-noexplain |
+|---|---|
+| think | 第二轮的 think 文件（同 template） |
+| 隐式题 | 同第 2 问两组：`context_correction_synth_zh@implicit-v1-20261117`，train 1,685 条、train_ts 1,684 条，权重同 clue-target-implicit-noexplain，约占样本 1.79% |
+| 隐式题的 think | 固定句“这段没有说明字怎么写。”（`think-no-explanation.jsonl.gz`，同 clue-target-implicit-noexplain） |
+| 其余 | 同 template：起点、配方、联合 MTP、seed、代码 code-v1；端口 29866 |
+
+- 与 template 比：只差隐式题数据和它的 think 文件（数据配置结构化比对核过）。
+- 与 clue-target-implicit-noexplain 比：只差显式说明题的 think 写法（think-v2 / think-v3），隐式题数据和权重相同。
+- 配置：`scripts/make_configs.py --implicit template-implicit-noexplain`。
+
 ## 评测
 
 各组的 checkpoint-3000 都测上下文纠偏评测集 v2（`asr/context-correction-zh@v2-20261117`），think 关、开各一遍。
@@ -110,6 +125,13 @@
   - clue-target-implicit 与 clue-target-implicit-noexplain 比 Emilia 需纠正的隐式题，以及独立合成组的隐式题，看准确率和纠正成功率；
   - 两组都与 clue-target 比，看补数据的效果；
   - 不能变差：Emilia 原转写已对的准确率、保持率和误改率。隐式题教模型按语义改字，最担心的是乱改。
+- **第 3 问**（2026-11-20，训练前写定），都看 think 开，template-implicit-noexplain 与 template 比：
+  - **主判定**：独立合成组的隐式题准确率，以及 Emilia 需纠正隐式题的准确率，都提高（CI 不含 0）。
+  - **不能变差**：Emilia 准确率、Emilia 原转写已对的准确率、全部保持率，CI 下限不低于 −1 个点；全部误改率 CI 上限不高于 +1 个点；think 关的全部纠正成功率 CI 下限不低于 −1 个点。
+  - **参考**：与 clue-target-implicit-noexplain 比 Emilia 准确率和 Emilia 隐式题准确率，看真实录音上第二轮写法是否够用；机制核对看 Emilia 需纠正隐式题里套用说明格式的比例（template 57%）。
+  - **结论**：
+    - 都满足：上下文纠偏 SFT 配方采用“第二轮 think + 隐式题（固定句）”，即本组的数据配置；隐式题的固定句 think 文件随配方登记。
+    - 不满足：记录结果，不定配方，汇报后再决定。
 
 ## 结果：第 1 问（template 与 clue-target，2026-11-18）
 
