@@ -10,7 +10,7 @@ pids=()
 for arm in cleankl control; do
   env -u PYTHONPATH /workspace/workspace/mingdong/repo/open-audio-llm/third_party/amphionkeys/load.sh sensecore -- \
     env PYTHONPATH=$X/shared/code-v1/src $PY -m open_audio_llm.cli train --config $X/configs/smoke-train-$arm.yaml \
-    > /workspace/workspace/mingdong/scratch/acp-tsov/logs/smoke2-$arm.cli.log 2>&1 & pids+=($!)
+    > /workspace/workspace/mingdong/scratch/acp-tsov/logs/smoke3-$arm.cli.log 2>&1 & pids+=($!)
   sleep 20
 done
 rc=0; for p in "${pids[@]}"; do wait $p || rc=1; done; echo "done rc=$rc $(date -u +%FT%TZ)"; exit $rc

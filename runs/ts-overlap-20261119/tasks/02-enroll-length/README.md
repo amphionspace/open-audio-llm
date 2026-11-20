@@ -62,7 +62,11 @@
   - 现在的服务固定按 5 秒切分，短于 5 秒的注册会补零。
   - 是否改成按请求切分（不补零）值得单独评测，见下一节。
 
-证据：`attempts/001/artifacts/paired-min8s.txt`、`paired-min10s.txt` 和 `breakdown-L*.json`。每次评测的 W&B run 就是上表的 run id，已写入 `breakdown/*`。
+证据：
+
+- 配对表与拆分：`whai:open-audio-llm/runs/ts-overlap-20261119/tasks/02-enroll-length/attempts/001/artifacts/`（`paired-min8s.txt`、`paired-min10s.txt`、`breakdown-L*.json`）。
+- 各评测运行的原始输出：`whai:open-audio-llm/runs/ts-overlap-20261119/tasks/02-enroll-length/ae-runs/<run id>/`。
+- 每次评测的 W&B run 就是上表的 run id，`breakdown/*` 已写入，远端核验过。
 
 ## 未做
 

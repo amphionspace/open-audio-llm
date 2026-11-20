@@ -15,8 +15,8 @@
 |---|---|---|
 | [01 守门拆分](tasks/01-gate-breakdown/README.md) | `scripts/ts_gate_breakdown.py`：在原守门之外，报出"出不出字"和按重叠分箱的转写错误，以及同句干扰代价，写回该评测自己的 W&B run | 完成 |
 | [02 注册长度](tasks/02-enroll-length/README.md) | 11.17 在 v12 上分别用 3/5/8/10/12 秒注册（只评测） | 完成 |
-| [03 干净原句 KL](tasks/03-clean-kl/README.md) | 从 11.17 起，v96 配方，解冻音频塔，加干净原句老师的 token 级 KL | 代码与冒烟 |
-| [04 对照](tasks/04-control/README.md) | 同 03，不加 KL | 代码与冒烟 |
+| [03 干净原句 KL](tasks/03-clean-kl/README.md) | 从 11.17 起，v96 配方，解冻音频塔，加干净原句老师的 token 级 KL | 冒烟通过，正式训练待确认 |
+| [04 对照](tasks/04-control/README.md) | 同 03，不加 KL | 冒烟通过，正式训练待确认 |
 
 ## 代码
 
