@@ -19,5 +19,5 @@
   - 跳过：说明之外没有出现目标字的录音（1,077 条），这类没有可判分的位置。
   - 抽查 WenetSpeech 的 4 条：目标位置和训练记录的原文逐字一致。
 - **证据**：
-  - `targets.jsonl`（1.4 MB）上传在 `whai:open-audio-llm/runs/zh-ctx-grpo-20261120/tasks/00-context-targets/targets.jsonl`；
+  - `targets.jsonl`（1,732,881 字节）上传在 `whai:open-audio-llm/runs/zh-ctx-grpo-20261120/tasks/00-context-targets/targets.jsonl`；
   - 统计在同目录的 `targets.jsonl.summary.json`（已入库）。
