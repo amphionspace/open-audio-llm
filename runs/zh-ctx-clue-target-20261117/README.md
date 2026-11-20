@@ -9,6 +9,7 @@
 - **第 3 问**（2026-11-20 加）：用户确认隐式题数据进上下文纠偏的 SFT 配方，加第 5 组 template-implicit-noexplain 确认“第二轮写法 + 隐式题固定句”这个组合。判定已在训练前写定，见“判定”的第 3 问。
   - 2026-11-20 训练、评测完成，节点已释放。
   - 主判定不满足：合成题上的收益都在，真实录音（Emilia）隐式题没有显著提高。按规则不定配方，汇报后再决定，见“结果：第 3 问”。
+  - 配方结论：隐式题数据不进上下文纠偏 SFT 配方，保持第二轮数据配置，见“结果：第 3 问”的“配方结论”。
   - 第 2 问“真实录音上也有效”要修正：那是和 clue-target 比的；和第二轮配方 template 比，三组补数据在 Emilia 隐式题上都不显著。
 
 **要回答的问题**：同事反馈，纠错时在 CoT 里先定好线索、再指明要改的目标，2B 的文本 LLM 能力也提升很大。
@@ -359,6 +360,33 @@
   - scene-template：`run-20261120T045233Z-238526ff`；scene-template-implicit-noexplain：`run-20261120T045218Z-bbf3b255`。
 - **比较**：`scripts/compare_q3.sh` 生成 `tasks/02-eval/compare/cmp-{template,noexplain}-tplimplicit-{on,off}.json`、`cmp-scene-template-tplimplicit.json`、`mined-groups-tplimplicit.md` 和 think 诊断。`scripts/gate_q3.py` 逐项输出上面的判定表。第 2 问补注用的 `cmp-template-noexplain-on.json` 用同一命令另算。
 - **训练**：[W&B](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/AmphionASR-ctx-template-implicit-noexplain-think-r2recipe-mtp-from-v10interp050-3k-1node-codev1-001)，checkpoint 在 `whai:open-audio-llm/runs/zh-ctx-clue-target-20261117/tasks/01-train-template-implicit-noexplain/attempts/001/artifacts/training/`。
+
+### 配方结论（2026-11-20）
+
+**隐式题数据不进上下文纠偏 SFT 配方，配方保持第二轮的数据配置（`configs/train-data-template.yaml`）。**
+- 这取代了用户 2026-11-20 的决定“隐式题数据进配方”。那个决定依据的是第 2 问的“真实录音上也有效”，这句话现已证实不成立：它是和 clue-target 比出来的。
+- 隐式题数据集 `context_correction_synth_zh@implicit-v1-20261117` 照常登记，只是不进配方；第 5 组的配置留作现成备选。
+
+依据：
+1. **交付和 GRPO 都用 think 关**（08：守门 8 项是 think 关，GRPO 的提示不经过 think 配置），所以以 think 关的数字为准。
+2. **think 关，真实录音全部持平**：
+   - Emilia 全部 69.7 → 70.1（+0.4 [−0.4, +1.1]）；
+   - 原转写已对 90.3 → 90.3，新对、新错各 9 条；
+   - 需纠正·隐式 67.6 → 68.5，需纠正·显式说明 44.2 → 44.4。
+   - think 开也一样：补数据的三组和 template 比，Emilia 隐式题都不显著（+1.5、+1.0、+0.4）。三次独立训练结果一致，即使有收益也在 1 个点上下，测不出来。
+3. **收益只在合成题上，而合成题就是训练数据的题型**：都是一对常用同音词加一句判别从句，例如“订金 / 定金”后接“只是预付房费……不涉及违约赔偿”。独立合成组换了生成方式，题型没换。
+   - 合成题上的收益是实的：think 关成对正确率 +2.3*，说明不只是改得更多，判别也有净提升。
+   - 但这种题型在真实录音里没有对应。
+4. **真实录音的隐式题主要缺的是生僻词知识**：
+   - 两组都漏改的 191 条，抽样看多是蛾眉、朊蛋白、阶元、阳焰、弘时、顿首这类词。
+   - 按 jieba 词频，目标词中位词频 13，两组都改对的是 140。
+   - 两边都是常用词的 271 条上，补数据也没有收益（74 → 73）。jieba 词频只是粗略近似，单字的频率不反映语境难度，这条只作佐证。
+5. **代价在交付模式里**：think 关，合成题里“上下文指向常用写法”的保持率 −1.4 [−2.4, −0.4]*，其中对话问答 −4.0*、拆字 −3.1*。
+6. **守门 8 项没测过**：隐式题数据占每轮样本的 1.8%，对一般识别的影响未知。不加就没有这项新风险。下一轮上下文纠偏 SFT 还要改 TS 数据修场景 TS，配方少变一处，结果也更好归因。
+
+下一步不再追真实录音的隐式题。与产品相关的缺口有两个，都先用现有输出定位、不先训练：
+- Emilia 显式说明题，think 关只有 44%；
+- 场景 TS 退化（交付卡点）。
 
 ## 不在本实验里
 
