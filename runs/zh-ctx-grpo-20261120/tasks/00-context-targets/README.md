@@ -1,0 +1,23 @@
+# 00-context-targets
+
+- **输入**：
+  - SFT 数据配置：上下文纠偏实验的 `configs/train-data-template.yaml`，即第二轮配方加联合 MTP；
+  - 合成说字数据的记录标注（`labels.context_correction.segments`）；
+  - think 文件里 think 开的行，按单元号连接说字清洗的改动记录（`context_correction_clean_zh@v1-20261110/<来源>/decisions.jsonl`）。
+- **命令**：`python3 scripts/build_context_targets.py <数据配置> tasks/00-context-targets/targets.jsonl`
+- **完成条件**：
+  - 每条目标都和所在转写对得上：合成数据核对拼回的全文，真实录音核对改动前的原字；
+  - `(来源, 记录)` 不重复；
+  - 抽查真实录音的目标位置，和训练记录的原文一致。
+- **结果**（2026-11-20，`targets.jsonl.summary.json`）：
+  - 共 7,011 条记录、9,349 个目标，其中 7,381 个知道易混写法。
+  - 合成：`train` 2,984 条，`train_ts` 2,917 条，“需纠正”和“保持”各约一半。
+  - 真实录音 1,110 条：
+    - 已改正的 208 条，有易混写法；
+    - 本来就对的 902 条，目标取说明之外出现这个字的地方，没有易混写法。
+    - 其中约 1,041 条在配方的说明录音子集里，可以挖题。
+  - 跳过：说明之外没有出现目标字的录音（1,077 条），这类没有可判分的位置。
+  - 抽查 WenetSpeech 的 4 条：目标位置和训练记录的原文逐字一致。
+- **证据**：
+  - `targets.jsonl`（1.4 MB）上传在 `whai:open-audio-llm/runs/zh-ctx-grpo-20261120/tasks/00-context-targets/targets.jsonl`；
+  - 统计在同目录的 `targets.jsonl.summary.json`（已入库）。
