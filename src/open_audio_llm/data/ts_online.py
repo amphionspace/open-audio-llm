@@ -239,7 +239,8 @@ def build_mixture(rng, target, config, *, absent, speech_loader, rir_loader, sam
     The window is the target plus any padding drawn by ``timing``, so the target can enter
     late or leave early. When the target is absent the window holds only interferers, or
     silence for the later noise step. ``info`` receives the padding in seconds and the
-    sample spans of the target and of the interferers.
+    sample spans of the target and of the interferers, and ``clean``: the target alone (reverberated like in
+    the mixture, no interferers) on the same window, or None when it is absent.
     """
     target = np.asarray(target, dtype=np.float32)
     length = len(target)
@@ -267,8 +268,12 @@ def build_mixture(rng, target, config, *, absent, speech_loader, rir_loader, sam
         other_spans.append(span)
         mixture += _scale_to(other, reference, rng.uniform(*config.sir_db))
     if info is not None:
+        clean = None
+        if not absent:
+            clean = np.zeros(window, dtype=np.float32)
+            clean[lead : lead + length] = present
         info.update(lead=lead / sampling_rate, trail=trail / sampling_rate, window=window / sampling_rate,
-                    target_spans=[] if absent else [(lead, lead + length)], other_spans=other_spans)
+                    target_spans=[] if absent else [(lead, lead + length)], other_spans=other_spans, clean=clean)
     return mixture, count
 
 
@@ -301,6 +306,7 @@ def build_scene(rng, mode, targets, others, config, *, rir_loader, sampling_rate
     ``{"target": (low, high), "others": [(low, high), ...]}`` in seconds), so the target can speak
     several times with other speakers talking in between and over it.
     Each speaker is reverberated as a whole, then the others are set against the target by SIR.
+    ``info`` also gets ``clean``: the reverberated target track alone, or None without target utterances.
     """
     if mode not in SCENE_MODES:
         raise ValueError(f"unknown scene mode {mode!r}")
@@ -354,7 +360,8 @@ def build_scene(rng, mode, targets, others, config, *, rir_loader, sampling_rate
         others_on = np.any([track != 0 for track in tracks], axis=0) if tracks else np.zeros(length, dtype=bool)
         info.update(lead=0.0, trail=0.0, window=length / sampling_rate,
                     overlap=float(np.mean(others_on[spoken])) if spoken.any() else 0.0,
-                    target_spans=_spans(spoken), other_spans=_spans(others_on))
+                    target_spans=_spans(spoken), other_spans=_spans(others_on),
+                    clean=present if targets else None)
     return mixture
 
 

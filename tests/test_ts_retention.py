@@ -276,3 +276,43 @@ def test_plain_asr_check_prefers_declared_tasks_over_reading_records():
     dataset = SimpleNamespace(sources=[{'task': 'asr', 'replay_kl': False}], source_ranges=[range(0, 1)],
                               records=Records(['asr']))
     assert not has_plain_asr_source(dataset)
+
+
+def test_clean_teacher_kl_reads_the_model_on_clean_features_for_clean_rows_only():
+    from open_audio_llm.integrations.ms_swift.retention import average_answer_parts, clean_teacher_kl
+
+    class TinyModel(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.embedding = torch.nn.Embedding(9, 5)
+            self.audio = torch.nn.Linear(3, 5)
+            self.head = torch.nn.Linear(5, 9)
+
+        def forward(self, input_ids, input_features, use_cache=False):
+            audio = self.audio(input_features.float().mean(-1))[:, None, :]
+            return SimpleNamespace(logits=self.head(self.embedding(input_ids) + audio))
+
+    torch.manual_seed(5)
+    model = TinyModel()
+    inputs = {"input_ids": torch.tensor([[1, 2, 3, 4], [2, 4, 5, 0], [3, 3, 1, 2]]),
+              "input_features": torch.randn(3, 3, 6)}
+    clean_features = torch.randn(3, 3, 6)
+    labels = torch.tensor([[-100, -100, 3, 4], [-100, 4, 5, -100], [-100, 1, 2, 2]])
+    clean_rows = torch.tensor([True, False, True])
+    output, targets, rows, counts = supervised_forward(model, model.head, inputs, labels)
+    kl, indexes = clean_teacher_kl(model, model.head, inputs, labels, output.logits, targets, rows, counts,
+                                   clean_rows, clean_features)
+    assert indexes.tolist() == [0, 2]
+    teacher = model(input_ids=inputs["input_ids"], input_features=clean_features).logits[:, :-1]
+    mask = labels[:, 1:] != -100
+    picked = clean_rows[:, None] & mask
+    student = output.logits[clean_rows[rows]]
+    expected_tokens = F.kl_div(student.log_softmax(-1), teacher[picked].detach().softmax(-1), reduction="none").sum(-1)
+    expected = average_answer_parts(expected_tokens, rows[clean_rows[rows]], counts)
+    torch.testing.assert_close(kl, expected, atol=2e-2, rtol=2e-2)  # the teacher runs under BF16 autocast
+    assert kl[1] == 0
+    # Gradient reaches the student through its mixture logits only: the teacher is a constant target.
+    actual_grads = torch.autograd.grad(kl.sum(), tuple(model.parameters()), retain_graph=True)
+    expected_grads = torch.autograd.grad(expected.sum(), tuple(model.parameters()))
+    for actual_grad, expected_grad in zip(actual_grads, expected_grads):
+        torch.testing.assert_close(actual_grad, expected_grad, atol=2e-2, rtol=2e-2)

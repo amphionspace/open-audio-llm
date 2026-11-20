@@ -419,3 +419,38 @@ def test_enrollment_from_another_recording_chain_is_band_limited_and_noisy():
 def test_new_augmentation_knobs_are_validated(bad):
     with pytest.raises(ValueError):
         OnlineMixConfig(**bad)
+
+
+def test_clean_target_is_the_target_alone_on_the_mixture_window():
+    config = OnlineMixConfig(interferer_probs=(0, 0, 1), speaker_rir_prob=0, entry_prob=1.0,
+                             lead_seconds=(0.5, 0.5), trail_seconds=(0.5, 0.5))
+    for seed in range(5):
+        info = {}
+        mixture, _ = _impulse_free(config, info=info, seed=seed)
+        lead = int(info["lead"] * SR)
+        clean = info["clean"]
+        assert len(clean) == len(mixture)
+        assert np.array_equal(clean[lead : lead + 2 * SR], _tone(200, 2.0))
+        assert not np.abs(np.delete(clean, np.s_[lead : lead + 2 * SR])).any()
+        # Building it draws nothing from the random stream.
+        again, _ = _impulse_free(config, seed=seed)
+        assert np.array_equal(mixture, again)
+    info = {}
+    _impulse_free(config, info=info, absent=True)
+    assert info["clean"] is None
+
+
+def test_scene_clean_target_is_the_target_track():
+    target = _tone(200, 1.0)
+    info = {}
+    mixture = build_scene(random.Random(1), "burst", [target], [[_tone(500, 1.0)] * 3],
+                          OnlineMixConfig(speaker_rir_prob=0, sir_db=(0, 0)), rir_loader=None, sampling_rate=SR,
+                          info=info)
+    clean = info["clean"]
+    assert len(clean) == len(mixture)
+    # The target track holds the target once, at some offset, and nothing else.
+    assert np.array_equal(clean[clean != 0], target[target != 0])
+    info = {}
+    build_scene(random.Random(1), "burst", [], [[_tone(500, 1.0)]], OnlineMixConfig(speaker_rir_prob=0),
+                rir_loader=None, sampling_rate=SR, info=info)
+    assert info["clean"] is None
