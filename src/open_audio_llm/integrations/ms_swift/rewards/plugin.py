@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 
 # Absolute: ms-swift also loads this file by path, outside its package.
@@ -115,6 +116,15 @@ class Qwen3ASRHotwordReward(ORM):
         return [qwen3_asr.hotword(c, s, h) for c, s, h in zip(completions, solution, lists)]
 
 
+class Qwen3ASRContextReward(ORM):
+    """Scores prompts whose ``grpo_meta`` lists context-correction targets (``grpo.context_targets``); None for the
+    others, so prompts without targets neither move nor dilute it."""
+
+    def __call__(self, completions, solution, grpo_meta=None, **kwargs):
+        metas = [json.loads(m) if m else {} for m in (grpo_meta or [None] * len(completions))]
+        return [qwen3_asr.context(c, s, m.get("context_targets")) for c, s, m in zip(completions, solution, metas)]
+
+
 if hasattr(orms, "__setitem__"):
     orms["asr_format_reward"] = ASRFormatReward
     orms["asr_accuracy_reward"] = ASRAccuracyReward
@@ -123,3 +133,4 @@ if hasattr(orms, "__setitem__"):
     orms["qwen3_asr_accuracy"] = Qwen3ASRAccuracyReward
     orms["qwen3_asr_presence"] = Qwen3ASRPresenceReward
     orms["qwen3_asr_hotword"] = Qwen3ASRHotwordReward
+    orms["qwen3_asr_context"] = Qwen3ASRContextReward

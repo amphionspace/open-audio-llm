@@ -69,3 +69,51 @@ def test_format_requires_the_native_header():
     assert qwen3_asr.well_formed("language Chinese<asr_text>你好")
     assert qwen3_asr.well_formed("language None<asr_text>")
     assert not qwen3_asr.well_formed("你好")
+
+
+def test_context_reads_each_target_at_its_own_mention():
+    ref = "language Chinese<asr_text>开了一家织音琴行。她解释过，织是纺织的织，不是知己的知。"
+    target = [{"start": ref.split("<asr_text>")[1].index("织音"), "text": "织音琴行", "alt": "知音琴行"}]
+    assert qwen3_asr.context(ref, ref, target) == 1.0
+    # The common spelling at the mention, though the explanation that repeats 织 is transcribed right.
+    wrong = "language Chinese<asr_text>开了一家知音琴行。她解释过，织是纺织的织，不是知己的知。"
+    assert qwen3_asr.context(wrong, ref, target) == -1.0
+    other = "language Chinese<asr_text>开了一家之音琴行。她解释过，织是纺织的织，不是知己的知。"
+    assert qwen3_asr.context(other, ref, target) == 0.0
+    assert qwen3_asr.context(ref, ref, None) is None and qwen3_asr.context(ref, ref, []) is None
+
+
+def test_context_survives_edits_around_the_target_and_averages_targets():
+    ref = "language Chinese<asr_text>我姓章，立早章，章程的章"
+    text = ref.split("<asr_text>")[1]
+    targets = [{"start": 2, "text": "章", "alt": "张"}, {"start": text.index("立早") + 2, "text": "章", "alt": None}]
+    # A word dropped before the target and one inserted after it move nothing.
+    assert qwen3_asr.context("language Chinese<asr_text>姓章啊，立早章，章程的章", ref, targets) == 1.0
+    assert qwen3_asr.context("language Chinese<asr_text>我姓张，立早章，章程的章", ref, targets) == 0.0  # -1 and +1
+    # Without a known alternative a wrong spelling scores 0, not -1.
+    assert qwen3_asr.context("language Chinese<asr_text>我姓张，立早张，章程的章", ref, targets) == -0.5
+
+
+def test_context_penalizes_over_correction_on_confirm_items():
+    ref = "language Chinese<asr_text>他说的是张三的张，弓长张"
+    confirm = [{"start": 4, "text": "张三", "alt": "章三"}]
+    assert qwen3_asr.context("language Chinese<asr_text>他说的是章三的张，弓长张", ref, confirm) == -1.0
+
+
+def test_context_rejects_a_target_that_is_not_in_the_reference():
+    ref = "language Chinese<asr_text>我姓章"
+    with pytest.raises(ValueError, match="not at 0"):
+        qwen3_asr.context(ref, ref, [{"start": 0, "text": "章", "alt": "张"}])
+
+
+def test_context_reward_takes_targets_from_grpo_meta():
+    import json
+
+    from open_audio_llm.integrations.ms_swift.rewards.plugin import Qwen3ASRContextReward, orms
+
+    ref = "language Chinese<asr_text>我姓章，立早章"
+    metas = [json.dumps({"context_targets": [{"start": 2, "text": "章", "alt": "张"}]}), json.dumps({"origin": "replay"})]
+    out = "language Chinese<asr_text>我姓张，立早章"
+    assert Qwen3ASRContextReward()([out, out], [ref, ref], grpo_meta=metas) == [-1.0, None]
+    if orms:
+        assert orms["qwen3_asr_context"] is Qwen3ASRContextReward
