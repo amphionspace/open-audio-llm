@@ -29,8 +29,14 @@ arms that change only the synthetic train_ts source:
 - template-synth-ts-mix:    template with synthetic train_ts mixed online like the clean one-speaker TS sources (the
   online_mix block of aishellmix train_1spk's main entry: interferers, 5% target absent, 7.5% non-speech, RIR, noise
   floor, enrollment degradations). It is the only TS source of the recipe without online mixing.
+With ``--synth-ts-twins`` (question 7, 2026-11-21: neither question-6 arm passed; a TTS voice was always the target in
+training, so the model transcribed any TTS voice), one arm:
+- template-synth-ts-twins:  template plus context_correction_synth_zh@ts-twins-v1-20261121 (scenes of the synthetic
+  data's own cloned voices, 30% twins with an absent voice enrolled, scripts/build_synth_ts_twins.py), weighted by round
+  2's rule (each record seen about EXPLAINED_VIEWS times) and mixed with the online_mix of ts_scene_pool alt-twins zh,
+  whose recipe it copies; its think file is added. Synthetic train_ts stays as it is.
 
-usage: make_configs.py [--implicit] [--ablation] [--synth-ts] [arm ...]   (writes configs/train-data-{arm}.yaml, configs/train-{arm}.yaml for
+usage: make_configs.py [--implicit] [--ablation] [--synth-ts] [--synth-ts-twins] [arm ...]   (writes configs/train-data-{arm}.yaml, configs/train-{arm}.yaml for
        the named arms, all of them when none is named; configs written on the node are root's and stay as they are)
 """
 import gzip
@@ -74,6 +80,12 @@ SYNTH_TS_ARMS = {
                              "task": "第二轮 think 模板，去掉合成 train_ts（保留合成 train）+ 联合 MTP"},
     "template-synth-ts-mix": {"port": 29906, "name": "template-synth-ts-onlinemix-think",
                               "task": "第二轮 think 模板，合成 train_ts 改走在线混音（同 aishellmix train_1spk 主条目）+ 联合 MTP"},
+}
+TWINS_VERSION = "ts-twins-v1-20261121"
+TWINS = Path(f"/workspace/data/datasets/{SYNTH}/versions/{TWINS_VERSION}")
+TWINS_ARMS = {
+    "template-synth-ts-twins": {"port": 29916, "name": "template-synth-ts-twins-think",
+                                "task": "第二轮 think 模板，加合成音色自己的 TS 场景（30% 孪生缺席）+ 联合 MTP"},
 }
 STEPS, SAMPLES_PER_STEP, EXPLAINED_VIEWS = 3000, 188, 3  # as round 2 (scripts/make_data_config.py there)
 CODE = EXP / "shared/code-v1"
@@ -125,6 +137,8 @@ def main():
         arms.update(ABLATION_ARMS)
     if "--synth-ts" in sys.argv[1:]:
         arms.update(SYNTH_TS_ARMS)
+    if "--synth-ts-twins" in sys.argv[1:]:
+        arms.update(TWINS_ARMS)
     only =[a for a in sys.argv[1:] if not a.startswith("--")]
     assert set(only) <= set(arms), set(only) - set(arms)
     arms = {arm: spec for arm, spec in arms.items() if not only or arm in only}
@@ -158,6 +172,26 @@ def main():
                                 for s in d["train"]]}
             note = ("合成 train_ts 加上 aishellmix train_1spk 主条目的 online_mix（干扰人 0–4 个、5% 目标缺席、7.5% 非语音、"
                     "混响、底噪、注册音频劣化），权重不变；其余同 template。\n")
+        if arm == "template-synth-ts-twins":
+            alt = [s for s in d["train"] if (s["dataset_id"], s["version"], s["split"])
+                   == ("ts_scene_pool", "alt-twins-20261024-punchw-20261102", "zh")]
+            assert len(alt) == 1 and alt[0]["online_mix"]["absent_prob"] == 0.0, alt
+            ts = [i for i, s in enumerate(d["train"]) if s["dataset_id"] == SYNTH and s["split"] == "train_ts"]
+            assert len(ts) == 1, ts
+            with gzip.open(TWINS / "records/train_ts_twins.jsonl.gz", "rt", encoding="utf-8") as stream:
+                count = sum(1 for line in stream if line.strip())
+            # Round 2's rule (with_implicit): the weight at which each record is seen EXPLAINED_VIEWS times.
+            total = sum(s["weight"] for s in d["train"])
+            share = EXPLAINED_VIEWS * count / (STEPS * SAMPLES_PER_STEP)
+            twins = {"dataset_id": SYNTH, "version": TWINS_VERSION, "split": "train_ts_twins",
+                     "weight": round(total * share / (1 - share), 4),
+                     "online_mix": yaml.safe_load(yaml.safe_dump(alt[0]["online_mix"]))}
+            d = {**d, "train": d["train"][: ts[0] + 1] + [twins] + d["train"][ts[0] + 1:],
+                 "think": {**d["think"], "files": d["think"]["files"] + [str(TWINS / "think.jsonl.gz")]}}
+            assert Path(d["think"]["files"][-1]).exists()
+            note = (f"另加 {SYNTH}@{TWINS_VERSION} train_ts_twins {count} 条（合成音色自己的 TS 场景，30% 孪生缺席），"
+                    f"约占样本 {share:.2%}，每条约见 {EXPLAINED_VIEWS} 次，online_mix 同 ts_scene_pool alt-twins zh，"
+                    "加它的 think 文件；合成 train_ts 不变，其余同 template。\n")
         if arm in IMPLICIT_ARMS:
             d, counts, share = with_implicit(d, spec["think"])
             note = (note.rstrip("\n") + f"另加 {IMPLICIT_ID}@{IMPLICIT_VERSION} {counts}，约占样本 {share:.2%}，"
@@ -190,7 +224,8 @@ def main():
         print(arm, data_path)
     extra = {**(IMPLICIT_ARMS if "--implicit" in sys.argv[1:] else {}),
              **(ABLATION_ARMS if "--ablation" in sys.argv[1:] else {}),
-             **(SYNTH_TS_ARMS if "--synth-ts" in sys.argv[1:] else {})}
+             **(SYNTH_TS_ARMS if "--synth-ts" in sys.argv[1:] else {}),
+             **(TWINS_ARMS if "--synth-ts-twins" in sys.argv[1:] else {})}
     if extra:
         experiment = EXP / "experiment.yaml"
         text = experiment.read_text()

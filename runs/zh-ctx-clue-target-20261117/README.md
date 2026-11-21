@@ -17,6 +17,7 @@
 - **第 6 问**（2026-11-21 加）：只改合成 `train_ts`。一组去掉（H），一组改走在线混音（I），看能否同时保住场景 TS 和纠偏。判定已在训练前写定，见“判定”的第 6 问。
   - 2026-11-21 完成，节点已释放。两组都不通过，不定配方：H 场景 TS 恢复，但 TS 题大量输出空，保持率 −10.2*；I 纠偏不变，场景 TS 没恢复，误出字反而更多。
   - 最接近的解释：模型把“是不是 TTS 声音”当成了判断目标的依据。见“结果：第 6 问”。
+- **第 7 问**（2026-11-21 加）：用合成数据自己的克隆音色造 TS 场景，30% 是换人注册的孪生缺席题，让 TTS 声音也当“别人”。一组 J，看能否两头都保住。判定已在训练前写定，见“判定”的第 7 问。
 
 **要回答的问题**：同事反馈，纠错时在 CoT 里先定好线索、再指明要改的目标，2B 的文本 LLM 能力也提升很大。
 1. 把第二轮的 think 改成这种写法，只换写法、不加新数据，上下文纠偏能不能在训练没见过的说法和真实录音上更好？
@@ -189,6 +190,21 @@
     - 两组都通过：think 关 TS 题纠正成功率 I 显著高于 H（I 对 H，CI 下限 > 0）时选 I，否则选 H，因为 H 少一份合成数据。
     - 两组都不通过：按数字记录最接近的解释，不定配方。
   - **机制上的预期**：H 恢复说明退化只来自合成 `train_ts`。I 也恢复，说明原因是它没经过混音；I 不恢复、H 恢复，则更像是模型把 TTS 克隆声音当成了目标。
+
+- **第 7 问**（2026-11-21，训练前写定）：第 6 问说明模型把 TTS 声音当成了目标。给合成 TS 数据补上“TTS 声音是别人”的样本，能不能两头都保住？
+  - 一组 J `template-synth-ts-twins`，带联合 MTP：template 加 `context_correction_synth_zh@ts-twins-v1-20261121`（audio-data-contract #283）。
+    - 构造见“结果：第 6 问”的下一步和登记说明。
+    - 按第二轮的规则配权重，每条约见 3 次，约占样本 2.2%。在线混音同 `ts_scene_pool` alt-twins zh，加它的 think 文件。
+    - 合成 `train_ts` 和其余来源都不变。
+  - 和 template 配对比较，think 关，标准同第 6 问：
+    - **场景 TS 恢复**：CER 和误出字率都显著更低，CER ≤ 5.0，误出字 ≤ 30 条；
+    - **纠偏保住**：Emilia 准确率、全部保持率的 CI 下限都不低于 −1 个点。
+    - 两项都满足才算通过。
+  - **只记录**：上下文纠偏 v2 的 TS 题里输出空的条数（template 70，H 943），TS 题纠正成功率，合成题纠正成功率，think 开的数字。
+  - **结论**：
+    - 通过：J 的数据配置作为上下文纠偏线的 SFT 配方，它的 checkpoint-3000 作为 GRPO 起点。
+    - 场景 TS 没恢复：说明这类样本不够，或者 TTS 声音不是主因。按数字记录，不定配方，汇报后再定。
+    - 场景 TS 恢复、纠偏没保住：按数字记录，对照 TS 题输出空的条数解释，不定配方。
 
 ## 结果：第 1 问（template 与 clue-target，2026-11-18）
 
@@ -704,6 +720,23 @@ open-audio-llm experiment run --config runs/zh-ctx-clue-target-20261117/experime
     - H：think 关 `run-20261121T035115Z-a67d5a8a`，think 开 `run-20261121T035723Z-e070e680`，场景 TS `run-20261121T035114Z-43a2d07d`；
     - I：think 关 `run-20261121T035115Z-32f55fd9`，think 开 `run-20261121T035726Z-e9c73434`，场景 TS `run-20261121T035114Z-5ce72ac9`。
 
+## 执行记录：第 7 问（2026-11-21）
+
+- **数据** `context_correction_synth_zh@ts-twins-v1-20261121`，由 `scripts/build_synth_ts_twins.py` 生成（种子 20261121，可复现：两次生成的记录逐字节相同）。
+  - 4,184 条：在场 2,917 条（轮流 1,402、重叠 1,515；其他音色 1 个的 2,056 条，2 个的 861 条），孪生 1,267 条，占 30.3%。
+  - 用到 3,201 个片段、284 个音色。场景总长 22.3 小时，最长 29.0 秒（不含间隔）。
+  - think 2,917 行，照抄来源记录，其中 2,900 行 think 开。
+  - 登记在 audio-data-contract #283。核对：`validate-records` 4,184 条通过，`check-registration --sample 200` 通过，只有一条“没有 Lance 记录索引”的 warning，`train-v1-20261114` 也没有。
+  - COS 镜像：`amphion-audio-backup-1373259071:audio-data-contract/datasets/context_correction_synth_zh/versions/ts-twins-v1-20261121/`，5 个文件、1,134,938 字节，打包为 1 个分片，2026-11-21 核对一致。音频本身在 `train-v1-20261114`，原已镜像。
+- **加载核对**：用 code-v1 的训练加载器解码 80 条。25 条是空答案，即孪生题，预期约 24 条；55 条有转写，其中 24 条带 think，think 比例设定为 0.5。最长样本 32 秒，含注册音频。
+- **配置**：由 `scripts/make_configs.py --synth-ts-twins template-synth-ts-twins` 生成，dry-run 通过（2026-11-21，数据登记合入 #283 并发布到 registry 之后）。
+  - 结构化比对：和 template 只多了新来源这一条（权重 3.823，紧跟合成 `train_ts`）和它的 think 文件。
+  - 训练配置只差路径、名字和端口（29916）。
+- **节点脚本** `scripts/acp-97-synth-ts-twins.sh`：
+  - 训练 J（8 卡）；
+  - 取回 checkpoint 后，同时跑上下文纠偏 v2（GPU 0/1）和场景 TS（GPU 4）。
+- 跑完后在开发机上执行 `bash scripts/compare_q7.sh && python3 scripts/gate_q7.py`。判定脚本已用第 6 问 H 的对比文件试跑过。
+
 ## 数据登记（2026-11-20）
 
 - 本实验生成、用过的数据都登记在 audio-data-contract，放在 `/workspace/data/datasets/`，并镜像到 COS（`amphion-audio-backup-1373259071:audio-data-contract/`）：
@@ -712,4 +745,5 @@ open-audio-llm experiment run --config runs/zh-ctx-clue-target-20261117/experime
     - 镜像记录写着 11-17 已同步，但那次核对的是数据建好之前的空目录，COS 上实际是空的。
     - 2026-11-20 已用 `cos_mirror.py push --only` 补传，2,001 个文件、772,588,092 字节，`.packed/` 下核对一致。
   - 评测集 `context_correction_zh@v2-20261116` 和合成数据 `train-v1-20261114` 在 COS 上都齐全。
+  - `context_correction_synth_zh@ts-twins-v1-20261121`：第 7 问的合成音色 TS 场景（#283），2026-11-21 已镜像，见“执行记录：第 7 问”。
 - 实验目录里只放配置、脚本、执行记录和分析结果，不放数据文件。
