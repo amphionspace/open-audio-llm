@@ -61,3 +61,31 @@ def test_ts_candidate_sends_enrollment_then_mixture_as_one_clip():
     assert item["enroll_seconds"] == pytest.approx(0.03) and item["system"] == "TS"
     audio, sr = sf.read(io.BytesIO(base64.b64decode(item["audio"])), dtype="float32")
     assert sr == rate and np.array_equal(audio, np.concatenate([enrollment, mixture]))
+
+
+def test_ts_candidate_pads_both_clips_to_whole_mel_hops():
+    import base64
+    import io
+
+    import numpy as np
+    import soundfile as sf
+
+    from open_audio_llm.data.qwen3_asr import _wav_bytes
+    from open_audio_llm.scripts.grpo_mining import Candidates
+
+    rate = 16000
+    # Neither length is a multiple of the 160-sample hop; training pads both (prepare_ts_clips).
+    enrollment, mixture = np.full(500, 0.25, np.float32), np.full(330, -0.5, np.float32)
+
+    class Dataset:
+        sampling_rate = rate
+
+        def __getitem__(self, key):
+            return {"audios": [_wav_bytes(enrollment, rate)], "mix_wav": _wav_bytes(mixture, rate),
+                    "messages": [{"role": "system", "content": "TS"}], "solution": "language None<asr_text>"}
+
+    item = Candidates(Dataset(), [{"source": "s", "index": [0, 1, 2], "record_id": "r"}])[0]
+    assert item["enroll_seconds"] == pytest.approx(0.04)
+    audio, _ = sf.read(io.BytesIO(base64.b64decode(item["audio"])), dtype="float32")
+    expected = np.concatenate([enrollment, np.zeros(140, np.float32), mixture, np.zeros(150, np.float32)])
+    assert np.array_equal(audio, expected)
