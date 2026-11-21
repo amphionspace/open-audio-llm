@@ -18,6 +18,7 @@
 | [03 干净原句 KL](tasks/03-clean-kl/README.md) | 从 11.17 起，v96 配方，解冻音频塔，加干净原句老师的 token 级 KL | 未达标：重叠转写比对照组还差 |
 | [04 对照](tasks/04-control/README.md) | 同 03，不加 KL | 未达标：从 11.17 接着训，全面退化 |
 | [05 老师信号诊断](tasks/05-teacher-signal/README.md) | 在训练分布样本上量老师和学生对标注的把握（11.17 / 03 / 04） | 完成：老师≈标注，KL 集中在听不到的字上 |
+| [06 v12 参考打分](tasks/06-v12-refscore/README.md) | 两组在 v12 参考文本上 teacher forcing，配对比较 11.17 | 完成：对照组拟合变差，实验组解码漏字；编码器选择性都没变 |
 
 ## 代码
 
