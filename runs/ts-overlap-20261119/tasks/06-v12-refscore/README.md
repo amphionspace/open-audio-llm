@@ -79,3 +79,5 @@ v12 自由解码的字错拆分（复盘的 `decompose_errors.py`，口径与守
 
 - `whai:open-audio-llm/runs/ts-overlap-20261119/tasks/06-v12-refscore/attempts/001/`：逐条记录 `artifacts/{control,cleankl}/shard-*.jsonl`，对比 `artifacts/compare.{json,txt}`，字错拆分 `artifacts/decompose.json`，日志 `logs/`。
 - 11.17 的逐条记录：`whai:open-audio-llm/runs/whitebox-20261119-overlap/tasks/03-ref-score/ref-score/`。
+
+> 2026-11-21 补记：上面第 1 条建议（音频塔表示拉向干净原句）已在任务 07 检验，没有改善，编码器选择性反而下降，见 [07 的结果](../07-clean-feature/README.md#结果)。第 2 条（冻结 LLM）在任务 08 检验，同样挡不住从 11.17 接着 SFT 的退化。
