@@ -21,6 +21,9 @@
 | [06 v12 参考打分](tasks/06-v12-refscore/README.md) | 两组在 v12 参考文本上 teacher forcing，配对比较 11.17 | 完成：对照组拟合变差，实验组解码漏字；编码器选择性都没变 |
 | [07 音频塔表示损失](tasks/07-clean-feature/README.md) | 从 11.17 起，冻结 LLM，只训音频塔，混音上的音频 token 拉向起点音频塔在干净原句上的 token | 未达标：重叠转写不比 08 好，抄干扰人变多，编码器选择性下降 |
 | [08 冻结 LLM 对照](tasks/08-frozen-llm/README.md) | 同 07，不加表示损失 | 未达标：冻结 LLM 也挡不住从 11.17 接着 SFT 的退化 |
+| [09 逐层选择性](tasks/09-layer-selectivity/README.md) | 用已有打分结果看音频塔每一层对目标人的选择性 | 完成：第 17–23 层一路上涨、没到顶，最后一层往回降 |
+| [10 GRPO 采样上限](tasks/10-grpo-headroom/README.md) | 11.17 在 v12 重叠 ≥ 0.9 上每条采 16 次，看 GRPO 有没有可学的信号 | 完成：贪心写错的样本 66.5% 能采到更好的，best-of-16 12.74%（贪心 18.27%） |
+| [11 循环编码器](tasks/11-audio-loop/README.md) | 11.17 加第 17–23 层的可训练副本再走一遍（起点与 11.17 逐位相同），冻结其余参数，只训副本 | 训练中（ACP `pt-0vbbz0mo`） |
 
 ## 结论（2026-11-21）
 
@@ -48,3 +51,5 @@
 
 - `shared/code-v1`：任务 03/04，分支 `feat/ts-clean-teacher-kl` 318c9bb 的 src/ 和 audio-data-contract，见 [SNAPSHOT.md](shared/code-v1/SNAPSHOT.md)。
 - `shared/code-v2`：任务 07/08，023232e，加了音频塔的表示损失，见 [SNAPSHOT.md](shared/code-v2/SNAPSHOT.md)。
+- `shared/code-v3`：任务 11，code-v2 加循环编码器补丁（分支 `feat/ts-audio-loop`），见 [SNAPSHOT.md](shared/code-v3/SNAPSHOT.md)。
+- `shared/pack-loop`：任务 11 的评测服务，11.17 守门用的 pack-mtp 运行时加同样的循环补丁。

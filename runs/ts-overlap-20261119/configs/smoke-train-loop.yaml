@@ -1,0 +1,112 @@
+# 冒烟（开发机本地跑）：同 train-loop.yaml，只跑 20 步、第 20 步存 checkpoint，核对可训练参数只有循环副本、副本确实更新、
+# checkpoint 带循环权重和配置。与正式配置的差别只为本地运行：开发机 4–7 号卡 4 进程，W&B 走开发机代理 127.0.0.1:7890，
+# 没有 storage 段（checkpoint 不同步到 whai）。
+# tasks/11 循环编码器：起点是 11.17 加上"第 17–23 层的可训练副本"（scripts/make_loop_init.py，输出投影置零，初始与 11.17 逐位相同），
+# 副本在第 23 层之后、第 24 层之前再走一遍（shared/code-v3 的 tsasr/audio_loop.py）。
+# 与 tasks/08（train-frozenllm.yaml）的差别：
+#   --model 11.17 -> 1117-loop16-23-init；只训练循环副本（--freeze_vit/--freeze_aligner true + --trainable_parameters），
+#   原有音频塔（含卷积、SEP、投影）和 LLM 全部冻结；副本学习率 --vit_lr 2e-5（08 整个音频塔 5e-6；副本的输出投影从 0 开始，需要更快长起来）；
+#   8 卡、梯度累积 3（08 是 4 卡、累积 6，全局批量同为 192）；代码 code-v2 -> code-v3（只多循环补丁）；
+#   数据配置 train-data-loop.yaml = 08 的 train-data-frozenllm.yaml 只把 batching.accumulation 改成 3（须与梯度累积一致）。
+data:
+  config: {path: train-data-loop.yaml}
+preflight:
+- arguments:
+    --batch-size: 8
+    --data_config: {path: train-data-loop.yaml}
+    --preflight-report:
+      path: '{attempt}/artifacts/data-preflight.json'
+    --world-size: 4
+  kind: prepare
+  module: open_audio_llm.data.catalog_cache
+recording:
+  attempts_dir:
+    path: ../tasks/11-audio-loop/attempts
+runtime:
+  cwd: {path: ../../..}
+  distributed:
+    port: 29864
+    processes: 4
+  environment:
+    HF_HUB_OFFLINE: '1'
+    PATH: /workspace/workspace/mingdong/.local-tools/ffmpeg-7.0.2-static/bin:/workspace/workspace/mingdong/miniconda3/envs/oal-train/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    PYTHONUNBUFFERED: '1'
+    PYTORCH_ALLOC_CONF: expandable_segments:True
+    TOKENIZERS_PARALLELISM: false
+    WANDB_HTTPS_PROXY: http://127.0.0.1:7890
+    WANDB_HTTP_PROXY: http://127.0.0.1:7890
+  gpus: [4, 5, 6, 7]
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  pythonpath:
+  - {path: ../shared/code-v3/src}
+  - {path: ../shared/code-v3/audio-data-contract-src}
+  threads:
+    omp: 2
+    openblas: 1
+task:
+  arguments:
+    --add_version: false
+    --attn_impl: sdpa
+    --audio_encoder_batching: true
+    --check_model: false
+    --dataloader_eval_num_workers: 12
+    --dataloader_eval_prefetch_factor: 4
+    --dataloader_num_workers: 12
+    --ddp_find_unused_parameters: true
+    --ddp_timeout: 1800
+    --eval_strategy: 'no'
+    --external_plugins:
+    - {path: ../shared/code-v3/src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py}
+    --freeze_aligner: true
+    --freeze_llm: true
+    --freeze_vit: true
+    --trainable_parameters:
+    - thinker.audio_tower.loop_layers
+    --gradient_accumulation_steps: 3
+    --gradient_checkpointing: false
+    --learning_rate: 2.0e-06
+    --vit_lr: 2.0e-05
+    --load_args: false
+    --logging_steps: 10
+    --lr_scheduler_kwargs:
+      min_lr: 1.0e-06
+    --lr_scheduler_type: cosine_with_min_lr
+    --max_grad_norm: 1.0
+    --max_length: 2048
+    --max_steps: 20
+    --model: /workspace/data/ts-overlap-20261119/models/1117-loop16-23-init
+    --model_type: amphion_asr_1.7b
+    --output_dir:
+      path: '{attempt}/artifacts/training'
+    --per_device_eval_batch_size: 4
+    --per_device_train_batch_size: 8
+    --performance_logging: true
+    --report_to: none
+    --save_steps: 20
+    --seed: 42
+    --supervised_head_loss: false
+    --retention_teacher:
+      path: /workspace/model/Qwen3-ASR-1.7B
+    --torch_dtype: bfloat16
+    --tuner_type: full
+    --vit_gradient_checkpointing: false
+    --warmup_ratio: 0.0
+    --warmup_steps: 100
+    --weight_decay: 0.1
+  kind: train
+  module: open_audio_llm.integrations.ms_swift.train
+  positional:
+  - sft
+tracking:
+  credentials_file: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh
+  enabled: true
+  entity: 1016097967-amphion
+  finish_timeout: 300
+  interval: 5
+  name: AmphionASR-ts-overlap-loop17to23copy-only-llm-tower-frozen-lr2e-5-from1117-v96final-smoke20-codev3
+  project: open-audio-llm
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  pythonpath:
+  - {path: ../shared/code-v3/src}
+  startup_timeout: 180
+version: 1
