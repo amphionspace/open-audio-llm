@@ -8,8 +8,8 @@ plentiful in the replay draw.
 
 Plain-ASR prompts go to ``--server``. TS-ASR prompts (one enrollment, then the mixture) go to ``--ts_server``, a
 TS-ASR service: the enrollment and mixture are sent as one clip with the enrollment length in
-``mm_processor_kwargs.enroll_seconds``, as AmphionEval does. Both clips arrive hop-aligned from the dataset, so the
-split is a whole number of Mel hops.
+``mm_processor_kwargs.enroll_seconds``, as AmphionEval does. Both clips are zero-padded to whole Mel hops as
+training pads them (``prepare_ts_clips``), so the split is a whole number of hops, which the TS service requires.
 
 usage: python -m open_audio_llm.scripts.grpo_mining --data_config D --source ID@VERSION:SPLIT [--source ...]
            --candidates N --epoch E --server URL --model NAME [--ts_server URL --ts_model NAME] --output kept.jsonl
@@ -30,7 +30,7 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 
 from open_audio_llm.data.catalog_dataset import CatalogSwiftDataset, read_data_config
-from open_audio_llm.data.qwen3_asr import _clip_samples, _wav_bytes
+from open_audio_llm.data.qwen3_asr import _clip_samples, _wav_bytes, prepare_ts_clips
 from open_audio_llm.integrations.ms_swift.grpo_prompts import source_key
 from open_audio_llm.integrations.ms_swift.rewards import qwen3_asr
 
@@ -52,6 +52,9 @@ class Candidates(Dataset):
         if sample.get("mix_wav") is not None:
             enrollment = _clip_samples(sample["audios"][0], rate)[0]
             mixture = _clip_samples(sample["mix_wav"], rate)[0]
+            # Training pads both clips to whole Mel hops (prepare_ts_clips), and the TS service rejects an
+            # enrollment that does not end on a hop.
+            enrollment, mixture = prepare_ts_clips([enrollment, mixture], rate)
             audio = _wav_bytes(np.concatenate([enrollment, mixture]), rate)
             enroll_seconds = len(enrollment) / rate
         else:
