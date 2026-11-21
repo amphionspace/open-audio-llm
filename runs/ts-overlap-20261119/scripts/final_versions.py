@@ -14,7 +14,9 @@ SUFFIX = "-final-v1-20261120"
 
 
 def final_version():
-    finals = {(d["dataset_id"], d["version"]) for d in yaml.safe_load((CATALOG / "text_final_v1.yaml").read_text())}
+    # text_final_v1.yaml (zh/en, 2026-11-20) and later per-language lists such as text_final_v1_es.yaml (2026-11-21).
+    finals = {(d["dataset_id"], d["version"]) for path in sorted(CATALOG.glob("text_final_v1*.yaml"))
+              for d in yaml.safe_load(path.read_text())}
     superseded = {}
     for path in CATALOG.glob("*.yaml"):
         for d in yaml.safe_load(path.read_text()) or []:

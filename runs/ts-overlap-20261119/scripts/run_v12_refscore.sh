@@ -11,7 +11,10 @@ task=${2:-06-v12-refscore}
 specs=("${@:3}")
 [ ${#specs[@]} -gt 0 ] || specs=(control:ts-overlap-control-004-avg3:run-20261120T123607Z-ac4867f3 cleankl:ts-overlap-cleankl-004-avg3:run-20261120T123537Z-44834ae9)
 PY=/workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
-SRC=/workspace/workspace/mingdong/repo/open-audio-llm-ts-robust/runs/ts-robust-acp-20261015/shared/code-v37/src
+# REFSCORE_SRC: the looped encoder (tasks/11) needs loop-aware code (shared/code-v3); code-v37 would drop the loop weights.
+SRC=${REFSCORE_SRC:-/workspace/workspace/mingdong/repo/open-audio-llm-ts-robust/runs/ts-robust-acp-20261015/shared/code-v37/src}
+# GPUS: one GPU per shard (8 shards); a list such as "0 1 2 3 0 1 2 3" runs two shards per GPU.
+read -r -a gpus <<< "${GPUS:-0 1 2 3 4 5 6 7}"
 SCRIPT=/workspace/workspace/mingdong/repo/oal-retro-overlap/runs/whitebox-20261119-overlap/scripts/ref_score.py
 M=/workspace/workspace/mingdong/scratch/acp-dev/ae-models.sh
 E=/workspace/workspace/mingdong/repo/oal-clean-teacher/runs/ts-overlap-20261119
@@ -26,7 +29,7 @@ for spec in "${specs[@]}"; do
   echo "$name $ckpt $run $(date -u +%FT%TZ)"; mkdir -p $A/artifacts/$name
   pids=()
   for g in 0 1 2 3 4 5 6 7; do
-    CUDA_VISIBLE_DEVICES=$g PYTHONPATH=$SRC $PY $SCRIPT --checkpoint $ckpt --run-dir $B/$cache/runs/$run \
+    CUDA_VISIBLE_DEVICES=${gpus[$g]} PYTHONPATH=$SRC $PY $SCRIPT --checkpoint $ckpt --run-dir $B/$cache/runs/$run \
       --out $A/artifacts/$name/shard-$g.jsonl --shard $g --num-shards 8 --workers 6 > $A/logs/$name-shard-$g.log 2>&1 & pids+=($!)
   done
   for g in 0 1 2 3 4 5 6 7; do wait ${pids[$g]} || { echo "$name shard $g failed"; rc=1; }; done
