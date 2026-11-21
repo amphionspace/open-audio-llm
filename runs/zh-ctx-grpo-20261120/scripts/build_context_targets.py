@@ -29,6 +29,9 @@ DATASETS = Path("/workspace/data/datasets")
 SYNTH = "context_correction_synth_zh"
 DECISIONS = DATASETS / "context_correction_clean_zh/versions/v1-20261110"
 THINK_LINE = re.compile(r"说话人说是「(.+?)」，写作「(.+?)」")
+# The synthetic splits the ctx plan mines (make_configs.py's ctx lanes). Other synthetic splits of a config are replay
+# only, e.g. ts-twins-v1-20261121's train_ts_twins, whose twin records have no context_correction labels.
+SYNTH_SPLITS = ("train", "train_ts")
 
 
 def synthetic(source):
@@ -127,7 +130,7 @@ def main():
         sources[(s["dataset_id"], s["version"])].append(s["split"])
     rows, stats = [], Counter()
     for s in config["train"]:
-        if s["dataset_id"] == SYNTH:
+        if s["dataset_id"] == SYNTH and s["split"] in SYNTH_SPLITS:
             key = f"{s['dataset_id']}@{s['version']}:{s['split']}"
             rows += [{"source": key, "record_id": rid, "kind": kind, "targets": t} for rid, kind, t in synthetic(s)]
     for think_file in config["think"]["files"]:

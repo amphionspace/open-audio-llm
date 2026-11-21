@@ -1,0 +1,16 @@
+# 由 scripts/make_configs.py 生成，不要手改。
+version: 1
+name: zh-ctx-grpo-20261120
+purpose: 在上下文纠偏 SFT（template-synth-ts-twins checkpoint-3000）上按交付版第十轮的 GRPO 配方，加一份上下文纠偏计划和奖励 qwen3_asr_context，让 think 关时真实录音的显式说明题多改对，守门和场景 TS 不变差
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training_coverage: replay_quota
+  training_steps: 400
+inputs:
+  init_model: /workspace/data/ae-state/model-cache/entries/checkpoint-3000-061b86c3902e
+tasks:
+- id: grpo
+  name: GRPO 400 步（1 节点 8 卡，第十轮配方 + ctx 计划，计划在起点上重挖）
+  config: configs/train-grpo.yaml
+  depends_on: []
