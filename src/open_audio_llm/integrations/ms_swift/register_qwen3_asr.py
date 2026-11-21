@@ -293,10 +293,13 @@ class Qwen3ASRLoader(ModelLoader):
         # ------------------------------------------------------------------
         self.auto_model_cls = self.auto_model_cls or AutoModel
         model = super().get_model(model_dir, *args, **kwargs)
+        from open_audio_llm.tsasr.audio_loop import attach_audio_loop
         from open_audio_llm.tsasr.sep_token import attach_sep_token
 
         # Before any swift forward rebinding. Plain ASR leaves enroll_n_frames at 0.
         model = attach_sep_token(model, model_dir)
+        # Before swift freezes parameters and builds the optimizer, so the loop copies are ordinary tower weights.
+        model = attach_audio_loop(model, model_dir)
         # swift sft has no catalog flag. AUDIO_ENCODER_BATCHING=1 turns on the
         # SEP-aware batched encoder for this v3 path.
         if get_env_args('audio_encoder_batching', bool, False):
