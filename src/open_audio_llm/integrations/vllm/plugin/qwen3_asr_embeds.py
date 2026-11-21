@@ -131,13 +131,15 @@ class Qwen3ASREmbedDummyInputsBuilder(Qwen3ASRDummyInputsBuilder):
 
 class Qwen3ASREmbedMultiModalProcessor(Qwen3ASRMultiModalProcessor):
     def _call_hf_processor(self, *args, **kwargs) -> BatchFeature:
-        # vLLM 0.18 (the GRPO training rollout) passes (prompt, mm_data, mm_kwargs,
-        # tok_kwargs) and calls the HF processor even without raw audio. For
-        # pre-computed embeddings, tokenise the prompt only; multimodal kwargs are
-        # carried separately by vLLM's MultiModalKwargsItems. vLLM 0.32 (serving)
-        # passes (hf_data, hf_kwargs) and skips the HF processor for embeddings.
-        if len(args) == 4:
-            prompt, mm_data = args[:2]
+        # vLLM 0.18 (the GRPO training rollout) passes prompt, mm_data, mm_kwargs and
+        # tok_kwargs, by keyword from _apply_hf_processor_text_mm, and calls the HF
+        # processor even without raw audio. For pre-computed embeddings, tokenise the
+        # prompt only; multimodal kwargs are carried separately by vLLM's
+        # MultiModalKwargsItems. vLLM 0.32 (serving) passes (hf_data, hf_kwargs) and
+        # skips the HF processor for embeddings.
+        if "mm_data" in kwargs or len(args) == 4:
+            prompt = kwargs["prompt"] if "prompt" in kwargs else args[0]
+            mm_data = kwargs["mm_data"] if "mm_data" in kwargs else args[1]
             if not (mm_data.get("audios") or mm_data.get("audio")):
                 tokenizer = self.info.get_tokenizer()
                 prompt_ids = tokenizer.encode(prompt, add_special_tokens=False)
