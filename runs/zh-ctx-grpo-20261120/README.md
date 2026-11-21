@@ -1,6 +1,6 @@
 # 上下文纠偏的 GRPO 计划（2026-11-20 起）
 
-**状态**：准备中，还没有训练。2026-11-21 起点定为上下文纠偏实验第 7、8 问选出的 J（`template-synth-ts-twins` 的 checkpoint-3000）。配置已按 J 重新生成，目标表定稿为 `grpo-targets-v2-20261121`（登记中，audio-data-contract #284）。判定已在训练前写定，见“判定”。
+**状态**：准备中，还没有训练。2026-11-21 起点定为上下文纠偏实验第 7、8 问选出的 J（`template-synth-ts-twins` 的 checkpoint-3000）。配置已按 J 重新生成，目标表定稿为 `context_correction_clean_zh@grpo-targets-v2-20261121`（audio-data-contract #284 已合入，registry 已发布，COS 已镜像）。判定已在训练前写定，见“判定”。
 
 **要回答的问题**：在 GRPO 里加一份上下文纠偏计划，能不能让 think 关时真实录音上的显式说明题多改对，同时守门和场景 TS 都不变差？
 - Emilia 显式说明题现在 think 关只有 44%。
@@ -67,7 +67,20 @@ avg3 和插值 50% 各自和起点 J 配对比较，think 关。
   - 用 v1 目标表试跑：7,011 行全部找到，9,349 个目标中 3 个移位，没有丢失，用时约 2 分钟。
 - **`scripts/mining.sh ARM TARGETS`**：08 的挖题线，加 4 条 ctx 线（普通识别、TS 各 2 条，每个候选每条线挖一次）。之后由 `scripts/mining_plans.py` 分成六份计划。
 
-## 待做（第 6 问之后）
+## 已完成（2026-11-21，起点定为 J 之后）
+
+- **目标表**：`build_context_targets.py` 只读挖题用的合成 `train`、`train_ts`；J 配置里的孪生 split 只进回放，孪生题没有纠偏标注。
+  - 在 template 配置上重跑，输出和 v1 逐字节相同；在 J 配置上，输出和 template 的逐字节相同。
+  - `finalize_targets.py` 定稿：7,011 行全部找到，9,349 个目标中 3 个就近移位，没有丢失。
+  - 登记为 `context_correction_clean_zh@grpo-targets-v2-20261121`（audio-data-contract #284，2026-11-21 合入，registry 已发布）。内容是目标表、`summary.json`、`state.json` 和改写后的 wenetspeech_clean 名单（923 条）。
+  - COS 镜像：`amphion-audio-backup-1373259071:audio-data-contract/datasets/context_correction_clean_zh/versions/grpo-targets-v2-20261121/`，4 个文件、1,824,186 字节，打包为 1 个分片，已核对。
+- **配置**：`make_configs.py template-synth-ts-twins <J> <v2 targets>` 重新生成，dry-run 通过。孪生来源在回放里，带在线混音；挖题只取合成 `train`、`train_ts`。
+- **评测脚本**：`make_eval_configs.py`（抄自上下文纠偏实验）、`make_gate_configs.py`（抄自 08，加跟错人和场景 TS）、`run_eval.sh`。
+- **节点脚本** `scripts/acp-node.sh`：依次执行挖题 `mining.sh`、训练 `train.sh`、评测 `eval_after_training.sh`。
+  - 按 08 的用时，挖题约 1 小时，训练约 40 分钟，评测约 2.5 小时。
+  - 执行器目录 `/workspace/workspace/mingdong/scratch/acp-ctx-grpo`。
+
+## 待做（第 6 问之后，已由上面完成，留作记录）
 
 1. 用胜出组的 SFT 数据配置跑 `build_context_targets.py`，再跑 `make_configs.py`，然后用 `finalize_targets.py` 定稿。
 2. 把目标表登记为 `context_correction_clean_zh@grpo-targets-v2-<日期>`，内容是目标表和改写后的名单，并镜像到 COS。
