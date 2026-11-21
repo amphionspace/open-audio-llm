@@ -859,4 +859,8 @@ open-audio-llm experiment run --config runs/zh-ctx-clue-target-20261117/experime
     - 2026-11-20 已用 `cos_mirror.py push --only` 补传，2,001 个文件、772,588,092 字节，`.packed/` 下核对一致。
   - 评测集 `context_correction_zh@v2-20261116` 和合成数据 `train-v1-20261114` 在 COS 上都齐全。
   - `context_correction_synth_zh@ts-twins-v1-20261121`：第 7 问的合成音色 TS 场景（#283），2026-11-21 已镜像，见“执行记录：第 7 问”。
+- **训练文本终版**（2026-11-21，amphiondata-64 按 `docs/reference/training-text.md` 扫过）：`context_correction_synth_zh` 的 train-v1、implicit-v1、ts-twins-v1 都没有要改的字，不出终版，原版本即符合“全部切到终版”的要求。所以 GRPO 目标表 `grpo-targets-v2-20261121` 不需要再出新版。
+- **已知问题**：train-v1 的 `train` 有 66/2,984 条、`train_ts` 有 63/2,917 条完全没有标点，ts-twins 里的 63 条是同一批句子（约 2.2%，本地复核过，例如“喂一一零吗我要报案我捡到个黑色钱包……”）。implicit-v1 没有这个问题。
+  - 补标点会移动 `labels.context_correction.segments` 的字符位置，要和 think 表、`metadata.scene.targets` 一起改。
+  - 现在没有训练在用这几份数据，放到下一版合成数据里修，到时一并重定 GRPO 目标表。
 - 实验目录里只放配置、脚本、执行记录和分析结果，不放数据文件。
