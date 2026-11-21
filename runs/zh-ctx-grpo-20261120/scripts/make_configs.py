@@ -179,6 +179,11 @@ def mining_configs(arm, start, lanes):
                 # refuses it. The plugin registers the in-repo class (SEP off: plain ASR) only with the SEP or the MTP-draft
                 # switch on, as the eval ASR server has it; the TS servers have the SEP on. No draft is configured here.
                 c["runtime"]["environment"]["OPEN_AUDIO_LLM_ENABLE_MTP_DRAFT"] = "1"
+            else:
+                # grpo_mining names each TS prompt's enrollment length (mm_processor_kwargs.enroll_seconds), as GRPO
+                # renders it; vLLM 0.32 refuses per-request mm kwargs (400) unless the server trusts them. The server
+                # listens on 127.0.0.1 only. The eval servers need no flag: AmphionEval sends a fixed 5 s enrollment.
+                c["task"]["flags"] = c["task"]["flags"] + ["--trust-request-mm-kwargs"]
             c["task"]["arguments"]["--served-model-name"] = f"mine-ctx-{kind}"
             c["recording"]["attempts_dir"]["path"] = f"../../tasks/01-mining/serve-{kind}-{lane}/attempts"
             gpu, port = c["runtime"]["gpus"][0], c["task"]["arguments"]["--port"]

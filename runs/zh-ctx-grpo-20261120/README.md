@@ -94,7 +94,15 @@ avg3 和插值 50% 各自和起点 J 配对比较，think 关。
   - 原因：起点带 TS 的 SEP 参数，vLLM 0.32 自带的 Qwen3-ASR 类不认它。插件只在开 SEP 或 MTP 草稿开关时才注册仓库里的类；08 用的旧版 vLLM 没有这个问题。
   - 修法：普通识别挖题服务开 `OPEN_AUDIO_LLM_ENABLE_MTP_DRAFT`，同评测服务，不配草稿（91c726a）。
 - **第 2 次（`11-ctx-grpo`）**：普通识别阶段 16 路都完成（10:20Z），TS 阶段 10:34Z 全部失败。TS 服务对每个请求都返回 400。
-  - 原因：main 的挖题脚本没把注册音频补齐到整数个 Mel 帧，训练路径（`prepare_ts_clips`）会补；main 的 TS 服务要求注册时长是帧长的整数倍。
-  - 修法：open-audio-llm #171（合入 main 4ca977e），挖题时用 `prepare_ts_clips` 补齐。实验代码快照换成 `shared/code-v2`（= main 4ca977e，和 code-v1 只差这一个文件），配置重新生成。
+  - 当时只看了服务日志（不写原因），按代码推断原因是挖题脚本没把注册音频补齐到整数个 Mel 帧：训练路径（`prepare_ts_clips`）会补，main 的 TS 服务要求注册时长是帧长的整数倍。
+  - 这一条确实不符合服务的要求，已在 open-audio-llm #171 修好（合入 main 4ca977e，挖题时用 `prepare_ts_clips` 补齐）。实验代码快照换成 `shared/code-v2`（= main 4ca977e，和 code-v1 只差这一个文件），配置重新生成。
+  - 但它不是这次 400 的原因，见第 3 次。
   - 加载较慢：数据配置里 `chime6`、`emilia2_short` 等终版来源没有 Lance 记录索引，`wenetspeech_clean` 的说明录音子集另算一个来源，各要从 JSONL 建目录索引。普通识别阶段的加载因此用了约 2 小时；索引缓存在共享盘上，之后的加载约 9 分钟。
   - 第 2 次的挖题输出留在 `tasks/01-mining/failed-20261121T1034Z/`，不进计划。
+- **第 3 次（`12-ctx-grpo`，code-v2）**：普通识别阶段完成（11:40Z），TS 阶段 11:53Z 又是全部 400。
+  - 这次在节点上单独起一个 TS 服务，用挖题脚本发 2 个请求并打印响应正文（`/workspace/workspace/mingdong/scratch/acp-ctx-grpo/debug/`），才拿到真正的原因：`Per-request mm_processor_kwargs are disabled by default ... Start the server with --trust-request-mm-kwargs`。
+  - vLLM 0.32 默认拒绝请求里的 `mm_processor_kwargs`。挖题按每条的实际注册时长发 `enroll_seconds`，和 GRPO 训练渲染的一致；08 用的旧版 vLLM 没有这个限制。
+  - 评测服务不需要这个开关：AmphionEval 默认发固定 5 秒的注册音频，不带 `mm_processor_kwargs`。
+  - 修法：TS 挖题服务加 `--trust-request-mm-kwargs`（服务只听 127.0.0.1）。同一个节点上用 2 个请求核对过，返回正常，`enroll_seconds` 为 5.15、5.7，转写正确。
+  - 另：这次加载时 `wenetspeech_clean` 说明录音子集的索引又重建了一遍（约 30 分钟），原因是重新生成配置时改写了内容相同的名单，名单的修改时间是索引缓存的键。`make_configs.py` 已改为内容不变就不写（5ca5186）。
+  - 第 3 次的挖题输出留在 `tasks/01-mining/failed-20261121T1153Z/`。
