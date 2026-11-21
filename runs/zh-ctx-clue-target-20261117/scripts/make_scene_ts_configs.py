@@ -28,16 +28,14 @@ def sub(text, old, new):
     return text.replace(old, new)
 
 
-def main():
-    name, checkpoint, gpu, port = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
+def write_serve(model, checkpoint, gpu, port, header):
+    """configs/eval-<model>/serve-tsasr.yaml and handoff.json for the checkpoint; returns the directory."""
     assert (Path(checkpoint) / "mtp" / "model.safetensors").exists(), checkpoint
-    model = f"scene-{name}"
     dst = EXP / "configs" / f"eval-{model}"
     dst.mkdir(exist_ok=True)
     s = (FROM / "serve-tsasr.yaml").read_text()
     cfg = yaml.safe_load(s)
-    s = sub(s, s.splitlines()[0] + "\n", "# 由 scripts/make_scene_ts_configs.py 从 configs/eval-clue-target-implicit-noexplain/serve-tsasr.yaml"
-                                        " 生成：只换模型（草稿随之换成它自带的 mtp/）、GPU、端口、服务名和记录目录。\n")
+    s = sub(s, s.splitlines()[0] + "\n", header)
     old_model = cfg["task"]["model"]["path"]
     s = sub(s, f"    path: {old_model}\n", f"    path: {checkpoint}\n")
     s = sub(s, f"      model: {old_model}/mtp\n", f"      model: {checkpoint}/mtp\n")
@@ -48,6 +46,18 @@ def main():
     s = sub(s, f"    path: {cfg['recording']['attempts_dir']['path']}\n",
             f"    path: ../../tasks/02-eval/serve-{model}-tsasr/attempts\n")
     (dst / "serve-tsasr.yaml").write_text(s)
+    handoff = json.loads((FROM / "handoff.json").read_text())
+    handoff.update(checkpoint=checkpoint, training_run=str(Path(checkpoint).parent))
+    (dst / "handoff.json").write_text(json.dumps(handoff))
+    return dst
+
+
+def main():
+    name, checkpoint, gpu, port = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
+    model = f"scene-{name}"
+    dst = write_serve(model, checkpoint, gpu, port,
+                      "# 由 scripts/make_scene_ts_configs.py 从 configs/eval-clue-target-implicit-noexplain/serve-tsasr.yaml"
+                      " 生成：只换模型（草稿随之换成它自带的 mtp/）、GPU、端口、服务名和记录目录。\n")
     g = GATE.read_text()
     g = sub(g, g.splitlines()[0] + "\n", "# 场景 TS（think 关）：08-scene-ts-diag 的 r1-think-new 配置，只换模型、服务与输出目录"
                                         "（scripts/make_scene_ts_configs.py）。\n")
@@ -57,9 +67,6 @@ def main():
     g = sub(g, "output_root: /workspace/data/ae-runs/spelling-think-grpo-20261115-diag-scene-ts-r1-think-new\n",
             f"output_root: /workspace/data/ae-runs/ctx-clue-target-20261117-{model}\n")
     (dst / "after-training-gate-scene-ts.yaml").write_text(g)
-    handoff = json.loads((FROM / "handoff.json").read_text())
-    handoff.update(checkpoint=checkpoint, training_run=str(Path(checkpoint).parent))
-    (dst / "handoff.json").write_text(json.dumps(handoff))
     print(dst)
 
 

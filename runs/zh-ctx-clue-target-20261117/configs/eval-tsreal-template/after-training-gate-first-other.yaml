@@ -1,0 +1,21 @@
+# 真人语音 TS（think 关）：交付版 run-20261105T185559Z-9b91bc4f 的配置，只换模型、服务与输出目录（scripts/make_ts_real_configs.py）。
+suite_id: asr-regression-native@1
+model_name: ctx-clue-target-tsreal-template
+evaluator: ts-asr
+eval_set: open-audio-llm/ts-asr-first-other@v3-20261105
+tsasr_server_url: http://127.0.0.1:18792
+tsasr_served_model: tsreal-template-tsasr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/ctx-clue-target-20261117-tsreal-template
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+  enroll_seconds: 5
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false
