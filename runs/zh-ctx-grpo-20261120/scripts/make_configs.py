@@ -168,6 +168,11 @@ def mining_configs(arm, start, lanes):
             c["runtime"]["python"] = {"path": SERVING}
             c["runtime"]["pythonpath"] = [{"path": "../../shared/code-v1/src"}]
             c["task"]["model"]["path"] = start
+            if kind == "asr":
+                # The start carries the TS SEP parameter (thinker.audio_tower.sep_token); vLLM 0.32's own Qwen3-ASR class
+                # refuses it. The plugin registers the in-repo class (SEP off: plain ASR) only with the SEP or the MTP-draft
+                # switch on, as the eval ASR server has it; the TS servers have the SEP on. No draft is configured here.
+                c["runtime"]["environment"]["OPEN_AUDIO_LLM_ENABLE_MTP_DRAFT"] = "1"
             c["task"]["arguments"]["--served-model-name"] = f"mine-ctx-{kind}"
             c["recording"]["attempts_dir"]["path"] = f"../../tasks/01-mining/serve-{kind}-{lane}/attempts"
             gpu, port = c["runtime"]["gpus"][0], c["task"]["arguments"]["--port"]
