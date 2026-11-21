@@ -1,13 +1,13 @@
 # 由 scripts/make_configs.py 从 08 的 configs/train-grpo.yaml（交付版第十轮的参数）生成，不要手改。
-# 改动：起点 template-synth-ts-twins checkpoint-3000（/workspace/data/ae-state/model-cache/entries/checkpoint-3000-061b86c3902e），代码 shared/code-v2（main 4ca977e），奖励加 qwen3_asr_context（权重 1.0），开联合 MTP（权重 0.1、3 步、衰减 0.8、lr 1e-5，从起点的 mtp/ 接上），记录目录和名字。
+# 改动：起点 template-synth-ts-twins checkpoint-3000（/workspace/data/ae-state/model-cache/entries/checkpoint-3000-061b86c3902e），代码 shared/code-v3（main 15eacbf），奖励加 qwen3_asr_context（权重 1.0），开联合 MTP（权重 0.1、3 步、衰减 0.8、lr 1e-5，从起点的 mtp/ 接上），记录目录和名字。
 version: 1
 runtime:
   python: /workspace/workspace/mingdong/miniconda3/envs/oal-train-vllm/bin/python
   cwd:
     path: ../../..
   pythonpath:
-  - path: ../shared/code-v2/src
-  - path: ../shared/code-v2/audio-data-contract-src
+  - path: ../shared/code-v3/src
+  - path: ../shared/code-v3/audio-data-contract-src
   gpus:
   - 0
   - 1
@@ -48,8 +48,8 @@ task:
     --model: /workspace/data/ae-state/model-cache/entries/checkpoint-3000-061b86c3902e
     --model_type: amphion_asr_1.7b
     --external_plugins:
-    - path: ../shared/code-v2/src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py
-    - path: ../shared/code-v2/src/open_audio_llm/integrations/ms_swift/rewards/plugin.py
+    - path: ../shared/code-v3/src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py
+    - path: ../shared/code-v3/src/open_audio_llm/integrations/ms_swift/rewards/plugin.py
     --tuner_type: full
     --freeze_vit: false
     --freeze_aligner: false
@@ -113,7 +113,7 @@ recording:
     path: ../tasks/02-grpo/attempts
 tracking:
   pythonpath:
-  - path: ../shared/code-v2/src
+  - path: ../shared/code-v3/src
   enabled: true
   python: /workspace/workspace/mingdong/miniconda3/envs/oal-train-vllm/bin/python
   credentials_file: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh

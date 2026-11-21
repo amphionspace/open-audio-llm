@@ -106,3 +106,19 @@ avg3 和插值 50% 各自和起点 J 配对比较，think 关。
   - 修法：TS 挖题服务加 `--trust-request-mm-kwargs`（服务只听 127.0.0.1）。同一个节点上用 2 个请求核对过，返回正常，`enroll_seconds` 为 5.15、5.7，转写正确。
   - 另：这次加载时 `wenetspeech_clean` 说明录音子集的索引又重建了一遍（约 30 分钟），原因是重新生成配置时改写了内容相同的名单，名单的修改时间是索引缓存的键。`make_configs.py` 已改为内容不变就不写（5ca5186）。
   - 第 3 次的挖题输出留在 `tasks/01-mining/failed-20261121T1153Z/`。
+- **第 4 次（`13-ctx-grpo`）**：挖题成功。12:20Z 普通识别服务就绪，12:44Z 普通识别阶段完成，13:17Z TS 阶段完成，13:20Z 六份计划写好：
+  - ctx 5,273（合成 `train` 1,914、`train_ts` 1,904；说明录音 1,455：wenetspeech_clean 682、emilia2_dialog 373、emilia2_mix 321、emilia2_short 79）；
+  - 热词 2,808，漏识 851，无语音 1,707，TS 缺席 4,544，TS 在场 2,632。每个候选每条线挖一次，所以同一条记录可能以不同的轮次出现两次。
+  - GRPO 13:20Z 开始，8 个 rank 都在第一次 rollout 报错 `Failed to apply Qwen3ASRProcessor on data={'text': '<|audio_pad|>'}`，13:31Z 退出（attempt 001）。
+  - 原因：main 的 #165（升级 vLLM 0.32）改了 embedding 提示的处理函数，用“4 个位置参数”认 vLLM 0.18 的调用；训练用的 vLLM 0.18 是按关键字传参的，于是 rollout 的提示被送进 HF 处理器而没有音频。08 用的是 #165 之前的代码。
+  - 修法：open-audio-llm #172（合入 main 15eacbf），按关键字也认出 vLLM 0.18 的调用；在 vLLM 0.18 环境里测过，修复前失败、修复后通过。代码快照换成 `shared/code-v3`（= main 15eacbf，和 code-v2 只差这一个文件）。
+  - 挖题不重跑：计划由 code-v2 挖出，code-v3 改的只是训练 rollout 的处理函数，挖题用的 vLLM 0.32 服务不走这条分支。
+  - `eval_after_training.sh` 改为取最新一次 GRPO 尝试（重跑是 attempt 002）。
+
+<!-- execution-status -->
+
+执行状态：partial；质量状态：未核实。
+
+开始：未知；结束：未结束；退出码：未知。
+
+<!-- /execution-status -->
