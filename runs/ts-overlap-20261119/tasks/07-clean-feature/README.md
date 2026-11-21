@@ -47,3 +47,17 @@
 - 要回答的问题：表示损失能不能让编码器的选择性和重叠转写错误动起来，同时守门不退。
 
 ## 进展
+
+- 2026-11-21 01:31–02:30 UTC：冒烟 attempt 001，ACP `pt-3ml2y432`，与 08 同节点各 4 卡，脚本 `scripts/run_smoke_v2.sh`。执行完成（exit 0）。
+  - 大部分时间花在首次建终版文本的索引上。
+  - 终版文本的 125 个来源全部加载；记录数比旧版少 0.18%，主要是 wenetspeech −0.6%。
+  - 排除名单都是 `<split>:<id>` 写法，不带版本号，不受换版本影响。
+  - LLM 可训练参数为 0，音频塔 305,461,248。
+  - 第 1 步两组 `ce_ts_positive` 都是 0.23555405，学生样本流一致。
+  - `clean_feat` 40 步内从 0.486 降到 0.387，每个微批约 2 条干净行。
+  - 速度：本组 3.0 秒/步、08 组 2.25 秒/步；显存约 32 GiB。
+  - W&B：`AmphionASR-ts-overlap-{cleanfeat1-llmfrozen,llmfrozen}-aud5e-6-from1117-v96final-smoke40-4gpu-codev2-001`，启动器远端核验通过。
+- 2026-11-21 02:33 UTC：正式训练 attempt 002，同一节点。
+  - 脚本 `scripts/run_train_eval_v2.sh`：训练 → 第 5000/5500/6000 步平均 → 与 03/04 相同的四套评测。
+  - W&B 走本会话自己的转发 `10.119.17.252:17922`，只放行本节点 IP。
+  - W&B 远端已读回训练指标（含 `train/clean_feat`）：`AmphionASR-ts-overlap-cleanfeat1-llmfrozen-aud5e-6-from1117-v96final-6k-4gpu-codev2-002`。

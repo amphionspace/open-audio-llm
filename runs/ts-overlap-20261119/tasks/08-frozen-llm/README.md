@@ -13,3 +13,7 @@
 同 07。评测与 07 配对比较。
 
 ## 进展
+
+- 2026-11-21：冒烟 attempt 001 与 07 同节点，执行完成，核对结果见 [07 的进展](../07-clean-feature/README.md#进展)。
+- 2026-11-21 02:33 UTC：正式训练 attempt 002，与 07 同节点，ACP `pt-3ml2y432`。
+  - W&B 远端已读回训练指标：`AmphionASR-ts-overlap-llmfrozen-aud5e-6-from1117-v96final-6k-4gpu-codev2-002`。
