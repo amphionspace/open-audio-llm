@@ -16,3 +16,5 @@ tasks:
 - {id: train-template-implicit-noexplain, name: 第二轮 think 模板，加隐式题数据（think 只写固定句）+ 联合 MTP，1 节点 8 卡全参 3000 步, config: configs/train-template-implicit-noexplain.yaml, depends_on: []}
 - {id: train-template-no-empty-think, name: 第二轮 think 模板，think.empty_prob / uncovered_prob 改为 0（第一轮的 think 分配）+ 联合 MTP，1 节点 8 卡全参 3000 步, config: configs/train-template-no-empty-think.yaml, depends_on: []}
 - {id: train-template-no-synth, name: 第二轮 think 模板，去掉合成说字数据（即第一轮数据 + PR 158、159 的 think 分配）+ 联合 MTP，1 节点 8 卡全参 3000 步, config: configs/train-template-no-synth.yaml, depends_on: []}
+- {id: train-template-no-synth-ts, name: 第二轮 think 模板，去掉合成 train_ts（保留合成 train）+ 联合 MTP，1 节点 8 卡全参 3000 步, config: configs/train-template-no-synth-ts.yaml, depends_on: []}
+- {id: train-template-synth-ts-mix, name: 第二轮 think 模板，合成 train_ts 改走在线混音（同 aishellmix train_1spk 主条目）+ 联合 MTP，1 节点 8 卡全参 3000 步, config: configs/train-template-synth-ts-mix.yaml, depends_on: []}

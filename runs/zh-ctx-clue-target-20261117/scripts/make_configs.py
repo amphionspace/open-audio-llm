@@ -22,8 +22,15 @@ which set think.empty_prob / uncovered_prob; #156/#157 touch the replay KL, whic
 - template-no-empty-think:  template with think.empty_prob and uncovered_prob 0, i.e. round 1's think allocation;
 - template-no-synth:        template without the synthetic spelling data (train, train_ts) and its think file, i.e.
   round 1's data with #158/#159's think allocation.
+With ``--synth-ts`` (question 6, 2026-11-21: template-no-synth restored scene TS but lost Emilia accuracy), two
+arms that change only the synthetic train_ts source:
+- template-no-synth-ts:     template without synthetic train_ts (synthetic train and the think file stay; the think
+  rows of train_ts records are then unused, the file being keyed by dataset@version);
+- template-synth-ts-mix:    template with synthetic train_ts mixed online like the clean one-speaker TS sources (the
+  online_mix block of aishellmix train_1spk's main entry: interferers, 5% target absent, 7.5% non-speech, RIR, noise
+  floor, enrollment degradations). It is the only TS source of the recipe without online mixing.
 
-usage: make_configs.py [--implicit] [--ablation] [arm ...]   (writes configs/train-data-{arm}.yaml, configs/train-{arm}.yaml for
+usage: make_configs.py [--implicit] [--ablation] [--synth-ts] [arm ...]   (writes configs/train-data-{arm}.yaml, configs/train-{arm}.yaml for
        the named arms, all of them when none is named; configs written on the node are root's and stay as they are)
 """
 import gzip
@@ -61,6 +68,12 @@ ABLATION_ARMS = {
                                 "task": "第二轮 think 模板，think.empty_prob / uncovered_prob 改为 0（第一轮的 think 分配）+ 联合 MTP"},
     "template-no-synth": {"port": 29886, "name": "template-no-synth-think",
                           "task": "第二轮 think 模板，去掉合成说字数据（即第一轮数据 + PR 158、159 的 think 分配）+ 联合 MTP"},
+}
+SYNTH_TS_ARMS = {
+    "template-no-synth-ts": {"port": 29896, "name": "template-no-synth-ts-think",
+                             "task": "第二轮 think 模板，去掉合成 train_ts（保留合成 train）+ 联合 MTP"},
+    "template-synth-ts-mix": {"port": 29906, "name": "template-synth-ts-onlinemix-think",
+                              "task": "第二轮 think 模板，合成 train_ts 改走在线混音（同 aishellmix train_1spk 主条目）+ 联合 MTP"},
 }
 STEPS, SAMPLES_PER_STEP, EXPLAINED_VIEWS = 3000, 188, 3  # as round 2 (scripts/make_data_config.py there)
 CODE = EXP / "shared/code-v1"
@@ -110,7 +123,9 @@ def main():
         arms.update(IMPLICIT_ARMS)
     if "--ablation" in sys.argv[1:]:
         arms.update(ABLATION_ARMS)
-    only = [a for a in sys.argv[1:] if not a.startswith("--")]
+    if "--synth-ts" in sys.argv[1:]:
+        arms.update(SYNTH_TS_ARMS)
+    only =[a for a in sys.argv[1:] if not a.startswith("--")]
     assert set(only) <= set(arms), set(only) - set(arms)
     arms = {arm: spec for arm, spec in arms.items() if not only or arm in only}
     for arm, spec in arms.items():
@@ -129,6 +144,20 @@ def main():
                  "think": {**d["think"], "files": [f for f in d["think"]["files"] if f != OLD_THINK[1]]}}
             assert len(d["think"]["files"]) == len(data["think"]["files"]) - 1
             note = "去掉合成说字数据（train、train_ts）和它的 think 文件，即第一轮的数据；think 分配同第二轮。\n"
+        if arm == "template-no-synth-ts":
+            dropped = [s for s in d["train"] if s["dataset_id"] == SYNTH and s["split"] == "train_ts"]
+            assert len(dropped) == 1 and "online_mix" not in dropped[0], dropped
+            d = {**d, "train": [s for s in d["train"] if s is not dropped[0]]}
+            note = "去掉合成 train_ts；合成 train 和 think 文件保留（train_ts 记录的 think 行不再用到）；其余同 template。\n"
+        if arm == "template-synth-ts-mix":
+            solo = [s for s in d["train"] if (s["dataset_id"], s["split"]) == ("aishellmix", "train_1spk")][0]
+            assert solo["online_mix"]["absent_prob"] == 0.05 and solo["online_mix"]["nonspeech_prob"] == 0.075, solo
+            ts = [s for s in d["train"] if s["dataset_id"] == SYNTH and s["split"] == "train_ts"]
+            assert len(ts) == 1 and "online_mix" not in ts[0], ts
+            d = {**d, "train": [{**s, "online_mix": yaml.safe_load(yaml.safe_dump(solo["online_mix"]))} if s is ts[0] else s
+                                for s in d["train"]]}
+            note = ("合成 train_ts 加上 aishellmix train_1spk 主条目的 online_mix（干扰人 0–4 个、5% 目标缺席、7.5% 非语音、"
+                    "混响、底噪、注册音频劣化），权重不变；其余同 template。\n")
         if arm in IMPLICIT_ARMS:
             d, counts, share = with_implicit(d, spec["think"])
             note = (note.rstrip("\n") + f"另加 {IMPLICIT_ID}@{IMPLICIT_VERSION} {counts}，约占样本 {share:.2%}，"
@@ -160,7 +189,8 @@ def main():
             f"代码 shared/code-v1（main 0a1b117），数据 configs/train-data-{arm}.yaml。\n" + text)
         print(arm, data_path)
     extra = {**(IMPLICIT_ARMS if "--implicit" in sys.argv[1:] else {}),
-             **(ABLATION_ARMS if "--ablation" in sys.argv[1:] else {})}
+             **(ABLATION_ARMS if "--ablation" in sys.argv[1:] else {}),
+             **(SYNTH_TS_ARMS if "--synth-ts" in sys.argv[1:] else {})}
     if extra:
         experiment = EXP / "experiment.yaml"
         text = experiment.read_text()

@@ -1,0 +1,123 @@
+# 由 scripts/make_configs.py 从 runs/zh-spelling-think-r2-20261115/configs/train-think.yaml 生成，不要手改。
+# template-synth-ts-mix 组：第二轮的训练参数，加联合 MTP（权重 0.1、3 步、衰减 0.8、lr 1e-4，从 11.17 交付包的 mtp/ 初始化），代码 shared/code-v1（main 0a1b117），数据 configs/train-data-template-synth-ts-mix.yaml。
+data:
+  config: /workspace/workspace/mingdong/repo/oal-clue-target/runs/zh-ctx-clue-target-20261117/configs/train-data-template-synth-ts-mix.yaml
+preflight:
+- arguments:
+    --batch-size: 12
+    --data_config: /workspace/workspace/mingdong/repo/oal-clue-target/runs/zh-ctx-clue-target-20261117/configs/train-data-template-synth-ts-mix.yaml
+    --preflight-report:
+      path: '{attempt}/artifacts/data-preflight.json'
+    --world-size: 8
+  kind: prepare
+  module: open_audio_llm.data.catalog_cache
+recording:
+  attempts_dir:
+    path: ../tasks/01-train-template-synth-ts-mix/attempts
+runtime:
+  cwd: /workspace/workspace/mingdong/repo/oal-clue-target
+  distributed:
+    port: 29906
+    processes: 8
+  environment:
+    HF_HUB_OFFLINE: '1'
+    PATH: /workspace/workspace/mingdong/.local-tools/ffmpeg-7.0.2-static/bin:/workspace/workspace/mingdong/miniconda3/envs/oal-train/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    PYTHONUNBUFFERED: '1'
+    PYTORCH_ALLOC_CONF: expandable_segments:True
+    TOKENIZERS_PARALLELISM: false
+    WANDB_HTTPS_PROXY: http://10.119.17.252:17920
+    WANDB_HTTP_PROXY: http://10.119.17.252:17920
+  gpus:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  pythonpath:
+  - /workspace/workspace/mingdong/repo/oal-clue-target/runs/zh-ctx-clue-target-20261117/shared/code-v1/src
+  - /workspace/workspace/mingdong/repo/oal-clue-target/runs/zh-ctx-clue-target-20261117/shared/code-v1/audio-data-contract-src
+  threads:
+    omp: 2
+    openblas: 1
+storage:
+  executable: /workspace/workspace/mingdong/.local/share/amphion-bucket/cluster-venv/bin/ab
+  local_root: /workspace/workspace/mingdong/repo/oal-clue-target
+  remote: whai:open-audio-llm
+task:
+  arguments:
+    --add_version: false
+    --attn_impl: sdpa
+    --audio_encoder_batching: true
+    --check_model: false
+    --dataloader_eval_num_workers: 12
+    --dataloader_eval_prefetch_factor: 4
+    --dataloader_num_workers: 12
+    --ddp_find_unused_parameters: false
+    --ddp_timeout: 1800
+    --deepspeed: /workspace/workspace/mingdong/repo/oal-clue-target/runs/zh-ctx-clue-target-20261117/configs/zero1-bf16-no-overflow-check.json
+    --eval_strategy: 'no'
+    --external_plugins:
+    - /workspace/workspace/mingdong/repo/oal-clue-target/runs/zh-ctx-clue-target-20261117/shared/code-v1/src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py
+    --freeze_aligner: false
+    --freeze_llm: false
+    --freeze_parameters:
+    - thinker.model.embed_tokens
+    - thinker.audio_tower.conv2d1
+    - thinker.audio_tower.conv2d2
+    - thinker.audio_tower.conv2d3
+    - thinker.audio_tower.conv_out
+    --freeze_vit: false
+    --gradient_accumulation_steps: 2
+    --gradient_checkpointing: false
+    --learning_rate: 3.55e-06
+    --load_args: false
+    --logging_steps: 10
+    --lr_scheduler_kwargs:
+      min_lr: 1.0e-06
+    --lr_scheduler_type: cosine_with_min_lr
+    --max_grad_norm: 1.0
+    --max_length: 2048
+    --max_steps: 3000
+    --model: /workspace/data/ae-runs/amphionasr2-grpo-v10interp050/checkpoint
+    --model_type: amphion_asr_1.7b
+    --output_dir:
+      path: '{attempt}/artifacts/training'
+    --per_device_eval_batch_size: 4
+    --per_device_train_batch_size: 12
+    --performance_logging: true
+    --report_to: none
+    --save_steps: 500
+    --seed: 42
+    --supervised_head_loss: true
+    --torch_dtype: bfloat16
+    --tuner_type: full
+    --vit_gradient_checkpointing: false
+    --warmup_ratio: 0.0
+    --warmup_steps: 300
+    --weight_decay: 0.1
+    --joint_mtp_weight: 0.1
+    --joint_mtp_steps: 3
+    --joint_mtp_step_decay: 0.8
+    --joint_mtp_lr: 0.0001
+    --joint_mtp_init: /workspace/data/packages/amphionasr-1.7b-v3-v18aes-mtp-candidate/model/mtp/model.safetensors
+  kind: train
+  module: open_audio_llm.integrations.ms_swift.train
+  positional:
+  - sft
+tracking:
+  credentials_file: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh
+  enabled: true
+  entity: 1016097967-amphion
+  finish_timeout: 300
+  interval: 5
+  name: AmphionASR-ctx-template-synth-ts-onlinemix-think-r2recipe-mtp-from-v10interp050-3k-1node-codev1
+  project: open-audio-llm
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  pythonpath:
+  - /workspace/workspace/mingdong/repo/oal-clue-target/runs/zh-ctx-clue-target-20261117/shared/code-v1/src
+  startup_timeout: 180
+version: 1
