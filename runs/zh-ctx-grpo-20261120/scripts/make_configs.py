@@ -6,9 +6,9 @@ runs/zh-spelling-think-grpo-20261115 on oal-think-exp, "08") on top of a context
   batching, validation) and 08's GRPO parts added: the two mined-only sources, ``objective``, ``rollout``, and a
   ``grpo`` section with 08's five plans, the ``ctx`` plan and ``context_targets``.
 - configs/train-grpo.yaml: 08's train-grpo.yaml (round 10's parameters: lr 1e-6, beta 0.04, 400 steps, 8 x 8
-  rollouts) with the start arm's checkpoint-3000, code-v1 (main f044443), the context reward (weight 1.0, as the
+  rollouts) with the start arm's checkpoint-3000, code-v2 (main 4ca977e), the context reward (weight 1.0, as the
   hotword reward) and joint MTP (AGENTS.md "MTP": weight 0.1, 3 steps, decay 0.8, lr 1e-5, from the start's mtp/).
-- configs/mining/serve-{asr,tsasr}-{0..6}.yaml: 08's mining servers with the start checkpoint, code-v1 and vLLM 0.32
+- configs/mining/serve-{asr,tsasr}-{0..6}.yaml: 08's mining servers with the start checkpoint, code-v2 and vLLM 0.32
   (main's TS server needs it), served names and attempts dirs of this experiment.
 - configs/mining/sources-{plain,miss,ts,ctx-asr,ctx-ts}.txt: the mining lanes' source keys, 08's lists (round 10's)
   moved to the final versions, plus the ctx lanes (context-correction candidates); every key must be a source of
@@ -27,7 +27,7 @@ from final_versions import final_key, final_version
 HERE = Path(__file__).resolve().parents[1]
 SFT = Path("/workspace/workspace/mingdong/repo/oal-clue-target/runs/zh-ctx-clue-target-20261117")
 R08 = Path("/workspace/workspace/mingdong/repo/oal-think-exp/runs/zh-spelling-think-grpo-20261115")
-CODE = "../shared/code-v1"
+CODE = "../shared/code-v2"
 SERVING = "/workspace/workspace/mingdong/miniconda3/envs/vllm-serving-032/bin/python"
 SFT_ONLY = ("think", "batching", "validation_samples", "validation_max_duration", "validation")
 MINED_ONLY = (("hw_grpo_candidates", "v1-20261101", "zh"), ("ts_nonspeech_pool", "env-20261101", "all"))
@@ -134,7 +134,7 @@ def data_config(arm, targets, final):
 
 def train_config(arm, start):
     t = yaml.safe_load((R08 / "configs/train-grpo.yaml").read_text())
-    old = "../shared/code-v2"
+    old = "../shared/code-v2"  # 08's snapshot (main f68e180); this experiment's CODE happens to have the same name
     rt = t["runtime"]
     rt["pythonpath"] = [{"path": p["path"].replace(old, CODE)} for p in rt["pythonpath"]]
     rt["distributed"]["port"] = 29736
@@ -150,9 +150,11 @@ def train_config(arm, start):
     t["tracking"]["pythonpath"] = [{"path": f"{CODE}/src"}]
     t["tracking"]["name"] = f"AmphionASR-ctx-grpo-v10recipe-ctxplan-from-{arm}-3000-textfinal-mtp-8gpu-400steps"
     text = yaml.safe_dump(t, allow_unicode=True, sort_keys=False, width=1000)
-    assert old not in text and "927844461eb1" not in text
+    assert "927844461eb1" not in text
+    paths = [p["path"] for p in rt["pythonpath"] + args["--external_plugins"] + t["tracking"]["pythonpath"]]
+    assert all(p.startswith(CODE + "/") for p in paths), paths
     header = ("# 由 scripts/make_configs.py 从 08 的 configs/train-grpo.yaml（交付版第十轮的参数）生成，不要手改。\n"
-              f"# 改动：起点 {arm} checkpoint-3000（{start}），代码 shared/code-v1（main f044443），奖励加 qwen3_asr_context（权重 1.0），"
+              f"# 改动：起点 {arm} checkpoint-3000（{start}），代码 shared/code-v2（main 4ca977e），奖励加 qwen3_asr_context（权重 1.0），"
               "开联合 MTP（权重 0.1、3 步、衰减 0.8、lr 1e-5，从起点的 mtp/ 接上），记录目录和名字。\n")
     (HERE / "configs/train-grpo.yaml").write_text(header + text)
     zero = (R08 / "configs/zero1-bf16-no-overflow-check.json").read_text()
@@ -166,7 +168,7 @@ def mining_configs(arm, start, lanes):
         for lane in range(7):
             c = yaml.safe_load((R08 / f"configs/mining/serve-{kind}-{lane}.yaml").read_text())
             c["runtime"]["python"] = {"path": SERVING}
-            c["runtime"]["pythonpath"] = [{"path": "../../shared/code-v1/src"}]
+            c["runtime"]["pythonpath"] = [{"path": "../../shared/code-v2/src"}]
             c["task"]["model"]["path"] = start
             if kind == "asr":
                 # The start carries the TS SEP parameter (thinker.audio_tower.sep_token); vLLM 0.32's own Qwen3-ASR class

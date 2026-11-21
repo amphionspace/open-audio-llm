@@ -1,0 +1,460 @@
+"""Train directly from Catalog manifests without an offline ShareGPT export."""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+import time
+import logging
+import torch
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from swift.arguments import RLHFArguments, SftArguments
+from swift.pipelines.train.rlhf import SwiftRLHF
+from swift.pipelines.train.sft import SwiftSft
+from transformers import TrainerCallback
+
+from open_audio_llm.data.catalog_dataset import CatalogSwiftDataset, read_data_config
+
+
+class CatalogArgumentsMixin:
+    def __post_init__(self):
+        if not self.data_config:
+            raise ValueError("--data_config is required")
+        if (
+            self.dataset
+            or self.val_dataset
+            or self.cached_dataset
+            or self.cached_val_dataset
+        ):
+            raise ValueError(
+                "Use train/validation in --data_config instead of dataset/cache arguments"
+            )
+        self._catalog_config = read_data_config(self.data_config)
+        if any(source.get("enrollment") is not None for key in ("train", "validation")
+               for source in self._catalog_config.get(key, [])):
+            import os
+
+            os.environ["OPEN_AUDIO_LLM_TARGET_SOT"] = "1"
+        # SftArguments requires dataset identities, but the pipeline below owns
+        # loading; these config references never go through the HF JSON loader.
+        self.dataset = [self.data_config]
+        self.val_dataset = (
+            [self.data_config] if self._catalog_config.get("validation") else []
+        )
+        self.split_dataset_ratio = 0
+        self.lazy_tokenize = True
+        super().__post_init__()
+        if (
+            self.packing
+            or self.padding_free
+            or getattr(self, "group_by_length", False)
+            or self.streaming
+        ):
+            raise ValueError(
+                "Catalog training uses on-demand map-style samples; disable packing, padding_free, group_by_length and streaming"
+            )
+
+
+@dataclass
+class CatalogSftArguments(CatalogArgumentsMixin, SftArguments):
+    data_config: str | None = None
+    continuous_training: bool = False
+    reset_catalog_sampler: bool = False
+    # JSON {"world_size": W, "previous_paths": {current: previous}} for resuming
+    # a checkpoint saved at another world size or data location.
+    catalog_sampler_migration: str | None = None
+    performance_logging: bool = True
+    # First and last update step whose CUDA timeline is written per rank; empty records none.
+    torch_profile_steps: list[int] = field(default_factory=list)
+    audio_encoder_parallel: bool = False
+    audio_encoder_batching: bool = False
+    supervised_head_loss: bool = False
+    # Freeze the model and train only an EAGLE draft head for vLLM speculative decoding,
+    # unrolled over this many draft steps (0: ordinary SFT); later steps weigh decay**(k-1).
+    draft_head_steps: int = 0
+    draft_head_step_decay: float = 0.8
+    # eagle1: reads the final-norm output (vLLM method "eagle"); eagle3: fuses three decoder
+    # layers' hidden states (vLLM method "eagle3").
+    draft_head_arch: str = "eagle1"
+    # reference: distil on the data's transcripts; greedy: regenerate each assistant span with the
+    # frozen model's greedy decoding first (self-distillation, several times slower per step).
+    draft_head_targets: str = "reference"
+    # A draft checkpoint's model.safetensors to start the head from instead of a fresh init.
+    draft_head_init: str | None = None
+    # DeepSeek-V3 style multi-token prediction trained jointly with the model (0: off): the loss
+    # adds this weight times the MTP module's cross entropy on the token after next. Needs
+    # supervised_head_loss SFT; the module is saved under each checkpoint's mtp/ directory.
+    joint_mtp_weight: float = 0.0
+    # Speculative steps unrolled under teacher forcing through the one MTP layer; later steps
+    # weigh decay**(k-1). DeepSeek-V3 trains one step (depth 1).
+    joint_mtp_steps: int = 1
+    joint_mtp_step_decay: float = 0.8
+    # An mtp/model.safetensors to start the module from instead of the backbone-based init.
+    joint_mtp_init: str | None = None
+    # Peak learning rate of the MTP module's own parameter groups (None: the model's).
+    joint_mtp_lr: float | None = None
+    # One unpadded row per microbatch for the Qwen3-ASR text decoder (FlashAttention-2 varlen).
+    packed_text: bool = False
+    # None keeps the training worker count. Eval sets these explicitly because
+    # its forward is too short to hide audio loading at the training depth.
+    dataloader_eval_num_workers: int | None = None
+    dataloader_eval_prefetch_factor: int | None = None
+    retention_teacher: str | None = None
+    retention_eval_script: str | None = None
+    retention_eval_interval: int = 2000
+    checkpoint_handoff: str | None = None
+    checkpoint_selection: str = "final"
+    storage_sync: str | None = None
+    amphion_eval_check: str | None = None
+
+
+@dataclass
+class CatalogRLHFArguments(CatalogArgumentsMixin, RLHFArguments):
+    data_config: str | None = None
+    storage_sync: str | None = None
+    # Keep training a joint MTP module (joint_mtp.py) during GRPO on each micro-batch's best
+    # completion; same meaning as the SFT fields. joint_mtp_init is usually the SFT checkpoint's mtp/.
+    joint_mtp_weight: float = 0.0
+    joint_mtp_steps: int = 1
+    joint_mtp_step_decay: float = 0.8
+    joint_mtp_init: str | None = None
+    joint_mtp_lr: float | None = None
+
+
+class DatasetEpochCallback(TrainerCallback):
+    def __init__(self, dataset):
+        self.dataset = dataset
+
+    def on_epoch_begin(self, args, state, control, **kwargs):
+        self.dataset.set_epoch(int(state.epoch or 0))
+
+
+class ReadableCheckpointCallback(TrainerCallback):
+    """Let the development machine read checkpoints that ACP containers write as root.
+
+    safetensors are saved through 0600 temporary files, so umask alone is not enough.
+    Only read bits are added; ownership and content are unchanged.
+    """
+
+    def on_save(self, args, state, control, **kwargs):
+        if state.is_world_process_zero:
+            checkpoint = Path(args.output_dir) / f"checkpoint-{state.global_step}"
+            for path in checkpoint.rglob("*"):
+                if path.is_file():
+                    path.chmod(path.stat().st_mode | 0o444)
+
+
+class CatalogTrainingMixin:
+    def _prepare_dataset(self):
+        started = time.perf_counter()
+        grpo = getattr(self.args, "rlhf_type", None) == "grpo"
+        if hasattr(self.args, "rlhf_type") and not grpo:
+            raise ValueError("Catalog RLHF entry currently supports GRPO")
+        config = self.args._catalog_config
+        message_format = (
+            "qwen3_asr"
+            if getattr(self.args, "model_type", None) == "amphion_asr_1.7b"
+            else "generic"
+        )
+        train = CatalogSwiftDataset(
+            config, encode=None if grpo else self.template.encode, grpo=grpo,
+            message_format=message_format,
+            collect_metrics=getattr(self.args, "performance_logging", False),
+        )
+        if grpo and config.get("grpo") is not None:
+            from .grpo_prompts import GRPOPromptPlan
+
+            train = GRPOPromptPlan(train, **config["grpo"])
+        validation = None
+        if config.get("validation"):
+            raw_eval = grpo or getattr(self.args, "predict_with_generate", False)
+            validation = CatalogSwiftDataset(
+                config,
+                training=False,
+                encode=None if raw_eval else self.template.encode,
+                grpo=grpo,
+                message_format=message_format,
+            )
+        logging.getLogger(__name__).warning(
+            "Catalog metadata ready: train=%d validation=%d load_seconds=%.3f",
+            len(train), len(validation) if validation is not None else 0,
+            time.perf_counter() - started,
+        )
+        return train, validation
+
+    def train(self, trainer):
+        if getattr(self.args, 'audio_encoder_parallel', False) and getattr(trainer.model.config, 'target_sot_audio', False):
+            raise ValueError('Conditional SOT requires audio_encoder_parallel=false')
+        if getattr(self.args, 'audio_encoder_batching', False) and getattr(self.args, 'audio_encoder_parallel', False):
+            raise ValueError('Choose either audio_encoder_batching or audio_encoder_parallel')
+        liger = getattr(self.args, "use_liger_kernel", False) and self.args.model_type == "amphion_asr_1.7b"
+        if liger and getattr(self.args, "retention_teacher", None):
+            raise ValueError("Liger RoPE is module-wide and would change the frozen retention teacher")
+        activity_weight = self.args._catalog_config.get("objective", {}).get("ts_activity_weight")
+        if activity_weight is not None and (
+            not isinstance(activity_weight, (int, float)) or not activity_weight > 0
+            or getattr(self.args, "rlhf_type", None) == "grpo"
+            or not getattr(self.args, "supervised_head_loss", False)
+            or not getattr(self.args, "audio_encoder_batching", False)
+            or getattr(self.args, "packed_text", False)
+        ):
+            # The loss reads the batched encoder's frame layout and adds to the supervised-head SFT loss.
+            raise ValueError("objective.ts_activity_weight must be positive and needs SFT with "
+                             "supervised_head_loss and audio_encoder_batching, without packed_text")
+        paired = self.args._catalog_config.get("objective", {}).get("paired_lookalike")
+        if paired is not None and (
+            getattr(self.args, "rlhf_type", None) == "grpo"
+            or not getattr(self.args, "supervised_head_loss", False)
+            or getattr(self.args, "packed_text", False)
+            or not isinstance(paired.get("weight"), (int, float)) or not paired["weight"] > 0
+            or not isinstance(paired.get("margin", 2.0), (int, float))
+            or not isinstance(paired.get("gap", 20.0), (int, float)) or not paired.get("gap", 20.0) > 0
+        ):
+            # A second, decision-only forward of the paired rows joins the supervised-head SFT loss.
+            raise ValueError("objective.paired_lookalike needs SFT with supervised_head_loss, without packed_text, "
+                             "a positive weight and a positive gap")
+        # paired_lookalike only adds its own forward; the other objectives read the main forward.
+        objective = {k: v for k, v in self.args._catalog_config.get("objective", {}).items() if k != "paired_lookalike"}
+        draft_steps = getattr(self.args, "draft_head_steps", 0)
+        if draft_steps and (
+            getattr(self.args, "rlhf_type", None) == "grpo"
+            or getattr(self.args, "supervised_head_loss", False)
+            or objective
+            or getattr(self.args, "packed_text", False)
+            or liger
+            or getattr(self.args, "retention_teacher", None)
+            or self.args.deepspeed
+        ):
+            # The head reads the frozen model's final-norm output on padded rows and replaces its loss.
+            raise ValueError("draft_head_steps is SFT-only, without supervised_head_loss, a data objective, "
+                             "packed_text, Liger, a retention teacher or DeepSpeed")
+        joint_mtp = getattr(self.args, "joint_mtp_weight", 0.0)
+        grpo = getattr(self.args, "rlhf_type", None) == "grpo"
+        if joint_mtp and grpo and liger:
+            raise ValueError("joint_mtp_weight in GRPO runs without Liger")
+        if joint_mtp and not grpo and (
+            not getattr(self.args, "supervised_head_loss", False)
+            or draft_steps
+            or objective
+            or getattr(self.args, "packed_text", False)
+            or liger
+            or getattr(self.args, "retention_teacher", None)
+        ):
+            # The MTP loss reads every position's final-norm output on right-padded rows and joins
+            # the supervised-head token-mean loss.
+            raise ValueError("joint_mtp_weight in SFT needs supervised_head_loss, without a draft head, a data "
+                             "objective, packed_text, Liger or a retention teacher")
+        original_create_optimizer = None
+        if getattr(self.args, "rlhf_type", None) == "grpo":
+            config = self.args._catalog_config
+            # A grpo prompt plan draws replay-weighted prompts once; GRPO's sampler then repeats them.
+            mixed = config.get("grpo") is None and (config.get("replay") is not None or any(
+                "weight" in source for source in config["train"]))
+            if config.get("batching") or mixed or any(
+                any(key in source for key in ("samples", "reps", "shard_rotation"))
+                for source in config["train"]
+            ):
+                raise ValueError(
+                    "Catalog mux/duration batching is SFT-only; GRPO uses its generation-group sampler"
+                    " (replay-weighted prompts need a grpo section)"
+                )
+            if config.get("grpo") is None:
+                trainer.add_callback(DatasetEpochCallback(trainer.train_dataset))
+            if config.get("objective", {}).get("presence_contrast"):
+                from .grpo_contrast import install_presence_contrast
+
+                install_presence_contrast(trainer)
+            if joint_mtp:
+                from .joint_mtp import install_grpo_mtp
+
+                install_grpo_mtp(trainer, joint_mtp, self.args.joint_mtp_steps, self.args.joint_mtp_step_decay,
+                                 self.args.joint_mtp_init, self.args.joint_mtp_lr)
+            if config.get("rollout"):
+                from .grpo_vllm_rollout import install_vllm_rollout
+
+                install_vllm_rollout(trainer, config["rollout"])
+            else:
+                # Sampled completions must not contain audio placeholder tokens: one <|audio_pad|> in a completion
+                # makes the scoring forward scatter more audio positions than there are features (masked_scatter
+                # assert, GRPO round 9 at step 273; an "<|audio_start|>" completion was logged earlier in that run).
+                # The local engine copies suppress_tokens from this generation config into every request.
+                tokenizer = getattr(trainer.processing_class, "tokenizer", trainer.processing_class)
+                audio_ids = tokenizer.convert_tokens_to_ids(["<|audio_start|>", "<|audio_end|>", "<|audio_pad|>"])
+                if tokenizer.unk_token_id is not None and tokenizer.unk_token_id in audio_ids:
+                    raise ValueError("audio special tokens missing from the tokenizer")
+                for generation_config in {id(c): c for c in (trainer.model.generation_config,
+                                          getattr(getattr(trainer, "engine", None), "generation_config", None))
+                                          if c is not None}.values():
+                    generation_config.suppress_tokens = sorted(set(generation_config.suppress_tokens or []) | set(audio_ids))
+            if os.environ.get("GRPO_EFFICIENT_LOGPS") == "1":
+                from .grpo_shared_prefix import install_efficient_logps
+
+                install_efficient_logps(trainer)
+            if trainer.args.deepspeed and trainer.args.optimizer in (None, "default"):
+                # DeepSpeed removes empty LoRA parameter groups. Do this before
+                # each scheduler creation, including DeepSpeed re-initialization.
+                original_create_optimizer = trainer.create_optimizer
+
+                def create_optimizer():
+                    optimizer = original_create_optimizer()
+                    optimizer.param_groups[:] = [
+                        group for group in optimizer.param_groups if group["params"]
+                    ]
+                    return optimizer
+
+                trainer.create_optimizer = create_optimizer
+        else:
+            from .catalog_loader import install_catalog_loader
+
+            # TrainerFactory drops fields outside its TrainingArguments schema.
+            trainer.args.continuous_training = self.args.continuous_training
+            trainer.args.reset_catalog_sampler = self.args.reset_catalog_sampler
+            trainer.args.catalog_sampler_migration = self.args.catalog_sampler_migration
+            # TrainerFactory drops fields that are not in TrainingArguments.
+            trainer.args.dataloader_eval_num_workers = getattr(
+                self.args, "dataloader_eval_num_workers", None
+            )
+            trainer.args.dataloader_eval_prefetch_factor = getattr(
+                self.args, "dataloader_eval_prefetch_factor", None
+            )
+            sample_mean = self.args._catalog_config.get("objective", {}).get("sample_mean")
+            if sample_mean and getattr(self.args, "supervised_head_loss", False):
+                raise ValueError("The sample-mean objective already projects only supervised positions")
+            trainer.args.packed_text = getattr(self.args, "packed_text", False)
+            if trainer.args.packed_text and (self.args.model_type != "amphion_asr_1.7b" or sample_mean):
+                # The sample-mean objective groups positions by batch row; a packed row holds every sample.
+                raise ValueError("packed_text supports Qwen3-ASR without the sample-mean objective")
+            if draft_steps:
+                from .draft_head import enable_draft_head
+
+                enable_draft_head(trainer, draft_steps, self.args.draft_head_step_decay,
+                                  self.args.draft_head_arch, self.args.draft_head_targets,
+                                  self.args.draft_head_init)
+            elif sample_mean:
+                from .retention import install_retention_objective
+
+                install_retention_objective(trainer, self.args)
+            elif joint_mtp:
+                from .joint_mtp import enable_joint_mtp
+
+                enable_joint_mtp(trainer, joint_mtp, self.args.joint_mtp_steps,
+                                 self.args.joint_mtp_step_decay, self.args.joint_mtp_init,
+                                 self.args.joint_mtp_lr)
+            elif getattr(self.args, "supervised_head_loss", False):
+                from .supervised_head import enable_supervised_head
+
+                enable_supervised_head(trainer)
+            install_catalog_loader(trainer, self._get_resume_checkpoint(trainer))
+            if getattr(self.args, 'retention_eval_script', None):
+                from .retention_eval import RetentionEvaluationCallback
+
+                trainer.add_callback(RetentionEvaluationCallback(
+                    self.args.retention_eval_script, self.args.retention_eval_interval,
+                ))
+        if profile_steps := getattr(self.args, "torch_profile_steps", None):
+            if len(profile_steps) != 2:
+                raise ValueError("torch_profile_steps takes a first and last update step")
+            from .performance import TorchProfileCallback
+
+            trainer.add_callback(TorchProfileCallback(*profile_steps))
+        if "SENSECORE_PYTORCH_NODE_RANK" in os.environ:
+            # Registered before uploads, which may remove the local checkpoint.
+            trainer.add_callback(ReadableCheckpointCallback())
+        uploads = None
+        if storage := getattr(self.args, 'storage_sync', None):
+            if trainer.args.save_total_limit:
+                raise ValueError('storage_sync removes uploaded checkpoints itself; unset save_total_limit')
+            from .checkpoint_upload import CheckpointUploadCallback
+
+            # Registered after callbacks that write into the checkpoint during on_save.
+            uploads = CheckpointUploadCallback(json.loads(storage))
+            trainer.add_callback(uploads)
+        if handoff := getattr(self.args, 'checkpoint_handoff', None):
+            from .checkpoint_handoff import CheckpointHandoffCallback
+
+            # After the uploader so train-end handoff sees the confirmed remote copy.
+            trainer.add_callback(CheckpointHandoffCallback(
+                handoff, selection=self.args.checkpoint_selection,
+                base_model=self.args.model, tuner_type=self.args.tuner_type,
+                uploads=uploads,
+                amphion_eval_check=getattr(self.args, 'amphion_eval_check', None),
+            ))
+        restore_audio = None
+        if getattr(self.args, "audio_encoder_batching", False):
+            from .audio_batching import enable_batched_audio
+
+            # Keep the frozen retention teacher's numerical target unchanged.
+            restore_audio = enable_batched_audio(trainer.model)
+        elif getattr(self.args, "audio_encoder_parallel", False):
+            from .audio_batching import enable_parallel_audio
+
+            restore_audio = enable_parallel_audio(trainer.model)
+        restore_liger = None
+        if liger:
+            from .liger import enable_liger_kernels
+
+            patched, restore_liger = enable_liger_kernels(trainer.model)
+            logging.getLogger(__name__).warning("Liger kernels on the Qwen3-ASR text decoder: %s", patched)
+        restore_text = None
+        if getattr(trainer.args, "packed_text", False):
+            from .packed_text import enable_packed_text
+
+            restore_text = enable_packed_text(trainer.model)
+            logging.getLogger(__name__).warning("Packed text batches: FlashAttention-2 varlen text decoder")
+        if activity_weight:
+            from .ts_activity import enable_ts_activity_loss
+
+            # Last: its forward takes ts_activity off the batch before the wrapped forwards see it.
+            enable_ts_activity_loss(trainer, float(activity_weight))
+            logging.getLogger(__name__).warning("TS speaker-activity auxiliary loss, weight %s", activity_weight)
+        if paired is not None:
+            from .paired_lookalike import enable_paired_lookalike
+
+            # Last: its forward takes the twin columns off the batch before the wrapped forwards see them.
+            enable_paired_lookalike(trainer, float(paired["weight"]), float(paired.get("margin", 2.0)),
+                                    float(paired.get("gap", 20.0)))
+            logging.getLogger(__name__).warning("Paired look-alike loss: %s", paired)
+        try:
+            return super().train(trainer)
+        finally:
+            if original_create_optimizer is not None:
+                trainer.create_optimizer = original_create_optimizer
+            if restore_audio is not None:
+                restore_audio()
+            if restore_liger is not None:
+                restore_liger()
+            if restore_text is not None:
+                restore_text()
+            performance = getattr(trainer, "catalog_performance", None)
+            if performance is not None:
+                performance.close()
+
+
+class CatalogSft(CatalogTrainingMixin, SwiftSft):
+    args_class = CatalogSftArguments
+
+
+class CatalogGRPO(CatalogTrainingMixin, SwiftRLHF):
+    args_class = CatalogRLHFArguments
+
+
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] not in {"sft", "grpo"}:
+        raise SystemExit(
+            "Usage: python -m open_audio_llm.integrations.ms_swift.train {sft,grpo} --data_config CONFIG [swift arguments]"
+        )
+    mode = sys.argv[1]
+    cls = CatalogSft if mode == "sft" else CatalogGRPO
+    cls(sys.argv[2:]).main()
+    # Only a successful rank tears down collectives. After a failure, peers may be
+    # blocked in a collective and destroy_process_group would wait for them, so
+    # exit with the error and let torchrun stop the remaining ranks.
+    if torch.distributed.is_initialized():
+        torch.distributed.destroy_process_group()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,350 @@
+"""Online prompt rendering and hotword sampling from Catalog records."""
+
+from __future__ import annotations
+
+import random
+from dataclasses import replace
+from typing import Any
+
+import torch
+from audio_data_contract import (
+    AudioRecord,
+    PromptAudio,
+    PromptTemplate,
+    PromptText,
+    render_example,
+)
+from torch.utils.data import Dataset
+
+from .hotwords import build_hotword_pool, build_hotword_pools, sample_hotwords, sample_ts_hotwords
+from .records import ResolvedAudioRecord, to_swift_record
+
+TASK_TEMPLATES = {
+    "speaker_attributed_asr": PromptTemplate(
+        "open-audio-llm/speaker-attributed-asr", "1",
+        ((PromptText("Transcribe every speaker, grouped by speaker:"), PromptAudio("mixture")),),
+    ),
+    "asr": PromptTemplate(
+        "open-audio-llm/asr",
+        "1",
+        ((PromptText("Transcribe the following audio:"), PromptAudio("primary")),),
+    ),
+    "asr_hotwords": PromptTemplate(
+        "open-audio-llm/asr-hotwords",
+        "1",
+        (
+            (
+                PromptText("Transcribe the following audio.\nHotwords: {hotwords}"),
+                PromptAudio("primary"),
+            ),
+        ),
+    ),
+    "ts_asr": PromptTemplate(
+        "open-audio-llm/ts-asr",
+        "1",
+        (
+            (
+                PromptText("Given the speaker's voice:"),
+                PromptAudio("enrollment"),
+                PromptText(
+                    "\nTranscribe what this speaker says in the following audio:"
+                ),
+                PromptAudio("mixture"),
+            ),
+        ),
+    ),
+    "ser": PromptTemplate(
+        "open-audio-llm/ser",
+        "1",
+        (
+            (
+                PromptText("Recognize the speaker emotion in the following audio:"),
+                PromptAudio("primary"),
+            ),
+        ),
+    ),
+    "sec": PromptTemplate(
+        "open-audio-llm/sec",
+        "1",
+        (
+            (
+                PromptText(
+                    "Classify the speaker emotion category of the following audio:"
+                ),
+                PromptAudio("primary"),
+            ),
+        ),
+    ),
+    "sepc": PromptTemplate(
+        "open-audio-llm/sepc",
+        "1",
+        (
+            (
+                PromptText("Describe the speaker emotion and speaking style:"),
+                PromptAudio("primary"),
+            ),
+        ),
+    ),
+    "sei": PromptTemplate(
+        "open-audio-llm/sei",
+        "1",
+        (
+            (
+                PromptText("Classify the emotion intensity of the following audio:"),
+                PromptAudio("primary"),
+            ),
+        ),
+    ),
+    "esc": PromptTemplate(
+        "open-audio-llm/esc",
+        "1",
+        (
+            (
+                PromptText(
+                    "Describe the background acoustic scene only and ignore spoken content:"
+                ),
+                PromptAudio("primary"),
+            ),
+        ),
+    ),
+}
+
+
+def build_answer(record: AudioRecord, hotwords: str) -> str:
+    if record.task in {"ser", "sec", "sei"} and record.labels:
+        return str(next(iter(record.labels.values())))
+    if record.task == "esc" and record.labels:
+        return str(record.labels.get("caption") or next(iter(record.labels.values())))
+    detected = []
+    if hotwords != "N/A":
+        candidates = {h.strip() for h in hotwords.split(",") if h.strip()}
+        detected = [h for h in record.hotwords if h in candidates]
+    return (
+        f"Language: {record.language}\n"
+        f"Hotwords: {','.join(detected) if detected else 'N/A'}\n"
+        f"Transcription: {record.target}"
+    )
+
+
+def _render(
+    resolved: ResolvedAudioRecord,
+    *,
+    hotwords: str,
+    prompt_seed: int,
+):
+    record = resolved.record
+    answer = build_answer(record, hotwords)
+    template = TASK_TEMPLATES.get(record.task, TASK_TEMPLATES["asr"])
+    example = render_example(
+        replace(record, target=answer),
+        template,
+        seed=prompt_seed,
+        context={"hotwords": hotwords},
+    )
+    return example, answer
+
+
+class OnlineAudioDataset(Dataset):
+    """Materialize swift-compatible records dynamically from stable facts."""
+
+    def __init__(
+        self,
+        records: list[ResolvedAudioRecord],
+        seed: int = 42,
+        max_hotwords: int = 30,
+        hotword_prompt_prob: float = 0.8,
+        hotword_miss_prob: float = 0.0,
+        ts_hotword_prompt_prob: float = 0.0,
+        hotword_confusable_prob: float = 0.0,
+        hotword_confusable_miss_prob: float | None = None,
+        same_language_distractor_prob: float = 0.0,
+        training: bool = True,
+        message_format: str = "generic",
+    ):
+        if message_format not in {"generic", "qwen3_asr"}:
+            raise ValueError(f"Unsupported message format: {message_format}")
+        self.message_format = message_format
+        self.records = records
+        self.training = training
+        self.seed = seed
+        self._epoch = torch.zeros((), dtype=torch.int64).share_memory_()
+        self.max_hotwords = max_hotwords
+        self.hotword_prompt_prob = hotword_prompt_prob
+        self.hotword_miss_prob = hotword_miss_prob
+        # Share of TS-ASR training samples that carry a hotword list (0 keeps the fixed TS prompt everywhere).
+        self.ts_hotword_prompt_prob = ts_hotword_prompt_prob
+        # Share of listed samples whose record names sound-alike words (metadata.confusable_hotwords) that join the
+        # list as distractors (0 keeps every list as before).
+        self.hotword_confusable_prob = hotword_confusable_prob
+        # Plain-ASR lists that carry sound-alikes leave out each real word with this probability instead of
+        # hotword_miss_prob, so "sound-alike listed, real word not" is common enough to learn (None keeps
+        # hotword_miss_prob). TS lists keep hotword_miss_prob.
+        self.hotword_confusable_miss_prob = hotword_confusable_miss_prob
+        self.hotword_pool = (
+            records.hotword_pool if hasattr(records, "hotword_pool")
+            else build_hotword_pool(self.records)
+        )
+        # Share of listed samples whose distractors (words nobody says) come from the pool of the record's own
+        # language instead of the pool of every language. One pool is mostly Chinese and English, so a list for
+        # a less frequent language (Spanish) would hardly ever hold a word of its language that nobody says.
+        self.same_language_distractor_prob = same_language_distractor_prob
+        self.hotword_pools = (
+            (records.hotword_pools if hasattr(records, "hotword_pools") else build_hotword_pools(self.records))
+            # Only training draws distractors. Building the pools from the rows reads every record in this
+            # process, which opens the Lance tables before the loader workers fork (they then crash).
+            if training and same_language_distractor_prob > 0 else {}
+        )
+
+    def set_epoch(self, epoch: int) -> None:
+        self._epoch.fill_(int(epoch) if self.training else 0)
+
+    @property
+    def epoch(self) -> int:
+        return int(self._epoch.item())
+
+    def _resolve_audio(self, resolved, rng):
+        raise NotImplementedError("The Catalog dataset resolves audio slots on demand")
+
+    def _think(self, record_idx, record, seed):
+        """Think text for a Qwen3-ASR example, or None for think off (data/think.py)."""
+        return None
+
+    def _plan_meeting(self, record, rng):
+        raise NotImplementedError("The Catalog dataset plans online meetings")
+
+    def _prepare_record(self, resolved, seed):
+        """Per-sample record changes that must reach the transcript too (e.g. retimed targets)."""
+        return resolved
+
+    def __len__(self) -> int:
+        return len(self.records)
+
+    def __getitem__(self, idx: int) -> dict[str, Any]:
+        epoch, record_idx, occurrence = (
+            idx if isinstance(idx, tuple) else (self.epoch, idx, None)
+        )
+        resolved = self.records[record_idx]
+        record = resolved.record
+        if record.metadata.get("sot_output_format") and self.message_format != "qwen3_asr":
+            raise ValueError("Timestamped SOT requires message_format=qwen3_asr")
+        seed = f"{self.seed}:{epoch}:{record_idx}"
+        if occurrence is not None:
+            seed += f":{occurrence}"
+        rng = random.Random(seed)
+        if record.metadata.get("enrollment_config") is not None:
+            from .target_sot import EnrollmentConfig, sample_enrollment
+
+            fixed = record.metadata.get("fixed_enrollment")
+            if not self.training and fixed is None:
+                raise ValueError("Conditional evaluation requires a frozen enrollment manifest")
+            record = sample_enrollment(record, EnrollmentConfig(**record.metadata["enrollment_config"]),
+                                       seed, fixed=fixed)
+            resolved = replace(resolved, record=record)
+        if self.training and record.metadata.get("online_mix") is not None:
+            from .ts_online import OnlineMixConfig
+
+            # Decide absence before rendering: it changes the transcript to empty.
+            config = OnlineMixConfig(**record.metadata["online_mix"])
+            nonspeech = bool(config.nonspeech_prob) and random.Random(
+                f"{seed}:online-nonspeech").random() < config.nonspeech_prob
+            # A scene names its utterances and transcript, so it is never blanked.
+            scene = bool(record.metadata.get("scene"))
+            if not scene and (nonspeech or random.Random(f"{seed}:online-absent").random() < config.absent_prob):
+                record = replace(record, target="",
+                                 labels={**record.labels, "target_present": False},
+                                 metadata={**record.metadata, "online_absent": True,
+                                           **({"online_nonspeech": True} if nonspeech else {})})
+                resolved = replace(resolved, record=record)
+        if record.metadata.get("online_meeting") is not None:
+            if not self.training:
+                raise ValueError("online_meeting windows are synthesized for training only")
+            # The plan fixes the transcript before the prompt is rendered, and before a speed draw retimes it.
+            record = self._plan_meeting(record, random.Random(f"{seed}:meeting"))
+            resolved = replace(resolved, record=record)
+        resolved = self._prepare_record(resolved, seed)
+        record = resolved.record
+        if record.metadata.get("enrollment_view"):
+            from .qwen3_asr import native_messages
+
+            audio = self._resolve_audio(resolved, rng)
+            names = [slot.name for slot in record.audio_slots]
+            messages = native_messages(record, "N/A")
+            return dict(messages=messages, audios=[audio["mixture"]],
+                        chat_template_kwargs={"enroll_wavs": [audio[n] for n in names[:-1]]},
+                        solution=messages[-1]["content"], task=record.task,
+                        candidate_hotwords="N/A", audio_slot_count=1,
+                        duration=resolved.duration, dataset_id=record.slot("mixture").ref.dataset_id,
+                        enrollment_view=record.metadata["enrollment_view"])
+        confusable_rng = random.Random(f"{seed}:confusables")
+        confusables = (
+            list(record.metadata.get("confusable_hotwords", ()))
+            if self.training and self.hotword_confusable_prob > 0
+            and confusable_rng.random() < self.hotword_confusable_prob
+            else []
+        )
+        distractor_pool = self.hotword_pool
+        if self.training and self.same_language_distractor_prob > 0:
+            from .qwen3_asr import native_language
+
+            own = self.hotword_pools.get(native_language(record.language))
+            if own and random.Random(f"{seed}:distractor-language").random() < self.same_language_distractor_prob:
+                distractor_pool = own
+        hotwords = (
+            sample_hotwords(
+                list(record.hotwords),
+                distractor_pool,
+                max_hotwords=self.max_hotwords,
+                prompt_prob=self.hotword_prompt_prob,
+                miss_prob=(
+                    self.hotword_confusable_miss_prob
+                    if confusables and self.hotword_confusable_miss_prob is not None
+                    else self.hotword_miss_prob
+                ),
+                rng=rng,
+                confusables=confusables,
+                confusable_rng=confusable_rng,
+            )
+            if self.training
+            else (",".join(record.hotwords) or "N/A")
+        )
+        if record.task == "ts_asr":
+            # TS records keep the plain-ASR draw above so the RNG stream (and augmentation) is unchanged when
+            # TS hotwords are off; their list is drawn separately. Words of an absent target are only distractors.
+            hotwords = (
+                sample_ts_hotwords(
+                    list(record.hotwords) if record.target.strip() else [],
+                    list(record.metadata.get("interferer_hotwords", ())),
+                    distractor_pool,
+                    max_hotwords=self.max_hotwords,
+                    prompt_prob=self.ts_hotword_prompt_prob,
+                    miss_prob=self.hotword_miss_prob,
+                    rng=random.Random(f"{seed}:ts-hotwords"),
+                    confusables=confusables,
+                )
+                if self.training and self.ts_hotword_prompt_prob > 0
+                else "N/A"
+            )
+        example, answer = _render(
+            resolved,
+            hotwords=hotwords,
+            prompt_seed=epoch,
+        )
+        sample = to_swift_record(
+            example,
+            self._resolve_audio(resolved, rng),
+            solution=answer,
+            candidate_hotwords=hotwords,
+        )
+        sample["duration"] = resolved.duration
+        sample["dataset_id"] = resolved.dataset_id
+        if self.message_format == "qwen3_asr":
+            from .qwen3_asr import native_messages, prepare_ts_clips
+
+            sample["messages"] = native_messages(record, hotwords, self._think(record_idx, record, seed))
+            sample["solution"] = sample["messages"][-1]["content"]
+            if record.task == "ts_asr":
+                enroll, mix = prepare_ts_clips(sample["audios"], self.sampling_rate)
+                sample["audios"] = [enroll]
+                sample["mix_wav"] = mix
+                sample["audio_slot_count"] = 1
+        return sample

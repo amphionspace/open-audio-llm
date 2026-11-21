@@ -23,7 +23,7 @@ source /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh
 export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 PYTHONUNBUFFERED=1 NUMPY_MADVISE_HUGEPAGE=0 \
   WANDB_ENTITY=1016097967-amphion WANDB_PROJECT=open-audio-llm WANDB_DIR=$E/$O \
   WANDB_HTTP_PROXY=http://10.119.17.252:17920 WANDB_HTTPS_PROXY=http://10.119.17.252:17920
-MINE="env PYTHONPATH=shared/code-v1/src:shared/code-v1/audio-data-contract-src $ENVS/oal-train-vllm/bin/python -m open_audio_llm.scripts.grpo_mining --data_config configs/train-data-grpo.yaml --workers 6 --concurrency 48 --samples 16"
+MINE="env PYTHONPATH=shared/code-v2/src:shared/code-v2/audio-data-contract-src $ENVS/oal-train-vllm/bin/python -m open_audio_llm.scripts.grpo_mining --data_config configs/train-data-grpo.yaml --workers 6 --concurrency 48 --samples 16"
 sources() { local k; for k in $(cat $C/sources-$1.txt); do printf -- '--source %s ' "$k"; done; }
 start_servers() {  # $1 = serve-asr | serve-tsasr, $2 = first port
   local kind=$1; pids=(); ports=()
@@ -68,6 +68,6 @@ for n in 0 1; do L=$O/ctx-ts-lane-$n; mkdir -p $L; lanes+=($L); url=http://127.0
   mpids+=($!); names+=(ctx-ts-$n)
 done
 wait_all; rc=$?; stop_servers; [ $rc -eq 0 ] || exit $rc
-env PYTHONPATH=shared/code-v1/src:shared/code-v1/audio-data-contract-src $ENVS/oal-train/bin/python scripts/mining_plans.py \
+env PYTHONPATH=shared/code-v2/src:shared/code-v2/audio-data-contract-src $ENVS/oal-train/bin/python scripts/mining_plans.py \
   $O AmphionASR-ctx-grpo-mining-$ARM-3000-n16-ctxplan "$TARGETS" "${lanes[@]}" > $O/plans.log 2>&1; x=$?
 echo "plans exit $x $(date -u +%FT%TZ)"; head -1 $O/plans.log; exit $x

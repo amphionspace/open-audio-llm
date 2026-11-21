@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copied from runs/zh-ctx-clue-target-20261117/scripts/run_eval.sh (oal-clue-target), itself from 08; only the code snapshot (EXP/shared/code-v1) differs between them.
+# Copied from runs/zh-ctx-clue-target-20261117/scripts/run_eval.sh (oal-clue-target), itself from 08; only the code snapshot (EXP/shared/code-v2) differs between them.
 # Start the ASR and TS servers of configs/eval-<name>/ (make_eval_configs.py), run the after-training configs one by one,
 # stop the servers. Logs and per-suite exit codes in <dir>/logs/.
 # usage: run_eval.sh <configs/eval-name> <wandb proxy url> <ae executable> <suite> [suite ...]
@@ -19,7 +19,7 @@ for m in asr tsasr; do
   [ -f "$DIR/serve-$m.yaml" ] || continue
   PORT[$m]=$(port "$DIR/serve-$m.yaml")
   curl -s --noproxy '*' -m 3 "http://127.0.0.1:${PORT[$m]}/v1/models" >/dev/null && { echo "port ${PORT[$m]} busy" >> "$LOG/status.txt"; exit 1; }
-  env PYTHONPATH="$EXP/shared/code-v1/src" $PY -m open_audio_llm.cli serve --config "$DIR/serve-$m.yaml" > "$LOG/serve-$m.log" 2>&1 &
+  env PYTHONPATH="$EXP/shared/code-v2/src" $PY -m open_audio_llm.cli serve --config "$DIR/serve-$m.yaml" > "$LOG/serve-$m.log" 2>&1 &
   PID[$m]=$!
 done
 stop() { for m in "${!PID[@]}"; do kill -TERM "${PID[$m]}" 2>/dev/null; done; wait; }

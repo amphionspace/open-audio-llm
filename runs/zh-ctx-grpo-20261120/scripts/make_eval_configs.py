@@ -3,8 +3,8 @@
 Copied from runs/zh-ctx-clue-target-20261117/scripts/make_eval_configs.py (oal-clue-target, the start arm's own eval),
 which was copied from 09-ctx-v2-eval of runs/zh-spelling-think-grpo-20261115 (configs/eval-ctxv2-avg3-eagle3-k3/, oal-think-exp
 branch), the run that measured avg3 on this set. Changed: the model; the eval set by name
-(asr/context-correction-zh@v2-20261117, published from the same selection 09 used); the code (here this experiment's code-v1, main
-f044443), whose TS server needs vLLM 0.32 (env vllm-serving-032); the draft is the checkpoint's own joint-MTP mtp/
+(asr/context-correction-zh@v2-20261117, published from the same selection 09 used); the code (here this experiment's code-v2, main
+4ca977e), whose TS server needs vLLM 0.32 (env vllm-serving-032); the draft is the checkpoint's own joint-MTP mtp/
 with EAGLE k=2 (AGENTS.md "MTP"); GPUs, ports, served names, output root and attempts dirs.
 
 Model names and output roots are ctx-grpo-20261120-<name>; serve records go to tasks/03-eval/.
@@ -46,7 +46,7 @@ def main():
                 "换模型、草稿（自带 mtp/，EAGLE k=2）、代码、vLLM 0.32 环境、GPU、端口和记录目录。\n")
         cfg = yaml.safe_load(s)
         s = sub(s, f"    path: {cfg['runtime']['python']['path']}\n", f"    path: {SERVING}\n")
-        s = s.replace("../../shared/code-v3/src", "../../shared/code-v1/src")
+        s = s.replace("../../shared/code-v3/src", "../../shared/code-v2/src")
         s = sub(s, f"  gpus:\n  - {cfg['runtime']['gpus'][0]}\n", f"  gpus:\n  - {gpu}\n")
         s = sub(s, f"    path: {cfg['task']['model']['path']}\n", f"    path: {checkpoint}\n")
         s = sub(s, f"    --port: {cfg['task']['arguments']['--port']}\n", f"    --port: {p}\n")

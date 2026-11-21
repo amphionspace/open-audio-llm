@@ -28,7 +28,7 @@
 - **奖励**：交付版的四项（准确率、出字判断、热词、格式），加 `qwen3_asr_context`。权重训练前定，先按和热词相同的 1.0 考虑。
 - **候选**：同 08，第 200/300/400 步的平均（avg3），和它与起点等权的插值（插值 50%）。
 - **评测**：上下文纠偏 v2（think 关、开）、守门 8 项、跟错人、场景 TS，都 think 关（上下文纠偏另测 think 开），ae 0.14。
-  - 起点 J 在同一个节点上、用同一份代码（`shared/code-v1`，main f044443）全部重测，和候选同口径。第 7、8 问的 J 用的是上下文纠偏实验的代码（main 0a1b117），只作参照。
+  - 起点 J 在同一个节点上、用同一份代码（`shared/code-v2`，main 4ca977e）全部重测，和候选同口径。第 7、8 问的 J 用的是上下文纠偏实验的代码（main 0a1b117），只作参照。
 
 ## 判定（训练前写定，2026-11-21）
 
@@ -86,3 +86,15 @@ avg3 和插值 50% 各自和起点 J 配对比较，think 关。
 2. 把目标表登记为 `context_correction_clean_zh@grpo-targets-v2-<日期>`，内容是目标表和改写后的名单，并镜像到 COS。
 3. 训练前写定判定：上下文纠偏 v2（think 关、开）、守门 8 项、场景 TS，比较对象是起点和交付版。
 4. 用一个 ACP 节点依次跑挖题、GRPO 400 步和评测。
+
+## 执行记录（2026-11-21）
+
+- **ACP 任务** `pt-xwk28bem`（`AmphionASR-ctx-grpo-v10recipe-ctxplan-from-synthtstwins3000-mine-grpo400-eval-1node`，节点 10.119.18.81），执行器目录 `/workspace/workspace/mingdong/scratch/acp-ctx-grpo`。07:51Z 提交，07:52Z 开始。
+- **第 1 次（`10-ctx-grpo`）**：07:54Z 失败。普通识别挖题服务加载起点时报错 `There is no module or parameter named 'sep_token' in Qwen3OmniMoeAudioEncoder`。
+  - 原因：起点带 TS 的 SEP 参数，vLLM 0.32 自带的 Qwen3-ASR 类不认它。插件只在开 SEP 或 MTP 草稿开关时才注册仓库里的类；08 用的旧版 vLLM 没有这个问题。
+  - 修法：普通识别挖题服务开 `OPEN_AUDIO_LLM_ENABLE_MTP_DRAFT`，同评测服务，不配草稿（91c726a）。
+- **第 2 次（`11-ctx-grpo`）**：普通识别阶段 16 路都完成（10:20Z），TS 阶段 10:34Z 全部失败。TS 服务对每个请求都返回 400。
+  - 原因：main 的挖题脚本没把注册音频补齐到整数个 Mel 帧，训练路径（`prepare_ts_clips`）会补；main 的 TS 服务要求注册时长是帧长的整数倍。
+  - 修法：open-audio-llm #171（合入 main 4ca977e），挖题时用 `prepare_ts_clips` 补齐。实验代码快照换成 `shared/code-v2`（= main 4ca977e，和 code-v1 只差这一个文件），配置重新生成。
+  - 加载较慢：数据配置里 `chime6`、`emilia2_short` 等终版来源没有 Lance 记录索引，`wenetspeech_clean` 的说明录音子集另算一个来源，各要从 JSONL 建目录索引。普通识别阶段的加载因此用了约 2 小时；索引缓存在共享盘上，之后的加载约 9 分钟。
+  - 第 2 次的挖题输出留在 `tasks/01-mining/failed-20261121T1034Z/`，不进计划。

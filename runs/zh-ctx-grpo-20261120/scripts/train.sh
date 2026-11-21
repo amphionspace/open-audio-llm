@@ -14,7 +14,7 @@ for i in $(seq 1 60); do
 done
 nvidia-smi --query-gpu=index,memory.used --format=csv,noheader; echo "GPUs busy: $busy"
 cd $R
-S=runs/zh-ctx-grpo-20261120/shared/code-v1
+S=runs/zh-ctx-grpo-20261120/shared/code-v2
 echo "start grpo $(date -u +%FT%TZ)"
 env -u PYTHONPATH /workspace/workspace/mingdong/repo/open-audio-llm/third_party/amphionkeys/load.sh sensecore -- \
   env PYTHONPATH=$S/src:$S/audio-data-contract-src /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python \
