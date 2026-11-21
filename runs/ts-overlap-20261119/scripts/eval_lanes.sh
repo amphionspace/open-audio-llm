@@ -35,7 +35,9 @@ lane() { local ga=$1 gt=$2 pa=$3 pt=$4; shift 4
   kill -TERM -$a -$b; wait $a $b 2>/dev/null; return $r; }
 source /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh >/dev/null 2>&1
 export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 PYTHONUNBUFFERED=1 AMPHION_EVAL_HOME=/workspace/data/ae-state
-export WANDB_HTTP_PROXY=http://10.119.17.252:17920 WANDB_HTTPS_PROXY=http://10.119.17.252:17920
+# W&B goes through a dev-machine forwarder that only admits listed node IPs; WB_PROXY picks which one.
+WB=${WB_PROXY:-http://10.119.17.252:17920}
+export WANDB_HTTP_PROXY=$WB WANDB_HTTPS_PROXY=$WB
 export AUDIO_DATA_CATALOG=/workspace/data/registry/catalog AUDIO_DATA_ROOTS_FILE=/workspace/data/registry/roots.json
 pids=(); i=0
 for spec in "$@"; do lane $((GB+2*i)) $((GB+2*i+1)) $((PB+10*i)) $((PB+10*i+1)) $spec & pids+=($!); i=$((i+1)); sleep 60; done

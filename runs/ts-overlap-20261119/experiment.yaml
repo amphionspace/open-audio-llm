@@ -9,3 +9,5 @@ inputs:
 tasks:
 - {id: clean-kl, name: 干净原句老师 KL（实验组）, config: configs/train-cleankl.yaml, depends_on: []}
 - {id: control, name: 只解冻音频塔（对照组）, config: configs/train-control.yaml, depends_on: []}
+- {id: clean-feature, name: 音频塔干净原句表示损失（实验组）, config: configs/train-feat.yaml, depends_on: []}
+- {id: frozen-llm, name: 冻结 LLM 只训音频塔（对照组）, config: configs/train-frozenllm.yaml, depends_on: []}
