@@ -1,0 +1,13 @@
+version: 1
+name: ts-overlap-20261119
+purpose: 降低重叠时的目标转写错误（11.17 重叠 ≥ 0.9 为 15.64%），中文 TS 守门 12.88 / 371 / 369 与英文 TS 误报、中文普通识别不回退
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+inputs:
+  init_model: /workspace/data/ae-state/model-cache/entries/model-afea989da22b77adc0ce9365
+tasks:
+- {id: clean-kl, name: 干净原句老师 KL（实验组）, config: configs/train-cleankl.yaml, depends_on: []}
+- {id: control, name: 只解冻音频塔（对照组）, config: configs/train-control.yaml, depends_on: []}
+- {id: clean-feature, name: 音频塔干净原句表示损失（实验组）, config: configs/train-feat.yaml, depends_on: []}
+- {id: frozen-llm, name: 冻结 LLM 只训音频塔（对照组）, config: configs/train-frozenllm.yaml, depends_on: []}

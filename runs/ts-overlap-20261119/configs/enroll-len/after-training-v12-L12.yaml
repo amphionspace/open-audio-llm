@@ -1,0 +1,27 @@
+# 11.17（whitebox-merge-v18a-es116inc）在中文 TS 测试集 v12 上只改注册长度：客户端发注册的前 12 秒，服务端 AMPHION_TSASR_ENROLL_SEC=12。
+# 其余与 11.17 的 v12 守门运行 run-20261117T032925Z-961b82b3（5 秒）相同。tasks/02-enroll-length。
+suite_id: asr-regression-native@1
+model_name: whitebox-merge-v18a-es116inc
+evaluator: ts-asr
+eval_set: open-audio-llm/ts-asr-benchmark@v12-20261022
+tsasr_server_url: http://127.0.0.1:19812
+tsasr_served_model: 1117-enroll12s-tsasr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/whitebox-merge-v18a-es116inc
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+  enroll_seconds: 12
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false
+  model_info:
+    origin: ours
+    mode: offline
+    params: 1.7B
+    license: internal

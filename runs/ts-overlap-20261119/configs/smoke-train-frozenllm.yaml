@@ -1,0 +1,116 @@
+# tasks/08 对照组：与 tasks/07 只差数据配置里的 clean_teacher_feature_weight（本组没有）。用来区分"冻结 LLM 只训音频塔"本身和表示损失各自的作用。
+# 冒烟：同正式配置，只跑 40 步、不存 checkpoint，用来核对表示损失生效（clean_rows、clean_feat）、冻结范围和速度。
+# 与 v96（ts-robust-acp-20261015/configs/train-1node-v96-v94audfrozen.yaml）的差别：
+#   起点 073 avg3 -> 11.17（ae 模型缓存 whitebox-merge-v18a-es116inc）；音频塔冻结 -> 解冻（同 v94）；
+#   与 tasks/04 相比：--freeze_llm true；音频塔学习率 --vit_lr / --aligner_lr 5e-6（LLM 冻结，--learning_rate 不再起作用）；
+#   训练文本切到 final-v1（audio-data-contract 5e20079）；代码 shared/code-v1 -> shared/code-v2（feat/ts-clean-teacher-kl 023232e）。
+data:
+  config: {path: train-data-frozenllm.yaml}
+preflight:
+- arguments:
+    --batch-size: 8
+    --data_config: {path: train-data-frozenllm.yaml}
+    --preflight-report:
+      path: '{attempt}/artifacts/data-preflight.json'
+    --world-size: 4
+  kind: prepare
+  module: open_audio_llm.data.catalog_cache
+recording:
+  attempts_dir:
+    path: ../tasks/08-frozen-llm/attempts
+runtime:
+  cwd: {path: ../../..}
+  distributed:
+    port: 29862
+    processes: 4
+  environment:
+    HF_HUB_OFFLINE: '1'
+    PATH: /workspace/workspace/mingdong/.local-tools/ffmpeg-7.0.2-static/bin:/workspace/workspace/mingdong/miniconda3/envs/oal-train/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    PYTHONUNBUFFERED: '1'
+    PYTORCH_ALLOC_CONF: expandable_segments:True
+    TOKENIZERS_PARALLELISM: false
+    WANDB_HTTPS_PROXY: http://10.119.17.252:17922
+    WANDB_HTTP_PROXY: http://10.119.17.252:17922
+  gpus: [4, 5, 6, 7]
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  pythonpath:
+  - {path: ../shared/code-v2/src}
+  - {path: ../shared/code-v2/audio-data-contract-src}
+  threads:
+    omp: 2
+    openblas: 1
+storage:
+  executable: /workspace/workspace/mingdong/.local/share/amphion-bucket/cluster-venv/bin/ab
+  local_root: {path: ../../..}
+  remote: whai:open-audio-llm
+task:
+  arguments:
+    --add_version: false
+    --attn_impl: sdpa
+    --audio_encoder_batching: true
+    --check_model: false
+    --dataloader_eval_num_workers: 12
+    --dataloader_eval_prefetch_factor: 4
+    --dataloader_num_workers: 12
+    --ddp_find_unused_parameters: true
+    --ddp_timeout: 1800
+    --eval_strategy: 'no'
+    --external_plugins:
+    - {path: ../shared/code-v2/src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py}
+    --freeze_aligner: false
+    --freeze_llm: true
+    --freeze_parameters:
+    - thinker.audio_tower.conv2d1
+    - thinker.audio_tower.conv2d2
+    - thinker.audio_tower.conv2d3
+    - thinker.audio_tower.conv_out
+    --freeze_vit: false
+    --gradient_accumulation_steps: 6
+    --gradient_checkpointing: false
+    --learning_rate: 2.0e-06
+    --vit_lr: 5.0e-06
+    --aligner_lr: 5.0e-06
+    --load_args: false
+    --logging_steps: 10
+    --lr_scheduler_kwargs:
+      min_lr: 1.0e-06
+    --lr_scheduler_type: cosine_with_min_lr
+    --max_grad_norm: 1.0
+    --max_length: 2048
+    --max_steps: 40
+    --model: /workspace/data/ae-state/model-cache/entries/model-afea989da22b77adc0ce9365
+    --model_type: amphion_asr_1.7b
+    --output_dir:
+      path: '{attempt}/artifacts/training'
+    --per_device_eval_batch_size: 4
+    --per_device_train_batch_size: 8
+    --performance_logging: true
+    --report_to: none
+    --save_steps: 1000
+    --seed: 42
+    --supervised_head_loss: false
+    --retention_teacher:
+      path: /workspace/model/Qwen3-ASR-1.7B
+    --torch_dtype: bfloat16
+    --tuner_type: full
+    --vit_gradient_checkpointing: false
+    --warmup_ratio: 0.0
+    --warmup_steps: 100
+    --weight_decay: 0.1
+  kind: train
+  module: open_audio_llm.integrations.ms_swift.train
+  positional:
+  - sft
+tracking:
+  credentials_file: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh
+  enabled: true
+  entity: 1016097967-amphion
+  finish_timeout: 300
+  interval: 5
+  name: AmphionASR-ts-overlap-llmfrozen-aud5e-6-from1117-v96final-smoke40-4gpu-codev2
+  project: open-audio-llm
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  pythonpath:
+  - {path: ../shared/code-v2/src}
+  startup_timeout: 180
+version: 1

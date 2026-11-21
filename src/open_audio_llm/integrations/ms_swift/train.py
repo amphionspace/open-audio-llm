@@ -216,6 +216,15 @@ class CatalogTrainingMixin:
             # A second, decision-only forward of the paired rows joins the supervised-head SFT loss.
             raise ValueError("objective.paired_lookalike needs SFT with supervised_head_loss, without packed_text, "
                              "a positive weight and a positive gap")
+        objective = self.args._catalog_config.get("objective", {})
+        clean_teacher = objective.get("clean_teacher_kl_weight") or objective.get("clean_teacher_feature_weight")
+        if clean_teacher and (
+            getattr(self.args, "rlhf_type", None) == "grpo"
+            or not self.args._catalog_config.get("objective", {}).get("sample_mean")
+        ):
+            # The clean-target forwards and their losses live in the sample-mean (retention) loss.
+            raise ValueError("objective.clean_teacher_kl_weight / clean_teacher_feature_weight need SFT with "
+                             "objective.sample_mean")
         # paired_lookalike only adds its own forward; the other objectives read the main forward.
         objective = {k: v for k, v in self.args._catalog_config.get("objective", {}).items() if k != "paired_lookalike"}
         draft_steps = getattr(self.args, "draft_head_steps", 0)
