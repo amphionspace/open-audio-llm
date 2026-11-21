@@ -89,7 +89,11 @@ def record_lists(source, version, out_dir):
         new = f"{source['dataset_id']}@{version}:"
         path = out_dir / f"{Path(source[name]).stem}-{version}.txt"
         out_dir.mkdir(parents=True, exist_ok=True)
-        path.write_text("".join(new + i[len(old):] + "\n" for i in ids))
+        text = "".join(new + i[len(old):] + "\n" for i in ids)
+        # The list is a registered artifact, and its size and mtime key the loader's index cache
+        # (catalog_cache._legacy_source_identity): rewriting the same content forces a full index rebuild.
+        if not (path.exists() and path.read_text() == text):
+            path.write_text(text)
         source[name] = str(path)
 
 
