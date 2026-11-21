@@ -17,6 +17,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from open_audio_llm.tsasr.audio_loop import attach_audio_loop, layer_sequence
+
 SEP_TOKENS = 1
 SEP_INIT_STD = 0.02
 _ENV_INSERT = "AMPHION_TSASR_INSERT_SEP"
@@ -483,7 +485,7 @@ def load_qwen3_asr(model_dir: str, torch_dtype=torch.bfloat16) -> nn.Module:
         dtype=torch_dtype,
         trust_remote_code=True,
     )
-    return attach_sep_token(model, model_dir=model_dir)
+    return attach_audio_loop(attach_sep_token(model, model_dir=model_dir), model_dir)
 
 
 def attach_sep_token(model: nn.Module, model_dir: str | None = None) -> nn.Module:
@@ -601,7 +603,7 @@ def _patch_hf_encoder_forward(tower: nn.Module) -> None:
         window_aftercnn = transformer_window_aftercnn(self)
         cu_seqlens = rebuild_cu_seqlens(aftercnn_lens, window_aftercnn, hidden_states.device)
 
-        for encoder_layer in self.layers:
+        for encoder_layer in layer_sequence(self):
             layer_outputs = encoder_layer(hidden_states, cu_seqlens)
             hidden_states = layer_outputs[0]
 

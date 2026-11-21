@@ -34,13 +34,17 @@ from vllm.model_executor.models.qwen3_asr import (
 from vllm.model_executor.models.qwen3_asr import (
     Qwen3ASRProcessingInfo as NativeQwen3ASRProcessingInfo,
 )
-from vllm.model_executor.models.qwen3_omni_moe_thinker import Qwen3OmniMoeAudioEncoder
+from vllm.model_executor.models.qwen3_omni_moe_thinker import (
+    Qwen3OmniMoeAudioEncoder,
+    Qwen3OmniMoeAudioEncoderLayer,
+)
 from vllm.model_executor.models.utils import maybe_prefix
 from vllm.multimodal import MULTIMODAL_REGISTRY
 from vllm.multimodal.inputs import MultiModalFieldConfig, MultiModalKwargsItems
 from vllm.multimodal.parse import AudioProcessorItems, MultiModalDataItems
 from vllm.multimodal.processing import PromptReplacement, PromptUpdate
 
+from open_audio_llm.tsasr.audio_loop import layer_sequence, loop_span
 from open_audio_llm.tsasr.concat_audio import configured_enroll_sec
 from open_audio_llm.tsasr.sep_token import (
     REQUEST_ENROLL_SEC,
@@ -89,6 +93,14 @@ class Qwen3ASRAudioEncoder(Qwen3OmniMoeAudioEncoder):
     def __init__(self, config, prefix: str = ""):
         super().__init__(config, prefix=prefix)
         self.sep_token = AudioSepToken(config.d_model)
+        span = loop_span(config)
+        if span is not None:
+            # Same names as the HF tower (audio_loop.py); the stacked q/k/v mapping of load_weights covers them.
+            self.loop_layers = nn.ModuleList(
+                Qwen3OmniMoeAudioEncoderLayer(config, prefix=f"{prefix}.loop_layers.{i}")
+                for i in range(span[1] - span[0])
+            )
+            self.loop_end = span[1]
 
     def forward(
         self,
@@ -116,7 +128,7 @@ class Qwen3ASRAudioEncoder(Qwen3OmniMoeAudioEncoder):
         max_seqlen = self.compute_attn_mask_seqlen(cu_seqlens)
         cu_seqlens = cu_seqlens.to(hidden_states.device, non_blocking=True)
 
-        for encoder_layer in self.layers:
+        for encoder_layer in layer_sequence(self):
             hidden_states = encoder_layer(hidden_states, cu_seqlens, max_seqlen)
 
         hidden_states = self.ln_post(hidden_states)

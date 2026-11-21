@@ -9,6 +9,8 @@ import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_sequence
 from transformers.modeling_outputs import BaseModelOutput
 
+from open_audio_llm.tsasr.audio_loop import layer_sequence
+
 
 def _enroll_list(enroll_n_frames, n_utt):
     if enroll_n_frames is None:
@@ -132,7 +134,7 @@ def _encode_batch(encoder, features, lengths, enroll_n_frames=None):
         hidden = hidden.detach().requires_grad_(True)
     # SDPA ignores native cu_seqlens. Use a batch dimension to isolate utterances
     # and mask padding, retaining full attention within each enrollment+mixture.
-    for layer in encoder.layers:
+    for layer in layer_sequence(encoder):
         hidden = layer(hidden, None, valid[:, None, None, :])[0]
     hidden = encoder.ln_post(hidden.flatten(0, 1).index_select(0, positions))
     return BaseModelOutput(last_hidden_state=encoder.proj2(encoder.act(encoder.proj1(hidden))))
@@ -172,7 +174,7 @@ def enable_batched_audio(model):
     if any(getattr(encoder.config, name) for name in ("dropout", "attention_dropout", "activation_dropout")):
         raise ValueError("Batched audio requires a dropout-free audio encoder")
     original_features, original_encoder = thinker.get_audio_features, encoder.forward
-    original_attention = [(layer.self_attn, layer.self_attn.forward) for layer in encoder.layers]
+    original_attention = [(layer.self_attn, layer.self_attn.forward) for layer in layer_sequence(encoder)]
 
     def forward(self, input_features, feature_lens=None, aftercnn_lens=None, enroll_n_frames=None):
         if input_features.ndim != 3:
