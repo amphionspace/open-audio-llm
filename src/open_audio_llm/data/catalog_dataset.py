@@ -409,8 +409,11 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             raise ValueError("objective.ts_activity_weight needs speed_prob 0: time warping moves the speakers")
         self._activity = None
         self._mix_info = {}
-        # The clean target of target-present online mixtures, for the clean-teacher KL (integrations.ms_swift.retention).
-        self.clean_teacher = bool(training and not grpo and config.get("objective", {}).get("clean_teacher_kl_weight"))
+        # The clean target of target-present online mixtures, for the clean-teacher KL and feature loss
+        # (integrations.ms_swift.retention).
+        objective = config.get("objective", {})
+        self.clean_teacher = bool(training and not grpo and (
+            objective.get("clean_teacher_kl_weight") or objective.get("clean_teacher_feature_weight")))
         self._clean = None
         # Twin enrollments for the paired look-alike loss (integrations.ms_swift.paired_lookalike).
         self.paired_lookalike = config.get("objective", {}).get("paired_lookalike") if training and not grpo else None

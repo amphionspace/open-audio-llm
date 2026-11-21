@@ -316,3 +316,89 @@ def test_clean_teacher_kl_reads_the_model_on_clean_features_for_clean_rows_only(
     expected_grads = torch.autograd.grad(expected.sum(), tuple(model.parameters()))
     for actual_grad, expected_grad in zip(actual_grads, expected_grads):
         torch.testing.assert_close(actual_grad, expected_grad, atol=2e-2, rtol=2e-2)
+
+
+class _TinyTower(torch.nn.Module):
+    """Stands in for the SEP-patched audio tower: features [mel, frames] -> tokens [frames, dim]."""
+
+    def __init__(self):
+        super().__init__()
+        self.proj = torch.nn.Linear(3, 4)
+
+    def forward(self, input_features, feature_lens=None, enroll_n_frames=None):
+        tokens = self.proj(input_features.float().T) + 0.1 * enroll_n_frames
+        return SimpleNamespace(last_hidden_state=tokens)
+
+
+def test_clean_teacher_features_pulls_the_mixture_tokens_toward_the_teacher_on_clean_rows_only():
+    from open_audio_llm.integrations.ms_swift.retention import clean_teacher_features
+
+    torch.manual_seed(7)
+    student, teacher = _TinyTower(), _TinyTower().requires_grad_(False)
+    inputs = {"input_features": torch.randn(3, 3, 6), "enroll_n_frames": torch.tensor([2, 1, 3]),
+              "feature_attention_mask": torch.tensor([[1] * 6, [1] * 4 + [0] * 2, [1] * 5 + [0]])}
+    clean_features = torch.randn(3, 3, 6)
+    clean_rows = torch.tensor([True, False, True])
+    error, indexes = clean_teacher_features(student, teacher, inputs, clean_rows, clean_features, 3)
+    assert indexes.tolist() == [0, 2] and error[1] == 0
+    for row, length in ((0, 6), (2, 5)):
+        s = student(inputs["input_features"][row, :, :length], enroll_n_frames=inputs["enroll_n_frames"][row])
+        t = teacher(clean_features[row, :, :length], enroll_n_frames=inputs["enroll_n_frames"][row])
+        s, t = s.last_hidden_state, t.last_hidden_state
+        expected = (s - t).square().sum() / t.square().sum()
+        torch.testing.assert_close(error[row], expected)
+    error.sum().backward()
+    assert student.proj.weight.grad is not None and student.proj.weight.grad.abs().sum() > 0
+    assert teacher.proj.weight.grad is None
+
+
+def test_frozen_tower_copy_rebinds_forward_to_the_copy(monkeypatch):
+    import open_audio_llm.tsasr.sep_token as sep_token
+    from open_audio_llm.integrations.ms_swift.retention import frozen_tower_copy
+
+    def patch(tower):
+        tower.forward = (lambda self, x: self.proj(x)).__get__(tower, type(tower))
+
+    monkeypatch.setattr(sep_token, "_patch_hf_encoder_forward", patch)
+    student = _TinyTower()
+    patch(student)
+    teacher = frozen_tower_copy(student)
+    with torch.no_grad():
+        student.proj.weight.add_(1.0)  # training moves the student; the teacher must not follow
+    x = torch.randn(2, 3)
+    assert student.forward.__self__ is student and teacher.forward.__self__ is teacher
+    assert teacher.proj.weight.dtype == torch.bfloat16 and not any(p.requires_grad for p in teacher.parameters())
+    assert not torch.allclose(teacher(x.to(torch.bfloat16)).float(), student(x), atol=0.1)
+
+
+def test_encoder_only_round_freezes_the_llm_and_copies_the_starting_tower(tmp_path, monkeypatch):
+    import open_audio_llm.tsasr.sep_token as sep_token
+    from open_audio_llm.integrations.ms_swift.retention import install_retention_objective
+
+    monkeypatch.setattr(sep_token, "_patch_hf_encoder_forward", lambda tower: None)
+    thinker = torch.nn.Module()
+    thinker.model = torch.nn.Linear(3, 3).requires_grad_(False)
+    thinker.model.config = SimpleNamespace(use_cache=False)
+    thinker.audio_tower = torch.nn.Linear(3, 3).to(torch.bfloat16)
+    thinker.lm_head = torch.nn.Linear(3, 3).requires_grad_(False)
+    thinker.generation_config = SimpleNamespace(use_cache=False)
+    student = torch.nn.Module()
+    student.thinker = thinker
+    trainer = SimpleNamespace(
+        model=student, optimizer=None, accelerator=SimpleNamespace(device=torch.device("cpu")),
+        template=SimpleNamespace(tokenizer=SimpleNamespace(convert_tokens_to_ids=lambda x: 1)),
+        args=SimpleNamespace(output_dir=str(tmp_path)), is_world_process_zero=lambda: True)
+    objective = {'replay_kl_weight': 0, 'clean_teacher_feature_weight': 1.0, 'reduction': 'token_mean'}
+    args = SimpleNamespace(tuner_type='full', freeze_llm=True, retention_teacher=None, deepspeed=None,
+                           use_logits_to_keep=False, audio_encoder_parallel=False,
+                           learning_rate=2e-6, vit_lr=5e-6, aligner_lr=5e-6, _catalog_config={'objective': objective})
+    install_retention_objective(trainer, args)
+    copy = trainer.clean_feature_teacher
+    assert copy is not None and copy.weight.dtype == torch.bfloat16 and not copy.weight.requires_grad
+    assert thinker.audio_tower.weight.dtype == torch.float32  # trainable student moves to FP32 masters
+    summary = json.loads((tmp_path / 'retention-objective.json').read_text())
+    assert summary['freeze_llm'] and summary['clean_teacher_feature_weight'] == 1.0
+    thinker.lm_head.requires_grad_(True)
+    trainer.optimizer = None
+    with pytest.raises(ValueError, match="freeze_llm left LLM parameters trainable"):
+        install_retention_objective(trainer, args)

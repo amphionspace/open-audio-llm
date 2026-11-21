@@ -14,7 +14,7 @@ from pathlib import Path
 
 TRAIN_KEYS = (
     "loss", "grad_norm", "learning_rate", "ce_asr", "ce_sot", "ce_think", "replay_kl",
-    "ce_ts_positive", "ce_ts_negative", "clean_kl", "clean_rows",
+    "ce_ts_positive", "ce_ts_negative", "clean_kl", "clean_feat", "clean_rows",
     "ts_activity_loss", "ts_activity_acc", "ts_activity_frames",
     "memory(GiB)", "train_speed(s/it)",
     "reward", "reward_std", "kl", "frac_reward_zero_std",
