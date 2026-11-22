@@ -1,0 +1,89 @@
+{
+  "run_a": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-r1117/runs/run-20261122T010433Z-18864105",
+  "run_b": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-avg3/runs/run-20261122T010433Z-f178dcd4",
+  "scoring": {
+    "version": 4,
+    "normalization": "v4: zh varieties and ja by character, others by word (CJK ideographs one each); zh: NFKC, lower, GigaSpeech tags, OpenCC t2s, Arabic numerals read in Chinese (4+ digit runs digit by digit, else cn2an an2cn), punctuation and symbols, SpeechIO fillers 呃啊 and erhua; v3: 幺/两/〇 read as 一/二/零 inside 3+ Chinese digit runs; v4: ja by character on v1 text; en: Whisper EnglishTextNormalizer; presence on v1 text",
+    "normalizers": {
+      "cn2an": "0.5.24",
+      "opencc": "0.1.7",
+      "whisper-normalizer": "0.1.15"
+    }
+  },
+  "resamples": 2000,
+  "confidence": 0.95,
+  "seed": 20261112,
+  "cluster_by": null,
+  "samples": 6,
+  "clusters": 6,
+  "protocol_differences": {},
+  "skipped_sources": [],
+  "overall": {
+    "all/CER": {
+      "error_rate": {
+        "a": 0.1875,
+        "b": 0.052083333333333336,
+        "diff": -0.13541666666666666,
+        "ci": [
+          -0.5342465753424657,
+          0.0
+        ],
+        "significant": false
+      },
+      "false_alarm_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.2,
+        "b": 0.0,
+        "diff": -0.2,
+        "ci": [
+          -0.6,
+          0.0
+        ],
+        "significant": false
+      }
+    }
+  },
+  "sources": {
+    "tdtech_customer_bench@v4-20261104:owner/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.1875,
+        "b": 0.052083333333333336,
+        "diff": -0.13541666666666666,
+        "ci": [
+          -0.5342465753424657,
+          0.0
+        ],
+        "significant": false
+      },
+      "false_alarm_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.2,
+        "b": 0.0,
+        "diff": -0.2,
+        "ci": [
+          -0.6,
+          0.0
+        ],
+        "significant": false
+      }
+    }
+  }
+}
