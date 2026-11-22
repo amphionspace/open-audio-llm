@@ -42,6 +42,9 @@ def main():
         if name in DONE:
             continue
         slug = re.sub(r"[^A-Za-z0-9.-]+", "-", name)
+        if "eval_set" in c:
+            # run.json also records the eval set's resolved data_config; ae accepts only one of the two.
+            c.pop("data_config", None)
         c["model_name"] = model
         c["output_root"] = f"/workspace/data/ae-runs/{model}"
         if "server_url" in c:
