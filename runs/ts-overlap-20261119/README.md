@@ -27,7 +27,8 @@
 | [12 GRPO 重叠转写计划](tasks/12-grpo-transcribe/README.md) | 从 11.17 起，GRPO 第 26 轮配方加 ts-transcribe 计划，训练文本终版 | 未达标：重叠 ≥ 0.9 只降 0.1；漏识 401–457 超守门（计划被近乎全对的提示占满） |
 | [13 GRPO 难例计划](tasks/13-grpo-hard/README.md) | 同 12，第六份计划只留组内准确率相差 ≥ 0.3 的难例，加挖 TS | 重叠 ≥ 0.9 显著变好（avg3 −0.35 [−0.54, −0.16]）；漏识 384–411 仍超守门 |
 | [14 难例 + ts-present 加倍](tasks/14-grpo-hard-present/README.md) | 同 13，ts-present 份额 0.06 → 0.12，压住出字门槛的漂移 | 推过了头：avg3 12.50/451/278（误报超）；转写仍显著变好 |
-| [15 13 与 14 的权重平均](tasks/15-grpo-soup/README.md) | 不训练，13 avg3 与 14 avg3 平均，门槛预计落在两者之间 | 排队（ACP `pt-0vbbz0mo`） |
+| [15 13 与 14 的权重平均](tasks/15-grpo-soup/README.md) | 不训练，13 avg3 与 14 avg3 平均，门槛预计落在两者之间 | **soup 过中文 TS 守门（12.74/357/342）与英文误报门槛（618）；重叠 ≥ 0.9 −0.28 [−0.48, −0.06]**；普通识别待补 |
+| [16 soup 交付候选评测](tasks/16-candidate-soup/README.md) | 11.17 发布时的其余 23 个评测套件逐项对比 + MTP 接受长度 | 排队（ACP `pt-0vbbz0mo`） |
 
 ## 结论（2026-11-21）
 

@@ -1,0 +1,25 @@
+# tasks/16：由 scripts/make_candidate_configs.py 从 11.17 发布评测 run-20261117T043022Z-b7aff370 的配置生成，只改模型名、输出目录与服务地址。
+suite_id: asr-regression-native@1
+model_name: ts-overlap-grpo-soup-t13t14-avg3
+evaluator: hotwords
+eval_set: open-audio-llm/hotword-bench@v3-20261020
+server_url: http://127.0.0.1:__ASR_PORT__
+served_model: soup-asr-__ASR_PORT__
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/ts-overlap-grpo-soup-t13t14-avg3
+parameters:
+  samples_per_source: 0
+  batch_size: 64
+  max_new_tokens: 512
+  seed: 42
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false
+  model_info:
+    origin: ours
+    mode: offline
+    params: 1.7B
+    license: internal
+data_config: /workspace/data/ae-state/eval-sets/open-audio-llm/hotword-bench@v3-20261020/eval-set.yaml
