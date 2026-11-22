@@ -2,8 +2,9 @@
 the same node and client. ts-asr suites: paired bootstrap (ae open-audio-llm compare, AmphionEval !158), every overall
 metric with its 95% CI; an error-type metric is worse when its CI low > 0, a hit rate when its CI high < 0. Hotword
 suites (not covered by compare): pooled CER and recall as the delivery packages report them (08's hotword_pool.py).
-Writes tasks/04-delivery/compare/cmp-<suite>.json and tasks/04-delivery/delivery.md.
-usage: python3 compare_delivery.py
+Writes tasks/04-delivery/compare/cmp-<suite>.json and tasks/04-delivery/delivery.md; another pair of models (e.g.
+startj, for attribution) writes compare/<a>-vs-<b>/ and delivery-<a>-vs-<b>.md.
+usage: python3 compare_delivery.py [BASELINE CANDIDATE]   (default r1117 avg3)
 """
 import json
 import subprocess
@@ -19,7 +20,9 @@ OUT = HERE / "tasks/04-delivery"
 RUNS = Path("/workspace/data/ae-runs")
 PY = "/workspace/workspace/mingdong/.local-tools/amphion-eval-0.14.0-eedcf15/bin/python"
 CMP_SRC = "/workspace/workspace/mingdong/repo/amphion-eval-ctx-compare/src"
-MODELS = ("r1117", "avg3")  # baseline, candidate
+MODELS = tuple(sys.argv[1:3]) or ("r1117", "avg3")  # baseline, candidate
+PAIR = "" if MODELS == ("r1117", "avg3") else f"{MODELS[0]}-vs-{MODELS[1]}"
+CMP = OUT / "compare" / PAIR
 HIGHER_BETTER = {"term_hit_rate", "recall"}
 
 
@@ -57,7 +60,7 @@ def one(item):
         if ra is not None:
             cells.append(f"召回 {100 * ra:.1f} → {100 * rb:.1f}（{100 * (rb - ra):+.1f}）")
         return key, cells, None
-    out = OUT / "compare" / f"cmp-{key}.json"
+    out = CMP / f"cmp-{key}.json"
     with open(out.with_suffix(".log"), "w") as log:
         subprocess.run([PY, "-m", "amphion_eval.cli", "open-audio-llm", "compare", str(a), str(b), "--output", str(out)],
                        env={"PYTHONPATH": CMP_SRC, "PATH": "/usr/bin:/bin"}, stdout=subprocess.DEVNULL, stderr=log, check=True)
@@ -76,10 +79,10 @@ def one(item):
 
 
 def main():
-    (OUT / "compare").mkdir(parents=True, exist_ok=True)
+    CMP.mkdir(parents=True, exist_ok=True)
     with ThreadPoolExecutor(6) as pool:
         results = list(pool.map(one, SUITES))
-    lines = ["# 交付评估：avg3 对 11.17（同一节点、同一推理栈，差 = avg3 − 11.17）", "",
+    lines = [f"# 交付评估：{MODELS[1]} 对 {MODELS[0]}（同一推理栈，差 = {MODELS[1]} − {MODELS[0]}）", "",
              "| 项目 | 结果 |", "|---|---|"]
     worse_all = []
     for key, cells, worse in results:
@@ -87,7 +90,7 @@ def main():
         if worse:
             worse_all.append(f"{key}: {', '.join(worse)}")
     lines += ["", "显著更差的项：" + ("；".join(worse_all) if worse_all else "无（热词类无 CI，单独看）")]
-    (OUT / "delivery.md").write_text("\n".join(lines) + "\n")
+    (OUT / (f"delivery-{PAIR}.md" if PAIR else "delivery.md")).write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
 
 
