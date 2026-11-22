@@ -22,3 +22,4 @@
 ## 进展
 
 - 2026-11-22：配置生成（23 个套件），排进 ACP `pt-0vbbz0mo` 的 runner（`19-candidate-soup.sh`），在任务 15 之后跑。
+- 2026-11-22：MTP 接受长度测量，用 joint-mtp-spec 的 `spec_check.py`，协议与 11.17 包相同：k=2 对照关闭 MTP。配置 [spec-check-soup-zhen-ts.yaml](../../configs/spec-check-soup-zhen-ts.yaml)、[spec-check-soup-esasr.yaml](../../configs/spec-check-soup-esasr.yaml)，脚本 [run_soup_spec.sh](../../scripts/run_soup_spec.sh)，排在 runner `20-soup-spec.sh`，结果写入 attempts 002 / 003。
