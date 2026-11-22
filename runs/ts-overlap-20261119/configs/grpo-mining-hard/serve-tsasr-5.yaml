@@ -1,0 +1,50 @@
+# 挖题（tasks/13 加挖的 TS 线）：同 configs/grpo-mining/serve-tsasr-5.yaml，只改记录目录。由 scripts/make_grpo_hard_configs.py 生成。
+version: 1
+runtime:
+  python:
+    path: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving-032/bin/python
+  cwd:
+    path: ../../../..
+  pythonpath:
+  - path: ../../shared/code-v4/src
+  gpus:
+  - 6
+  threads:
+    omp: 4
+    openblas: 1
+  environment:
+    VLLM_WORKER_MULTIPROC_METHOD: spawn
+    HF_HUB_OFFLINE: '1'
+    VLLM_ENGINE_READY_TIMEOUT_S: '1800'
+    PYTHONUNBUFFERED: '1'
+    AMPHION_TSASR_INSERT_SEP: '1'
+    AMPHION_TSASR_ENROLL_SEC: '5'
+    AMPHION_TSASR_ENROLL_NOPAD: '0'
+    COT_TSASR_ENROLL_RANDOM: '0'
+    COT_AUDIO_CHUNKED_ATTN: '0'
+task:
+  kind: serve
+  backend: vllm
+  model:
+    path: /workspace/data/ae-state/model-cache/entries/model-afea989da22b77adc0ce9365
+  arguments:
+    --host: 127.0.0.1
+    --port: 19415
+    --served-model-name: mine-1117-tsasr
+    --dtype: bfloat16
+    --tensor-parallel-size: 1
+    --limit-mm-per-prompt:
+      audio: 1
+    --gpu-memory-utilization: 0.5
+    --max-model-len: 8192
+    --hf-overrides:
+      thinker_config:
+        audio_config:
+          n_window_infer: 1000000000
+  flags:
+  - --trust-remote-code
+  - --no-enable-prefix-caching
+  - --trust-request-mm-kwargs
+recording:
+  attempts_dir:
+    path: ../../tasks/13-grpo-hard/mining/serve-tsasr-5/attempts

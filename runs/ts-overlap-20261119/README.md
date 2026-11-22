@@ -24,7 +24,8 @@
 | [09 逐层选择性](tasks/09-layer-selectivity/README.md) | 用已有打分结果看音频塔每一层对目标人的选择性 | 完成：第 17–23 层一路上涨、没到顶，最后一层往回降 |
 | [10 GRPO 采样上限](tasks/10-grpo-headroom/README.md) | 11.17 在 v12 重叠 ≥ 0.9 上每条采 16 次，看 GRPO 有没有可学的信号 | 完成：贪心写错的样本 66.5% 能采到更好的，best-of-16 12.74%（贪心 18.27%） |
 | [11 循环编码器](tasks/11-audio-loop/README.md) | 11.17 加第 17–23 层的可训练副本再走一遍（起点与 11.17 逐位相同），冻结其余参数，只训副本 | 未达标：v12 13.55/403/375，重叠 ≥ 0.9 转写 15.88（11.17 14.82）；只训新参数也同样退化 |
-| [12 GRPO 重叠转写计划](tasks/12-grpo-transcribe/README.md) | 从 11.17 起，GRPO 第 26 轮配方加 ts-transcribe 计划，训练文本终版 | 进行中（ACP `pt-0vbbz0mo`） |
+| [12 GRPO 重叠转写计划](tasks/12-grpo-transcribe/README.md) | 从 11.17 起，GRPO 第 26 轮配方加 ts-transcribe 计划，训练文本终版 | 未达标：重叠 ≥ 0.9 只降 0.1；漏识 401–457 超守门（计划被近乎全对的提示占满） |
+| [13 GRPO 难例计划](tasks/13-grpo-hard/README.md) | 同 12，第六份计划只留组内准确率相差 ≥ 0.3 的难例，加挖 TS | 进行中（ACP `pt-0vbbz0mo`） |
 
 ## 结论（2026-11-21）
 

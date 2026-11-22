@@ -10,6 +10,8 @@ E=/workspace/workspace/mingdong/repo/oal-clean-teacher/runs/ts-overlap-20261119;
 ENVS=/workspace/workspace/mingdong/miniconda3/envs; C=configs/grpo-mining; T=tasks/12-grpo-transcribe; O=$T/mining
 M=/workspace/workspace/mingdong/scratch/acp-dev/ae-models.sh
 PROXY=http://10.119.17.252:17922
+# eval_lanes.sh sends W&B through WB_PROXY (its default 17920 is another session's forward that admits only its node).
+export WB_PROXY=$PROXY
 START=/workspace/data/ae-state/model-cache/entries/model-afea989da22b77adc0ce9365
 now() { date -u +%FT%TZ; }
 for i in $(seq 60); do
@@ -83,21 +85,31 @@ train() {
 
 evals() {
   local a=$(cat $T/last-attempt) AVG=/workspace/workspace/mingdong/scratch/ts033/avg_ckpt.py PY=$ENVS/oal-train/bin/python
-  local c=() s f
-  for s in 200 300 400; do f=$(bash $M fetch ts-overlap-grpo-transcribe-$a-ckpt$s 2>/dev/null) || { echo "fetch ckpt$s failed"; return 4; }
-    c+=("$(echo "$f" | tail -1)"); done
-  local W=$(bash $M stage); $PY $AVG $W "${c[@]}" | tail -1; rm -f $W/.complete
-  local A=$(bash $M put $W --name ts-overlap-grpo-transcribe-$a-avg3 | tail -1); echo "avg3 $A $(now)"
-  local W2=$(bash $M stage); $PY $AVG $W2 $START $A | tail -1; rm -f $W2/.complete
-  local I=$(bash $M put $W2 --name ts-overlap-grpo-transcribe-$a-interp050 | tail -1); echo "interp050 $I $(now)"
-  ls $A/mtp $I/mtp || return 4
-  local rc=0 x
+  local c=() s f A I
+  # Rerunnable: reuse the avg3 / interp050 cache entries when an earlier run already made them.
+  if A=$(bash $M fetch ts-overlap-grpo-transcribe-$a-avg3 2>/dev/null); then A=$(echo "$A" | tail -1); else
+    for s in 200 300 400; do f=$(bash $M fetch ts-overlap-grpo-transcribe-$a-ckpt$s 2>/dev/null) || { echo "fetch ckpt$s failed"; return 4; }
+      c+=("$(echo "$f" | tail -1)"); done
+    local W=$(bash $M stage); $PY $AVG $W "${c[@]}" | tail -1; rm -f $W/.complete
+    A=$(bash $M put $W --name ts-overlap-grpo-transcribe-$a-avg3 | tail -1)
+  fi; echo "avg3 $A $(now)"
+  if I=$(bash $M fetch ts-overlap-grpo-transcribe-$a-interp050 2>/dev/null); then I=$(echo "$I" | tail -1); else
+    local W2=$(bash $M stage); $PY $AVG $W2 $START $A | tail -1; rm -f $W2/.complete
+    I=$(bash $M put $W2 --name ts-overlap-grpo-transcribe-$a-interp050 | tail -1)
+  fi; echo "interp050 $I $(now)"
+  # The GRPO run trains joint MTP, so avg3 carries mtp/. interp050 mixes in 11.17's cache entry, which has no mtp/
+  # (11.17's MTP ships in its package), so it has none; the evals serve without MTP (AMPHION_MTP_TOKENS=0).
+  [ -d $A/mtp ] || { echo "avg3 has no mtp/"; return 4; }
+  # Both candidates side by side, two lanes (four GPUs) each, as tasks 07/08: plain ASR (253k utterances) bounds the time.
+  local rc=0 x pids=() gb=0 pb=19900
   for x in avg3 interp050; do
-    bash scripts/eval_lanes.sh ts-overlap-grpo-transcribe-$a-$x grpo-$x 0 19900 \
-      "eval-sumfull-es116-core/v12" "eval-sumfull-es116-core/tsen" \
-      "eval-v18avg3-ckpt400-asrfull/asrfull" "eval-sumfull-es116-core/custts" > $T/eval-$x.log 2>&1 || rc=1
-    echo "evals $x done rc=$rc $(now)"
+    bash scripts/eval_lanes.sh ts-overlap-grpo-transcribe-$a-$x grpo-$x $gb $pb \
+      "eval-sumfull-es116-core/v12 eval-sumfull-es116-core/tsen" \
+      "eval-v18avg3-ckpt400-asrfull/asrfull eval-sumfull-es116-core/custts" > $T/eval-$x.log 2>&1 & pids+=($!)
+    gb=$((gb + 4)); pb=$((pb + 100)); sleep 60
   done
+  for x in 0 1; do wait ${pids[$x]} || rc=1; done
+  echo "evals done rc=$rc $(now)"
   return $rc
 }
 
