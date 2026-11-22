@@ -21,6 +21,7 @@ usage: make_configs.py ARM START TARGETS   (ARM: the SFT arm, e.g. template-no-s
        the ae model cache, as ae-models.sh fetch prints it; TARGETS: where the finalized context targets JSONL goes,
        in the dataset version that also gets the rewritten record lists; it may not exist yet)
 """
+import math
 import sys
 from pathlib import Path
 
@@ -117,6 +118,14 @@ def data_config(arm, targets, final):
         assert len(source) == 1, (dataset_id, version, split)
         d["train"].append({**source[0], "version": final(dataset_id, version)})
     d["objective"], d["rollout"] = r08["objective"], r08["rollout"]
+    # K's replay has 136 sources (es116's 15 Spanish ones, plus the two mined-only sources): at the SFT's window of 2000
+    # the smallest, chime6 train_2spk (0.023% of the weight), has an exact quota of 0.46, the sampler's rounding leaves
+    # it 0 and the sampler refuses to start (02-grpo attempt 001). The window becomes the smallest divisor of
+    # epoch_samples at which every source's exact quota is at least 1; source shares are unchanged.
+    weights = [s["weight"] for s in d["train"]]
+    epoch, window = d["replay"]["epoch_samples"], d["replay"]["window_samples"]
+    need = max(window, math.ceil(sum(weights) / min(weights)))
+    d["replay"]["window_samples"] = next(x for x in range(need, epoch + 1) if epoch % x == 0)
     plans = [{**p, "plan": str(HERE / "tasks/01-mining" / Path(p["plan"]).name)} for p in r08["grpo"]["mined"]]
     plans.append({"plan": str(HERE / "tasks/01-mining/plan-ctx.jsonl"), "share": CTX_SHARE})
     d["grpo"] = {**r08["grpo"], "mined": plans,

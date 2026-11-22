@@ -87,4 +87,34 @@
 
 ## 执行记录
 
-（待提交）
+- **ACP 任务** `pt-cwectlc6`（`AmphionASR-ctx-q10-K-grpo400-v10recipe-ctxplan-mine-avg3-ctxv2-delivery27-1node`，节点 10.119.16.243），执行器目录 `/workspace/workspace/mingdong/scratch/acp-ctx-kgrpo`。13:05Z 提交，13:18Z 开始。
+  - 提交时本项目另有 1 个节点在跑，合计 2 个。
+- **第 1 次（`10-kgrpo`）**：挖题成功，GRPO 启动失败。
+  - 13:23Z 普通识别服务就绪，13:46Z 普通识别阶段完成；13:49Z TS 服务就绪，14:19Z TS 阶段完成。
+  - 14:21Z 六份计划写好，同 J 那一轮对照如下：
+
+    | 计划 | K | J 那一轮 |
+    |---|---|---|
+    | 纠偏 | 4,149 | 5,273 |
+    | 热词 | 3,653 | 2,808 |
+    | TS 缺席 | 4,102 | 4,544 |
+    | TS 在场 | 3,015 | 2,632 |
+    | 无语音 | 1,274 | 1,707 |
+    | 漏字 | 760 | 851 |
+
+  - GRPO attempt 001 在建采样器时报错退出（14:25Z）：`Increase replay.window_samples to include every source`。
+    - 原因：K 的回放多了 15 个西语来源，GRPO 又加了两个只挖不放回的来源，共 136 个。回放窗口沿用 SFT 的 2000，最小的来源 chime6 `train_2spk` 只占权重的 0.023%，按比例应分 0.46 个。采样器按最大余数取整后它是 0，于是拒绝启动。
+    - K 的 SFT 只有 134 个来源，这个来源的配额刚好舍入成 1，所以 SFT 时没报错。J 那一轮最小的配额是 0.54。
+    - 修法：`make_configs.py` 把 GRPO 数据配置的 `replay.window_samples` 设为能整除 `epoch_samples`、且每个来源按比例算出的配额都不小于 1 的最小值，即 5000。各来源的份额不变，SFT 配置不动。
+- **第 2 次（`11-kgrpo`）**：只跑 GRPO 和评测，挖题结果沿用第 1 次的。
+  - GRPO attempt 002 14:27Z 开始，生效配置 `window_samples: 5000`。
+  - W&B 远端核验：[run](https://wandb.ai/1016097967-amphion/open-audio-llm/runs/AmphionASR-ctx-grpo-v10recipe-ctxplan-from-template-twins-dialog-final-1117-3000-textfinal-mtp-8gpu-400steps-002) running，第 10 步已上传 46 项指标，五项奖励都有数。
+  - 成功后由 `stop_when_done.sh 11-kgrpo` 停掉节点。
+
+<!-- execution-status -->
+
+执行状态：partial；质量状态：未核实。
+
+开始：未知；结束：未结束；退出码：未知。
+
+<!-- /execution-status -->
