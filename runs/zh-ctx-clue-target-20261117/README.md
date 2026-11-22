@@ -892,6 +892,25 @@ open-audio-llm experiment run --config runs/zh-ctx-clue-target-20261117/experime
     - template：v12 `run-20261121T070648Z-d7557475`，跟错人 `run-20261121T071924Z-11f4a084`；
     - J：v12 `run-20261121T070652Z-3a75dc95`，跟错人 `run-20261121T071940Z-b9ad1d60`。
 
+## 执行记录：第 9 问（2026-11-22）
+
+- **配置**：`python3 scripts/make_configs.py --k template-twins-dialog-final-1117`，生成 `configs/train-{,data-}template-twins-dialog-final-1117.yaml` 和 `experiment.yaml` 里的任务；dry-run 通过。
+- **数据预检**：开发机上用训练入口的预检（`open_audio_llm.data.catalog_cache`，world size 8、batch 12）跑过一遍，通过。
+  - 134 个来源都有记录。
+  - 新加的长对话 2,000 条、15 个西语来源都在。
+  - 五个 think 开子集的条数和终版 include 列表一致：emilia2_mix 326 / 316，emilia2_dialog 229，wenetspeech_clean 923，emilia2_short 281。
+- **运行**：ACP 任务 `pt-koq57kor`（`AmphionASR-ctx-q9-K-twins-asrdialog-esreplay-final-from1117-sft3k-ctxv2-delivery27-1node`），执行器目录 `/workspace/workspace/mingdong/scratch/acp-ctx-k`。
+  - 2026-11-22 08:23Z 提交，同时另有一个本项目节点在跑，合计 2 个。
+  - 节点脚本是 `scripts/acp-99-k.sh`：
+    1. 训练；
+    2. 取回 checkpoint-3000；
+    3. 同时跑上下文纠偏 v2（GPU 0/1）和 27 项交付评测（GRPO 实验的 `scripts/acp-delivery-k.sh`，GPU 2–5，输出 `/workspace/data/ae-runs/ctx-grpo-20261120-delivery-k`）。
+  - 成功后由 `stop_when_done.sh` 停掉节点。
+- **评测后**：
+  - 交付评测：在 GRPO 实验里跑 `python3 scripts/compare_delivery.py r1117 k` 和 `python3 scripts/scene_asr_drops.py r1117 k`；
+  - 上下文纠偏 v2：K 对 J 配对比较；
+  - 然后按“判定”的第 9 问判读。
+
 ## 数据登记（2026-11-20）
 
 - 本实验生成、用过的数据都登记在 audio-data-contract，放在 `/workspace/data/datasets/`，并镜像到 COS（`amphion-audio-backup-1373259071:audio-data-contract/`）：
