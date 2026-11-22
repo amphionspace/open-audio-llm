@@ -1,4 +1,4 @@
-"""Training-text final versions (audio-data-contract catalog/text_final_v1.yaml, 2026-11-20) for config versions.
+"""Training-text final versions (audio-data-contract catalog/text_final_v1*.yaml, 2026-11-20) for config versions.
 
 A version maps to ``<version>-final-v1-20261120`` when that is registered, else to its ``superseded_by`` (the
 cleaned intermediate versions, e.g. ``-ctxclean-20261110``, name their final there), else stays. The text-final
@@ -14,7 +14,9 @@ SUFFIX = "-final-v1-20261120"
 
 
 def final_version():
-    finals = {(d["dataset_id"], d["version"]) for d in yaml.safe_load((CATALOG / "text_final_v1.yaml").read_text())}
+    # Every list: Spanish finals are registered in text_final_v1_es.yaml (audio-data-contract #286).
+    finals = {(d["dataset_id"], d["version"]) for path in CATALOG.glob("text_final_v1*.yaml")
+              for d in yaml.safe_load(path.read_text())}
     superseded = {}
     for path in CATALOG.glob("*.yaml"):
         for d in yaml.safe_load(path.read_text()) or []:
