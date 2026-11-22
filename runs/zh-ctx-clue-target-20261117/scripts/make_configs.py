@@ -36,10 +36,19 @@ training, so the model transcribed any TTS voice), one arm:
   2's rule (each record seen about EXPLAINED_VIEWS times) and mixed with the online_mix of ts_scene_pool alt-twins zh,
   whose recipe it copies; its think file is added. Synthetic train_ts stays as it is.
 
-usage: make_configs.py [--implicit] [--ablation] [--synth-ts] [--synth-ts-twins] [arm ...]   (writes configs/train-data-{arm}.yaml, configs/train-{arm}.yaml for
+With ``--k`` (question 9, 2026-11-22: J left out whole speakers of long dialogues in plain ASR, and its increment
+merged onto 11.17 made Spanish TS worse), one arm:
+- template-twins-dialog-final-1117 (K):  J's data on the training-text final versions (every ``text_final_v1*.yaml``
+  list, else ``superseded_by``; think-v2 and its include lists from think-v2-20261113-final-v1-20261120), plus
+  context_correction_synth_zh@asr-dialog-v1-20261122 (plain-ASR dialogues of the twin scenes' voices) at the twins'
+  per-record weight, plus es116's Spanish sources, interference pool and hotword block (the training of 11.17's
+  Spanish increment), Spanish at es116's share of samples; trained from the 11.17 package with J's parameters.
+
+usage: make_configs.py [--implicit] [--ablation] [--synth-ts] [--synth-ts-twins] [--k] [arm ...]   (writes configs/train-data-{arm}.yaml, configs/train-{arm}.yaml for
        the named arms, all of them when none is named; configs written on the node are root's and stay as they are)
 """
 import gzip
+import json
 import sys
 from pathlib import Path
 
@@ -87,8 +96,97 @@ TWINS_ARMS = {
     "template-synth-ts-twins": {"port": 29916, "name": "template-synth-ts-twins-think",
                                 "task": "第二轮 think 模板，加合成音色自己的 TS 场景（30% 孪生缺席）+ 联合 MTP"},
 }
+K_ARM = "template-twins-dialog-final-1117"
+K_ARMS = {
+    K_ARM: {"port": 29926, "name": "twins-asrdialog-esreplay-final",
+            "task": "J 的配方换终版文本，加合成音色的普通识别长对话和 es116 的西语回放，从 11.17 起训 + 联合 MTP"},
+}
+DIALOG_VERSION = "asr-dialog-v1-20261122"
+DIALOG = Path(f"/workspace/data/datasets/{SYNTH}/versions/{DIALOG_VERSION}")
+THINK_FINAL = "/workspace/data/datasets/context_correction_clean_zh/versions/think-v2-20261113-final-v1-20261120/"
+START_1117 = "/workspace/data/packages/amphionasr-1.7b-v3-v18aes-mtp-candidate/model"
+# es116: the SFT whose increment is 11.17's Spanish (model_info.json of the 11.17 package).
+ES116 = Path("/workspace/workspace/mingdong/repo/open-audio-llm-ts-robust/runs/ts-robust-acp-20261015/tasks/01-train/"
+             "attempts/116/data-effective.yaml")
+CATALOG = Path("/workspace/data/registry/catalog")
+FINAL_SUFFIX = "-final-v1-20261120"
 STEPS, SAMPLES_PER_STEP, EXPLAINED_VIEWS = 3000, 188, 3  # as round 2 (scripts/make_data_config.py there)
 CODE = EXP / "shared/code-v1"
+
+
+def final_version():
+    """Training-text final version of a version: ``<version>-final-v1-20261120`` when registered (every
+    ``text_final_v1*.yaml`` list: Spanish has its own), else its ``superseded_by`` (the -ctxclean intermediates), else
+    the version itself (no final; Portuguese and the synthetic data are final as they are)."""
+    finals = {(d["dataset_id"], d["version"]) for path in CATALOG.glob("text_final_v1*.yaml")
+              for d in yaml.safe_load(path.read_text())}
+    superseded = {(d["dataset_id"], d["version"]): (d.get("provenance") or {}).get("superseded_by")
+                  for path in CATALOG.glob("*.yaml") for d in yaml.safe_load(path.read_text()) or []}
+
+    def final(dataset_id, version):
+        if (dataset_id, version + FINAL_SUFFIX) in finals:
+            return version + FINAL_SUFFIX
+        target = superseded.get((dataset_id, version))
+        if target:
+            name, new = target.split("@", 1)
+            if name != dataset_id or (name, new) not in finals:
+                raise ValueError(f"{dataset_id}@{version} superseded by {target}, which is not a text-final version")
+            return new
+        return version
+
+    return final
+
+
+def spanish(source):
+    return source["dataset_id"].endswith("_es") or source["split"] == "es" or source["version"].startswith("es-")
+
+
+def to_k(d, twins_weight, twins_count):
+    """J's data config (``d``) -> K's; returns it and the numbers for the header."""
+    final = final_version()
+    d = yaml.safe_load(yaml.safe_dump(d))
+    includes = {key: item["path"] for path in Path(THINK_FINAL).glob("*/includes.json")
+                for key, item in json.loads(path.read_text()).items()}
+    for s in d["train"]:
+        version = final(s["dataset_id"], s["version"])
+        if s.get("include_records"):
+            assert s["include_records"].startswith(OLD_THINK[0]), s
+            s["include_records"] = includes[f"{s['dataset_id']}@{version}|{s['split']}"]
+        if s.get("exclude_records"):
+            # split:id lists carry over; only lists of version-carrying IDs (Lhotse sources) would need rewriting.
+            assert not any(i.startswith(f"{s['dataset_id']}@") for i in Path(s["exclude_records"]).read_text().split()), s
+        s["version"] = version
+    for v in d["validation"]:
+        v["version"] = final(v["dataset_id"], v["version"])
+    d["think"]["files"] = [THINK_FINAL + f[len(OLD_THINK[0]):] if f.startswith(OLD_THINK[0]) else f
+                           for f in d["think"]["files"]]
+    assert all(Path(f).exists() for f in d["think"]["files"]), d["think"]["files"]
+    with gzip.open(DIALOG / "records/train_asr_dialog.jsonl.gz", "rt", encoding="utf-8") as stream:
+        dialogs = sum(1 for line in stream if line.strip())
+    twins = [i for i, s in enumerate(d["train"]) if (s["dataset_id"], s["version"]) == (SYNTH, TWINS_VERSION)]
+    assert len(twins) == 1, twins
+    # The twins' weight per record: each dialogue is seen about as often as a twin scene.
+    dialog = {"dataset_id": SYNTH, "version": DIALOG_VERSION, "split": "train_asr_dialog",
+              "weight": round(twins_weight * dialogs / twins_count, 4)}
+    d["train"].insert(twins[0] + 1, dialog)
+    es = yaml.safe_load(ES116.read_text())
+    es_sources = [s for s in es["train"] if spanish(s)]
+    assert len(es_sources) == 15 and not any(spanish(s) for s in d["train"]), [k for k in es_sources]
+    assert not any("lookalike_prob" in (s.get("online_mix") or {}) for s in es_sources)
+    share = sum(s["weight"] for s in es_sources) / sum(s["weight"] for s in es["train"])
+    rest = sum(s["weight"] for s in d["train"])
+    scale = share * rest / (1 - share) / sum(s["weight"] for s in es_sources)
+    d["train"] += [{**s, "version": final(s["dataset_id"], s["version"]), "weight": round(s["weight"] * scale, 4)}
+                   for s in es_sources]
+    es_pool = [s for s in es["interference_sources"] if s["language"] == "es"]
+    assert len(es_pool) == 1, es_pool
+    d["interference_sources"] = d["interference_sources"] + es_pool
+    # 11.17's Spanish increment was trained with es116's hotword block (miss / confusable-miss / same-language
+    # distractors, eshw-confmiss08); J's is v7set34's, without them.
+    d["hotwords"] = es["hotwords"]
+    moved = sum(1 for s in d["train"] if s["version"].endswith(FINAL_SUFFIX))
+    return d, {"dialogs": dialogs, "dialog_weight": dialog["weight"], "es_share": share, "es_sources": len(es_sources),
+               "final_sources": moved, "sources": len(d["train"])}
 
 
 def think_files(files, arm):
@@ -139,6 +237,8 @@ def main():
         arms.update(SYNTH_TS_ARMS)
     if "--synth-ts-twins" in sys.argv[1:]:
         arms.update(TWINS_ARMS)
+    if "--k" in sys.argv[1:]:
+        arms.update(K_ARMS)
     only =[a for a in sys.argv[1:] if not a.startswith("--")]
     assert set(only) <= set(arms), set(only) - set(arms)
     arms = {arm: spec for arm, spec in arms.items() if not only or arm in only}
@@ -172,7 +272,7 @@ def main():
                                 for s in d["train"]]}
             note = ("合成 train_ts 加上 aishellmix train_1spk 主条目的 online_mix（干扰人 0–4 个、5% 目标缺席、7.5% 非语音、"
                     "混响、底噪、注册音频劣化），权重不变；其余同 template。\n")
-        if arm == "template-synth-ts-twins":
+        if arm in ("template-synth-ts-twins", K_ARM):
             alt = [s for s in d["train"] if (s["dataset_id"], s["version"], s["split"])
                    == ("ts_scene_pool", "alt-twins-20261024-punchw-20261102", "zh")]
             assert len(alt) == 1 and alt[0]["online_mix"]["absent_prob"] == 0.0, alt
@@ -192,6 +292,13 @@ def main():
             note = (f"另加 {SYNTH}@{TWINS_VERSION} train_ts_twins {count} 条（合成音色自己的 TS 场景，30% 孪生缺席），"
                     f"约占样本 {share:.2%}，每条约见 {EXPLAINED_VIEWS} 次，online_mix 同 ts_scene_pool alt-twins zh，"
                     "加它的 think 文件；合成 train_ts 不变，其余同 template。\n")
+        if arm == K_ARM:
+            d, k = to_k(d, twins["weight"], count)
+            note = (f"J（template-synth-ts-twins）的数据换训练文本终版（{k['final_sources']}/{k['sources']} 个来源是 "
+                    f"-final-v1-20261120 版本，think-v2 和 include 列表换 think-v2-20261113-final-v1-20261120）；"
+                    f"另加 {SYNTH}@{DIALOG_VERSION} train_asr_dialog {k['dialogs']} 条（合成音色的普通识别长对话），"
+                    f"权重 {k['dialog_weight']}（与孪生场景每条同权）；另加 es116 的 {k['es_sources']} 个西语来源、"
+                    f"西语干扰人池和热词设置，西语占样本 {k['es_share']:.2%}（同 es116）。\n")
         if arm in IMPLICIT_ARMS:
             d, counts, share = with_implicit(d, spec["think"])
             note = (note.rstrip("\n") + f"另加 {IMPLICIT_ID}@{IMPLICIT_VERSION} {counts}，约占样本 {share:.2%}，"
@@ -210,22 +317,26 @@ def main():
         args["--external_plugins"] = [p.replace(old_code, str(CODE)) for p in args["--external_plugins"]]
         args["--deepspeed"] = str(EXP / "configs/zero1-bf16-no-overflow-check.json")  # copied from round 2
         args.update(MTP)
+        if arm == K_ARM:
+            args["--model"] = START_1117
         t["preflight"][0]["arguments"]["--data_config"] = str(data_path)
         t["recording"]["attempts_dir"]["path"] = f"../tasks/01-train-{arm}/attempts"
         t["tracking"]["pythonpath"] = [str(CODE / "src")]
-        t["tracking"]["name"] = f"AmphionASR-ctx-{spec['name']}-r2recipe-mtp-from-v10interp050-3k-1node-codev1"
+        t["tracking"]["name"] = (f"AmphionASR-ctx-q9-{spec['name']}-mtp-from1117-3k-1node-codev1" if arm == K_ARM else
+                                 f"AmphionASR-ctx-{spec['name']}-r2recipe-mtp-from-v10interp050-3k-1node-codev1")
         t["storage"]["local_root"] = str(EXP.parents[1])
         text = yaml.safe_dump(t, allow_unicode=True, sort_keys=False, width=1000)
         assert old_code not in text and "zh-spelling-think-r2-20261115/configs/train-data" not in text
         (EXP / f"configs/train-{arm}.yaml").write_text(
             f"# 由 scripts/make_configs.py 从 runs/zh-spelling-think-r2-20261115/configs/train-think.yaml 生成，不要手改。\n"
-            f"# {arm} 组：第二轮的训练参数，加联合 MTP（权重 0.1、3 步、衰减 0.8、lr 1e-4，从 11.17 交付包的 mtp/ 初始化），"
+            f"# {arm} 组：第二轮的训练参数{'（起点换成 11.17 交付包 ' + START_1117 + '）' if arm == K_ARM else ''}，加联合 MTP（权重 0.1、3 步、衰减 0.8、lr 1e-4，从 11.17 交付包的 mtp/ 初始化），"
             f"代码 shared/code-v1（main 0a1b117），数据 configs/train-data-{arm}.yaml。\n" + text)
         print(arm, data_path)
     extra = {**(IMPLICIT_ARMS if "--implicit" in sys.argv[1:] else {}),
              **(ABLATION_ARMS if "--ablation" in sys.argv[1:] else {}),
              **(SYNTH_TS_ARMS if "--synth-ts" in sys.argv[1:] else {}),
-             **(TWINS_ARMS if "--synth-ts-twins" in sys.argv[1:] else {})}
+             **(TWINS_ARMS if "--synth-ts-twins" in sys.argv[1:] else {}),
+             **(K_ARMS if "--k" in sys.argv[1:] else {})}
     if extra:
         experiment = EXP / "experiment.yaml"
         text = experiment.read_text()
