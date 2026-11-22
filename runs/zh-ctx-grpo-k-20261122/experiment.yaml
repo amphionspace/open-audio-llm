@@ -1,0 +1,16 @@
+# 由 scripts/make_configs.py 生成，不要手改。
+version: 1
+name: zh-ctx-grpo-k-20261122
+purpose: 在上下文纠偏 SFT（template-twins-dialog-final-1117 checkpoint-3000）上按交付版第十轮的 GRPO 配方，加一份上下文纠偏计划和奖励 qwen3_asr_context，修回 SFT 丢掉的出字判断校准（中文 TS 漏识别、西语 TS 误触发），保住 K 修好的长对话、西语 WER 和纠偏
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training_coverage: replay_quota
+  training_steps: 400
+inputs:
+  init_model: /workspace/data/ae-state/model-cache/entries/checkpoint-3000-f28e379337e1
+tasks:
+- id: grpo
+  name: GRPO 400 步（1 节点 8 卡，第十轮配方 + ctx 计划，计划在起点上重挖）
+  config: configs/train-grpo.yaml
+  depends_on: []

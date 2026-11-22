@@ -1,0 +1,2359 @@
+{
+  "run_a": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-r1117/runs/run-20261122T011022Z-7633547d",
+  "run_b": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-k/runs/run-20261122T102221Z-308ac3be",
+  "scoring": {
+    "version": 4,
+    "normalization": "v4: zh varieties and ja by character, others by word (CJK ideographs one each); zh: NFKC, lower, GigaSpeech tags, OpenCC t2s, Arabic numerals read in Chinese (4+ digit runs digit by digit, else cn2an an2cn), punctuation and symbols, SpeechIO fillers 呃啊 and erhua; v3: 幺/两/〇 read as 一/二/零 inside 3+ Chinese digit runs; v4: ja by character on v1 text; en: Whisper EnglishTextNormalizer; presence on v1 text",
+    "normalizers": {
+      "cn2an": "0.5.24",
+      "opencc": "0.1.7",
+      "whisper-normalizer": "0.1.15"
+    }
+  },
+  "resamples": 2000,
+  "confidence": 0.95,
+  "seed": 20261112,
+  "cluster_by": null,
+  "samples": 17040,
+  "clusters": 17040,
+  "protocol_differences": {},
+  "skipped_sources": [],
+  "overall": {
+    "all/WER": {
+      "error_rate": {
+        "a": 0.2748656766933198,
+        "b": 0.27670601176122184,
+        "diff": 0.0018403350679020436,
+        "ci": [
+          -0.0019380975025834407,
+          0.005441634001613564
+        ],
+        "significant": false
+      },
+      "false_alarm_rate": {
+        "a": 0.030324074074074073,
+        "b": 0.08576388888888889,
+        "diff": 0.05543981481481482,
+        "ci": [
+          0.0505603319224086,
+          0.06044933190702409
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.03404761904761905,
+        "b": 0.0225,
+        "diff": -0.01154761904761905,
+        "ci": [
+          -0.014084589033795272,
+          -0.008987594803080218
+        ],
+        "significant": true
+      }
+    }
+  },
+  "sources": {
+    "ts_asr_benchmark@es-v1-20261110:abs-hard/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.058333333333333334,
+        "b": 0.13333333333333333,
+        "diff": 0.075,
+        "ci": [
+          0.025423728813559324,
+          0.1311746375829832
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:abs-k1/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.016666666666666666,
+        "b": 0.08333333333333333,
+        "diff": 0.06666666666666667,
+        "ci": [
+          0.026086956521739132,
+          0.112
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:abs-k2/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.016666666666666666,
+        "b": 0.05,
+        "diff": 0.03333333333333334,
+        "ci": [
+          0.007872477854330711,
+          0.06957027300303334
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:abs-k4/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.041666666666666664,
+        "b": 0.06666666666666667,
+        "diff": 0.025,
+        "ci": [
+          -0.008928571428571428,
+          0.06154867256637163
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:abs-long/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:abs-short/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dom-clean-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.0,
+        "b": 0.03333333333333333,
+        "diff": 0.03333333333333333,
+        "ci": [
+          0.0078125,
+          0.06838235294117645
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dom-clean-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.18890814558058924,
+        "b": 0.18370883882149047,
+        "diff": -0.005199306759098771,
+        "ci": [
+          -0.02315652684322786,
+          0.012824675324675312
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.03333333333333333,
+        "b": 0.025,
+        "diff": -0.008333333333333331,
+        "ci": [
+          -0.02654867256637168,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dom-music-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.025,
+        "diff": 0.01666666666666667,
+        "ci": [
+          0.0,
+          0.04379722115507747
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dom-music-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.24667822068168688,
+        "b": 0.24898902368573078,
+        "diff": 0.0023108030040439043,
+        "ci": [
+          -0.022589861881580447,
+          0.02802112731045099
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.016666666666666666,
+        "b": 0.016666666666666666,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dom-reverb-noise-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.0,
+        "b": 0.03333333333333333,
+        "diff": 0.03333333333333333,
+        "ci": [
+          0.0076321420309969955,
+          0.06896551724137931
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dom-reverb-noise-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.38648180242634317,
+        "b": 0.3830155979202773,
+        "diff": -0.003466204506065884,
+        "ci": [
+          -0.035248458540639495,
+          0.02946235659956257
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.041666666666666664,
+        "b": 0.016666666666666666,
+        "diff": -0.024999999999999998,
+        "ci": [
+          -0.0546875,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dom-solo-music/ts_asr/es": {
+      "error_rate": {
+        "a": 0.10228108903605593,
+        "b": 0.10522442972774099,
+        "diff": 0.002943340691685059,
+        "ci": [
+          -0.007335277706418233,
+          0.014095246179176395
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.008333333333333333,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dom-solo-traffic/ts_asr/es": {
+      "error_rate": {
+        "a": 0.15873015873015872,
+        "b": 0.16904761904761906,
+        "diff": 0.010317460317460336,
+        "ci": [
+          -0.015300963948763197,
+          0.03958233201960972
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.041666666666666664,
+        "b": 0.03333333333333333,
+        "diff": -0.008333333333333331,
+        "ci": [
+          -0.028576567317574506,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dom-traffic-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.008333333333333333,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dom-traffic-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.30271519352975157,
+        "b": 0.30906990179087235,
+        "diff": 0.006354708261120778,
+        "ci": [
+          -0.017111503588543638,
+          0.030156873227252114
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.03333333333333333,
+        "b": 0.025,
+        "diff": -0.008333333333333331,
+        "ci": [
+          -0.027522935779816515,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dyn-alternate-k2/ts_asr/es": {
+      "error_rate": {
+        "a": 0.07686274509803921,
+        "b": 0.08705882352941176,
+        "diff": 0.010196078431372546,
+        "ci": [
+          -0.014394928320972186,
+          0.042758501973981726
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.025,
+        "diff": 0.01666666666666667,
+        "ci": [
+          0.0,
+          0.042735042735042736
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dyn-alternate-k4/ts_asr/es": {
+      "error_rate": {
+        "a": 0.06947697111631537,
+        "b": 0.06791569086651054,
+        "diff": -0.0015612802498048278,
+        "ci": [
+          -0.012216671620293097,
+          0.01024569039864446
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.008333333333333333,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dyn-burst-k1/ts_asr/es": {
+      "error_rate": {
+        "a": 0.12110091743119267,
+        "b": 0.13669724770642203,
+        "diff": 0.015596330275229359,
+        "ci": [
+          0.0008710696643087791,
+          0.03144680119955016
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.008333333333333333,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dyn-burst-k2/ts_asr/es": {
+      "error_rate": {
+        "a": 0.24094202898550723,
+        "b": 0.28804347826086957,
+        "diff": 0.047101449275362334,
+        "ci": [
+          0.012290800437325038,
+          0.08814576580226904
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.025,
+        "b": 0.03333333333333333,
+        "diff": 0.008333333333333331,
+        "ci": [
+          0.0,
+          0.02759099616858235
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dyn-burst-k4/ts_asr/es": {
+      "error_rate": {
+        "a": 0.4192982456140351,
+        "b": 0.4324561403508772,
+        "diff": 0.01315789473684209,
+        "ci": [
+          -0.03508943136797944,
+          0.056645847848445674
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.041666666666666664,
+        "b": 0.03333333333333333,
+        "diff": -0.008333333333333331,
+        "ci": [
+          -0.03076923076923077,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dyn-enter-k2/ts_asr/es": {
+      "error_rate": {
+        "a": 0.26048951048951047,
+        "b": 0.2770979020979021,
+        "diff": 0.016608391608391615,
+        "ci": [
+          -0.01507632621546018,
+          0.051394824968775704
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.05,
+        "b": 0.058333333333333334,
+        "diff": 0.008333333333333331,
+        "ci": [
+          0.0,
+          0.028037383177570093
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dyn-full-k1/ts_asr/es": {
+      "error_rate": {
+        "a": 0.12360248447204969,
+        "b": 0.11180124223602485,
+        "diff": -0.011801242236024842,
+        "ci": [
+          -0.027955133913846564,
+          0.002325807619219986
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.025,
+        "b": 0.025,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dyn-full-k4/ts_asr/es": {
+      "error_rate": {
+        "a": 0.47507507507507507,
+        "b": 0.512912912912913,
+        "diff": 0.037837837837837895,
+        "ci": [
+          0.009060655120676058,
+          0.06801311712735583
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.041666666666666664,
+        "b": 0.041666666666666664,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dyn-leave-k2/ts_asr/es": {
+      "error_rate": {
+        "a": 0.2913793103448276,
+        "b": 0.30431034482758623,
+        "diff": 0.012931034482758619,
+        "ci": [
+          -0.011852952068475543,
+          0.03898612820755608
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.03333333333333333,
+        "b": 0.016666666666666666,
+        "diff": -0.016666666666666666,
+        "ci": [
+          -0.04273504273504273,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dyn-overlap-k1/ts_asr/es": {
+      "error_rate": {
+        "a": 0.14403778040141677,
+        "b": 0.15702479338842976,
+        "diff": 0.012987012987012991,
+        "ci": [
+          -0.012458592865232161,
+          0.0446957020132813
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.016666666666666666,
+        "b": 0.016666666666666666,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dyn-overlap-k3/ts_asr/es": {
+      "error_rate": {
+        "a": 0.514047866805411,
+        "b": 0.5473465140478668,
+        "diff": 0.03329864724245579,
+        "ci": [
+          -0.009376696765816827,
+          0.07874533492577791
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.025,
+        "b": 0.025,
+        "diff": 0.0,
+        "ci": [
+          -0.024590163934426226,
+          0.024193548387096774
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dyn-solo/ts_asr/es": {
+      "error_rate": {
+        "a": 0.104,
+        "b": 0.10472727272727272,
+        "diff": 0.0007272727272727292,
+        "ci": [
+          -0.0066548111830031145,
+          0.009015537985161668
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.008333333333333333,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dyn-target-loud/ts_asr/es": {
+      "error_rate": {
+        "a": 0.1590013140604468,
+        "b": 0.16819973718791065,
+        "diff": 0.009198423127463856,
+        "ci": [
+          -0.0101011802662746,
+          0.031159471609804167
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.016666666666666666,
+        "b": 0.016666666666666666,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:dyn-target-quiet/ts_asr/es": {
+      "error_rate": {
+        "a": 0.5070661390616167,
+        "b": 0.5217637083097796,
+        "diff": 0.0146975692481629,
+        "ci": [
+          -0.013764653414882795,
+          0.04209384566542155
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.058333333333333334,
+        "b": 0.05,
+        "diff": -0.008333333333333331,
+        "ci": [
+          -0.02702702702702703,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-clean-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.02,
+        "b": 0.08666666666666667,
+        "diff": 0.06666666666666667,
+        "ci": [
+          0.028771839671120254,
+          0.10967741935483871
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-clean-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.21374490390215492,
+        "b": 0.22189866045428072,
+        "diff": 0.008153756552125802,
+        "ci": [
+          -0.010395897766585583,
+          0.029466096659372533
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.05333333333333334,
+        "b": 0.04666666666666667,
+        "diff": -0.006666666666666668,
+        "ci": [
+          -0.022222222222222223,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-contam0-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.16666666666666666,
+        "b": 0.2866666666666667,
+        "diff": 0.12000000000000002,
+        "ci": [
+          0.06508755472170107,
+          0.17722559960026646
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-contam0-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.5288293535235876,
+        "b": 0.5177635410599883,
+        "diff": -0.011065812463599278,
+        "ci": [
+          -0.07550151369631118,
+          0.05091426708495509
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.24666666666666667,
+        "b": 0.12,
+        "diff": -0.12666666666666668,
+        "ci": [
+          -0.1831097343555001,
+          -0.07284213252432577
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-contam10-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.09333333333333334,
+        "b": 0.21333333333333335,
+        "diff": 0.12000000000000001,
+        "ci": [
+          0.07030627985668791,
+          0.17518603659114607
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-contam10-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.302853814793244,
+        "b": 0.3465346534653465,
+        "diff": 0.043680838672102484,
+        "ci": [
+          0.0,
+          0.08912227800861806
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.07333333333333333,
+        "b": 0.04,
+        "diff": -0.03333333333333333,
+        "ci": [
+          -0.07333333333333333,
+          0.006537022703818368
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-lead_silence-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.03333333333333333,
+        "b": 0.1,
+        "diff": 0.06666666666666668,
+        "ci": [
+          0.029628533859303086,
+          0.10898109243697475
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-lead_silence-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.21549213744903903,
+        "b": 0.2253931275480489,
+        "diff": 0.009900990099009882,
+        "ci": [
+          -0.012163152691237668,
+          0.03408639212577377
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.05333333333333334,
+        "b": 0.04,
+        "diff": -0.013333333333333336,
+        "ci": [
+          -0.04081632653061225,
+          0.010720205147449601
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-len2-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.07333333333333333,
+        "b": 0.16666666666666666,
+        "diff": 0.09333333333333332,
+        "ci": [
+          0.048951048951048945,
+          0.14173228346456695
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-len2-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.23471170646476414,
+        "b": 0.23471170646476414,
+        "diff": 0.0,
+        "ci": [
+          -0.0384040939175851,
+          0.03307608972159446
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.05333333333333334,
+        "b": 0.03333333333333333,
+        "diff": -0.020000000000000004,
+        "ci": [
+          -0.04605516194331983,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-len3-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.02666666666666667,
+        "b": 0.09333333333333334,
+        "diff": 0.06666666666666667,
+        "ci": [
+          0.028771839671120254,
+          0.11291848299912807
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-len3-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.2119976703552708,
+        "b": 0.22597553873034362,
+        "diff": 0.01397786837507281,
+        "ci": [
+          -0.0063330345827177234,
+          0.03725696059561384
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.05333333333333334,
+        "b": 0.04666666666666667,
+        "diff": -0.006666666666666668,
+        "ci": [
+          -0.021134305835010043,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-len4-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.013333333333333334,
+        "b": 0.08666666666666667,
+        "diff": 0.07333333333333333,
+        "ci": [
+          0.034013605442176874,
+          0.12000751879699244
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-len4-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.21782178217821782,
+        "b": 0.2172393709959231,
+        "diff": -0.000582411182294712,
+        "ci": [
+          -0.021101858695986925,
+          0.02099052598268188
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.05333333333333334,
+        "b": 0.04666666666666667,
+        "diff": -0.006666666666666668,
+        "ci": [
+          -0.02158273381294964,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-lp4k-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.02666666666666667,
+        "b": 0.09333333333333334,
+        "diff": 0.06666666666666667,
+        "ci": [
+          0.03105590062111801,
+          0.1088468079539508
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-lp4k-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.20267909143855561,
+        "b": 0.20617355853232383,
+        "diff": 0.0034944670937682165,
+        "ci": [
+          -0.01602280306739715,
+          0.02436551078763345
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.04666666666666667,
+        "b": 0.04,
+        "diff": -0.006666666666666668,
+        "ci": [
+          -0.021428571428571422,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-noise10-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.02666666666666667,
+        "b": 0.10666666666666667,
+        "diff": 0.08,
+        "ci": [
+          0.03821534497009774,
+          0.12739174111913815
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-noise10-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.1997670355270821,
+        "b": 0.1986022131624927,
+        "diff": -0.0011648223645893963,
+        "ci": [
+          -0.01727992485238862,
+          0.01643497913166962
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.04666666666666667,
+        "b": 0.04,
+        "diff": -0.006666666666666668,
+        "ci": [
+          -0.02142857142857143,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-quiet-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.08,
+        "b": 0.17333333333333334,
+        "diff": 0.09333333333333334,
+        "ci": [
+          0.045744206773618554,
+          0.1450412459985225
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-quiet-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.24694234129295284,
+        "b": 0.26557949912638323,
+        "diff": 0.018637157833430396,
+        "ci": [
+          -0.015267175572519056,
+          0.052362265549658504
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.06,
+        "b": 0.04,
+        "diff": -0.019999999999999997,
+        "ci": [
+          -0.04459074056469245,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-reverb-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.03333333333333333,
+        "b": 0.08,
+        "diff": 0.04666666666666667,
+        "ci": [
+          0.014922609176340524,
+          0.08126277515723264
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-reverb-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.20733838089691323,
+        "b": 0.2079207920792079,
+        "diff": 0.0005824111822946842,
+        "ci": [
+          -0.02513155674043699,
+          0.02597483012343691
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.06,
+        "b": 0.04,
+        "diff": -0.019999999999999997,
+        "ci": [
+          -0.04478031192352842,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-short1-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.18666666666666668,
+        "b": 0.3,
+        "diff": 0.11333333333333331,
+        "ci": [
+          0.05921052631578949,
+          0.1760666942833471
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:enroll-short1-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.3051834595224228,
+        "b": 0.32847990681421085,
+        "diff": 0.023296447291788036,
+        "ci": [
+          -0.02242336506240396,
+          0.07050629647815758
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.05333333333333334,
+        "b": 0.04,
+        "diff": -0.013333333333333336,
+        "ci": [
+          -0.04729829681752759,
+          0.01911134247917686
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:floor-dnsas50-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.03333333333333333,
+        "b": 0.08333333333333333,
+        "diff": 0.049999999999999996,
+        "ci": [
+          0.016129032258064516,
+          0.0916030534351145
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:floor-dnsas50-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.19970738844184346,
+        "b": 0.20629114850036576,
+        "diff": 0.006583760058522292,
+        "ci": [
+          -0.00993663280281486,
+          0.023274759892292853
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.016666666666666666,
+        "b": 0.008333333333333333,
+        "diff": -0.008333333333333333,
+        "ci": [
+          -0.026086956521739132,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:floor-dnsfs50-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.025,
+        "b": 0.09166666666666666,
+        "diff": 0.06666666666666665,
+        "ci": [
+          0.01680672268907563,
+          0.11764705882352941
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:floor-dnsfs50-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.20702267739575714,
+        "b": 0.2055596196049744,
+        "diff": -0.0014630577907827347,
+        "ci": [
+          -0.023490710223059878,
+          0.022032655810429035
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.0,
+        "diff": -0.008333333333333333,
+        "ci": [
+          -0.027033169533169525,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:floor-none-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.025,
+        "b": 0.09166666666666666,
+        "diff": 0.06666666666666665,
+        "ci": [
+          0.02631578947368421,
+          0.11475409836065574
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:floor-none-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.19751280175566935,
+        "b": 0.17629846378931968,
+        "diff": -0.021214337966349667,
+        "ci": [
+          -0.05178558475140385,
+          0.004148898365316268
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.0,
+        "diff": -0.008333333333333333,
+        "ci": [
+          -0.027285353535353513,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:floor-pink50-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.03333333333333333,
+        "b": 0.15,
+        "diff": 0.11666666666666667,
+        "ci": [
+          0.06201378884544145,
+          0.1794871794871795
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:floor-pink50-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.2867593269934162,
+        "b": 0.2794440380395026,
+        "diff": -0.007315288953913646,
+        "ci": [
+          -0.03223553470745914,
+          0.01844090827820492
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:floor-wham30-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.03333333333333333,
+        "b": 0.11666666666666667,
+        "diff": 0.08333333333333334,
+        "ci": [
+          0.03676301942795467,
+          0.14064711084905648
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:floor-wham30-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.34381858083394295,
+        "b": 0.32991953182150696,
+        "diff": -0.013899049012435993,
+        "ci": [
+          -0.04403740530303027,
+          0.016211196329390002
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.016666666666666666,
+        "b": 0.008333333333333333,
+        "diff": -0.008333333333333333,
+        "ci": [
+          -0.027522935779816515,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:floor-wham40-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.041666666666666664,
+        "b": 0.09166666666666666,
+        "diff": 0.049999999999999996,
+        "ci": [
+          0.015996825396825395,
+          0.09483784893267647
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:floor-wham40-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.2238478419897586,
+        "b": 0.21653255303584493,
+        "diff": -0.007315288953913673,
+        "ci": [
+          -0.023708048365959543,
+          0.008623322501053141
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.0,
+        "diff": -0.008333333333333333,
+        "ci": [
+          -0.027529306829765534,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:floor-wham50-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.016666666666666666,
+        "b": 0.06666666666666667,
+        "diff": 0.05,
+        "ci": [
+          0.015384615384615385,
+          0.0928612956810631
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:floor-wham50-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.2011704462326262,
+        "b": 0.20043891733723482,
+        "diff": -0.0007315288953913812,
+        "ci": [
+          -0.03385966435185186,
+          0.033016171435558794
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.0,
+        "diff": -0.008333333333333333,
+        "ci": [
+          -0.027033169533169525,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:floor-wham60-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.016666666666666666,
+        "b": 0.075,
+        "diff": 0.058333333333333334,
+        "ci": [
+          0.01869158878504673,
+          0.10256410256410256
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:floor-wham60-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.19312362838332114,
+        "b": 0.17410387710314557,
+        "diff": -0.01901975128017558,
+        "ci": [
+          -0.038583361201471426,
+          0.0
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:floor-white50-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.03333333333333333,
+        "b": 0.13333333333333333,
+        "diff": 0.1,
+        "ci": [
+          0.04310344827586207,
+          0.16216216216216217
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:floor-white50-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.29114850036576445,
+        "b": 0.2794440380395026,
+        "diff": -0.011704462326261877,
+        "ci": [
+          -0.04790115610120638,
+          0.023955703051727874
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.0,
+        "diff": -0.008333333333333333,
+        "ci": [
+          -0.027777777777777776,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:level-clip-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.025,
+        "b": 0.08333333333333333,
+        "diff": 0.05833333333333333,
+        "ci": [
+          0.018518518518518517,
+          0.10170356278104457
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:level-clip-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.2099487929773226,
+        "b": 0.2033650329188003,
+        "diff": -0.00658376005852232,
+        "ci": [
+          -0.03709546064257882,
+          0.019962205984282347
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.0,
+        "diff": -0.008333333333333333,
+        "ci": [
+          -0.027039424745846745,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:level-loud10-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.016666666666666666,
+        "b": 0.05,
+        "diff": 0.03333333333333334,
+        "ci": [
+          0.007750447227191416,
+          0.06504065040650406
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:level-loud10-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.21141185076810534,
+        "b": 0.1960497439648866,
+        "diff": -0.015362106803218728,
+        "ci": [
+          -0.04494614383674818,
+          0.009144354124128326
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.0,
+        "diff": -0.008333333333333333,
+        "ci": [
+          -0.028037383177570093,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:level-mulaw-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.025,
+        "b": 0.09166666666666666,
+        "diff": 0.06666666666666665,
+        "ci": [
+          0.02499483471074381,
+          0.11305244285073952
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:level-mulaw-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.22165325530358448,
+        "b": 0.2077542062911485,
+        "diff": -0.013899049012435993,
+        "ci": [
+          -0.041587475633528256,
+          0.010205491036193459
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.016666666666666666,
+        "b": 0.008333333333333333,
+        "diff": -0.008333333333333333,
+        "ci": [
+          -0.027784267912772574,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:level-nb-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.041666666666666664,
+        "b": 0.10833333333333334,
+        "diff": 0.06666666666666668,
+        "ci": [
+          0.02564102564102564,
+          0.11403508771929824
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:level-nb-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.2531089978054133,
+        "b": 0.260424286759327,
+        "diff": 0.007315288953913701,
+        "ci": [
+          -0.024331359895076846,
+          0.03511825331205411
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.016666666666666666,
+        "b": 0.008333333333333333,
+        "diff": -0.008333333333333333,
+        "ci": [
+          -0.029126213592233007,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:level-q10-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.075,
+        "diff": 0.06666666666666667,
+        "ci": [
+          0.02608133433283359,
+          0.11571170306965757
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:level-q10-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.23408924652523774,
+        "b": 0.21287490855888808,
+        "diff": -0.021214337966349667,
+        "ci": [
+          -0.052945791934290345,
+          0.00895414752630729
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.0,
+        "diff": -0.008333333333333333,
+        "ci": [
+          -0.02702702702702703,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:level-q20-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.06666666666666667,
+        "diff": 0.058333333333333334,
+        "ci": [
+          0.02204692128650023,
+          0.10257009345794389
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:level-q20-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.3723482077542063,
+        "b": 0.3606437454279444,
+        "diff": -0.011704462326261877,
+        "ci": [
+          -0.036569262676106676,
+          0.01444620584844352
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.058333333333333334,
+        "b": 0.03333333333333333,
+        "diff": -0.025,
+        "ci": [
+          -0.05600186915887851,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:nonspeech-long/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.0,
+        "diff": -0.008333333333333333,
+        "ci": [
+          -0.028303559480797536,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:nonspeech-music/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:nonspeech-noise/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:nonspeech-quiet/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:nonspeech-short/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:nonspeech-traffic/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:panel-base-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.025,
+        "b": 0.075,
+        "diff": 0.049999999999999996,
+        "ci": [
+          0.015264284061993991,
+          0.09322033898305085
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:panel-base-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.20848573518653987,
+        "b": 0.2011704462326262,
+        "diff": -0.007315288953913673,
+        "ci": [
+          -0.028369181454984654,
+          0.013658430917351676
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:room-dns5_sim-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.025,
+        "b": 0.075,
+        "diff": 0.049999999999999996,
+        "ci": [
+          0.016949152542372885,
+          0.09375
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:room-dns5_sim-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.29846378931967815,
+        "b": 0.31236283833211415,
+        "diff": 0.013899049012435993,
+        "ci": [
+          -0.018427089301792574,
+          0.049415276558384555
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.016666666666666666,
+        "b": 0.025,
+        "diff": 0.008333333333333335,
+        "ci": [
+          0.0,
+          0.027782634032634004
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:room-real-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.11666666666666667,
+        "diff": 0.10833333333333334,
+        "ci": [
+          0.055544619422572196,
+          0.1681659942738156
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:room-real-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.43087051938551574,
+        "b": 0.40965618141916604,
+        "diff": -0.021214337966349694,
+        "ci": [
+          -0.05175508461193206,
+          0.008462922234706304
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.016666666666666666,
+        "b": 0.016666666666666666,
+        "diff": 0.0,
+        "ci": [
+          -0.0234375,
+          0.022075534759358195
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:room-sim_large-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.03333333333333333,
+        "b": 0.09166666666666666,
+        "diff": 0.05833333333333333,
+        "ci": [
+          0.018863516134720513,
+          0.10527385537013259
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:room-sim_large-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.31016825164594003,
+        "b": 0.3108997805413314,
+        "diff": 0.0007315288953913535,
+        "ci": [
+          -0.02455387783115993,
+          0.02551705561980448
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.0,
+        "diff": -0.008333333333333333,
+        "ci": [
+          -0.027522935779816515,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:room-sim_medium-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.025,
+        "b": 0.08333333333333333,
+        "diff": 0.05833333333333333,
+        "ci": [
+          0.01769523365936967,
+          0.10318144499178977
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:room-sim_medium-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.32040965618141914,
+        "b": 0.3057790782735918,
+        "diff": -0.014630577907827347,
+        "ci": [
+          -0.04360310889211716,
+          0.013257864949931279
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.025,
+        "b": 0.016666666666666666,
+        "diff": -0.008333333333333335,
+        "ci": [
+          -0.02727272727272727,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:room-sim_small-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.025,
+        "b": 0.1,
+        "diff": 0.07500000000000001,
+        "ci": [
+          0.032786885245901634,
+          0.125
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:room-sim_small-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.28895391367959034,
+        "b": 0.2794440380395026,
+        "diff": -0.009509875640087762,
+        "ci": [
+          -0.032464868980547325,
+          0.014019262150103216
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.016666666666666666,
+        "b": 0.0,
+        "diff": -0.016666666666666666,
+        "ci": [
+          -0.043104998759612996,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:stress-office-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.041666666666666664,
+        "b": 0.06666666666666667,
+        "diff": 0.025,
+        "ci": [
+          0.0,
+          0.05607739157828413
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:stress-office-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.5828908554572272,
+        "b": 0.6,
+        "diff": 0.01710914454277279,
+        "ci": [
+          -0.013578047415584514,
+          0.050037531364500946
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.18333333333333332,
+        "b": 0.10833333333333334,
+        "diff": -0.07499999999999998,
+        "ci": [
+          -0.125,
+          -0.02911921209858107
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:stress-outdoor-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.03333333333333333,
+        "b": 0.09166666666666666,
+        "diff": 0.05833333333333333,
+        "ci": [
+          0.016,
+          0.11016949152542373
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_benchmark@es-v1-20261110:stress-outdoor-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.7124773960216998,
+        "b": 0.7389993972272453,
+        "diff": 0.026522001205545487,
+        "ci": [
+          -0.004557839337041549,
+          0.05986643676356007
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.175,
+        "b": 0.075,
+        "diff": -0.09999999999999999,
+        "ci": [
+          -0.15790776446065655,
+          -0.05146587481146307
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_farfield@es-v1-20261111:mmfarfar-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.08333333333333333,
+        "b": 0.18333333333333332,
+        "diff": 0.09999999999999999,
+        "ci": [
+          0.04378768644874645,
+          0.16298371647509563
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_farfield@es-v1-20261111:mmfarfar-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.4476956839795172,
+        "b": 0.4352596927578639,
+        "diff": -0.012435991221653286,
+        "ci": [
+          -0.04809072737180692,
+          0.02283968774220051
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.016666666666666666,
+        "b": 0.008333333333333333,
+        "diff": -0.008333333333333333,
+        "ci": [
+          -0.03877108983128133,
+          0.018190235690235642
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_farfield@es-v1-20261111:mmfarnear-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.03333333333333333,
+        "b": 0.13333333333333333,
+        "diff": 0.1,
+        "ci": [
+          0.04423808414842417,
+          0.1615441176470588
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_farfield@es-v1-20261111:mmfarnear-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.2282370153621068,
+        "b": 0.23408924652523774,
+        "diff": 0.005852231163130939,
+        "ci": [
+          -0.022341776395183578,
+          0.035745143924318365
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.008333333333333333,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_farfield@es-v1-20261111:rirdiff-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.125,
+        "diff": 0.11666666666666667,
+        "ci": [
+          0.060851585485452796,
+          0.17757999366386815
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_farfield@es-v1-20261111:rirdiff-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.4389173372348208,
+        "b": 0.4111192392099488,
+        "diff": -0.027798098024871987,
+        "ci": [
+          -0.0642249848572146,
+          0.00822839624778822
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.025,
+        "b": 0.016666666666666666,
+        "diff": -0.008333333333333335,
+        "ci": [
+          -0.038461538461538464,
+          0.01818181818181818
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_farfield@es-v1-20261111:rirint-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.11666666666666667,
+        "diff": 0.10833333333333334,
+        "ci": [
+          0.056072897196261684,
+          0.16666666666666666
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_farfield@es-v1-20261111:rirint-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.2055596196049744,
+        "b": 0.18873445501097294,
+        "diff": -0.016825164594001463,
+        "ci": [
+          -0.04609932029407685,
+          0.009895020114256301
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.016666666666666666,
+        "b": 0.008333333333333333,
+        "diff": -0.008333333333333333,
+        "ci": [
+          -0.0373151764541777,
+          0.018018018018018018
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_farfield@es-v1-20261111:rirsame-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.03333333333333333,
+        "b": 0.11666666666666667,
+        "diff": 0.08333333333333334,
+        "ci": [
+          0.037732302454248835,
+          0.13794429708222805
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_farfield@es-v1-20261111:rirsame-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.4133138258961229,
+        "b": 0.42209217264081933,
+        "diff": 0.008778346744696408,
+        "ci": [
+          -0.024672765899122782,
+          0.04386143282988003
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.016666666666666666,
+        "b": 0.008333333333333333,
+        "diff": -0.008333333333333333,
+        "ci": [
+          -0.02702702702702703,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_farfield@es-v1-20261111:rirtgt-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.025,
+        "b": 0.075,
+        "diff": 0.049999999999999996,
+        "ci": [
+          0.016260162601626018,
+          0.09166666666666667
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_farfield@es-v1-20261111:rirtgt-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.493050475493782,
+        "b": 0.46013167520117043,
+        "diff": -0.03291880029261157,
+        "ci": [
+          -0.07450366028446738,
+          0.004972230599000895
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.05,
+        "b": 0.008333333333333333,
+        "diff": -0.04166666666666667,
+        "ci": [
+          -0.08080808080808081,
+          -0.008545197740113005
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_handover@es-v1-20261111:abs-hard-k1/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.08333333333333333,
+        "b": 0.18333333333333332,
+        "diff": 0.09999999999999999,
+        "ci": [
+          0.03845419847328246,
+          0.16529236313925308
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_handover@es-v1-20261111:abs-rand-k1/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.0,
+        "b": 0.03333333333333333,
+        "diff": 0.03333333333333333,
+        "ci": [
+          0.0078125,
+          0.06767647273523611
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_handover@es-v1-20261111:handover-rand/ts_asr/es": {
+      "error_rate": {
+        "a": 0.055873925501432664,
+        "b": 0.05157593123209169,
+        "diff": -0.0042979942693409726,
+        "ci": [
+          -0.018005540166204988,
+          0.010208046949349663
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_handover@es-v1-20261111:handover-rev-same-open/ts_asr/es": {
+      "error_rate": {
+        "a": 0.06017191977077364,
+        "b": 0.09312320916905444,
+        "diff": 0.0329512893982808,
+        "ci": [
+          -0.011826729461249316,
+          0.09230171176793775
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_handover@es-v1-20261111:handover-same-open/ts_asr/es": {
+      "error_rate": {
+        "a": 0.05730659025787966,
+        "b": 0.04727793696275072,
+        "diff": -0.01002865329512894,
+        "ci": [
+          -0.021962334883271924,
+          0.0013793579729472266
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_noise@es-v1-20261111:crowd10-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.025,
+        "b": 0.075,
+        "diff": 0.049999999999999996,
+        "ci": [
+          0.016260162601626018,
+          0.09090909090909091
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_noise@es-v1-20261111:crowd10-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.24359912216532553,
+        "b": 0.24067300658376006,
+        "diff": -0.0029261155815654694,
+        "ci": [
+          -0.037414267917639944,
+          0.027274933804060014
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.0,
+        "diff": -0.008333333333333333,
+        "ci": [
+          -0.028037383177570093,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_noise@es-v1-20261111:events10-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.075,
+        "diff": 0.06666666666666667,
+        "ci": [
+          0.02521008403361345,
+          0.11570247933884298
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_noise@es-v1-20261111:events10-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.23994147768836868,
+        "b": 0.22896854425749816,
+        "diff": -0.010972933430870524,
+        "ci": [
+          -0.03408308497050057,
+          0.012187219411777592
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_noise@es-v1-20261111:events20-neg/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.016666666666666666,
+        "b": 0.09166666666666666,
+        "diff": 0.075,
+        "ci": [
+          0.028295274202080774,
+          0.12502460629921247
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_noise@es-v1-20261111:events20-pos/ts_asr/es": {
+      "error_rate": {
+        "a": 0.2150694952450622,
+        "b": 0.20702267739575714,
+        "diff": -0.008046817849305055,
+        "ci": [
+          -0.02969599718599756,
+          0.014355063795853256
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_noise@es-v1-20261111:nonspeech-crowd/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_noise@es-v1-20261111:nonspeech-events/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_shortseg@es-v1-20261111:abs-mid1-k1/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.008333333333333333,
+        "b": 0.0,
+        "diff": -0.008333333333333333,
+        "ci": [
+          -0.028308625336927212,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_shortseg@es-v1-20261111:abs-mid1-k2/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.025,
+        "b": 0.025,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_shortseg@es-v1-20261111:abs-mid2-k1/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.025,
+        "b": 0.03333333333333333,
+        "diff": 0.008333333333333331,
+        "ci": [
+          0.0,
+          0.027027027027027025
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_shortseg@es-v1-20261111:abs-mid2-k2/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.06666666666666667,
+        "b": 0.16666666666666666,
+        "diff": 0.09999999999999999,
+        "ci": [
+          0.04236397949010115,
+          0.161547619047619
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_singing@es-v1-20261111:nonspeech-song/ts_asr/es": {
+      "false_alarm_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    }
+  }
+}
