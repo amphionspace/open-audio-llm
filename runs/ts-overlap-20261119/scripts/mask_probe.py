@@ -5,7 +5,8 @@ applying the predicted mask to the mixture's mel input help recognition?
 2. Dev MSE on the fixed task-19 dev scenes, with two references: the mean mask and an all-ones (pass-through) mask.
 3. On the 615 heavy-overlap samples: upsample the predicted token masks to mel frames, multiply the mixture mel power,
    re-apply the log-mel transform, and decode with 11.17 and with MODEL (greedy HF); also the unmasked decode of MODEL.
-usage: mask_probe.py MODEL(base|STATE.pt) OUT_DIR STEPS SHARD NUM_SHARDS   (shard 0 trains; others wait for its head)"""
+usage: mask_probe.py MODEL(base|STATE.pt) OUT_DIR STEPS SHARD NUM_SHARDS   (shard 0 trains; others wait for its head)
+STEPS 0: use the layer-12 head saved in MODEL's checkpoint (ft_e2e2.py) instead of training one."""
 import json, math, os, random, sys, time
 from pathlib import Path
 import numpy as np, soundfile as sf, torch, torch.nn as nn
@@ -60,7 +61,9 @@ def irm_tokens(m1, t, ef, fl, nm):
     pt, pr = power(tt), power(m1 - tt); irm = (pt / (pt + pr).clamp_min(1e-10))[:, : fl - ef]
     return torch.nn.functional.interpolate(irm[None], size=nm, mode="area")[0].T.cuda(), irm
 head = nn.Linear(1024, 128).cuda(); hp = out / "head.pt"
-if shard == 0:
+if steps == 0 and shard == 0:
+    torch.save(torch.load(mpath, map_location="cpu")["heads"][11], hp)
+if shard == 0 and steps > 0:
     recipe, pools, splits, _ = tse_data.setup("train"); rng = random.Random("mask-probe"); opt = torch.optim.AdamW(head.parameters(), lr=1e-3)
     t0 = time.time()
     for step in range(1, steps + 1):
@@ -70,6 +73,8 @@ if shard == 0:
         for g in opt.param_groups: g["lr"] = 1e-3 * 0.5 * (1 + math.cos(math.pi * step / steps))
         if step % 500 == 0: print(f"step {step} mse {loss.item():.4f} {time.time() - t0:.0f}s", flush=True)
     torch.save(head.state_dict(), hp)
+if shard == 0:
+    head.load_state_dict(torch.load(hp))
     rows = [json.loads(l) for l in open(DEV / "manifest.jsonl")]; acc = {"probe": [], "mean": [], "ones": []}; allt = []
     with torch.no_grad():
         for r in rows:
