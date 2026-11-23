@@ -20,6 +20,12 @@ DEV_SOURCES = {"studio": [{"dataset": "aishell", "version": "legacy-20260804", "
 
 FINAL_SOURCES = [{"dataset": "kespeech", "version": "train-punc-v1-20261102-final-v1-20261120", "split": "train"},
                  {"dataset": "aishell2", "version": "train-punc-v1-20261102-final-v1-20261120", "split": "train"}]
+# Final v2 (2026-11-23): every source of the v12 recipe has a final, so the pools keep the recipe's grouping.
+FINAL2_SOURCES = {"studio": [{"dataset": "aishell3", "version": "legacy-20260804-final-v2-20261123", "split": "train"}],
+                  "phone": [{"dataset": "kespeech", "version": "train-punc-v1-20261102-final-v1-20261120", "split": "train"},
+                            {"dataset": "magicdata", "version": "legacy-20260804-final-v2-20261123", "split": "train"},
+                            {"dataset": "aishell2", "version": "train-punc-v1-20261102-final-v2-20261123", "split": "train"}],
+                  "read": [{"dataset": "aishell", "version": "legacy-20260804-final-v2-20261123", "split": "train"}]}
 _CJK = "\u2e80-\u9fff\u3000-\u303f\uff00-\uffef"
 
 
@@ -53,10 +59,12 @@ def _load_source_final(source, catalog, roots, rng):
 
 def setup(mode):
     """mode: 'dev' (dev splits, legacy text; audio only), 'train' (train splits of the original sources, legacy text;
-    tasks 19-23 before 2026-11-23), 'train_final' (every pool = KeSpeech + AISHELL-2 final-v1 train text)."""
+    tasks 19-23 before 2026-11-23), 'train_final' (every pool = KeSpeech + AISHELL-2 final-v1 train text),
+    'train_final2' (the recipe's pools from final v2 where registered: AISHELL-3 studio; KeSpeech, MagicData, AISHELL-2
+    phone; AISHELL-1 read)."""
     from audio_data_contract import load_catalog
     recipe = yaml.safe_load((GEN / "recipe.yaml").read_text())
-    if mode == "train_final":
+    if mode in ("train_final", "train_final2"):
         build.load_source = _load_source_final
     for name, pool in recipe["pools"].items():
         if not pool.get("sources"):
@@ -65,6 +73,8 @@ def setup(mode):
             pool["sources"] = DEV_SOURCES[name]
         elif mode == "train_final":
             pool["sources"] = [dict(s) for s in FINAL_SOURCES]
+        elif mode == "train_final2":
+            pool["sources"] = [dict(s) for s in FINAL2_SOURCES[name]]
         else:
             for s in pool["sources"]:
                 s["split"] = "train"; s.pop("max_speakers", None)
