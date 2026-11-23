@@ -1,0 +1,165 @@
+{
+  "run_a": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-r1117/runs/run-20261122T030208Z-11b82082",
+  "run_b": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-pairmerge/runs/run-20261123T155951Z-25ddc7ae",
+  "scoring": {
+    "version": 4,
+    "normalization": "v4: zh varieties and ja by character, others by word (CJK ideographs one each); zh: NFKC, lower, GigaSpeech tags, OpenCC t2s, Arabic numerals read in Chinese (4+ digit runs digit by digit, else cn2an an2cn), punctuation and symbols, SpeechIO fillers 呃啊 and erhua; v3: 幺/两/〇 read as 一/二/零 inside 3+ Chinese digit runs; v4: ja by character on v1 text; en: Whisper EnglishTextNormalizer; presence on v1 text",
+    "normalizers": {
+      "cn2an": "0.5.24",
+      "opencc": "0.1.7",
+      "whisper-normalizer": "0.1.15"
+    }
+  },
+  "resamples": 2000,
+  "confidence": 0.95,
+  "seed": 20261112,
+  "cluster_by": null,
+  "samples": 16358,
+  "clusters": 16358,
+  "protocol_differences": {},
+  "skipped_sources": [],
+  "overall": {
+    "all/CER": {
+      "error_rate": {
+        "a": 0.002745604374738921,
+        "b": 0.0030114305244370184,
+        "diff": 0.0002658261496980975,
+        "ci": [
+          0.000125575665425755,
+          0.00040829027455707587
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      },
+      "term_hit_rate": {
+        "a": 0.9975060040642897,
+        "b": 0.9957509698873084,
+        "diff": -0.0017550341769813071,
+        "ci": [
+          -0.0027914146609596784,
+          -0.0007363651709314551
+        ],
+        "significant": true
+      }
+    }
+  },
+  "sources": {
+    "police_synthetic_zh_accent@legacy-rebalance-100k-20260916:test/asr/zh": {
+      "error_rate": {
+        "a": 0.002784086415149769,
+        "b": 0.0030462244217710132,
+        "diff": 0.0002621380066212442,
+        "ci": [
+          9.311713939798092e-05,
+          0.00042061553673985666
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      },
+      "term_hit_rate": {
+        "a": 0.9980281967859608,
+        "b": 0.9966479345361333,
+        "diff": -0.0013802622498274575,
+        "ci": [
+          -0.002363641315288914,
+          -0.00039489597896570644
+        ],
+        "significant": true
+      }
+    },
+    "police_terms_v5_test@icefall-20260908:test/asr/zh": {
+      "error_rate": {
+        "a": 0.005819239861793053,
+        "b": 0.006864884524458993,
+        "diff": 0.0010456446626659396,
+        "ci": [
+          0.00014313620732216552,
+          0.002076677858470046
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      },
+      "term_hit_rate": {
+        "a": 0.9897510980966325,
+        "b": 0.9824304538799414,
+        "diff": -0.007320644216691097,
+        "ci": [
+          -0.014535943114787465,
+          -0.0014992503748125774
+        ],
+        "significant": true
+      }
+    },
+    "police_v6_acceptance_205@icefall-20260908:test/asr/zh": {
+      "error_rate": {
+        "a": 0.0009587153214692312,
+        "b": 0.0009287554676733178,
+        "diff": -2.9959853795913393e-05,
+        "ci": [
+          -0.0001228774837518662,
+          6.101481364652381e-05
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_v6_expanded@icefall-20260908:test/asr/zh": {
+      "error_rate": {
+        "a": 0.0018768899238816865,
+        "b": 0.001946404365506934,
+        "diff": 6.951444162524756e-05,
+        "ci": [
+          -0.00021854878984910224,
+          0.00037573537229792554
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    }
+  }
+}

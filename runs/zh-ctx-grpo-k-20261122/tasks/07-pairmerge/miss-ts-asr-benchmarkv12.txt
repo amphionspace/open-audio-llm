@@ -1,0 +1,19 @@
+ts-asr-benchmark@v12: 12953 with the target, 13797 without
+  r1117: misses 357 (2.76%), false alarms 340
+  startj: misses 411 (3.17%), false alarms 368
+  k: misses 486 (3.75%), false alarms 283
+  pairmerge: misses 407 (3.14%), false alarms 345
+  by corpus [n, misses of r1117, startj, k, pairmerge]: {None: [11763, 338, 382, 451, 376], 'aishell4': [155, 7, 7, 8, 10], 'alimeeting': [780, 10, 19, 25, 18], 'emilia2': [155, 2, 3, 2, 3], 'ramc': [100, 0, 0, 0, 0]}
+  by enroll_domain [n, misses of r1117, startj, k, pairmerge]: {None: [12329, 347, 393, 463, 390], 'far': [312, 7, 16, 19, 12], 'near': [312, 3, 2, 4, 5]}
+  new misses of pairmerge against r1117: 100; misses of r1117 that pairmerge recovers: 50
+  new misses by (cell, corpus): [((None, None), 88), ((None, 'alimeeting'), 8), ((None, 'aishell4'), 3), ((None, 'emilia2'), 1)]
+    babble10-pos:0073: ref 爱在日落之前演员有什么 | r1117: 爱在日落之前的演员有什么？
+    babble20-pos:0073: ref 爱在日落之前演员有什么 | r1117: 爱在日落之前的演员有什么？
+    dom-phone-pos:0075: ref 员工可以选择合适的方式提出 | r1117: 员工可以选择合适的方式提出。
+    dyn-alternate-k2:0037: ref 全省将迎来高速返程高峰 | r1117: 学生将迎来高速返程高峰。
+    dyn-alternate-k4:0076: ref 每年可能会创造两百亿美元收入 | r1117: 每年可能会创造两百亿美元的收入。
+  misses by reference length:
+    [0, 10) n=4215 r1117=124 startj=143 k=174 pairmerge=147
+    [10, 20) n=4620 r1117=155 startj=183 k=212 pairmerge=176
+    [20, 40) n=3176 r1117=73 startj=75 k=82 pairmerge=71
+    [40, ) n=942 r1117=5 startj=10 k=18 pairmerge=13
