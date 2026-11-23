@@ -18,14 +18,53 @@ DEV_SOURCES = {"studio": [{"dataset": "aishell", "version": "legacy-20260804", "
                "read": [{"dataset": "aishell", "version": "legacy-20260804", "split": "dev"}]}
 
 
+FINAL_SOURCES = [{"dataset": "kespeech", "version": "train-punc-v1-20261102-final-v1-20261120", "split": "train"},
+                 {"dataset": "aishell2", "version": "train-punc-v1-20261102-final-v1-20261120", "split": "train"}]
+_CJK = "\u2e80-\u9fff\u3000-\u303f\uff00-\uffef"
+
+
+def final_text(text):
+    """Training-text spec rule 5 (zh-en-transcription.md): one space between English words, none between Chinese
+    characters or between Chinese and English (final-v1 did not execute this rule); nothing else is changed."""
+    import re
+    t = re.sub(r"\s+", " ", (text or "").strip())
+    return re.sub(f"(?<=[{_CJK}]) | (?=[{_CJK}])", "", t)
+
+
+def _load_source_final(source, catalog, roots, rng):
+    """build.load_source with final_text instead of deleting every space (that would join English words)."""
+    import re
+    from collections import defaultdict
+    from audio_data_contract import resolve_split
+    paths = {role: resolve_split(catalog, source["dataset"], source["version"], source["split"], role, roots)
+             for role in ("recordings", "supervisions")}
+    audio = {r["id"]: r["sources"][0]["source"] for path in paths["recordings"] for r in build._rows(path)}
+    by_speaker = defaultdict(list)
+    for row in (row for path in paths["supervisions"] for row in build._rows(path)):
+        text = final_text(row.get("text"))
+        if not text or row.get("start", 0) != 0 or row["recording_id"] not in audio:
+            continue
+        speaker = f"{source['dataset']}:{row['speaker']}"
+        by_speaker[speaker].append(mixer.Utt(id=f"{source['dataset']}:{row['id']}", speaker=speaker, text=text,
+                                             duration=float(row["duration"]), path=audio[row["recording_id"]],
+                                             corpus=source["dataset"], gender=row.get("gender")))
+    return {s: by_speaker[s] for s in sorted(by_speaker)}
+
+
 def setup(mode):
+    """mode: 'dev' (dev splits, legacy text; audio only), 'train' (train splits of the original sources, legacy text;
+    tasks 19-23 before 2026-11-23), 'train_final' (every pool = KeSpeech + AISHELL-2 final-v1 train text)."""
     from audio_data_contract import load_catalog
     recipe = yaml.safe_load((GEN / "recipe.yaml").read_text())
+    if mode == "train_final":
+        build.load_source = _load_source_final
     for name, pool in recipe["pools"].items():
         if not pool.get("sources"):
             continue
         if mode == "dev":
             pool["sources"] = DEV_SOURCES[name]
+        elif mode == "train_final":
+            pool["sources"] = [dict(s) for s in FINAL_SOURCES]
         else:
             for s in pool["sources"]:
                 s["split"] = "train"; s.pop("max_speakers", None)

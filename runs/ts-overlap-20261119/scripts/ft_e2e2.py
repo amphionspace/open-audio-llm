@@ -1,7 +1,9 @@
 """tasks/23 = ft_e2e.py scaled up: warm start from a ft_e2e.py state (INIT env), mask heads on several tower layers
 (HEAD_LAYERS env, 0-based layer indices, default 5,11 = after layers 6 and 12), saved with every checkpoint; gradients
 all-reduced in flat ~200M-element buckets (multi-node); rank 0 waits for WANDB_READY_FILE (the W&B forward letting the
-nodes through) for up to 30 min, else logs offline. Everything else as ft_e2e.py:
+nodes through) for up to 30 min, else logs offline. POOLS env (default train_final): speech pools from KeSpeech and
+AISHELL-2 final-v1 text (labels as written, no added '。'); 'train' = the legacy-text pools of ft_e2e.py.
+Everything else as ft_e2e.py:
 End-to-end TS-ASR training from 11.17 on on-the-fly v12-generator scenes (train-split speakers, KeSpeech uncapped):
 all parameters (audio tower incl. the conv front end, LLM), lr 2e-5, target-text cross-entropy. 15% of samples take
 another scene's enrollment (wrong speaker) and the absent output 'language None<asr_text>'. Labels: reference + '。'.
@@ -41,7 +43,8 @@ HEAD_LAYERS = [int(x) for x in os.environ.get("HEAD_LAYERS", "5,11").split(",")]
 thinker = model.thinker; tower = thinker.audio_tower; tower.config._attn_implementation = "sdpa"
 template = get_template(processor, max_length=None, template_type="amphion_asr_1.7b"); template.set_mode("train")
 fe = processor.feature_extractor; MELF = torch.from_numpy(fe.mel_filters).float(); WIN = torch.hann_window(fe.n_fft)
-recipe, pools, splits, n_spk = tse_data.setup("train")
+POOLS = os.environ.get("POOLS", "train_final")  # train_final: KeSpeech + AISHELL-2 final-v1 text (user rule, 2026-11-23)
+recipe, pools, splits, n_spk = tse_data.setup(POOLS)
 
 
 def mel_power(w):
@@ -72,7 +75,7 @@ class Scenes(torch.utils.data.IterableDataset):
             if neg:
                 e = prev[rng.randrange(len(prev))]; t = np.zeros_like(t); content = "language None<asr_text>"
             else:
-                content = "language Chinese<asr_text>" + text + "。"
+                content = "language Chinese<asr_text>" + text + ("" if POOLS == "train_final" else "。")  # final text is punctuated
             prev = (prev + [own])[-8:]
             e1, m1 = prepare_ts_clips([e, m], 16000)
             enc = template.encode({"messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": "<audio>"},
@@ -130,7 +133,7 @@ if rank == 0:
                      config={"arm": arm, "lr": 2e-5, "steps": steps, "micro_batch": mb, "world": world, "aux_lambda": lam if head is not None else 0,
                              "aux": "layer-12 linear head -> mel IRM per mixture token (area-pooled)" if head is not None else None,
                              "start": INIT or "11.17 model-afea989da22b77adc0ce9365", "init_step": init_step, "head_layers": HEAD_LAYERS,
-                             "train_speakers": n_spk, "neg_prob": 0.15,
+                             "train_speakers": n_spk, "pools": POOLS, "neg_prob": 0.15,
                              "trainable_params_M": sum(p.numel() for p in params) / 1e6})
     print(f"arm {arm}: {sum(p.numel() for p in params) / 1e6:.1f}M trainable; speakers {n_spk}; {run.url}", flush=True)
 model.train(); t0 = time.time(); it = iter(loader)
