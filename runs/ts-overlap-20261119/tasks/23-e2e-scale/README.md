@@ -74,6 +74,12 @@
 5. **离理想上限还远**：理想比例掩码下是 5.76%，现在 12.14%。
 6. **未验证**：以上用 HF 解码，只覆盖 v12 中文模拟数据。还没有跑交付守门（中文 TS 12.88/371/369、英文 TS 误报 ≤ 655、中文普通识别 ≤ 4.39）和部署推理栈（vLLM + MTP）。训练数据只有中文 TS 场景，英文和普通识别可能退化，必须先测。
 
+## 交付守门（进行中）
+
+- 2026-11-23 14:10 UTC：用 [export_e2e_ckpt.py](../../scripts/export_e2e_ckpt.py) 把第 3 万步写成完整模型目录。做法是在 11.17 的文件上覆盖 708 个微调张量；掩码头丢弃；lm_head 与 embed_tokens 绑定。缓存名 `ts-overlap-e2e2-final001-s30000`，条目 `model-5dee9018e382e9153123897c`。
+- ACP 单节点作业 `pt-e1kguqzd`（[job_e2e2_gate.sh](../../scripts/job_e2e2_gate.sh)）：用 11.17 守门时的服务栈（pack-mtp serve.sh，不开 MTP），跑四个评测套件：v12、英文 TS、中文普通识别全集、客户 TS。
+- 守门：v12 12.88 / 371 / 369；英文 TS 误报 ≤ 655；中文普通识别 ≤ 4.39。
+
 ## 证据
 
 - `attempts/002/artifacts/`：`e2e-report.json`、`mask-report.json`、`asr_heavy_s*.jsonl`、`asr_safety_s*.jsonl`、`mask_decode_s*.jsonl`。
