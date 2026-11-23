@@ -568,6 +568,13 @@ MTP 草稿只影响接受长度和速度，不影响贪心输出。
     - J 的联合 MTP 就是从这份初始化的。
     - 投机解码的校验是贪心的，草稿只影响速度，不改变输出。
   - **`20-control1106`**：同一节点 GPU 0–3 补跑对照组，16:32Z 开始；由 `stop_when_done.sh 20-control1106` 在成功后停掉节点。
+    - 19:03Z 两路都 exit 0，节点 19:03Z 停掉。
+    - W&B 远端核验：27 个 run 都是 finished，都有指标。
+- **数据增量诊断 ACP 任务** `pt-nbnnbcwl`（`AmphionASR-ctx-datainc-1117-plus-j-minus-g-nosynth-and-g-delivery27x2-1node`）。
+  - 执行器目录 `/workspace/workspace/mingdong/scratch/acp-ctx-pairmerge-g`，节点脚本 `scripts/acp-pairmerge-g.sh`。
+  - 19:10Z 提交，当时本项目没有别的节点；随即开始。19:12Z 起 W&B 放行，两路评测都已启动。
+  - 合并模型在 `/workspace/data/ae-runs/ctx-grpo-k-20261122-pairmerge/1117-plus-j-minus-g`，709 个张量里 649 个有增量。
+  - 成功后由 `stop_when_done.sh` 停掉节点。
 
 <!-- execution-status -->
 
