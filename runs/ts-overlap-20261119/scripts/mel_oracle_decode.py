@@ -2,7 +2,9 @@
 (x + 4) / 4) of the mixture part, recomputed from the waveform; masks from the target / rest stems' mel power:
   melcheck: no mask (must equal the template's features and reproduce the plain decode);
   melibm:   keep bands where target power > rest power, others floored;
-  melirm:   mixture power x target / (target + rest).
+  melirm:   mixture power x target / (target + rest);
+  melirm_tok: the same mask area-pooled to the audio-token rate (80 ms) and linearly upsampled (the resolution of the
+              layer-12 mask heads of tasks 21-22).
 The enrollment part is untouched. Greedy HF decoding as decode_adapter.py; also per-sample target-energy shares.
 usage: mel_oracle_decode.py SUBSET_DIR OUT_JSONL CONDS SHARD NUM_SHARDS"""
 import json, sys
@@ -45,7 +47,11 @@ with open(out_path, "w", encoding="utf-8") as f:
         tmpl = batch["input_features"][0, :, ef:total].float()
         check = (logmel(Pm) - tmpl).abs().max().item()
         dom = (Pt > Pr).float(); share = float((Pt * (1 - dom)).sum() / Pt.sum().clamp_min(1e-10))
-        feats = {"melcheck": logmel(Pm), "melibm": logmel(Pm * dom), "melirm": logmel(Pm * Pt / (Pt + Pr).clamp_min(1e-20))}
+        irm = Pt / (Pt + Pr).clamp_min(1e-20)
+        from open_audio_llm.tsasr.sep_token import conv_token_count
+        ntok = conv_token_count(nmix)  # the ideal ratio mask at the audio-token rate (80 ms), upsampled back to mel frames
+        irm_tok = torch.nn.functional.interpolate(torch.nn.functional.interpolate(irm[None], size=ntok, mode="area"), size=nmix, mode="linear", align_corners=False)[0]
+        feats = {"melcheck": logmel(Pm), "melibm": logmel(Pm * dom), "melirm": logmel(Pm * irm), "melirm_tok": logmel(Pm * irm_tok)}
         for c in conds:
             b = {kk: (v.clone() if torch.is_tensor(v) else v) for kk, v in batch.items()}
             b["input_features"][0, :, ef:total] = feats[c].to(b["input_features"].dtype)
