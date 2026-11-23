@@ -31,6 +31,9 @@ if [ -d /workspace/data/ae-runs/ctx-grpo-k-20261122-kgrpo-llm ]; then
   for m in "" -think; do
     PYTHONPATH=$CMP_SRC $PY -m amphion_eval.cli open-audio-llm compare "$(r start-k$m)" "$(r kgrpo-llm$m)" \
       --output $C/cmp-start-k-kgrpo-llm${m:-"-off"}.json >/dev/null 2>$C/cmp-start-k-kgrpo-llm${m:-"-off"}.log &
+    # avg3 -> kgrpo-llm: the same LLM, the audio tower put back to 11.17's (attribution of the context-correction items)
+    PYTHONPATH=$CMP_SRC $PY -m amphion_eval.cli open-audio-llm compare "$(r kgrpo-avg3$m)" "$(r kgrpo-llm$m)" \
+      --output $C/cmp-avg3-kgrpo-llm${m:-"-off"}.json >/dev/null 2>$C/cmp-avg3-kgrpo-llm${m:-"-off"}.log &
   done
   wait; ls $C
 fi

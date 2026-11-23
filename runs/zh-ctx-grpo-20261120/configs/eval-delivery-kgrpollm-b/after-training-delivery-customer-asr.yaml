@@ -1,0 +1,20 @@
+# 交付评估：11.17 交付包验证 run-20261117T033551Z-f566d145 的配置，只换模型、服务与输出目录（scripts/make_delivery_configs.py）。
+suite_id: asr-regression-native@1
+model_name: ctx-grpo-delivery-kgrpollm
+evaluator: ts-asr
+data_config: /workspace/workspace/mingdong/repo/oal-grpo/runs/amphionasr2-grpo-20261101/configs/customer-v5/customer-asr-v5-asronly-data.yaml
+server_url: http://127.0.0.1:18942
+served_model: delivery-kgrpollm-b-asr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/ctx-grpo-20261120-delivery-kgrpollm
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false

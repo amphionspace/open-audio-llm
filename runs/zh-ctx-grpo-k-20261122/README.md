@@ -7,7 +7,10 @@
 - 配方对照（只用已有结果）：
   - 从 11.17 起训的两轮第九轮配方 GRPO（v26 / v27）也只是挪门槛，误触发降、漏识别升；
   - K 这条线在同样误触发下漏识别约高 0.4–0.5 个百分点，丢的是 TS 分辨力；
-  - 换份额修不好，见“GRPO 配方对照”。拆分诊断已提交，在排队。
+  - 换份额修不好，见“GRPO 配方对照”。
+- 拆分诊断（2026-11-23）：avg3 的 LLM 拼 11.17 的音频塔也**不通过**，见“拆分诊断 · 结果”。
+  - TS 分辨力丢在 LLM：同误触发下多漏的是换了 LLM 的那个；只换音频塔是往出字挪门槛，字错率还更好。
+  - 纠偏收益两部分都有：把音频塔换回 11.17，纠偏 v2 Emilia 准确率掉 1.26\*。拼部件保不住两头。
 
 ## 为什么做
 
@@ -230,6 +233,60 @@ MTP 草稿只影响接受长度和速度，不影响贪心输出。
   - 两边都差，两部分都有。
   - 记录归因，不定配方。
 
+### 结果（2026-11-23）
+
+**kgrpo-llm 不通过**（`python3 scripts/gate.py kgrpollm cmp-start-k-kgrpo-llm-off.json`）：
+- 长对话、西语 WER 全部通过；
+- 纠偏、TS、西语 TS 误触发三组不满足。
+
+逐项归因：交付评测对 11.17，纠偏 v2 对 K，配对 bootstrap 95% CI，\* 为显著。
+
+| 项（基线） | avg3 | kgrpo-llm（avg3 的 LLM） | kgrpo-audio（avg3 的音频塔） | 归因 |
+|---|---|---|---|---|
+| 纠偏 v2 Emilia 准确率（K 70.94） | 71.73\* | 70.47，CI 下限 −1.21 | 没测 | 音频塔也有贡献，见下 |
+| v12 漏识别（2.76） | 2.13\* | 3.03\* | 1.92\* | LLM |
+| 跟错人漏识别（1.66） | 2.28\* | 3.06\* | 1.46 | LLM |
+| ts-es-v1 误触发（3.21） | 9.26\* | 7.08\* | 4.63\* | 两部分，LLM 为主 |
+| ts-es-v2 误触发（3.03） | 9.03\* | 6.91\* | 4.51\* | 两部分，LLM 为主 |
+| crosslingual-es 误触发（1.04） | 4.38\* | 3.96\* | 1.67 | LLM |
+| v12 误触发（2.46） | 3.46\* | 2.38 | 3.68\* | 音频塔（kgrpo-llm 通过） |
+| 场景 TS 字错率（3.43） | 4.99\* | 3.30 | 4.57\* | 音频塔（kgrpo-llm 通过） |
+
+最后两行是 avg3 本身不通过、kgrpo-llm 通过的项，按同样规则归因。
+
+**TS 分辨力丢在 LLM，不在音频塔**：
+- 跟错人：
+  - kgrpo-llm 误触发 2.58 → 2.16\*，漏识别 1.66 → 3.06\*。
+  - 从 11.17 起训的 v27 在误触发 2.14 时漏识别 2.34（vLLM 0.18；11.17 在两套推理栈上只差 0.05–0.08）。同误触发下 kgrpo-llm 多漏约 0.7 个百分点。
+  - kgrpo-audio 两项都和 11.17 持平。
+- v12：
+  - kgrpo-llm 误触发持平（2.38），漏识别 +0.28\*，字错率 12.78 → 13.32\*。
+  - kgrpo-audio 往出字挪（误触发 3.68\*、漏识别 1.92\*），字错率反而更好，12.78 → 12.29\*。
+- 英文 TS：
+  - kgrpo-llm 误触发 +0.88\*，漏识别不变；
+  - kgrpo-audio 误触发 +0.54\*，漏识别 −0.54\*。
+- 小结：
+  - 换音频塔是沿曲线往出字挪门槛，识别本身更好；换 LLM 是在同样门槛下错得更多。
+  - TS 重叠实验（`runs/ts-overlap-20261119`，PR #168）任务 18 发现，训编码器会学成“认训练说话人”的捷径。如果 K 也是这样，多漏的应该是 kgrpo-audio，实际相反。
+  - 任务 09 测到 11.17 音频塔的说话人选择性在第 17–23 层上升，这和本结果不矛盾：说话人信号在音频塔里，丢的是 LLM 对它的使用。
+
+**纠偏收益两部分都有**，“纠偏在 LLM、出字判断在音频塔”的假设不成立：
+- ctx-v1 字错率 7.87：avg3 1.31\*，kgrpo-llm 2.55\*，kgrpo-audio 4.13\*。
+- 纠偏 v2 直接配对 avg3 → kgrpo-llm（`tasks/04-gate/cmp-avg3-kgrpo-llm-{off,think}.json`），也就是把音频塔换回 11.17：
+  - think 关：Emilia 准确率 71.73 → 70.47\*，保持率 85.87 → 84.24\*；
+  - think 开：Emilia 72.04 → 71.10\*。
+
+**长对话修复主要在 LLM**：一人基本漏掉的对话，11.17 52/289，avg3 4，kgrpo-llm 6，kgrpo-audio 53。
+
+**两部分的效果基本可加，跟错人除外**：
+- v12 两项，两次单换之和与 avg3 的差不到 0.15 个百分点：误触发 +1.14 对 +1.00，漏识别 −0.57 对 −0.63。
+- 跟错人漏识别：单换 LLM +1.40，avg3 只有 +0.62。K 的音频塔抵消了一部分，所以 kgrpo-llm 在这一项上会高估 LLM 自身的损失。但方向一致，avg3 也显著更差。
+
+**结论**：
+- 不能靠拼部件替换 11.17。
+- K 线要修的是 K 的 SFT 让 LLM 丢掉的 TS 分辨力。它也是西语 TS 误触发的主要来源。
+- 按写定的分支，只记录归因，不定配方。
+
 ## 执行记录
 
 - **ACP 任务** `pt-cwectlc6`（`AmphionASR-ctx-q10-K-grpo400-v10recipe-ctxplan-mine-avg3-ctxv2-delivery27-1node`，节点 10.119.16.243），执行器目录 `/workspace/workspace/mingdong/scratch/acp-ctx-kgrpo`。13:05Z 提交，13:18Z 开始。
@@ -263,6 +320,15 @@ MTP 草稿只影响接受长度和速度，不影响贪心输出。
   - `bash scripts/compare.sh && python3 scripts/gate.py`，输出在 `tasks/04-gate/`。
   - 节点以 root 建的 `tasks/03-eval` 开发机写不进去，所以对比和判定放在 `tasks/04-gate/`。
   - 交付对比在 `runs/zh-ctx-grpo-20261120` 的 `tasks/04-delivery/compare/r1117-vs-kgrpo/`，汇总 `tasks/04-delivery/delivery-r1117-vs-kgrpo.md`。
+- **拆分诊断 ACP 任务** `pt-11igu9o5`（`AmphionASR-ctx-q10-split-diag-kgrpo-llm-and-audio-hybrids-ctxv2-delivery27x2-1node`，节点 10.119.18.16），执行器目录 `/workspace/workspace/mingdong/scratch/acp-ctx-swap`，节点脚本 `scripts/acp-swap.sh`。
+  - 两个节点都被别的会话占着，等到 02:16Z 才空出一个，提交后 02:17Z 开始。
+  - 05:08Z 全部 exit 0（纠偏 v2、两组交付评测），节点由 `stop_when_done.sh 10-swap` 停掉。
+  - W&B 远端核验 56 个 run 都是 finished，且都有指标：纠偏 v2 2 个，交付评测 54 个。
+- **拆分诊断判读**（开发机）：
+  - `runs/zh-ctx-grpo-20261120` 里：
+    - `compare_delivery.py r1117 kgrpollm` 和 `compare_delivery.py r1117 kgrpoaudio`，汇总 `tasks/04-delivery/delivery-r1117-vs-{kgrpollm,kgrpoaudio}.md`；
+    - `scene_asr_drops.py r1117 kgrpo kgrpollm kgrpoaudio`。
+  - 本实验里：`compare.sh`（kgrpo-llm 对 start-k，以及 avg3 对 kgrpo-llm），再跑 `gate.py kgrpollm cmp-start-k-kgrpo-llm-off.json`。
 
 <!-- execution-status -->
 

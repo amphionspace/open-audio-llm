@@ -1,0 +1,23 @@
+suite_id: asr-regression-native@1
+model_name: ctx-grpo-delivery-kgrpoaudio-a-think
+evaluator: ts-asr
+eval_set: asr/context-correction-zh@v2-20261117
+server_url: http://127.0.0.1:18944
+served_model: delivery-kgrpoaudio-a-asr
+tsasr_server_url: http://127.0.0.1:18945
+tsasr_served_model: delivery-kgrpoaudio-a-tsasr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/ctx-grpo-20261120-delivery-kgrpoaudio-a-think
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+  enroll_seconds: 5
+  think: true
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false

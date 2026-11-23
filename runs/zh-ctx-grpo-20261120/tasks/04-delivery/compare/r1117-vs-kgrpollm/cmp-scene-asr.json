@@ -1,0 +1,2143 @@
+{
+  "run_a": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-r1117/runs/run-20261122T030312Z-5948ccbc",
+  "run_b": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-kgrpollm/runs/run-20261123T023716Z-57c1b564",
+  "scoring": {
+    "version": 4,
+    "normalization": "v4: zh varieties and ja by character, others by word (CJK ideographs one each); zh: NFKC, lower, GigaSpeech tags, OpenCC t2s, Arabic numerals read in Chinese (4+ digit runs digit by digit, else cn2an an2cn), punctuation and symbols, SpeechIO fillers 呃啊 and erhua; v3: 幺/两/〇 read as 一/二/零 inside 3+ Chinese digit runs; v4: ja by character on v1 text; en: Whisper EnglishTextNormalizer; presence on v1 text",
+    "normalizers": {
+      "cn2an": "0.5.24",
+      "opencc": "0.1.7",
+      "whisper-normalizer": "0.1.15"
+    }
+  },
+  "resamples": 2000,
+  "confidence": 0.95,
+  "seed": 20261112,
+  "cluster_by": null,
+  "samples": 4600,
+  "clusters": 4600,
+  "protocol_differences": {},
+  "skipped_sources": [],
+  "overall": {
+    "all/CER": {
+      "error_rate": {
+        "a": 0.04724159344463558,
+        "b": 0.02622788171221779,
+        "diff": -0.021013711732417787,
+        "ci": [
+          -0.026130273656886163,
+          -0.016251901059722747
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.008478260869565218,
+        "b": 0.011304347826086957,
+        "diff": 0.0028260869565217388,
+        "ci": [
+          0.0015217391304347822,
+          0.004565217391304347
+        ],
+        "significant": true
+      }
+    }
+  },
+  "sources": {
+    "police_scene_bench@v1-20261028:asr-extreme-emergency/asr/zh": {
+      "error_rate": {
+        "a": 0.1268267223382046,
+        "b": 0.14665970772442588,
+        "diff": 0.019832985386221275,
+        "ci": [
+          -0.0015882914988121124,
+          0.044179734962470026
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.08,
+        "b": 0.11,
+        "diff": 0.03,
+        "ci": [
+          0.0,
+          0.06730769230769229
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:asr-heavy-construction-wind/asr/zh": {
+      "error_rate": {
+        "a": 0.006508768757909962,
+        "b": 0.006508768757909962,
+        "diff": 0.0,
+        "ci": [
+          -0.0005246572765848453,
+          0.0005303587421159045
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:asr-heavy-crowd/asr/zh": {
+      "error_rate": {
+        "a": 0.0070410139060024645,
+        "b": 0.009153318077803204,
+        "diff": 0.002112304171800739,
+        "ci": [
+          -0.0004522630102609797,
+          0.005402336296584588
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:asr-light-car-command/asr/zh": {
+      "error_rate": {
+        "a": 0.00846979107848673,
+        "b": 0.00846979107848673,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:asr-light-home-law/asr/zh": {
+      "error_rate": {
+        "a": 0.007454257962502824,
+        "b": 0.006324824937881184,
+        "diff": -0.0011294330246216398,
+        "ci": [
+          -0.0038819137026153525,
+          0.001655462694975202
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:asr-medium-accident-mark/asr/zh": {
+      "error_rate": {
+        "a": 0.0013360053440213762,
+        "b": 0.0006680026720106881,
+        "diff": -0.0006680026720106881,
+        "ci": [
+          -0.003959321365244464,
+          0.0018599750474598848
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:asr-medium-command/asr/zh": {
+      "error_rate": {
+        "a": 0.005060088551549652,
+        "b": 0.003478810879190386,
+        "diff": -0.0015812776723592662,
+        "ci": [
+          -0.004733609304561299,
+          0.0010164946841776093
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:asr-medium-shop-record/asr/zh": {
+      "error_rate": {
+        "a": 0.009650180940892641,
+        "b": 0.010856453558504222,
+        "diff": 0.0012062726176115812,
+        "ci": [
+          0.0,
+          0.003881869830000096
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:asr-medium-street-idcheck/asr/zh": {
+      "error_rate": {
+        "a": 0.004384133611691023,
+        "b": 0.0027139874739039666,
+        "diff": -0.001670146137787056,
+        "ci": [
+          -0.0035054726571047143,
+          -0.00021433597993920304
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:asr-medium-visit-idcheck/asr/zh": {
+      "error_rate": {
+        "a": 0.004143947655398037,
+        "b": 0.003489640130861505,
+        "diff": -0.0006543075245365325,
+        "ci": [
+          -0.002183406113537118,
+          0.0007768788343867278
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:asr-quiet-command/asr/zh": {
+      "error_rate": {
+        "a": 0.013660245183887917,
+        "b": 0.012259194395796848,
+        "diff": -0.001401050788091069,
+        "ci": [
+          -0.003595643184586067,
+          0.0
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:asr-quiet-dictation/asr/zh": {
+      "error_rate": {
+        "a": 0.007492999960563158,
+        "b": 0.005915526284655125,
+        "diff": -0.001577473675908033,
+        "ci": [
+          -0.0043968803499405155,
+          0.0004064009800814141
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:asr-quiet-discussion/asr/zh": {
+      "error_rate": {
+        "a": 0.16144615864110956,
+        "b": 0.024414316139421327,
+        "diff": -0.13703184250168823,
+        "ci": [
+          -0.17720376382774145,
+          -0.09680776357751428
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:asr-quiet-interview/asr/zh": {
+      "error_rate": {
+        "a": 0.12288713910761155,
+        "b": 0.027191601049868768,
+        "diff": -0.09569553805774278,
+        "ci": [
+          -0.13479453797724583,
+          -0.0601937331339303
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:asr-quiet-reception/asr/zh": {
+      "error_rate": {
+        "a": 0.08042354720786588,
+        "b": 0.01619815958653725,
+        "diff": -0.06422538762132862,
+        "ci": [
+          -0.09882281189100013,
+          -0.03253646955444168
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:ctx-extreme-emergency/asr/zh": {
+      "error_rate": {
+        "a": 0.16441857163140708,
+        "b": 0.16129490274030953,
+        "diff": -0.003123668891097553,
+        "ci": [
+          -0.02629292092852845,
+          0.028885351023575905
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.12,
+        "b": 0.14,
+        "diff": 0.020000000000000018,
+        "ci": [
+          0.0,
+          0.05154639175257732
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:ctx-heavy-pdt-link/asr/zh": {
+      "error_rate": {
+        "a": 0.08886946386946387,
+        "b": 0.07153263403263403,
+        "diff": -0.01733682983682984,
+        "ci": [
+          -0.026884770548083317,
+          -0.005619577628573344
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.01,
+        "b": 0.02,
+        "diff": 0.01,
+        "ci": [
+          0.0,
+          0.03361580587291095
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:ctx-light-visit/asr/zh": {
+      "error_rate": {
+        "a": 0.02502531462462028,
+        "b": 0.012151019817734702,
+        "diff": -0.012874294806885577,
+        "ci": [
+          -0.01661074288974304,
+          -0.009549165841465677
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:ctx-medium-street/asr/zh": {
+      "error_rate": {
+        "a": 0.031175771971496437,
+        "b": 0.012618764845605701,
+        "diff": -0.018557007125890736,
+        "ci": [
+          -0.023397514684010464,
+          -0.014018827030581524
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:ctx-quiet-reception/asr/zh": {
+      "error_rate": {
+        "a": 0.027823732892164235,
+        "b": 0.00827192058956234,
+        "diff": -0.019551812302601897,
+        "ci": [
+          -0.02505337629043555,
+          -0.014211544603856978
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:ctx-quiet-record/asr/zh": {
+      "error_rate": {
+        "a": 0.029839667458432303,
+        "b": 0.013212589073634205,
+        "diff": -0.0166270783847981,
+        "ci": [
+          -0.025793901637810427,
+          -0.010176402519848405
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:dev-asr-heavy-crowd/asr/zh": {
+      "error_rate": {
+        "a": 0.010209470163703573,
+        "b": 0.01302587572610456,
+        "diff": 0.002816405562400986,
+        "ci": [
+          0.0,
+          0.006706687515604418
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.01,
+        "diff": 0.01,
+        "ci": [
+          0.0,
+          0.03334269662921343
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:dev-num-heavy-main-road/asr/zh": {
+      "error_rate": {
+        "a": 0.010806483890334201,
+        "b": 0.013007804682809685,
+        "diff": 0.002201320792475484,
+        "ci": [
+          -0.000628762613291688,
+          0.005652546207335449
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:dev-term-medium-street/asr/zh": {
+      "error_rate": {
+        "a": 0.0030416471689284044,
+        "b": 0.0039775386055217596,
+        "diff": 0.0009358914365933551,
+        "ci": [
+          -0.00038562226635527623,
+          0.0029247737546392203
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:far-asr-quiet-command/asr/zh": {
+      "error_rate": {
+        "a": 0.013660245183887917,
+        "b": 0.012609457092819614,
+        "diff": -0.0010507880910683026,
+        "ci": [
+          -0.003406961068870136,
+          0.0007305405780550038
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:num-extreme-emergency/asr/zh": {
+      "error_rate": {
+        "a": 0.1449933749763392,
+        "b": 0.1758470565966307,
+        "diff": 0.03085368162029148,
+        "ci": [
+          0.0012422714104210351,
+          0.07161445559271637
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.09,
+        "b": 0.13,
+        "diff": 0.04000000000000001,
+        "ci": [
+          0.00900502272183688,
+          0.08421052631578949
+        ],
+        "significant": true
+      }
+    },
+    "police_scene_bench@v1-20261028:num-heavy-crowd-id/asr/zh": {
+      "error_rate": {
+        "a": 0.007592373882233845,
+        "b": 0.008098532141049435,
+        "diff": 0.0005061582588155892,
+        "ci": [
+          -0.001572729800975776,
+          0.002892639073284268
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:num-heavy-main-road/asr/zh": {
+      "error_rate": {
+        "a": 0.010406243746247748,
+        "b": 0.012007204322593557,
+        "diff": 0.0016009605763458081,
+        "ci": [
+          -0.0013385219328085956,
+          0.005044387356541331
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:num-light-car/asr/zh": {
+      "error_rate": {
+        "a": 0.005026273703449852,
+        "b": 0.005026273703449852,
+        "diff": 0.0,
+        "ci": [
+          -0.0016190212010696386,
+          0.0015090923182600135
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:num-light-home/asr/zh": {
+      "error_rate": {
+        "a": 0.0031424581005586594,
+        "b": 0.0033170391061452514,
+        "diff": 0.000174581005586592,
+        "ci": [
+          -0.0006093907133068106,
+          0.0009432821925863757
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:num-light-mediation/asr/zh": {
+      "error_rate": {
+        "a": 0.0022592978797358358,
+        "b": 0.0008689607229753215,
+        "diff": -0.0013903371567605142,
+        "ci": [
+          -0.0030235707006008783,
+          -0.0001647385481603696
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:num-medium-ebike-plate/asr/zh": {
+      "error_rate": {
+        "a": 0.005543237250554324,
+        "b": 0.004988913525498891,
+        "diff": -0.000554323725055433,
+        "ci": [
+          -0.0024738317090945874,
+          0.0012320280276453916
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:num-medium-multi-plate/asr/zh": {
+      "error_rate": {
+        "a": 0.02170207930916941,
+        "b": 0.010566981024883536,
+        "diff": -0.011135098284285876,
+        "ci": [
+          -0.02790214810988142,
+          0.0016173752457809241
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:num-medium-phone/asr/zh": {
+      "error_rate": {
+        "a": 0.004776225013267292,
+        "b": 0.004245533345126481,
+        "diff": -0.0005306916681408107,
+        "ci": [
+          -0.001848804772393426,
+          0.0005901722965065399
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:num-medium-street-id/asr/zh": {
+      "error_rate": {
+        "a": 0.0027066041140382533,
+        "b": 0.003969686033922772,
+        "diff": 0.0012630819198845185,
+        "ci": [
+          -0.0003324137129989719,
+          0.0035986488693358523
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:num-quiet-plate/asr/zh": {
+      "error_rate": {
+        "a": 0.009865470852017937,
+        "b": 0.009192825112107623,
+        "diff": -0.0006726457399103131,
+        "ci": [
+          -0.0027643617296651967,
+          0.0013161531564763837
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:num-quiet-reception/asr/zh": {
+      "error_rate": {
+        "a": 0.002459822892751722,
+        "b": 0.002459822892751722,
+        "diff": 0.0,
+        "ci": [
+          -0.0010075905595988749,
+          0.0008629670038905406
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:term-extreme-emergency/asr/zh": {
+      "error_rate": {
+        "a": 0.12337133550488599,
+        "b": 0.14128664495114007,
+        "diff": 0.01791530944625408,
+        "ci": [
+          -0.004177878619029335,
+          0.05502248194661505
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.06,
+        "b": 0.08,
+        "diff": 0.020000000000000004,
+        "ci": [
+          0.0,
+          0.05154639175257732
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:term-heavy-pdt-link/asr/zh": {
+      "error_rate": {
+        "a": 0.2672476397966594,
+        "b": 0.27257322682159285,
+        "diff": 0.005325587024933465,
+        "ci": [
+          -0.008955151431762214,
+          0.020030589117721712
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.03,
+        "b": 0.03,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:term-heavy-pdt-local/asr/zh": {
+      "error_rate": {
+        "a": 0.020242914979757085,
+        "b": 0.020481066920695404,
+        "diff": 0.00023815194093831926,
+        "ci": [
+          -0.004792401904119929,
+          0.005718140453323563
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:term-light-car/asr/zh": {
+      "error_rate": {
+        "a": 0.004592171441067133,
+        "b": 0.004373496610540126,
+        "diff": -0.00021867483052700684,
+        "ci": [
+          -0.0013988311078878875,
+          0.0008787491099648782
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:term-light-community/asr/zh": {
+      "error_rate": {
+        "a": 0.0030837004405286344,
+        "b": 0.002422907488986784,
+        "diff": -0.0006607929515418504,
+        "ci": [
+          -0.002313390875102232,
+          0.0006557916307161343
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:term-medium-accident/asr/zh": {
+      "error_rate": {
+        "a": 0.007578628268283441,
+        "b": 0.008715422508525956,
+        "diff": 0.0011367942402425151,
+        "ci": [
+          -0.0008579045957667361,
+          0.003733368011804765
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:term-medium-reception/asr/zh": {
+      "error_rate": {
+        "a": 0.002151565861821659,
+        "b": 0.002629691608893139,
+        "diff": 0.00047812574707148,
+        "ci": [
+          -0.0019825537775670548,
+          0.0034667224942859396
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:term-medium-street/asr/zh": {
+      "error_rate": {
+        "a": 0.006317267197005147,
+        "b": 0.0039775386055217596,
+        "diff": -0.0023397285914833876,
+        "ci": [
+          -0.006665131597969985,
+          0.00026458544410672016
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_scene_bench@v1-20261028:term-quiet-interrogation/asr/zh": {
+      "error_rate": {
+        "a": 0.004803616840915513,
+        "b": 0.005086182537439954,
+        "diff": 0.00028256569652444167,
+        "ci": [
+          -0.0024107392992215792,
+          0.0034947883634657644
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    }
+  },
+  "context_correction": {
+    "items": 600,
+    "clusters": 245,
+    "overall": {
+      "cer": {
+        "a": 0.06301115695417592,
+        "b": 0.047606259612802425,
+        "diff": -0.015404897341373493,
+        "ci": [
+          -0.021231625729626433,
+          -0.008698876117412024
+        ],
+        "significant": true,
+        "n_a": 40961,
+        "n_b": 40961,
+        "unit": "chars"
+      },
+      "conditional_correction_rate": {
+        "a": 0.030864197530864196,
+        "b": 0.6271186440677966,
+        "diff": 0.5962544465369324,
+        "ci": [
+          0.5016697606170097,
+          0.6892026431896108
+        ],
+        "significant": true,
+        "n_a": 162,
+        "n_b": 177,
+        "unit": "items"
+      },
+      "correction_rate": {
+        "a": 0.038461538461538464,
+        "b": 0.5625,
+        "diff": 0.5240384615384616,
+        "ci": [
+          0.4385006980848766,
+          0.6132345013477087
+        ],
+        "significant": true,
+        "n_a": 208,
+        "n_b": 208,
+        "unit": "items"
+      },
+      "evidence_rate": {
+        "a": 0.8096446700507615,
+        "b": 0.8730964467005076,
+        "diff": 0.0634517766497461,
+        "ci": [
+          0.032258064516129115,
+          0.0962636337163127
+        ],
+        "significant": true,
+        "n_a": 394,
+        "n_b": 394,
+        "unit": "items"
+      },
+      "implicit_accuracy": {
+        "a": 0.5145631067961165,
+        "b": 0.5194174757281553,
+        "diff": 0.004854368932038833,
+        "ci": [
+          -0.015228426395939132,
+          0.02857142857142858
+        ],
+        "significant": false,
+        "n_a": 206,
+        "n_b": 206,
+        "unit": "items"
+      },
+      "implicit_pair_accuracy": {
+        "a": 0.037037037037037035,
+        "b": 0.1111111111111111,
+        "diff": 0.07407407407407407,
+        "ci": [
+          -0.05886809269162203,
+          0.23814285714285688
+        ],
+        "significant": false,
+        "n_a": 27,
+        "n_b": 27,
+        "unit": "pairs"
+      },
+      "keep_rate": {
+        "a": 0.8225806451612904,
+        "b": 0.8602150537634409,
+        "diff": 0.037634408602150504,
+        "ci": [
+          -0.014043224299065323,
+          0.09240710313447915
+        ],
+        "significant": false,
+        "n_a": 186,
+        "n_b": 186,
+        "unit": "items"
+      },
+      "over_correction_rate": {
+        "a": 0.03225806451612903,
+        "b": 0.053763440860215055,
+        "diff": 0.021505376344086023,
+        "ci": [
+          -0.01143021346469622,
+          0.061370355065323005
+        ],
+        "significant": false,
+        "n_a": 186,
+        "n_b": 186,
+        "unit": "items"
+      },
+      "pair_accuracy": {
+        "a": 0.1111111111111111,
+        "b": 0.5,
+        "diff": 0.3888888888888889,
+        "ci": [
+          0.23071428571428582,
+          0.5532505910165482
+        ],
+        "significant": true,
+        "n_a": 36,
+        "n_b": 36,
+        "unit": "pairs"
+      },
+      "protected_keep_rate": {
+        "a": 0.847457627118644,
+        "b": 0.8559322033898306,
+        "diff": 0.008474576271186529,
+        "ci": [
+          0.0,
+          0.02941721132897601
+        ],
+        "significant": false,
+        "n_a": 118,
+        "n_b": 118,
+        "unit": "items"
+      },
+      "unchanged_rate": {
+        "a": 0.7692307692307693,
+        "b": 0.2932692307692308,
+        "diff": -0.4759615384615385,
+        "ci": [
+          -0.5714285714285714,
+          -0.38678447725822623
+        ],
+        "significant": true,
+        "n_a": 208,
+        "n_b": 208,
+        "unit": "items"
+      }
+    },
+    "by": {
+      "source": {
+        "synthetic": {
+          "cer": {
+            "a": 0.06301115695417592,
+            "b": 0.047606259612802425,
+            "diff": -0.015404897341373493,
+            "ci": [
+              -0.021231625729626433,
+              -0.008698876117412024
+            ],
+            "significant": true,
+            "n_a": 40961,
+            "n_b": 40961,
+            "unit": "chars"
+          },
+          "conditional_correction_rate": {
+            "a": 0.030864197530864196,
+            "b": 0.6271186440677966,
+            "diff": 0.5962544465369324,
+            "ci": [
+              0.5016697606170097,
+              0.6892026431896108
+            ],
+            "significant": true,
+            "n_a": 162,
+            "n_b": 177,
+            "unit": "items"
+          },
+          "correction_rate": {
+            "a": 0.038461538461538464,
+            "b": 0.5625,
+            "diff": 0.5240384615384616,
+            "ci": [
+              0.4385006980848766,
+              0.6132345013477087
+            ],
+            "significant": true,
+            "n_a": 208,
+            "n_b": 208,
+            "unit": "items"
+          },
+          "evidence_rate": {
+            "a": 0.8096446700507615,
+            "b": 0.8730964467005076,
+            "diff": 0.0634517766497461,
+            "ci": [
+              0.032258064516129115,
+              0.0962636337163127
+            ],
+            "significant": true,
+            "n_a": 394,
+            "n_b": 394,
+            "unit": "items"
+          },
+          "implicit_accuracy": {
+            "a": 0.5145631067961165,
+            "b": 0.5194174757281553,
+            "diff": 0.004854368932038833,
+            "ci": [
+              -0.015228426395939132,
+              0.02857142857142858
+            ],
+            "significant": false,
+            "n_a": 206,
+            "n_b": 206,
+            "unit": "items"
+          },
+          "implicit_pair_accuracy": {
+            "a": 0.037037037037037035,
+            "b": 0.1111111111111111,
+            "diff": 0.07407407407407407,
+            "ci": [
+              -0.05886809269162203,
+              0.23814285714285688
+            ],
+            "significant": false,
+            "n_a": 27,
+            "n_b": 27,
+            "unit": "pairs"
+          },
+          "keep_rate": {
+            "a": 0.8225806451612904,
+            "b": 0.8602150537634409,
+            "diff": 0.037634408602150504,
+            "ci": [
+              -0.014043224299065323,
+              0.09240710313447915
+            ],
+            "significant": false,
+            "n_a": 186,
+            "n_b": 186,
+            "unit": "items"
+          },
+          "over_correction_rate": {
+            "a": 0.03225806451612903,
+            "b": 0.053763440860215055,
+            "diff": 0.021505376344086023,
+            "ci": [
+              -0.01143021346469622,
+              0.061370355065323005
+            ],
+            "significant": false,
+            "n_a": 186,
+            "n_b": 186,
+            "unit": "items"
+          },
+          "pair_accuracy": {
+            "a": 0.1111111111111111,
+            "b": 0.5,
+            "diff": 0.3888888888888889,
+            "ci": [
+              0.23071428571428582,
+              0.5532505910165482
+            ],
+            "significant": true,
+            "n_a": 36,
+            "n_b": 36,
+            "unit": "pairs"
+          },
+          "protected_keep_rate": {
+            "a": 0.847457627118644,
+            "b": 0.8559322033898306,
+            "diff": 0.008474576271186529,
+            "ci": [
+              0.0,
+              0.02941721132897601
+            ],
+            "significant": false,
+            "n_a": 118,
+            "n_b": 118,
+            "unit": "items"
+          },
+          "unchanged_rate": {
+            "a": 0.7692307692307693,
+            "b": 0.2932692307692308,
+            "diff": -0.4759615384615385,
+            "ci": [
+              -0.5714285714285714,
+              -0.38678447725822623
+            ],
+            "significant": true,
+            "n_a": 208,
+            "n_b": 208,
+            "unit": "items"
+          }
+        }
+      },
+      "subtype": {
+        "偏旁结构": {
+          "cer": {
+            "a": 0.057031526744597945,
+            "b": 0.034891958908962094,
+            "diff": -0.02213956783563585,
+            "ci": [
+              -0.030245147339656893,
+              -0.016003248682728097
+            ],
+            "significant": true,
+            "n_a": 5646,
+            "n_b": 5646,
+            "unit": "chars"
+          },
+          "conditional_correction_rate": {
+            "a": 0.0,
+            "b": 0.4411764705882353,
+            "diff": 0.4411764705882353,
+            "ci": [
+              0.24324324324324326,
+              0.6551724137931034
+            ],
+            "significant": true,
+            "n_a": 32,
+            "n_b": 34,
+            "unit": "items"
+          },
+          "correction_rate": {
+            "a": 0.05,
+            "b": 0.425,
+            "diff": 0.375,
+            "ci": [
+              0.21052631578947367,
+              0.5675829238329237
+            ],
+            "significant": true,
+            "n_a": 40,
+            "n_b": 40,
+            "unit": "items"
+          },
+          "evidence_rate": {
+            "a": 0.8227848101265823,
+            "b": 0.8734177215189873,
+            "diff": 0.050632911392405,
+            "ci": [
+              -0.014711369622475797,
+              0.11941791044776112
+            ],
+            "significant": false,
+            "n_a": 79,
+            "n_b": 79,
+            "unit": "items"
+          },
+          "keep_rate": {
+            "a": 0.6666666666666666,
+            "b": 0.717948717948718,
+            "diff": 0.05128205128205132,
+            "ci": [
+              -0.1428571428571429,
+              0.25
+            ],
+            "significant": false,
+            "n_a": 39,
+            "n_b": 39,
+            "unit": "items"
+          },
+          "over_correction_rate": {
+            "a": 0.07692307692307693,
+            "b": 0.1794871794871795,
+            "diff": 0.10256410256410256,
+            "ci": [
+              -0.04764808362369333,
+              0.275
+            ],
+            "significant": false,
+            "n_a": 39,
+            "n_b": 39,
+            "unit": "items"
+          },
+          "pair_accuracy": {
+            "a": 0.2,
+            "b": 0.2,
+            "diff": 0.0,
+            "ci": [
+              0.0,
+              0.0
+            ],
+            "significant": false,
+            "n_a": 5,
+            "n_b": 5,
+            "unit": "pairs"
+          },
+          "protected_keep_rate": {
+            "a": 0.8,
+            "b": 0.84,
+            "diff": 0.039999999999999925,
+            "ci": [
+              0.0,
+              0.1333333333333333
+            ],
+            "significant": false,
+            "n_a": 25,
+            "n_b": 25,
+            "unit": "items"
+          },
+          "unchanged_rate": {
+            "a": 0.675,
+            "b": 0.225,
+            "diff": -0.45000000000000007,
+            "ci": [
+              -0.6470985691573925,
+              -0.23809523809523814
+            ],
+            "significant": true,
+            "n_a": 40,
+            "n_b": 40,
+            "unit": "items"
+          }
+        },
+        "同名一致性": {
+          "cer": {
+            "a": 0.06260118726389638,
+            "b": 0.0332793667925886,
+            "diff": -0.029321820471307783,
+            "ci": [
+              -0.03798485967090619,
+              -0.02191719967837833
+            ],
+            "significant": true,
+            "n_a": 5559,
+            "n_b": 5559,
+            "unit": "chars"
+          },
+          "conditional_correction_rate": {
+            "a": 0.0,
+            "b": 0.6,
+            "diff": 0.6,
+            "ci": [
+              0.375,
+              0.8125
+            ],
+            "significant": true,
+            "n_a": 31,
+            "n_b": 35,
+            "unit": "items"
+          },
+          "correction_rate": {
+            "a": 0.0,
+            "b": 0.5526315789473685,
+            "diff": 0.5526315789473685,
+            "ci": [
+              0.3333333333333333,
+              0.7674865831842574
+            ],
+            "significant": true,
+            "n_a": 38,
+            "n_b": 38,
+            "unit": "items"
+          },
+          "evidence_rate": {
+            "a": 0.868421052631579,
+            "b": 0.9342105263157895,
+            "diff": 0.06578947368421051,
+            "ci": [
+              -0.013157894736842146,
+              0.1625072674418604
+            ],
+            "significant": false,
+            "n_a": 76,
+            "n_b": 76,
+            "unit": "items"
+          },
+          "keep_rate": {
+            "a": 0.8421052631578947,
+            "b": 0.868421052631579,
+            "diff": 0.026315789473684292,
+            "ci": [
+              0.0,
+              0.08571428571428574
+            ],
+            "significant": false,
+            "n_a": 38,
+            "n_b": 38,
+            "unit": "items"
+          },
+          "over_correction_rate": {
+            "a": 0.05263157894736842,
+            "b": 0.05263157894736842,
+            "diff": 0.0,
+            "ci": [
+              0.0,
+              0.0
+            ],
+            "significant": false,
+            "n_a": 38,
+            "n_b": 38,
+            "unit": "items"
+          },
+          "pair_accuracy": {
+            "a": 0.0,
+            "b": 0.6,
+            "diff": 0.6,
+            "ci": [
+              0.0,
+              1.0
+            ],
+            "significant": false,
+            "n_a": 5,
+            "n_b": 5,
+            "unit": "pairs"
+          },
+          "protected_keep_rate": {
+            "a": 1.0,
+            "b": 1.0,
+            "diff": 0.0,
+            "ci": [
+              0.0,
+              0.0
+            ],
+            "significant": false,
+            "n_a": 23,
+            "n_b": 23,
+            "unit": "items"
+          },
+          "unchanged_rate": {
+            "a": 0.8157894736842105,
+            "b": 0.39473684210526316,
+            "diff": -0.42105263157894735,
+            "ci": [
+              -0.6176820728291316,
+              -0.22850230414746578
+            ],
+            "significant": true,
+            "n_a": 38,
+            "n_b": 38,
+            "unit": "items"
+          }
+        },
+        "否定对比": {
+          "cer": {
+            "a": 0.06938905726591163,
+            "b": 0.043388100175466585,
+            "diff": -0.026000957090445045,
+            "ci": [
+              -0.0340444627077932,
+              -0.01932354682413991
+            ],
+            "significant": true,
+            "n_a": 6269,
+            "n_b": 6269,
+            "unit": "chars"
+          },
+          "conditional_correction_rate": {
+            "a": 0.027777777777777776,
+            "b": 0.6842105263157895,
+            "diff": 0.6564327485380117,
+            "ci": [
+              0.4594594594594595,
+              0.8108108108108109
+            ],
+            "significant": true,
+            "n_a": 36,
+            "n_b": 38,
+            "unit": "items"
+          },
+          "correction_rate": {
+            "a": 0.02040816326530612,
+            "b": 0.5510204081632653,
+            "diff": 0.5306122448979591,
+            "ci": [
+              0.3584905660377359,
+              0.6875256147540982
+            ],
+            "significant": true,
+            "n_a": 49,
+            "n_b": 49,
+            "unit": "items"
+          },
+          "evidence_rate": {
+            "a": 0.7701149425287356,
+            "b": 0.8045977011494253,
+            "diff": 0.034482758620689724,
+            "ci": [
+              -0.03297619047619045,
+              0.11111111111111105
+            ],
+            "significant": false,
+            "n_a": 87,
+            "n_b": 87,
+            "unit": "items"
+          },
+          "keep_rate": {
+            "a": 0.8157894736842105,
+            "b": 0.9210526315789473,
+            "diff": 0.10526315789473684,
+            "ci": [
+              0.0,
+              0.2333333333333334
+            ],
+            "significant": false,
+            "n_a": 38,
+            "n_b": 38,
+            "unit": "items"
+          },
+          "over_correction_rate": {
+            "a": 0.02631578947368421,
+            "b": 0.0,
+            "diff": -0.02631578947368421,
+            "ci": [
+              -0.09375,
+              0.0
+            ],
+            "significant": false,
+            "n_a": 38,
+            "n_b": 38,
+            "unit": "items"
+          },
+          "pair_accuracy": {
+            "a": 0.0,
+            "b": 0.3333333333333333,
+            "diff": 0.3333333333333333,
+            "ci": [
+              0.0,
+              0.7
+            ],
+            "significant": false,
+            "n_a": 9,
+            "n_b": 9,
+            "unit": "pairs"
+          },
+          "protected_keep_rate": {
+            "a": 0.7391304347826086,
+            "b": 0.7391304347826086,
+            "diff": 0.0,
+            "ci": [
+              0.0,
+              0.0
+            ],
+            "significant": false,
+            "n_a": 23,
+            "n_b": 23,
+            "unit": "items"
+          },
+          "unchanged_rate": {
+            "a": 0.7755102040816326,
+            "b": 0.2653061224489796,
+            "diff": -0.510204081632653,
+            "ci": [
+              -0.7209302325581396,
+              -0.29995614035087736
+            ],
+            "significant": true,
+            "n_a": 49,
+            "n_b": 49,
+            "unit": "items"
+          }
+        },
+        "拆字": {
+          "cer": {
+            "a": 0.09230021860578091,
+            "b": 0.05440854991498664,
+            "diff": -0.03789166869079427,
+            "ci": [
+              -0.05304574607619413,
+              -0.025874973720079276
+            ],
+            "significant": true,
+            "n_a": 4117,
+            "n_b": 4117,
+            "unit": "chars"
+          },
+          "conditional_correction_rate": {
+            "a": 0.08,
+            "b": 0.6,
+            "diff": 0.52,
+            "ci": [
+              0.23809237637362637,
+              0.7660714285714286
+            ],
+            "significant": true,
+            "n_a": 25,
+            "n_b": 30,
+            "unit": "items"
+          },
+          "correction_rate": {
+            "a": 0.08333333333333333,
+            "b": 0.5555555555555556,
+            "diff": 0.47222222222222227,
+            "ci": [
+              0.23326923076923087,
+              0.6945075757575754
+            ],
+            "significant": true,
+            "n_a": 36,
+            "n_b": 36,
+            "unit": "items"
+          },
+          "evidence_rate": {
+            "a": 0.7424242424242424,
+            "b": 0.8787878787878788,
+            "diff": 0.13636363636363635,
+            "ci": [
+              0.06120902906617191,
+              0.22642138364779876
+            ],
+            "significant": true,
+            "n_a": 66,
+            "n_b": 66,
+            "unit": "items"
+          },
+          "keep_rate": {
+            "a": 0.8666666666666667,
+            "b": 0.8666666666666667,
+            "diff": 0.0,
+            "ci": [
+              -0.11111111111111105,
+              0.09677419354838701
+            ],
+            "significant": false,
+            "n_a": 30,
+            "n_b": 30,
+            "unit": "items"
+          },
+          "over_correction_rate": {
+            "a": 0.0,
+            "b": 0.03333333333333333,
+            "diff": 0.03333333333333333,
+            "ci": [
+              0.0,
+              0.12
+            ],
+            "significant": false,
+            "n_a": 30,
+            "n_b": 30,
+            "unit": "items"
+          },
+          "pair_accuracy": {
+            "a": 0.16666666666666666,
+            "b": 0.5,
+            "diff": 0.33333333333333337,
+            "ci": [
+              0.0,
+              0.75
+            ],
+            "significant": false,
+            "n_a": 6,
+            "n_b": 6,
+            "unit": "pairs"
+          },
+          "protected_keep_rate": {
+            "a": 0.88,
+            "b": 0.88,
+            "diff": 0.0,
+            "ci": [
+              0.0,
+              0.0
+            ],
+            "significant": false,
+            "n_a": 25,
+            "n_b": 25,
+            "unit": "items"
+          },
+          "unchanged_rate": {
+            "a": 0.75,
+            "b": 0.3888888888888889,
+            "diff": -0.3611111111111111,
+            "ci": [
+              -0.6000000000000001,
+              -0.09999999999999998
+            ],
+            "significant": true,
+            "n_a": 36,
+            "n_b": 36,
+            "unit": "items"
+          }
+        },
+        "组词": {
+          "cer": {
+            "a": 0.06671287471841969,
+            "b": 0.041067405995494716,
+            "diff": -0.025645468722924974,
+            "ci": [
+              -0.03512077127291852,
+              -0.0139344607100791
+            ],
+            "significant": true,
+            "n_a": 5771,
+            "n_b": 5771,
+            "unit": "chars"
+          },
+          "conditional_correction_rate": {
+            "a": 0.05263157894736842,
+            "b": 0.775,
+            "diff": 0.7223684210526315,
+            "ci": [
+              0.5461459860703815,
+              0.8717969472710453
+            ],
+            "significant": true,
+            "n_a": 38,
+            "n_b": 40,
+            "unit": "items"
+          },
+          "correction_rate": {
+            "a": 0.044444444444444446,
+            "b": 0.7111111111111111,
+            "diff": 0.6666666666666667,
+            "ci": [
+              0.49999999999999994,
+              0.8085106382978724
+            ],
+            "significant": true,
+            "n_a": 45,
+            "n_b": 45,
+            "unit": "items"
+          },
+          "evidence_rate": {
+            "a": 0.8372093023255814,
+            "b": 0.8837209302325582,
+            "diff": 0.046511627906976716,
+            "ci": [
+              0.010986024844720466,
+              0.09090909090909083
+            ],
+            "significant": true,
+            "n_a": 86,
+            "n_b": 86,
+            "unit": "items"
+          },
+          "keep_rate": {
+            "a": 0.926829268292683,
+            "b": 0.926829268292683,
+            "diff": 0.0,
+            "ci": [
+              -0.062533244680851,
+              0.06822145877378408
+            ],
+            "significant": false,
+            "n_a": 41,
+            "n_b": 41,
+            "unit": "items"
+          },
+          "over_correction_rate": {
+            "a": 0.0,
+            "b": 0.0,
+            "diff": 0.0,
+            "ci": [
+              0.0,
+              0.0
+            ],
+            "significant": false,
+            "n_a": 41,
+            "n_b": 41,
+            "unit": "items"
+          },
+          "pair_accuracy": {
+            "a": 0.18181818181818182,
+            "b": 0.7272727272727273,
+            "diff": 0.5454545454545454,
+            "ci": [
+              0.2222222222222222,
+              0.875
+            ],
+            "significant": true,
+            "n_a": 11,
+            "n_b": 11,
+            "unit": "pairs"
+          },
+          "protected_keep_rate": {
+            "a": 0.8181818181818182,
+            "b": 0.8181818181818182,
+            "diff": 0.0,
+            "ci": [
+              0.0,
+              0.0
+            ],
+            "significant": false,
+            "n_a": 22,
+            "n_b": 22,
+            "unit": "items"
+          },
+          "unchanged_rate": {
+            "a": 0.8222222222222222,
+            "b": 0.2222222222222222,
+            "diff": -0.6,
+            "ci": [
+              -0.75,
+              -0.4333108108108109
+            ],
+            "significant": true,
+            "n_a": 45,
+            "n_b": 45,
+            "unit": "items"
+          }
+        },
+        "隐式语义": {
+          "cer": {
+            "a": 0.05228325612177366,
+            "b": 0.061401573645120965,
+            "diff": 0.009118317523347304,
+            "ci": [
+              -0.001947651618297506,
+              0.024954649537663246
+            ],
+            "significant": false,
+            "n_a": 13599,
+            "n_b": 13599,
+            "unit": "chars"
+          },
+          "implicit_accuracy": {
+            "a": 0.5145631067961165,
+            "b": 0.5194174757281553,
+            "diff": 0.004854368932038833,
+            "ci": [
+              -0.014851485148514757,
+              0.02753579696476023
+            ],
+            "significant": false,
+            "n_a": 206,
+            "n_b": 206,
+            "unit": "items"
+          },
+          "implicit_pair_accuracy": {
+            "a": 0.037037037037037035,
+            "b": 0.1111111111111111,
+            "diff": 0.07407407407407407,
+            "ci": [
+              -0.06896551724137931,
+              0.23333333333333334
+            ],
+            "significant": false,
+            "n_a": 27,
+            "n_b": 27,
+            "unit": "pairs"
+          }
+        }
+      },
+      "train_overlap": {},
+      "mode": {
+        "asr": {
+          "cer": {
+            "a": 0.06301115695417592,
+            "b": 0.047606259612802425,
+            "diff": -0.015404897341373493,
+            "ci": [
+              -0.021231625729626433,
+              -0.008698876117412024
+            ],
+            "significant": true,
+            "n_a": 40961,
+            "n_b": 40961,
+            "unit": "chars"
+          },
+          "conditional_correction_rate": {
+            "a": 0.030864197530864196,
+            "b": 0.6271186440677966,
+            "diff": 0.5962544465369324,
+            "ci": [
+              0.5016697606170097,
+              0.6892026431896108
+            ],
+            "significant": true,
+            "n_a": 162,
+            "n_b": 177,
+            "unit": "items"
+          },
+          "correction_rate": {
+            "a": 0.038461538461538464,
+            "b": 0.5625,
+            "diff": 0.5240384615384616,
+            "ci": [
+              0.4385006980848766,
+              0.6132345013477087
+            ],
+            "significant": true,
+            "n_a": 208,
+            "n_b": 208,
+            "unit": "items"
+          },
+          "evidence_rate": {
+            "a": 0.8096446700507615,
+            "b": 0.8730964467005076,
+            "diff": 0.0634517766497461,
+            "ci": [
+              0.032258064516129115,
+              0.0962636337163127
+            ],
+            "significant": true,
+            "n_a": 394,
+            "n_b": 394,
+            "unit": "items"
+          },
+          "implicit_accuracy": {
+            "a": 0.5145631067961165,
+            "b": 0.5194174757281553,
+            "diff": 0.004854368932038833,
+            "ci": [
+              -0.015228426395939132,
+              0.02857142857142858
+            ],
+            "significant": false,
+            "n_a": 206,
+            "n_b": 206,
+            "unit": "items"
+          },
+          "implicit_pair_accuracy": {
+            "a": 0.037037037037037035,
+            "b": 0.1111111111111111,
+            "diff": 0.07407407407407407,
+            "ci": [
+              -0.05886809269162203,
+              0.23814285714285688
+            ],
+            "significant": false,
+            "n_a": 27,
+            "n_b": 27,
+            "unit": "pairs"
+          },
+          "keep_rate": {
+            "a": 0.8225806451612904,
+            "b": 0.8602150537634409,
+            "diff": 0.037634408602150504,
+            "ci": [
+              -0.014043224299065323,
+              0.09240710313447915
+            ],
+            "significant": false,
+            "n_a": 186,
+            "n_b": 186,
+            "unit": "items"
+          },
+          "over_correction_rate": {
+            "a": 0.03225806451612903,
+            "b": 0.053763440860215055,
+            "diff": 0.021505376344086023,
+            "ci": [
+              -0.01143021346469622,
+              0.061370355065323005
+            ],
+            "significant": false,
+            "n_a": 186,
+            "n_b": 186,
+            "unit": "items"
+          },
+          "pair_accuracy": {
+            "a": 0.1111111111111111,
+            "b": 0.5,
+            "diff": 0.3888888888888889,
+            "ci": [
+              0.23071428571428582,
+              0.5532505910165482
+            ],
+            "significant": true,
+            "n_a": 36,
+            "n_b": 36,
+            "unit": "pairs"
+          },
+          "protected_keep_rate": {
+            "a": 0.847457627118644,
+            "b": 0.8559322033898306,
+            "diff": 0.008474576271186529,
+            "ci": [
+              0.0,
+              0.02941721132897601
+            ],
+            "significant": false,
+            "n_a": 118,
+            "n_b": 118,
+            "unit": "items"
+          },
+          "unchanged_rate": {
+            "a": 0.7692307692307693,
+            "b": 0.2932692307692308,
+            "diff": -0.4759615384615385,
+            "ci": [
+              -0.5714285714285714,
+              -0.38678447725822623
+            ],
+            "significant": true,
+            "n_a": 208,
+            "n_b": 208,
+            "unit": "items"
+          }
+        }
+      }
+    }
+  }
+}

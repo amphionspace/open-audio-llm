@@ -1,0 +1,417 @@
+{
+  "run_a": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-r1117/runs/run-20261122T010050Z-99fbafe8",
+  "run_b": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-kgrpollm/runs/run-20261123T023717Z-7dc0e4b2",
+  "scoring": {
+    "version": 4,
+    "normalization": "v4: zh varieties and ja by character, others by word (CJK ideographs one each); zh: NFKC, lower, GigaSpeech tags, OpenCC t2s, Arabic numerals read in Chinese (4+ digit runs digit by digit, else cn2an an2cn), punctuation and symbols, SpeechIO fillers 呃啊 and erhua; v3: 幺/两/〇 read as 一/二/零 inside 3+ Chinese digit runs; v4: ja by character on v1 text; en: Whisper EnglishTextNormalizer; presence on v1 text",
+    "normalizers": {
+      "cn2an": "0.5.24",
+      "opencc": "0.1.7",
+      "whisper-normalizer": "0.1.15"
+    }
+  },
+  "resamples": 2000,
+  "confidence": 0.95,
+  "seed": 20261112,
+  "cluster_by": null,
+  "samples": 2200,
+  "clusters": 2200,
+  "protocol_differences": {},
+  "skipped_sources": [],
+  "overall": {
+    "all/WER": {
+      "error_rate": {
+        "a": 0.17878217200251098,
+        "b": 0.18041431261770244,
+        "diff": 0.0016321406151914575,
+        "ci": [
+          -0.004547810074428038,
+          0.007912428644957501
+        ],
+        "significant": false
+      },
+      "false_alarm_rate": {
+        "a": 0.02727272727272727,
+        "b": 0.029545454545454545,
+        "diff": 0.0022727272727272735,
+        "ci": [
+          -0.004598633475846084,
+          0.009390223695111841
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.09166666666666666,
+        "b": 0.09848484848484848,
+        "diff": 0.0068181818181818205,
+        "ci": [
+          0.00297607991933771,
+          0.011468548982389536
+        ],
+        "significant": true
+      }
+    }
+  },
+  "sources": {
+    "ts_asr_crosslingual@en-v1-20261109:cv-abs1-cross/ts_asr/en": {
+      "false_alarm_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_crosslingual@en-v1-20261109:cv-abs1-same/ts_asr/en": {
+      "false_alarm_rate": {
+        "a": 0.025,
+        "b": 0.008333333333333333,
+        "diff": -0.01666666666666667,
+        "ci": [
+          -0.04274193548387096,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_crosslingual@en-v1-20261109:cv-abs2-cross/ts_asr/en": {
+      "false_alarm_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_crosslingual@en-v1-20261109:cv-abs2-same/ts_asr/en": {
+      "false_alarm_rate": {
+        "a": 0.05,
+        "b": 0.058333333333333334,
+        "diff": 0.008333333333333331,
+        "ci": [
+          -0.017547741034000922,
+          0.037388447754901244
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_crosslingual@en-v1-20261109:cv-k1-cross/ts_asr/en": {
+      "error_rate": {
+        "a": 0.3560830860534125,
+        "b": 0.3850148367952522,
+        "diff": 0.028931750741839735,
+        "ci": [
+          0.0014825248189436202,
+          0.06390621164575774
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.24166666666666667,
+        "b": 0.25833333333333336,
+        "diff": 0.01666666666666669,
+        "ci": [
+          0.0,
+          0.0423728813559322
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_crosslingual@en-v1-20261109:cv-k1-same/ts_asr/en": {
+      "error_rate": {
+        "a": 0.14836795252225518,
+        "b": 0.15356083086053413,
+        "diff": 0.0051928783382789445,
+        "ci": [
+          -0.011213109883835202,
+          0.02090281315724157
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.041666666666666664,
+        "b": 0.041666666666666664,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_crosslingual@en-v1-20261109:cv-k2-cross/ts_asr/en": {
+      "error_rate": {
+        "a": 0.5020374898125509,
+        "b": 0.511002444987775,
+        "diff": 0.00896495517522411,
+        "ci": [
+          -0.007081368131752322,
+          0.02550591937827358
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.31666666666666665,
+        "b": 0.3333333333333333,
+        "diff": 0.016666666666666663,
+        "ci": [
+          0.0,
+          0.0423728813559322
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_crosslingual@en-v1-20261109:cv-k2-same/ts_asr/en": {
+      "error_rate": {
+        "a": 0.30073349633251834,
+        "b": 0.2982885085574572,
+        "diff": -0.002444987775061136,
+        "ci": [
+          -0.019417904559333073,
+          0.015113923247700608
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.10833333333333334,
+        "b": 0.10833333333333334,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_crosslingual@en-v1-20261109:cv-solo-cross/ts_asr/en": {
+      "error_rate": {
+        "a": 0.25998142989786444,
+        "b": 0.28133704735376047,
+        "diff": 0.021355617455896037,
+        "ci": [
+          -0.015931981772047,
+          0.06631179527356017
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.175,
+        "b": 0.2,
+        "diff": 0.025000000000000022,
+        "ci": [
+          0.0,
+          0.05600186915887852
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_crosslingual@en-v1-20261109:cv-solo-same/ts_asr/en": {
+      "error_rate": {
+        "a": 0.14391829155060354,
+        "b": 0.1532033426183844,
+        "diff": 0.009285051067780853,
+        "ci": [
+          -0.006521941920830633,
+          0.03138598644120812
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.041666666666666664,
+        "b": 0.041666666666666664,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_crosslingual@en-v1-20261109:tts-abs1-cross/ts_asr/en": {
+      "false_alarm_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_crosslingual@en-v1-20261109:tts-abs1-same/ts_asr/en": {
+      "false_alarm_rate": {
+        "a": 0.09,
+        "b": 0.1,
+        "diff": 0.010000000000000009,
+        "ci": [
+          0.0,
+          0.03335227272727263
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_crosslingual@en-v1-20261109:tts-abs2-cross/ts_asr/en": {
+      "false_alarm_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_crosslingual@en-v1-20261109:tts-abs2-same/ts_asr/en": {
+      "false_alarm_rate": {
+        "a": 0.06,
+        "b": 0.08,
+        "diff": 0.020000000000000004,
+        "ci": [
+          -0.020005050505050494,
+          0.0625
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_crosslingual@en-v1-20261109:tts-k1-cross/ts_asr/en": {
+      "error_rate": {
+        "a": 0.07285622179239201,
+        "b": 0.06898774983881367,
+        "diff": -0.0038684719535783396,
+        "ci": [
+          -0.025985613857391756,
+          0.01957759177988074
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.01,
+        "b": 0.02,
+        "diff": 0.01,
+        "ci": [
+          0.0,
+          0.03334269662921343
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_crosslingual@en-v1-20261109:tts-k1-same/ts_asr/en": {
+      "error_rate": {
+        "a": 0.05725190839694656,
+        "b": 0.056615776081424936,
+        "diff": -0.0006361323155216272,
+        "ci": [
+          -0.005335435612081951,
+          0.003973641681451684
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.02,
+        "b": 0.02,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_crosslingual@en-v1-20261109:tts-k2-cross/ts_asr/en": {
+      "error_rate": {
+        "a": 0.1353904282115869,
+        "b": 0.11964735516372796,
+        "diff": -0.015743073047858935,
+        "ci": [
+          -0.03987650866491315,
+          0.007905399063480954
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.02,
+        "b": 0.03,
+        "diff": 0.009999999999999998,
+        "ci": [
+          0.0,
+          0.03226462103330707
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_crosslingual@en-v1-20261109:tts-k2-same/ts_asr/en": {
+      "error_rate": {
+        "a": 0.08866371120962635,
+        "b": 0.09246358454718176,
+        "diff": 0.0037998733375554095,
+        "ci": [
+          -0.002433915054857025,
+          0.011112571178274182
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.01,
+        "b": 0.01,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_crosslingual@en-v1-20261109:tts-solo-cross/ts_asr/en": {
+      "error_rate": {
+        "a": 0.12325174825174826,
+        "b": 0.08566433566433566,
+        "diff": -0.03758741258741259,
+        "ci": [
+          -0.07381619164055932,
+          -0.01012402057962806
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.04,
+        "b": 0.04,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_crosslingual@en-v1-20261109:tts-solo-same/ts_asr/en": {
+      "error_rate": {
+        "a": 0.041107382550335574,
+        "b": 0.047818791946308725,
+        "diff": 0.006711409395973152,
+        "ci": [
+          -0.0017366450644405386,
+          0.01628835733203445
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    }
+  }
+}
