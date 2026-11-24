@@ -39,6 +39,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [公开 ASR 榜单](research/2026-11-23-public-asr-leaderboards.md) | Open ASR / SpeechIO / Artificial Analysis 现状与上榜方式；AmphionASR 与 Qwen3-ASR 对比；AISHELL-1/3、MagicData 训练测试文本重合核查（2026-11-23） |
 | [上下文纠偏相关工作](research/2026-11-20-context-correction-related-work.md) | 说字、上下文偏置、RL 奖励、误改控制与合成到真实迁移；对应上下文纠偏线的下一步（2026-11-20） |
 | [会话级上下文 ASR](research/2026-11-04-context-aware-asr-survey.md) | 会话历史作上下文的方法、数据与评测设计（2026-11-04） |
 
