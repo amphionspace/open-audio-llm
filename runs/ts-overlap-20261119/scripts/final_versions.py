@@ -23,7 +23,8 @@ def final_version():
     for path in CATALOG.glob("*.yaml"):
         for d in yaml.safe_load(path.read_text()) or []:
             target = (d.get("provenance") or {}).get("superseded_by")
-            if target:
+            # The registered fleurs_zh v3 (2026-11-24) names itself as its successor; that is no successor.
+            if target and target != f"{d['dataset_id']}@{d['version']}":
                 superseded[(d["dataset_id"], d["version"])] = target
 
     def final(dataset_id, version):
@@ -42,7 +43,21 @@ def final_version():
             return final(dataset_id, new)  # a v1 final named by superseded_by upgrades to its v2
         return version
 
-    return final
+    def newest(dataset_id, version):
+        # A final can itself be superseded by a later final (fleurs_zh v1 -> v2 -> v3, 2026-11-24, catalog/text_final_v3.yaml):
+        # follow superseded_by to the end.
+        new = final(dataset_id, version)
+        seen = {new}
+        while new and (dataset_id, new) in superseded:
+            name, nxt = superseded[(dataset_id, new)].split("@", 1)
+            if name != dataset_id or (name, nxt) not in finals:
+                raise ValueError(f"{dataset_id}@{new} superseded by {name}@{nxt}, which is not a text-final version")
+            if nxt in seen:
+                raise ValueError(f"superseded_by cycle at {dataset_id}@{nxt}")
+            seen.add(nxt); new = nxt
+        return new
+
+    return newest
 
 
 def final_key(final, key):

@@ -43,6 +43,11 @@
   - 可训练参数 3.175 亿，即整个音频塔。
   - 模拟说话人 26,585 个。
 - 诊断与结论的汇总页：https://playground.amphion.top/ts-overlap/
+- 2026-11-24：fleurs_zh 新出终版 v3（`legacy-20260804-final-v3-20261124`，删掉朗读人没读的拉丁文括注，train 3,246 条改 399 条）。attempt 001 已在跑，回放里的 fleurs_zh 仍是 v2，不重启。原因有三：
+  - 回放只算对 11.17 的 KL，不算交叉熵，学生只会被拉向 11.17 原有的输出分布，不会因为括注多学出凭空输出括注；
+  - LLM 冻结；
+  - fleurs_zh 只占回放的很小一部分。
+  下一次训练用 v3。映射脚本 `final_versions.py` 和 ts-robust `to_final_v1.py` 已改为沿 superseded_by 走到底。
 
 ## 结果
 
