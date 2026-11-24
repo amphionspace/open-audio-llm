@@ -1,7 +1,9 @@
 """Exact normalized-text overlap: benchmark refs vs every text field of zh training sources.
 
 Scans all *.jsonl.gz under each source's version dir (except audio/record indexes).
-Usage: overlap_scan.py <predictions.jsonl> <data-effective.yaml> <out.json>
+Usage: overlap_scan.py <predictions.jsonl> <data-effective.yaml> <out.json> [source-prefix,...]
+predictions.jsonl may also be a run's samples.jsonl (references only). The optional fourth
+argument replaces the default test-set source prefixes.
 """
 import collections
 import difflib
@@ -16,8 +18,9 @@ from multiprocessing import Pool
 import yaml
 
 PRED, DATA_CFG, OUT = sys.argv[1], sys.argv[2], sys.argv[3]
-SRC_KEYS = ['aishell@', 'aishell3@', 'aishell2@', 'magicdata@', 'thchs30@',
+DEFAULT_SRC_KEYS = ['aishell@', 'aishell3@', 'aishell2@', 'magicdata@', 'thchs30@',
             'wenetspeech@icefall-20260908:test_net', 'common_voice_zh@']
+SRC_KEYS = sys.argv[4].split(',') if len(sys.argv) > 4 else DEFAULT_SRC_KEYS
 EN_ONLY = {'librimix', 'gigaspeech', 'librispeech', 'common_voice_en', 'ami_sdm', 'chime6', 'fleurs_en'}
 SKIP_KEYS = {'id', 'audio', 'path', 'cut_id', 'recording_id', 'source', 'version', 'dataset_id', 'split'}
 MIN_LEN = 6  # shorter refs collide by chance
