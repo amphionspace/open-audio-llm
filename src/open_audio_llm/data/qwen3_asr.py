@@ -25,6 +25,11 @@ def native_language(language: str) -> str:
         "zh-cn": "Chinese", "chinese": "Chinese", "mandarin": "Chinese",
         "es": "Spanish", "spanish": "Spanish",
         "pt": "Portuguese", "portuguese": "Portuguese",
+        # Retention replay languages (retention_replay@qwen3-base-v1-20261124).
+        "de": "German", "german": "German", "fr": "French", "french": "French",
+        "it": "Italian", "italian": "Italian", "nl": "Dutch", "dutch": "Dutch",
+        "ja": "Japanese", "japanese": "Japanese", "ko": "Korean", "korean": "Korean",
+        "ru": "Russian", "russian": "Russian", "ar": "Arabic", "arabic": "Arabic",
         # KeSpeech stores Chinese regional accents in supervision.language.
         "northeastern": "Chinese", "jiang-huai": "Chinese",
         "southwestern": "Chinese", "jiao-liao": "Chinese", "beijing": "Chinese",
