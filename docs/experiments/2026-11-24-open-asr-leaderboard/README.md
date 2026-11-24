@@ -67,6 +67,8 @@
 | 打分 | 榜单仓库 commit `c4696193` 的规范化器原样搬入；英文合并拆写复合词，中文按字并用 wetext 读数字，Earnings22 按场拼接 | `ae open-asr-leaderboard score` |
 | 推理 | 部署栈 vLLM 0.18.0：Qwen3-ASR-1.7B 原版；11.17 交付包用包内 `serve.sh asr`（MTP k=2）；各 3 卡数据并行 | `/workspace/data/ae-runs/open-asr-leaderboard-20261124/` |
 
+登记：评测集 `asr/open-asr-leaderboard@v1-20261124` 已发布到团队 COS（`ae eval-sets check` 通过），数据已镜像到备份桶。代码：audio-data-contract [PR #298](https://github.com/amphionspace/audio-data-contract/pull/298)，amphion-eval [MR !169](https://git.amphiondev.com/amphion/amphioneval/-/merge_requests/169)，均未合并。
+
 不覆盖：英文私有集（榜单英文平均里有两列私有）、印地语（私有集，lattice 打分）。榜单这一条目是 transformers 版 `Qwen3-ASR-1.7B-hf`，我们用 vLLM，两者有后端差异。
 
 ## 过程记录
