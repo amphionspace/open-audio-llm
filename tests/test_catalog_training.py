@@ -2002,6 +2002,18 @@ def test_native_language_maps_portuguese_to_the_qwen3_asr_label():
     validate_language(native_language("pt"))
 
 
+def test_native_language_maps_retention_languages_to_qwen3_asr_labels():
+    from qwen_asr.inference.utils import validate_language
+
+    from open_audio_llm.data.qwen3_asr import native_language
+
+    names = {"de": "German", "fr": "French", "it": "Italian", "nl": "Dutch",
+             "ja": "Japanese", "ko": "Korean", "ru": "Russian", "ar": "Arabic"}
+    for code, name in names.items():
+        assert native_language(code) == name
+        validate_language(native_language(code))
+
+
 def test_indexed_records_forward_the_language_hotword_pools():
     from open_audio_llm.data.catalog_dataset import _IndexedRecords
 
