@@ -124,6 +124,12 @@ Musci 的改动很小：语言模型部分 |Musci − 底座| = 1.19，只有 |1
 
 - GRPO 用的 ms-swift 4.5.3 已支持 `--teacher_model`（OPD-RL）：学生采样后，老师对采到的每个词元算对数概率，作为逐词优势与奖励优势相加。它只取采样词元，不是 VOPD 的前 16 个候选；VOPD 的“按验证信号与老师一致程度放大”可以写成逐词优势里的一项 λ·c·(log p_老师 − log p_参考)。
 - 要补的两处：老师信号只能加在普通英文识别样本上（Musci 不会目标说话人和热词，混合批次里其余样本的老师项要置零）；Musci 没有 11.17 的 `audio_tower.sep_token`，以 11.17 的模型类型加载老师时要处理这个缺项。
+- **冒烟（11-25，oal-grpo `runs/amphionasr2-grpo-20261101/tasks/41-opd1-musci-en-smoke-from-1117`，attempt 004）通过。**GRPO v27 加上 Musci 本地老师，老师只作用于 4 个英文普通识别源，跑 10 步。
+  - 老师项只落在英文提示的整组 8 行上：6 条英文提示对应 6 条逐 rank 日志，其余批次没有老师项。
+  - 学生答对时老师基本同意（每个词元 teacher − old logp 为 −0.004），答错时明显不同意（挖掘出的漏识题上为 −2.27）。
+  - 每步比 v27 慢约 8%，显存多 3.8 GiB。
+  - 代码在 open-audio-llm `feat/grpo-teacher-scope`（cd60d1d，未推送），共三处：老师作用范围；有老师时高效 logprob 路径不跳过旧策略前向，否则 ms-swift 的 OPD 拿到 `None` 会失败；每个 rank 打印老师作用的行。
+  - 正式轮要改：`teacher_rows` 和 `teacher_kl` 只是 rank 0 本地的值，要改为跨 rank 汇总；英文普通识别在 v27 回放里只占约 2%，要提高；`teacher_kl_coef` 从 0.25～0.5 里选，因为答错组的老师项每个词元约 −1～−2.3，会盖过 ±1 的奖励优势。
 
 ## 第 1 步第一轮：v99e
 
@@ -216,3 +222,4 @@ v99s = v99z + SPGISpeech 2.0 train（终版文本 v3，权重 3.0，attempt 135�
 | 11-25 | 守门：α=1 只差 v12 整条漏识（371，门槛 369，p=0.054），来自语言模型部分；英文 TS、普通识别、客户 TS 都比 11.17 好。VoxPopuli、AMI 近讲转正，去重共排除 23 条，v99e（attempt 134）在 pt-bije92x2 上开训。GRPO 老师作用范围补丁（open-audio-llm `feat/grpo-teacher-scope` 66479cf，未推送） |
 | 11-25 | v99e 候选不采用：榜单英文 6.20（11.17 为 6.12），VoxPopuli 2.01 → 3.71，中文普通识别 4.70（TALCS 中英混说 8.10 → 9.44）。原因是 VoxPopuli 训练文本是议会编辑稿，模型学会了改写。AMI、Earnings22 有效（AMI −0.69、Earnings-21 −0.42）。v99f（去掉 VoxPopuli）排在 v99s 之后训练；v99s（attempt 135）已在训，W&B 已核对 |
 | 11-25 | v99s 候选不采用：榜单英文 6.68（SPGISpeech −1.07，其余英文集和 Earnings-21 变差，后者 8.00 → 10.71），原因是 SPGISpeech 的整理稿写法带到了所有英文上。v12 漏识 402、英文 TS 误报 678、中文 4.67 都没过。TALCS 退步与 v99e 相同，所以来自纯英文数据，不是 VoxPopuli。叠加候选去掉 v99s；SPGISpeech 改在第 2 步由 Musci 老师处理。OPD 冒烟（oal-grpo tasks/41）排在 v99f 合并之后，修了高效 logprob 路径在有老师时拿不到旧策略 logp 的问题（c173da4） |
+| 11-25 | 第 2 步 OPD 冒烟通过（attempt 004）：老师项只落在英文普通识别提示上，答错时信号大、答对时接近 0，每步慢约 8%。前三次失败依次是：W&B 转发端口不放行本节点；代码快照里的 audio-data-contract 太旧；老师的 model_type 无法自动判断。v99f 候选评测进行中 |
