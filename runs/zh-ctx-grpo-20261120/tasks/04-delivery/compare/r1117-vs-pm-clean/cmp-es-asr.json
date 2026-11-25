@@ -1,0 +1,113 @@
+{
+  "run_a": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-r1117/runs/run-20261122T025057Z-44739735",
+  "run_b": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-pm-clean/runs/run-20261125T183110Z-41318f61",
+  "scoring": {
+    "version": 4,
+    "normalization": "v4: zh varieties and ja by character, others by word (CJK ideographs one each); zh: NFKC, lower, GigaSpeech tags, OpenCC t2s, Arabic numerals read in Chinese (4+ digit runs digit by digit, else cn2an an2cn), punctuation and symbols, SpeechIO fillers 呃啊 and erhua; v3: 幺/两/〇 read as 一/二/零 inside 3+ Chinese digit runs; v4: ja by character on v1 text; en: Whisper EnglishTextNormalizer; presence on v1 text",
+    "normalizers": {
+      "cn2an": "0.5.24",
+      "opencc": "0.1.7",
+      "whisper-normalizer": "0.1.15"
+    }
+  },
+  "resamples": 2000,
+  "confidence": 0.95,
+  "seed": 20261112,
+  "cluster_by": null,
+  "samples": 19193,
+  "clusters": 19193,
+  "protocol_differences": {},
+  "skipped_sources": [],
+  "overall": {
+    "all/WER": {
+      "error_rate": {
+        "a": 0.052490020626511744,
+        "b": 0.055747228776209766,
+        "diff": 0.0032572081496980224,
+        "ci": [
+          0.002685605242854021,
+          0.0038610103055338784
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.00020840931589642057,
+        "b": 0.00031261397384463086,
+        "diff": 0.00010420465794821029,
+        "ci": [
+          0.0,
+          0.00026051164487052574
+        ],
+        "significant": false
+      }
+    }
+  },
+  "sources": {
+    "common_voice_es@legacy:test/asr/es": {
+      "error_rate": {
+        "a": 0.05389487298155744,
+        "b": 0.05748955513430924,
+        "diff": 0.003594682152751799,
+        "ci": [
+          0.00293855173391695,
+          0.004299519600822715
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.00025157232704402514,
+        "b": 0.00031446540880503143,
+        "diff": 6.289308176100629e-05,
+        "ci": [
+          0.0,
+          0.00018922729043322744
+        ],
+        "significant": false
+      }
+    },
+    "fleurs_es@legacy:test/asr/es": {
+      "error_rate": {
+        "a": 0.04219011276422416,
+        "b": 0.04424816704540582,
+        "diff": 0.002058054281181665,
+        "ci": [
+          0.0007191615854520975,
+          0.003451676478991888
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "mls_es@legacy:test/asr/spanish": {
+      "error_rate": {
+        "a": 0.052700564971751414,
+        "b": 0.05567231638418079,
+        "diff": 0.002971751412429377,
+        "ci": [
+          0.0018080196907145046,
+          0.004428137352735451
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0004192872117400419,
+        "diff": 0.0004192872117400419,
+        "ci": [
+          0.0,
+          0.0012881757663051148
+        ],
+        "significant": false
+      }
+    }
+  }
+}

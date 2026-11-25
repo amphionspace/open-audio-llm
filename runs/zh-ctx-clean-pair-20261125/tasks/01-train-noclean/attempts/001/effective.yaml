@@ -1,0 +1,116 @@
+version: 1
+runtime:
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  cwd: /workspace/workspace/mingdong/repo/oal-ctx-grpo
+  pythonpath:
+  - /workspace/workspace/mingdong/repo/oal-think-exp/runs/zh-spelling-think-20261113/shared/code-v1/src
+  - /workspace/workspace/mingdong/repo/oal-think-exp/runs/zh-spelling-think-20261113/shared/code-v1/audio-data-contract-src
+  gpus:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  threads:
+    omp: 2
+    openblas: 1
+  environment:
+    TOKENIZERS_PARALLELISM: false
+    HF_HUB_OFFLINE: '1'
+    PYTHONUNBUFFERED: '1'
+    PYTORCH_ALLOC_CONF: expandable_segments:True
+    WANDB_HTTP_PROXY: http://10.119.17.252:17920
+    WANDB_HTTPS_PROXY: http://10.119.17.252:17920
+    PATH: /workspace/workspace/mingdong/.local-tools/ffmpeg-7.0.2-static/bin:/workspace/workspace/mingdong/miniconda3/envs/oal-train/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  distributed:
+    processes: 8
+    port: 29816
+data:
+  config: /workspace/workspace/mingdong/repo/oal-ctx-grpo/runs/zh-ctx-clean-pair-20261125/tasks/01-train-noclean/attempts/001/data-effective.yaml
+  source_config: /workspace/workspace/mingdong/repo/oal-ctx-grpo/runs/zh-ctx-clean-pair-20261125/configs/train-data-noclean.yaml
+  source_sha256: 5ab63ab0654529040735c6e97f20db08988c9921e44bf234614ea654743f0530
+task:
+  kind: train
+  module: open_audio_llm.integrations.ms_swift.train
+  positional:
+  - sft
+  arguments:
+    --model: /workspace/data/ae-runs/amphionasr2-grpo-v10interp050/checkpoint
+    --model_type: amphion_asr_1.7b
+    --external_plugins:
+    - /workspace/workspace/mingdong/repo/oal-think-exp/runs/zh-spelling-think-20261113/shared/code-v1/src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py
+    --tuner_type: full
+    --freeze_vit: false
+    --freeze_aligner: false
+    --freeze_llm: false
+    --freeze_parameters:
+    - thinker.model.embed_tokens
+    - thinker.audio_tower.conv2d1
+    - thinker.audio_tower.conv2d2
+    - thinker.audio_tower.conv2d3
+    - thinker.audio_tower.conv_out
+    --deepspeed: /workspace/workspace/mingdong/repo/oal-think-exp/runs/zh-spelling-think-20261113/configs/zero1-bf16-no-overflow-check.json
+    --torch_dtype: bfloat16
+    --attn_impl: sdpa
+    --max_length: 2048
+    --per_device_train_batch_size: 12
+    --per_device_eval_batch_size: 4
+    --gradient_accumulation_steps: 2
+    --learning_rate: 3.55e-06
+    --weight_decay: 0.1
+    --max_steps: 3000
+    --lr_scheduler_type: cosine_with_min_lr
+    --lr_scheduler_kwargs:
+      min_lr: 1.0e-06
+    --warmup_ratio: 0.0
+    --warmup_steps: 300
+    --gradient_checkpointing: false
+    --vit_gradient_checkpointing: false
+    --audio_encoder_batching: true
+    --supervised_head_loss: true
+    --ddp_find_unused_parameters: false
+    --dataloader_num_workers: 12
+    --dataloader_eval_num_workers: 12
+    --dataloader_eval_prefetch_factor: 4
+    --performance_logging: true
+    --save_steps: 500
+    --eval_strategy: 'no'
+    --logging_steps: 10
+    --report_to: none
+    --seed: 42
+    --check_model: false
+    --load_args: false
+    --add_version: false
+    --output_dir: /workspace/workspace/mingdong/repo/oal-ctx-grpo/runs/zh-ctx-clean-pair-20261125/tasks/01-train-noclean/attempts/001/artifacts/training
+    --ddp_timeout: 1800
+    --max_grad_norm: 1.0
+preflight:
+- kind: prepare
+  module: open_audio_llm.data.catalog_cache
+  arguments:
+    --data_config: /workspace/workspace/mingdong/repo/oal-ctx-grpo/runs/zh-ctx-clean-pair-20261125/tasks/01-train-noclean/attempts/001/data-effective.yaml
+    --batch-size: 12
+    --world-size: 8
+    --preflight-report: /workspace/workspace/mingdong/repo/oal-ctx-grpo/runs/zh-ctx-clean-pair-20261125/tasks/01-train-noclean/attempts/001/artifacts/data-preflight.json
+recording:
+  attempts_dir: /workspace/workspace/mingdong/repo/oal-ctx-grpo/runs/zh-ctx-clean-pair-20261125/tasks/01-train-noclean/attempts
+tracking:
+  pythonpath:
+  - /workspace/workspace/mingdong/repo/oal-think-exp/runs/zh-spelling-think-20261113/shared/code-v1/src
+  enabled: true
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  credentials_file: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: AmphionASR-ctx-cleanpair-noclean-from-v10interp050-v7set34-3k-1node-codev1
+  interval: 5
+  startup_timeout: 180
+  finish_timeout: 300
+storage:
+  executable: /workspace/workspace/mingdong/.local/share/amphion-bucket/cluster-venv/bin/ab
+  remote: whai:open-audio-llm
+  local_root: /workspace/workspace/mingdong/repo/oal-ctx-grpo
+config_file: /workspace/workspace/mingdong/repo/oal-ctx-grpo/runs/zh-ctx-clean-pair-20261125/configs/train-noclean.yaml

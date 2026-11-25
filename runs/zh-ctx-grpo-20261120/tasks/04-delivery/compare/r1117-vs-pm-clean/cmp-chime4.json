@@ -1,0 +1,69 @@
+{
+  "run_a": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-r1117/runs/run-20261122T010304Z-91f2e3e0",
+  "run_b": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-pm-clean/runs/run-20261125T165014Z-c7c969f7",
+  "scoring": {
+    "version": 4,
+    "normalization": "v4: zh varieties and ja by character, others by word (CJK ideographs one each); zh: NFKC, lower, GigaSpeech tags, OpenCC t2s, Arabic numerals read in Chinese (4+ digit runs digit by digit, else cn2an an2cn), punctuation and symbols, SpeechIO fillers 呃啊 and erhua; v3: 幺/两/〇 read as 一/二/零 inside 3+ Chinese digit runs; v4: ja by character on v1 text; en: Whisper EnglishTextNormalizer; presence on v1 text",
+    "normalizers": {
+      "cn2an": "0.5.24",
+      "opencc": "0.1.7",
+      "whisper-normalizer": "0.1.15"
+    }
+  },
+  "resamples": 2000,
+  "confidence": 0.95,
+  "seed": 20261112,
+  "cluster_by": null,
+  "samples": 1320,
+  "clusters": 1320,
+  "protocol_differences": {},
+  "skipped_sources": [],
+  "overall": {
+    "all/WER": {
+      "error_rate": {
+        "a": 0.09420402254278476,
+        "b": 0.12801819967943748,
+        "diff": 0.03381417713665272,
+        "ci": [
+          0.02371448325842871,
+          0.04420091157482569
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.05227272727272727,
+        "b": 0.0946969696969697,
+        "diff": 0.04242424242424243,
+        "ci": [
+          0.031818181818181815,
+          0.053787878787878794
+        ],
+        "significant": true
+      }
+    }
+  },
+  "sources": {
+    "chime4@isolated-1ch-20261026:et05_real/asr/en": {
+      "error_rate": {
+        "a": 0.09420402254278476,
+        "b": 0.12801819967943748,
+        "diff": 0.03381417713665272,
+        "ci": [
+          0.02371448325842871,
+          0.04420091157482569
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.05227272727272727,
+        "b": 0.0946969696969697,
+        "diff": 0.04242424242424243,
+        "ci": [
+          0.031818181818181815,
+          0.053787878787878794
+        ],
+        "significant": true
+      }
+    }
+  }
+}
