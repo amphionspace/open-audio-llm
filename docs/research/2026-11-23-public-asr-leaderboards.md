@@ -137,7 +137,7 @@ AISHELL-1 0.35%、AISHELL-3 0.77% 比任何公开报告低 3 倍左右，原因�
 - **领先项**：目标说话人识别。11.17 与小米 CocktailASR-1、7 家商用 API 在同一批样本上逐条对比：
   - 中文 v12：字错率 12.8 / 33.4 / 88–260，目标缺席误输出 2.5% / 61.5% / 87–94%；
   - 英文 en@v1：词错率 13.6 / 26.3 / 107–160，误输出 6.2% / 50.6% / 88–98%；
-  - 真实会议（AliMeeting、AISHELL-4、AMI、NOTSOFAR-1、ICSI）：我们 7–16，对方 17–65。
+  - 真实会议（AliMeeting、AISHELL-4、AMI、NOTSOFAR-1、ICSI，目标在场）：我们 7.4–15.7；CocktailASR 两种模式取较好者 16.5–36.9；每个会议集上最好的商用 API 为 42.2–61.7。
   - 对比表见 [ts-compare/](2026-11-23-public-asr-leaderboards/ts-compare/)：配置是商用 API 实验的 `compare.py`，把基线换成了 11.17 的守门 run。
 - **报告页**：[amphionasr-leaderboard-plan.html](2026-11-23-public-asr-leaderboards/amphionasr-leaderboard-plan.html)，公网 https://playground.amphion.top/asr-leaderboard/ （去掉外部字体的版本）。
 
