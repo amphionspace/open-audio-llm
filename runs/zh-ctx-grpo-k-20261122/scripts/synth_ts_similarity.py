@@ -2,7 +2,8 @@
 against the real TS eval where the merged models newly miss. ECAPA cosine (wespeaker ECAPA-TDNN512-LM, the front end of
 audio-data-contract scripts/ts_benchmark/speaker_embeddings.py, the model behind the eval labels' ``target_sim``) between
 enrollment and mixture of every present item of context_correction_synth_zh ``train_ts`` (one TTS voice per mixture, so
-mixture = target speech) and ``train_ts_twins`` (several TTS voices, so a lower bound of the target's similarity).
+mixture = target speech) and ``train_ts_twins`` (its mixture slot is the target clip; the loader renders the scene from
+metadata.scene, so this is also enrollment vs target speech: the present twins reuse train_ts's 2,917 target clips).
 Prints quantiles next to ``labels.target_sim`` of ts-asr-first-other@v3 present items (enrollment vs the target's solo
 speech in the far-field mixture). Writes tasks/08-datainc/synth-ts-similarity.json.
 usage: python -I synth_ts_similarity.py   (env with onnxruntime, torchaudio, soundfile)
