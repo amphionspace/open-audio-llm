@@ -84,6 +84,9 @@
 
   与设定一致。负样本低于 50%，是因为发整个窗口时，大多数 AliMeeting 窗口没有可用的负样本。
 - 2026-11-25 06:3x UTC：提交 ACP 2 节点作业 `pt-syzd2myv`（[job_meeting_train.sh](../../scripts/job_meeting_train.sh)），W&B 经开发机转发端口 17923。
+  - 07:19 UTC 两个节点启动：10.119.18.20、10.119.17.224。W&B `g5hpfejm`（`AmphionASR-ts-overlap-encreplay-meeting-001`）在远端为 running，第 1180 步已有 `train/meeting_*` 指标。
+  - 每步约 1.59 秒，3 万步约 13 小时。
+  - 第 200、400 步，会议数据流的负样本比例为 32%；相似度 ≥ 0.4 的负样本占全部会议请求的 15–16%；耳麦注册 13–14%；加噪 35–37%；裁剪 51–53%。
 
 ## 结果
 

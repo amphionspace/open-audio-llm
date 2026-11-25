@@ -174,6 +174,16 @@ RAMC 的别场注册对照：6.95 → 3.55，−3.39 [−8.59, +0.53]。方向�
    - 近讲注册组的漏识；
    - 现有的 v12、英文 TS 误报、中文普通识别。
 
+## 发布（2026-11-25，用户确认）
+
+- **数据**：`ts_asr_real@meeting-v4/v5-20261125` 登记在 audio-data-contract PR #304，已合并（4cfb646）。共享目录 `/workspace/data/registry/catalog` 已同步，旧文件留在 `/workspace/data/migration/register-ts-asr-real-meeting-v5-20261125/`。
+- **镜像**：`ts_asr_real` 整目录已推到 `amphion-audio-backup-1373259071:audio-data-contract/datasets/ts_asr_real/`。新传 24,169 个文件，其余一致跳过，无失败、无冲突。`cos_sync_eval_sets.py run` 核对通过，镜像记录已补。
+- **评测集**：并入 AmphionEval `asr/ts-asr-benchmark@v15-20261125`（amphioneval MR !171，0d61da5）。
+  - 304 个划分、124,830 条：v14 加 12 个 AliMeeting / RAMC 划分，外加新分区「真实对话 · 整场会议对照」。
+  - v14 原有划分的数据不变，AISHELL-4 仍是 meeting-v3。
+  - `ae eval-sets check` 显示 COS 与仓库一致。
+- **本实验的配置**：`configs/meeting-bench` 改为 meeting-v5（[make_meeting_bench_configs.py](../../scripts/make_meeting_bench_configs.py)）。单跑会议部分用这套配置；跑整套 TS 评测用 `eval_set: asr/ts-asr-benchmark@v15-20261125`。
+
 ## 局限
 
 - AliMeeting 有 3 场会议（9 人）没有可作注册的语句，抢话最密的会议没进基准。
