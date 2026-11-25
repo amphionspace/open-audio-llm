@@ -1,0 +1,243 @@
+<title>AmphionASR 打榜路线</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* Layout: one reading column (~880px); summary first, then evidence tables, then the plan and decisions. Our column is marked with the accent. */
+:root {
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --ink: #172033;
+  --muted: #5b6577;
+  --line: #dde2ea;
+  --accent: #0b6e69;
+  --accent-soft: #e3f2f0;
+  --warn: #a4471d;
+  --warn-soft: #fbeee6;
+  --font-body: "Inter", "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --font-head: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11151c; --surface: #181e27; --ink: #e6e9ef; --muted: #9aa4b5; --line: #2b3340;
+    --accent: #5cc2b8; --accent-soft: #15302e; --warn: #f0a37c; --warn-soft: #3a2419; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11151c; --surface: #181e27; --ink: #e6e9ef; --muted: #9aa4b5; --line: #2b3340;
+  --accent: #5cc2b8; --accent-soft: #15302e; --warn: #f0a37c; --warn-soft: #3a2419; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.7; }
+.page { max-width: 880px; margin: 0 auto; padding-block: 40px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 40px; }
+header { display: grid; gap: 8px; }
+.eyebrow { font-size: 12px; letter-spacing: 0.08em; color: var(--muted); }
+h1 { font-family: var(--font-head); font-size: 30px; line-height: 1.3; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--font-head); font-size: 21px; margin: 0; text-wrap: balance; }
+h3 { font-family: var(--font-head); font-size: 16px; margin: 0; }
+p { margin: 0; max-width: 68ch; }
+.lede { color: var(--muted); }
+section { display: grid; gap: 16px; }
+.summary { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 24px; display: grid; gap: 16px; }
+.summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 12px; }
+.summary li::marker { color: var(--accent); font-weight: 700; }
+.summary strong { color: var(--ink); }
+.ask { border-top: 1px solid var(--line); padding-top: 14px; color: var(--muted); }
+.ask strong { color: var(--accent); }
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+th, td { padding: 9px 12px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; white-space: normal; min-width: 9em; }
+thead th { font-weight: 600; color: var(--muted); font-size: 13px; background: var(--bg); }
+tbody tr:last-child td { border-bottom: none; }
+.ours { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.bad { color: var(--warn); }
+.note { font-size: 13px; color: var(--muted); max-width: 72ch; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.card .big { font-size: 26px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1.2; }
+.card .vs { color: var(--muted); font-size: 13px; }
+.steps { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.steps li { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; display: grid; gap: 6px; }
+.steps .when { font-size: 12px; letter-spacing: 0.06em; color: var(--accent); font-weight: 600; }
+.status { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 600; margin-left: 6px; }
+.status.todo { background: var(--warn-soft); color: var(--warn); }
+ul.plain { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; display: grid; gap: 6px; }
+code { font-size: 12px; overflow-wrap: anywhere; }
+</style>
+
+<div class="page">
+  <header>
+    <div class="eyebrow">AMPHIONASR · 2026-11-25</div>
+    <h1>AmphionASR 打榜：现状与建议</h1>
+    <p class="lede">目标是借公开榜单提升 Amphion 的知名度。本页说明 AmphionASR 在公开榜单上的位置、我们真正领先的地方，以及建议的打法。</p>
+  </header>
+
+  <div class="summary">
+    <h2>结论</h2>
+    <ol>
+      <li><strong>不建议继续在 Hugging Face Open ASR Leaderboard 上投入训练。</strong>这个榜只测普通转写，以英文和欧洲语言为主，正好不是我们的强项。AmphionASR 在这些集上与底座 Qwen3-ASR 持平或略差；就算全部恢复到底座水平，英文也只排第 17 左右，没有宣传价值。</li>
+      <li><strong>我们真正领先的是“目标说话人识别”。</strong>这个任务是只转写指定的人，其他人说话不写出来，公开榜单不测它。同一套约 5 万条中英测试上：中文字错率 12.8，开源同类最好的是 33.4，7 家商用 API 在 88 以上；目标不在场时，我们误把别人的话写出来的比例是中文 2.5%、英文 6.2%，对方在 50%–98%。</li>
+      <li><strong>建议换一种打法：</strong>开源 AmphionASR 权重，发布 Amphion 的目标说话人识别评测集和排行榜，配一份技术报告。Open ASR Leaderboard 只在发布后如实提交一次，作为参考，不追名次。</li>
+    </ol>
+    <p class="ask"><strong>需要决定：</strong>是否同意这条路线，以及由谁负责技术报告和对外发布。权重可以公开，负责人已确认。</p>
+  </div>
+
+  <section>
+    <h2>现状：在 Open ASR Leaderboard 上</h2>
+    <p>我们先搭了一套和榜单完全同口径的评测（数据、调用方式、打分器逐一对齐）。用它复现 Qwen3-ASR 原版，每个数据集和榜单只差 ±0.11，所以下面的名次可以直接对照榜单。</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>项目（错误率 %，越低越好）</th><th>Qwen3-ASR 原版</th><th class="ours">AmphionASR 11.17</th><th>恢复实验最好结果</th><th>榜单第一</th></tr></thead>
+        <tbody>
+          <tr><td>英文 7 个公开集平均</td><td>5.73（第 17）</td><td class="ours">6.12（第 25/68）</td><td>6.07</td><td>4.19（API）/ 5.15（开源）</td></tr>
+          <tr><td>多语种平均（德法意西葡荷 + 中文）</td><td>4.97</td><td class="ours">11.18</td><td>8.37</td><td>— **</td></tr>
+          <tr><td>中文列（FLEURS + AISHELL-1）</td><td>2.10</td><td class="ours">2.24</td><td>1.57 *</td><td>1.89（Azure）</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">* 中文列的领先靠的是 AISHELL-1：它 96.5% 的测试句出现在我们的训练数据里，去重也去不干净，不能对外说中文第一。只看干净的 FLEURS 中文，我们和原版持平（2.73 对 2.70）。<br>** 榜单的多语种平均含印地语（私有集，我们测不到），不和榜单数字直接比。</p>
+
+    <div class="two">
+      <div class="card">
+        <h3>为什么上不去</h3>
+        <p>AmphionASR 是在 Qwen3-ASR 上为业务能力微调的，训练只用了中、英、西三种语言。微调后其他语言退化了，英文也比底座略差：训练标注逐字保留口语重复，模型照学了。</p>
+      </div>
+      <div class="card">
+        <h3>已经试过的</h3>
+        <p>做了 3 组恢复训练和对照。多语种能部分恢复（11.18 → 8.37），但会让英文目标说话人识别多出误报、中英夹杂识别变差，过不了交付门槛。英文要换训练目标才可能回到底座水平。即使全部做到，也只是和底座持平，所以已停止。</p>
+      </div>
+    </div>
+
+    <h3>其他公开集上也一样</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>公开集（错误率 %）</th><th>Qwen3-ASR 原版</th><th class="ours">AmphionASR</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>WenetSpeech 网络 / 会议</td><td>4.49 / 4.69</td><td class="ours">5.46 / 5.63</td><td>11-16 版本，与 11.17 同一训练线</td></tr>
+          <tr><td>四川话</td><td>12.85</td><td class="ours">15.75</td><td>同上</td></tr>
+          <tr><td>英文 5 个集平均</td><td>5.10</td><td class="ours">5.43</td><td>同上</td></tr>
+          <tr><td>热词：给出正确热词时的召回</td><td>97.1</td><td class="ours">94.0</td><td>11.17；越高越好，Ming-3.0-tiny 为 98.2</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">警务业务集上我们大幅领先（例如录音鲁棒性平均 1.57，对比基线 5.31），热词在鼎桥业务集上的召回也从 70% 提到了 93%。但这些是客户数据，不能公开。</p>
+  </section>
+
+  <section>
+    <h2>我们领先的地方：目标说话人识别</h2>
+    <p>场景是会议、多人对话、旁边有人说话或放音乐的时候，只转写指定那个人。用户先录 5 秒注册音，模型据此识别是谁。测试集共 49,771 条（中文 26,750 条约 75 小时，英文 23,021 条约 64 小时），包括合成场景，以及 AliMeeting、AISHELL-4、AMI、NOTSOFAR-1 等真实会议录音。所有模型用同一批样本、同一套打分逐条对比。</p>
+
+    <div class="two">
+      <div class="card">
+        <span class="vs">中文 · 目标在场时的字错率</span>
+        <span class="big">12.8</span>
+        <span class="vs">开源同类最好 33.4 · 商用 API 88–260</span>
+      </div>
+      <div class="card">
+        <span class="vs">中文 · 目标不在场时误把别人的话写出来</span>
+        <span class="big">2.5%</span>
+        <span class="vs">开源同类最好 60.5% · 商用 API 87%–94%</span>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>模型</th><th>中文 字错率</th><th>中文 目标缺席误输出</th><th>英文 词错率</th><th>英文 目标缺席误输出</th></tr></thead>
+        <tbody>
+          <tr class="ours"><td>AmphionASR 11.17</td><td>12.8</td><td>2.5%</td><td>13.6</td><td>6.2%</td></tr>
+          <tr><td>小米 CocktailASR-1（开源，同类模型）</td><td>33.4</td><td>61.5%</td><td>26.3</td><td>50.6%</td></tr>
+          <tr><td>小米 CocktailASR-1（思维链模式）</td><td>39.6</td><td>60.5%</td><td>25.3</td><td>61.3%</td></tr>
+          <tr><td>火山 豆包流式 ASR 2.0</td><td>88.0</td><td>89.2%</td><td>107.2</td><td>90.0%</td></tr>
+          <tr><td>腾讯 混元 ASR 3.0 实时</td><td>92.7</td><td>89.0%</td><td>106.9</td><td>87.8%</td></tr>
+          <tr><td>Deepgram Nova-3</td><td>97.4</td><td>86.7%</td><td>129.6</td><td>89.6%</td></tr>
+          <tr><td>阿里 Fun-ASR 实时</td><td>98.3</td><td>91.1%</td><td>118.2</td><td>91.2%</td></tr>
+          <tr><td>阿里 Qwen3-ASR-Flash 实时</td><td>103.7</td><td>94.4%</td><td>117.7</td><td>97.6%</td></tr>
+          <tr><td>AssemblyAI Universal-3.5 Pro</td><td>110.9</td><td>94.2%</td><td>111.8</td><td>89.6%</td></tr>
+          <tr><td>MOSS transcribe-diarize-pro</td><td>260.0</td><td>90.1%</td><td>160.1</td><td>88.2%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">商用 API 都没有“只转写指定的人”的接口，只能把混合音频整段转写，别人的话全算作错误，所以错误率会超过 100。正式发布时需要补上“说话人分离 + 声纹匹配 + 识别”这类流水线做法作为基线，否则对比会被认为不公平。CocktailASR 是这次唯一测到的同类开源模型。</p>
+
+    <h3>真实会议录音（目标在场时的错误率 %）</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>会议语料</th><th class="ours">AmphionASR 11.17</th><th>CocktailASR（两种模式取较好者）</th><th>商用 API 最好</th><th>目标缺席误输出：我们 / 其他</th></tr></thead>
+        <tbody>
+          <tr><td>AliMeeting 远场（中文）</td><td class="ours">7.4</td><td>36.9</td><td>42.2</td><td>2.0% / 92%–100%</td></tr>
+          <tr><td>AISHELL-4 远场（中文）</td><td class="ours">13.6</td><td>23.0</td><td>53.5</td><td>6.4% / 97%–100%</td></tr>
+          <tr><td>AMI 远场（英文）</td><td class="ours">15.7</td><td>28.6</td><td>50.1</td><td>9.3% / 95%–100%</td></tr>
+          <tr><td>NOTSOFAR-1 远场（英文）</td><td class="ours">9.6</td><td>20.6</td><td>49.3</td><td>7.3% / 92%–100%</td></tr>
+          <tr><td>ICSI 会议（英文）</td><td class="ours">8.5</td><td>16.5</td><td>61.7</td><td>3.2% / 96%–100%</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>不该出字的时候不出字</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>场景（误输出比例，越低越好）</th><th class="ours">AmphionASR 11.17</th><th>CocktailASR</th><th>商用 API</th></tr></thead>
+        <tbody>
+          <tr><td>没有人说话（中文 720 条）</td><td class="ours">0.1%</td><td>10.8%</td><td>3.3%–47.1%</td></tr>
+          <tr><td>只有歌声（中文 240 条）</td><td class="ours">0.0%</td><td>5.0%</td><td>29.6%–100%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">目标一个人单独说话、没有干扰时，比的是识别本身：中文我们最好（3.6，API 5.7–15.8）；英文我们 5.4，处在中间，AssemblyAI 3.8、阿里 Fun-ASR 4.2 更好。</p>
+  </section>
+
+  <section>
+    <h2>建议方案</h2>
+    <p>思路是让我们的强项能被公开衡量：由 Amphion 定义这个赛道并开放评测，比在别人的普通转写榜上排第 17 更能建立影响力。</p>
+    <ol class="steps">
+      <li>
+        <span class="when">第 1 周</span>
+        <h3>整理可公开的评测集，补齐基线</h3>
+        <ul class="plain">
+          <li>从现有测试集里挑出能公开的部分：真实会议录音和公开朗读语料合成的场景；去掉业务反馈里的真实注册录音等客户数据；逐一核对来源语料的许可，不能再分发的只发生成脚本或剔除。</li>
+          <li>补“说话人分离 + 声纹匹配 + 识别”的流水线基线（例如 pyannote + Qwen3-ASR），和已测的 7 家 API、CocktailASR 放在一起。</li>
+        </ul>
+      </li>
+      <li>
+        <span class="when">第 2 周</span>
+        <h3>开源模型与排行榜</h3>
+        <ul class="plain">
+          <li>在 Hugging Face 发布 AmphionASR 权重、模型卡和推理代码，并核对 transformers 版与我们 vLLM 部署版的结果一致。</li>
+          <li>发布评测集和排行榜页面（Hugging Face Space），评测代码用已有的 AmphionEval，所有模型的逐条预测一并公开，方便第三方复现。</li>
+        </ul>
+      </li>
+      <li>
+        <span class="when">第 3 周</span>
+        <h3>技术报告与发布</h3>
+        <ul class="plain">
+          <li>arXiv 技术报告：方法、评测集、对比结果。英文和多语种比底座弱、AISHELL-1 文本重合这些情况都如实写，并给出去重后的数字。</li>
+          <li>Open ASR Leaderboard：按真实口径提交一次，作为报告里的参考项。</li>
+        </ul>
+      </li>
+    </ol>
+    <p class="note">时间为预估，前提是有一位同事负责报告写作和对外发布。</p>
+
+    <h3>已经具备的</h3>
+    <ul class="plain">
+      <li>中英目标说话人识别测试集（约 139 小时）和 AmphionEval 评测代码<span class="status">已有</span></li>
+      <li>7 家商用 API 和小米 CocktailASR 在全集上的结果、逐条预测<span class="status">已有</span></li>
+      <li>与 Open ASR Leaderboard 同口径的评测，可在提交前预估名次<span class="status">已有</span></li>
+      <li>公开测试集去重工具；已修复 FLEURS 中文训练文本里不读出来的英文括注<span class="status">已有</span></li>
+      <li>公开版评测集裁剪与许可核对、流水线基线、Hugging Face 发布包、排行榜页面、技术报告<span class="status todo">待做</span></li>
+    </ul>
+
+    <h3>风险</h3>
+    <ul class="plain">
+      <li><strong>自建自评的公信力：</strong>评测集、评测代码和全部模型的预测都公开，基线按各家官方推荐的方式调用。</li>
+      <li><strong>对比公平性：</strong>商用 API 没有指定说话人的功能，直接比会被质疑，所以要加流水线基线，并单列“目标单独说话”的对照组；那一组里我们英文并不领先，照实展示。</li>
+      <li><strong>来源许可：</strong>部分会议和噪声语料可能限制再分发，能公开的范围要核对后才能确定。</li>
+    </ul>
+  </section>
+
+  <footer>
+    <div>数据来源：AmphionEval 共享结果（2026-11-25 同步）；目标说话人测试集 <code>open-audio-llm/ts-asr-benchmark@v12-20261022</code>（中文）、<code>ts-asr-benchmark-en@v1-20261031</code>（英文），打分口径版本 4，5 秒注册音，逐条配对。11.17 为交付包合并模型（vLLM 部署栈）。</div>
+    <div>Open ASR Leaderboard 数字来自同口径镜像评测（榜单 v1.16.2，2026-11-20）。详细记录在 open-audio-llm PR #174：<code>docs/experiments/2026-11-24-open-asr-leaderboard/README.md</code>。商用 API 评测：<code>oal-vendor-ts/runs/vendor-ts-asr-20261111</code>。</div>
+  </footer>
+</div>

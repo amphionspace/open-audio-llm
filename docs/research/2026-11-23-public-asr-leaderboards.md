@@ -129,6 +129,18 @@ AISHELL-1 0.35%、AISHELL-3 0.77% 比任何公开报告低 3 倍左右，原因�
 3. **训练发布版**：去掉重合文本；守门是英文榜单集不差于 Qwen3-ASR-1.7B，中文保持不退。
 4. **提交与发布**：给 `huggingface/open_asr_leaderboard` 提 PR（复用 `qwen/` 脚本或新建目录），同时发模型卡和技术报告；中文表格用去重后的数字，附 SpeechIO 公开集、WenetSpeech-Yue/Chuan、KeSpeech。
 
+### 2026-11-25 更新：换打法
+
+用户决定（2026-11-25）：停掉为 Open ASR Leaderboard 做的恢复训练（v99y 已中断，attempt 133）；权重可以公开；改为“开源权重 + 发布目标说话人识别评测集和排行榜 + 技术报告”，Open ASR Leaderboard 只在发布后如实提交一次作参考。
+
+- **依据**：Open ASR 只测普通转写，AmphionASR 在这些集上与底座持平或略差，恢复到底座也只排第 17 左右（见[实验记录](../experiments/2026-11-24-open-asr-leaderboard/README.md)）。公开热词集上也不领先：给出正确热词时召回 11.17 为 94.0，Qwen3 原版 97.1，Ming-3.0-tiny 98.2。
+- **领先项**：目标说话人识别。11.17 与小米 CocktailASR-1、7 家商用 API 在同一批样本上逐条对比：
+  - 中文 v12：字错率 12.8 / 33.4 / 88–260，目标缺席误输出 2.5% / 61.5% / 87–94%；
+  - 英文 en@v1：词错率 13.6 / 26.3 / 107–160，误输出 6.2% / 50.6% / 88–98%；
+  - 真实会议（AliMeeting、AISHELL-4、AMI、NOTSOFAR-1、ICSI）：我们 7–16，对方 17–65。
+  - 对比表见 [ts-compare/](2026-11-23-public-asr-leaderboards/ts-compare/)：配置是商用 API 实验的 `compare.py`，把基线换成了 11.17 的守门 run。
+- **报告页**：[amphionasr-leaderboard-plan.html](2026-11-23-public-asr-leaderboards/amphionasr-leaderboard-plan.html)，公网 https://playground.amphion.top/asr-leaderboard/ （去掉外部字体的版本）。
+
 ## 5. 证据与复现
 
 - 榜单数据：Open ASR Space 的 Gradio 配置（`https://hf-audio-open-asr-leaderboard.hf.space/config`，v1.16.2，2026-11-20）；版本历史见 Space 的 `init.py`（经 hf-mirror 读取）。本机直连 huggingface.co 不通，hf.space 和 hf-mirror 可用。
