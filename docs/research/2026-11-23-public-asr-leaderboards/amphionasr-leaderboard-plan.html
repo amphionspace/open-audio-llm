@@ -1,7 +1,7 @@
 <title>AmphionASR 打榜评估报告</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
-/* Layout: a model-card style document (one ~860px column): title, date, summary, numbered sections; every figure sits in a warm panel with title, subtitle, chart and a data table. Ours = blue, everyone else = warm grays. */
+/* Layout: model-card style report in one ~860px column. Page one is the answer (verdict rows, plan, decisions); numbered sections below hold the evidence, each = one-line takeaway + one figure or table. Ours = blue, everyone else = warm grays; amber marks a resource gap. */
 :root {
   --page: #ffffff;
   --ink: #1b1b1b;
@@ -15,46 +15,81 @@
   --axis: #b9b1a5;
   --ours: #2a78d6;
   --ours-soft: #e2edfb;
+  --on-ours: #ffffff;
+  --gap: #9a5410;
+  --gap-soft: #fbeedc;
   --peer: #857c71;
   --other: #c2baae;
-  --range: #d8d1c6;
   --font: "Aptos", "Segoe UI", system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --page: #141312; --ink: #efece7; --ink2: #c9c4bc; --muted: #938d84; --head: #9cc2ef;
     --panel: #1f1d1a; --card: #272420; --line: #36322c; --grid: #34312b; --axis: #5a554d;
-    --ours: #3987e5; --ours-soft: #1b2d45; --peer: #a69d91; --other: #625b52; --range: #4a453e; color-scheme: dark;
+    --ours: #3987e5; --ours-soft: #1b2d45; --on-ours: #ffffff; --gap: #f0b070; --gap-soft: #3b2a18;
+    --peer: #a69d91; --other: #625b52; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --page: #141312; --ink: #efece7; --ink2: #c9c4bc; --muted: #938d84; --head: #9cc2ef;
   --panel: #1f1d1a; --card: #272420; --line: #36322c; --grid: #34312b; --axis: #5a554d;
-  --ours: #3987e5; --ours-soft: #1b2d45; --peer: #a69d91; --other: #625b52; --range: #4a453e; color-scheme: dark;
+  --ours: #3987e5; --ours-soft: #1b2d45; --on-ours: #ffffff; --gap: #f0b070; --gap-soft: #3b2a18;
+  --peer: #a69d91; --other: #625b52; color-scheme: dark;
 }
 * { box-sizing: border-box; }
-body { background: var(--page); color: var(--ink); font-family: var(--font); font-size: 15.5px; line-height: 1.75; }
-.doc { max-width: 880px; margin: 0 auto; padding-block: 56px 72px; padding-left: max(18px, env(safe-area-inset-left, 0px)); padding-right: max(18px, env(safe-area-inset-right, 0px)); display: grid; gap: 22px; }
-h1 { font-size: clamp(30px, 5vw, 42px); font-weight: 400; line-height: 1.25; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
-.date { font-style: italic; color: var(--ink2); margin-top: -8px; }
-h2 { color: var(--head); font-size: 25px; font-weight: 400; margin: 26px 0 0; text-wrap: balance; }
-h3 { color: var(--head); font-size: 19px; font-weight: 400; margin: 6px 0 0; }
-p { margin: 0; max-width: 70ch; }
-ul.doc-list { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 72ch; }
-.kicker { font-size: 15px; color: var(--ink2); }
-strong { font-weight: 600; }
+body { background: var(--page); color: var(--ink); font-family: var(--font); font-size: 16px; line-height: 1.8; }
+.doc { max-width: 860px; margin: 0 auto; padding-block: 56px 72px; padding-left: max(18px, env(safe-area-inset-left, 0px)); padding-right: max(18px, env(safe-area-inset-right, 0px)); display: grid; gap: 52px; }
+.sec { display: grid; gap: 18px; min-width: 0; }
+h1 { font-size: clamp(30px, 5vw, 40px); font-weight: 400; line-height: 1.25; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.date { font-style: italic; color: var(--muted); font-size: 14.5px; }
+h2 { color: var(--head); font-size: 24px; font-weight: 400; line-height: 1.4; margin: 0; text-wrap: balance; }
+h3 { color: var(--head); font-size: 18px; font-weight: 400; margin: 4px 0 0; }
+p { margin: 0; max-width: 42em; }
+.lead { font-size: 17.5px; line-height: 1.75; color: var(--ink); max-width: 40em; }
+.hero { display: grid; gap: 14px; }
+.hero .lead { font-size: 19px; }
+.hero .lead b { font-weight: 600; }
+ul.plain { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; max-width: 42em; }
+strong, b { font-weight: 600; }
+.label { font-size: 12px; letter-spacing: 0.1em; color: var(--muted); font-weight: 600; }
 
+/* Page one */
+.answer { border: 1px solid var(--line); border-radius: 14px; padding: 6px 22px 20px; display: grid; gap: 0; }
+.v-row { display: grid; grid-template-columns: minmax(0, 15em) 7.5em minmax(0, 1fr); gap: 4px 18px; padding: 16px 0; border-top: 1px solid var(--line); align-items: start; }
+.label + .v-row { border-top: 0; }
+.v-goal { display: grid; gap: 2px; }
+.v-goal b { font-size: 16px; line-height: 1.5; }
+.v-goal small { color: var(--muted); font-size: 13px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.v-reason { font-size: 14.5px; color: var(--ink2); line-height: 1.7; }
+.pill { justify-self: start; font-size: 13px; font-weight: 600; line-height: 1.5; padding: 2px 11px; border-radius: 999px; white-space: nowrap; margin-top: 1px; }
+.pill.go { background: var(--ours-soft); color: var(--ours); }
+.pill.ahead { background: var(--ours); color: var(--on-ours); }
+.pill.gap { background: var(--gap-soft); color: var(--gap); }
+.answer .label { padding: 20px 0 8px; }
+.answer > .label:first-child { padding-top: 16px; }
+
+.tracks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.track { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 4px; align-content: start; }
+.track .k { font-size: 12px; letter-spacing: 0.08em; font-weight: 700; color: var(--ours); }
+.track.c .k { color: var(--muted); }
+.track .t { font-size: 15.5px; font-weight: 600; line-height: 1.5; }
+.track .d { font-size: 14px; color: var(--ink2); line-height: 1.65; }
+.track .m { font-size: 12.5px; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+.decide { display: grid; gap: 8px; }
+.decide ol { margin: 0; padding-left: 1.4em; display: grid; gap: 4px; font-size: 15px; }
+
+/* Evidence */
 .panel { background: var(--panel); border-radius: 12px; padding: 22px 22px 16px; display: grid; gap: 14px; min-width: 0; }
-.panel-title { font-weight: 700; font-size: 17px; line-height: 1.4; text-align: center; margin: 0; }
-.panel-sub { font-size: 13px; color: var(--muted); text-align: center; margin: -10px auto 0; max-width: 62ch; }
-.fig-cap { font-size: 13px; color: var(--muted); margin-top: -10px; }
-.fig-cap b { color: var(--ink2); font-weight: 600; }
+.panel-title { font-weight: 700; font-size: 16.5px; line-height: 1.4; text-align: center; margin: 0; }
+.panel-sub { font-size: 13px; color: var(--muted); text-align: center; margin: -10px auto 0; max-width: 56ch; line-height: 1.6; }
+.fig-cap { font-size: 13px; color: var(--muted); line-height: 1.65; max-width: none; }
 
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
-.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 12px 12px; text-align: center; display: grid; gap: 2px; align-content: start; }
-.card .lbl { font-size: 11.5px; letter-spacing: 0.08em; color: var(--muted); }
-.card .num { font-size: 30px; font-weight: 700; color: var(--ours); line-height: 1.25; }
-.card .num.plain { color: var(--ink); }
+.cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 10px 12px; text-align: center; display: grid; gap: 2px; align-content: start; }
+.card .lbl { font-size: 12px; color: var(--muted); line-height: 1.45; }
+.card .num { font-size: 28px; font-weight: 700; color: var(--ours); line-height: 1.3; font-variant-numeric: tabular-nums; }
+.card .num.gap { color: var(--gap); }
 .card .sub { font-size: 12px; color: var(--muted); line-height: 1.45; }
 
 .chart-box { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 14px 8px; display: grid; gap: 6px; min-width: 0; }
@@ -65,7 +100,6 @@ strong { font-weight: 600; }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
 .legend i.ours { background: var(--ours); } .legend i.peer { background: var(--peer); } .legend i.other { background: var(--other); }
-.legend i.range { background: var(--range); height: 8px; width: 18px; border-radius: 4px; }
 .legend i.dot { border-radius: 50%; width: 11px; height: 11px; }
 .plot { width: 100%; min-width: 0; }
 .plot svg { display: block; overflow: visible; }
@@ -78,8 +112,7 @@ svg .rowlabel.strong, svg .val.strong { fill: var(--ink); font-weight: 700; }
 svg .val { fill: var(--ink2); font-size: 12px; font-variant-numeric: tabular-nums; }
 svg .bar.ours, svg .dot.ours { fill: var(--ours); }
 svg .bar.peer, svg .dot.peer { fill: var(--peer); }
-svg .bar.other { fill: var(--other); }
-svg .band { fill: var(--range); }
+svg .bar.other, svg .dot.other { fill: var(--other); }
 svg .ring { stroke: var(--card); stroke-width: 2; }
 svg .hit { fill: transparent; cursor: default; outline: none; }
 svg .hit:focus-visible { stroke: var(--ours); stroke-width: 1.5; }
@@ -87,275 +120,322 @@ svg .note { fill: var(--muted); font-size: 11.5px; }
 
 .seg { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; justify-self: center; }
 .seg button { font: inherit; font-size: 13px; border: 0; background: transparent; color: var(--ink2); padding: 4px 16px; border-radius: 999px; cursor: pointer; }
-.seg button[aria-pressed="true"] { background: var(--ours); color: #fff; }
+.seg button[aria-pressed="true"] { background: var(--ours); color: var(--on-ours); }
 .seg button:focus-visible { outline: 2px solid var(--ours); outline-offset: 2px; }
 
 details.data { font-size: 13px; }
 details.data summary { cursor: pointer; color: var(--muted); }
 .tbl-wrap { overflow-x: auto; }
-table.raw { border-collapse: collapse; width: 100%; font-size: 12.5px; font-variant-numeric: tabular-nums; margin-top: 8px; }
-table.raw th { font-size: 11px; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; text-align: right; padding: 7px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-table.raw td { text-align: right; padding: 7px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; color: var(--ink2); }
+table.raw { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+details table.raw { margin-top: 8px; font-size: 12.5px; }
+table.raw th { font-size: 11.5px; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; text-align: right; padding: 7px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.raw td { text-align: right; padding: 8px; border-bottom: 1px solid var(--line); white-space: nowrap; color: var(--ink2); }
 table.raw th:first-child, table.raw td:first-child { text-align: left; }
-table.raw td:first-child { color: var(--ink); white-space: normal; min-width: 8em; }
+table.raw td:first-child { color: var(--ink); white-space: normal; min-width: 7em; }
 table.raw tr.ours td { color: var(--ink); font-weight: 600; }
 table.raw td.best { background: var(--ours-soft); color: var(--ours); font-weight: 700; }
+table.raw td.worse { color: var(--gap); font-weight: 600; }
 table.raw tr:last-child td { border-bottom: 0; }
 table.gap-table th { text-align: left; }
-table.gap-table td { white-space: normal; text-align: left; vertical-align: top; min-width: 8.5em; line-height: 1.55; }
-table.gap-table td:last-child { min-width: 15em; }
-table.gap-table td b { color: var(--ink); }
+table.gap-table td { white-space: normal; text-align: left; vertical-align: top; line-height: 1.6; min-width: 9em; }
+table.gap-table td:first-child { min-width: 6.5em; font-weight: 600; }
+table.gap-table td:last-child { color: var(--ink); }
 
 .schema { display: grid; gap: 10px; }
-.lane { display: grid; grid-template-columns: 7.5em minmax(0, 1fr); gap: 12px; align-items: center; }
+.lane { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 12px; align-items: center; }
 .lane .tag { font-size: 12.5px; color: var(--ink2); text-align: right; }
 .lane svg { width: 100%; height: 38px; display: block; }
 .wave-ours { fill: var(--ours); } .wave-other { fill: var(--other); }
-.outcomes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
-.outcome { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; font-size: 13.5px; display: grid; gap: 2px; }
-.outcome .who { font-size: 11.5px; letter-spacing: 0.06em; color: var(--muted); }
-.outcome .txt { color: var(--ink); }
+.outcomes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.outcome { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; font-size: 14px; display: grid; gap: 2px; }
+.outcome .who { font-size: 12px; color: var(--muted); }
 .outcome mark { background: var(--ours-soft); color: var(--ours); font-weight: 600; border-radius: 3px; padding: 0 3px; }
 .outcome s { color: var(--muted); }
 
-.gantt { display: grid; grid-template-columns: minmax(0, 2.2fr) repeat(3, minmax(0, 1fr)); gap: 6px 0; font-size: 13.5px; }
-.gantt .wk { font-size: 11px; letter-spacing: 0.08em; color: var(--muted); text-align: center; border-left: 1px solid var(--line); padding-bottom: 4px; }
+.plan-lines { display: grid; gap: 10px; }
+.plan-lines p { max-width: 44em; }
+.gantt { display: grid; grid-template-columns: minmax(0, 2.2fr) repeat(3, minmax(0, 1fr)); gap: 6px 0; font-size: 14px; }
+.gantt .wk { font-size: 11.5px; color: var(--muted); text-align: center; border-left: 1px solid var(--line); padding-bottom: 4px; }
 .gantt .task { padding: 6px 12px 6px 0; line-height: 1.45; color: var(--ink); }
 .gantt .task small { display: block; color: var(--muted); font-size: 12px; }
-.gantt .bar { align-self: center; height: 22px; border-radius: 6px; background: var(--ours); margin: 0 4px; }
+.gantt .bar { align-self: center; height: 20px; border-radius: 6px; background: var(--ours); margin: 0 4px; }
 .gantt .bar.b { background: var(--peer); }
-.checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
-.checks ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 13.5px; }
-.checks li { display: grid; grid-template-columns: 1.3em minmax(0, 1fr); gap: 6px; }
-.checks .ok::before { content: "✓"; color: var(--ours); font-weight: 700; }
-.checks .todo::before { content: "○"; color: var(--muted); }
-.checks h4 { margin: 0 0 6px; font-size: 12px; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
+.two ul { font-size: 14.5px; }
 
-.decide { border: 1px solid var(--line); border-left: 4px solid var(--head); border-radius: 6px; padding: 14px 18px; display: grid; gap: 6px; }
-.decide ol { margin: 0; padding-left: 1.3em; display: grid; gap: 4px; }
-footer { border-top: 1px solid var(--line); padding-top: 16px; font-size: 12.5px; color: var(--muted); display: grid; gap: 6px; }
+footer { border-top: 1px solid var(--line); padding-top: 16px; font-size: 12.5px; color: var(--muted); display: grid; gap: 8px; line-height: 1.7; }
+footer a { color: var(--ink2); }
 #tip { position: fixed; z-index: 20; pointer-events: none; background: var(--ink); color: var(--page); font-size: 12.5px; line-height: 1.5; padding: 7px 10px; border-radius: 6px; max-width: 280px; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
 #tip b { font-weight: 700; }
-@media (max-width: 560px) { .panel { padding: 16px 12px 12px; } .lane { grid-template-columns: 5.2em minmax(0, 1fr); } }
+@media (max-width: 720px) {
+  .tracks, .two { grid-template-columns: minmax(0, 1fr); }
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .outcomes { grid-template-columns: minmax(0, 1fr); }
+  .v-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .v-reason { grid-column: 1 / -1; }
+}
+@media (max-width: 560px) {
+  .doc { gap: 44px; padding-top: 36px; }
+  .hero .lead { font-size: 17.5px; }
+  .answer { padding: 4px 14px 16px; }
+  .panel { padding: 16px 12px 12px; }
+  .lane { grid-template-columns: 4.8em minmax(0, 1fr); }
+}
 </style>
 
 <div class="doc">
-  <h1>AmphionASR 打榜评估报告</h1>
-  <div class="date">日期：2026 年 11 月 25 日</div>
-  <p class="kicker">报告摘要</p>
-  <p>AmphionASR 是 Amphion 在 Qwen3-ASR-1.7B 上微调的语音识别模型，主打目标说话人识别、热词和复杂声学环境。为了借公开榜单提升 Amphion 的知名度，我们按 Hugging Face Open ASR Leaderboard 的口径完整复现了它的评测，并把 AmphionASR 与开源同类模型、7 家商用语音 API 放在同一批数据上做了逐条对比。本报告给出它的现状、与各项第一名的资源对比、真正领先的地方，以及建议的打法。</p>
 
-  <h2>结论</h2>
-  <ul class="doc-list">
-    <li><strong>能不能拿第一，取决于哪一项第一，各项第一背后的资源差别很大。</strong>
-      <ul class="doc-list">
-        <li><strong>英文榜开源第一：资源上我们具备条件。</strong>现在的开源第一 Musci-ASR 和排第 16 的 orukqwen，都是在 Qwen3-ASR-1.7B（也是我们的底座）上，用公开数据做强化学习微调出来的；orukqwen 第一版只用了 54.6 小时英文和 14.3 个 A100 卡时。我们没拿到，是因为 11.17 是为业务训练的（中文、目标说话人、警务），从没针对这个榜做过，不是缺资源。建议单独做一个“榜单版”去争，约 3 周。</li>
-        <li><strong>英文榜全榜第一、多语种榜第一：存在真实的资源差距。</strong>这两项第一都是商用 API（Zoom、Azure），用的是规模未公开的专有数据；开源里最好的 NVIDIA 用了 172 万小时、77 种语言的数据，其中包括采购的数据。我们的训练数据约 7 万小时，几乎全是公开语料，以中英为主；德、法、意、葡、荷、印地语基本没有。要争这两项，需要先投入数据和算力。</li>
-        <li><strong>中文列：数字上能超过，但不能这样报。</strong>恢复实验做到 1.57，低于第一的 1.89，但其中一半靠 AISHELL-1 的测试句出现在训练数据里；干净口径下我们与底座持平。</li>
-      </ul>
-    </li>
-    <li><strong>我们已经明显领先的是目标说话人识别</strong>：只转写指定的人，其他人说话不写出来。在约 5 万条中英测试上，中文 44 个场景组全部最好（含并列），英文 40 组中有 39 组最好；真实会议录音上错误率比开源同类低 41%–80%，商用 API 没有这项能力。公开榜单不测这一项。</li>
-    <li><strong>建议两条线并行</strong>：一是做英文榜单版，争开源第一，现有资源可做；二是开源 AmphionASR、发布目标说话人识别评测集和排行榜并配技术报告。全榜第一和多语种第一需要的数据与算力单独评估，由领导决定是否投入。</li>
-  </ul>
+  <header class="hero">
+    <h1>AmphionASR 打榜评估报告</h1>
+    <div class="date">2026 年 11 月 25 日</div>
+    <p class="lead">能不能拿第一，要看是哪一项。<b>英文榜的开源第一，我们现有资源就能争；</b>英文榜全榜第一和多语种榜第一，差在数据；<b>目标说话人识别，我们已经领先。</b></p>
+  </header>
 
-  <h2>一、在 Open ASR Leaderboard 上的位置</h2>
-  <p>我们先搭了一套和榜单完全同口径的评测：数据、调用方式、打分器逐一对齐。用它复现底座 Qwen3-ASR-1.7B，每个数据集和榜单只差 ±0.11，所以下面的名次可以直接对照榜单。</p>
+  <section class="answer" aria-label="结论">
+    <div class="label">结论</div>
 
-  <div class="panel" id="fig-board">
-    <p class="panel-title">图 1 · Open ASR Leaderboard 英文榜</p>
-    <p class="panel-sub">7 个公开英文测试集的平均词错率（%），越低越好。榜上 68 个模型，这里列出代表性的几个；我们的数是同口径实测。</p>
-    <div class="chart-box">
-      <div class="legend"><span><i class="ours"></i>AmphionASR 11.17</span><span><i class="peer"></i>底座 Qwen3-ASR-1.7B</span><span><i class="other"></i>其他上榜模型</span></div>
-      <div class="plot" data-chart="board"></div>
+    <div class="v-row">
+      <div class="v-goal"><b>英文榜 · 开源模型第一</b><small>第一 Musci-ASR 5.15 · 我们 6.12（第 25 名）</small></div>
+      <span class="pill go">可以争</span>
+      <div class="v-reason">开源第一 Musci-ASR 和排第 16 的 orukqwen，都是在我们用的同一个底座上，用公开数据做小规模微调得到的。我们落后，是因为 11.17 没有针对这个榜训练过。</div>
     </div>
-    <details class="data"><summary>查看数据表</summary><div class="tbl-wrap" data-table="board"></div></details>
-  </div>
-
-  <div class="panel">
-    <p class="panel-title">表 1 · 各语种错误率（%）</p>
-    <p class="panel-sub">同口径实测，越低越好；中文为字错率。恢复实验是 11-24 做的多语种恢复训练里最好的一组，因副作用过不了交付门槛，已停止。</p>
-    <div class="tbl-wrap">
-      <table class="raw">
-        <thead><tr><th>模型</th><th>英文 7 集</th><th>中文</th><th>德</th><th>法</th><th>意</th><th>西</th><th>葡</th><th>荷</th><th>多语种平均</th></tr></thead>
-        <tbody>
-          <tr><td>Qwen3-ASR-1.7B 底座</td><td class="best">5.73</td><td>2.10</td><td class="best">3.86</td><td class="best">5.64</td><td class="best">5.38</td><td class="best">3.69</td><td class="best">6.17</td><td class="best">7.93</td><td class="best">4.97</td></tr>
-          <tr class="ours"><td>AmphionASR 11.17</td><td>6.12</td><td>2.24</td><td>8.53</td><td>11.85</td><td>14.90</td><td>4.50</td><td>12.01</td><td>24.25</td><td>11.18</td></tr>
-          <tr><td>恢复实验（已停止）</td><td>6.07</td><td>1.57 *</td><td>7.70</td><td>9.81</td><td>8.79</td><td>4.49</td><td>9.96</td><td>16.28</td><td>8.37</td></tr>
-        </tbody>
-      </table>
+    <div class="v-row">
+      <div class="v-goal"><b>英文榜 · 全榜第一</b><small>第一 Zoom（商用）4.19</small></div>
+      <span class="pill gap">差数据</span>
+      <div class="v-reason">商用 API 用的是未公开的专有数据。所有开源模型目前都在 5.15 以上。</div>
     </div>
-    <p class="fig-cap">* 中文列由 FLEURS 和 AISHELL-1 组成。AISHELL-1 的测试句 96.5% 出现在我们的训练数据里，所以这个数不能拿来对外说中文第一；只看干净的 FLEURS 中文，我们和底座持平（2.73 对 2.70）。</p>
-  </div>
-
-  <p><strong>11.17 排在底座后面的原因：</strong>它是为业务训练的交付模型，训练目标是中文、目标说话人识别和警务场景，没有针对这个榜做过。训练数据只有中、英、西三种语言，其他语言微调后退化了；英文训练标注逐字保留口语重复（“the the”），而榜单参考文本是去掉重复的整理稿，模型照学了标注风格，所以英文也比底座略差。11-24 在交付模型上做过 3 组多语种恢复训练，能部分恢复，但会影响交付指标，已停止。这些说明的是交付模型的取舍，不代表做不到。</p>
-
-  <h2>二、第一名靠什么：资源对比</h2>
-  <p>下面把榜上领先模型公开的训练资源和我们放在一起比。商用 API 都没有公开训练数据。</p>
-
-  <div class="panel" id="fig-data">
-    <p class="panel-title">图 2 · 训练数据规模</p>
-    <p class="panel-sub">训练用的音频小时数，对数刻度，每格相差 10 倍。前五行是各模型训练的数据总量；后三行都是在 Qwen3-ASR 底座之上再微调的数据量。</p>
-    <div class="chart-box">
-      <div class="legend"><span><i class="ours dot"></i>AmphionASR</span><span><i class="peer dot"></i>我们和其他微调模型共用的底座</span><span><i class="other dot"></i>其他模型</span></div>
-      <div class="plot" data-chart="data"></div>
+    <div class="v-row">
+      <div class="v-goal"><b>多语种榜 · 第一</b><small>第一 Azure（商用）3.27 · 开源最好 4.50</small></div>
+      <span class="pill gap">差数据和算力</span>
+      <div class="v-reason">开源最好的 NVIDIA 用了 172 万小时、77 种语言的数据，其中有采购数据。我们德、法、意、葡、荷、印地语几乎没有训练数据。</div>
     </div>
-    <details class="data"><summary>查看数据表</summary><div class="tbl-wrap" data-table="data"></div></details>
-    <p class="fig-cap">来源：Qwen3-ASR 技术报告（编码器预训练约 4,000 万小时伪标注数据，以中英为主）；Whisper large-v3 模型卡（100 万小时弱标注 + 400 万小时伪标注）；Nemotron 3.5 Transcribe 模型卡（172 万小时不重复，按重复使用计 653 万小时，含从 David AI 采购的数据）；Canary-1B-v2 论文（170 万小时，25 种语言）；orukqwen 模型卡（54.6 小时提示音频池，第一版训练 14.3 A100 卡时）；Musci-ASR 模型卡（公开榜单训练集 + 难例 + 非母语英语，未给小时数）。AmphionASR 为本项目训练配方统计，含派生的混合样本。</p>
-  </div>
-
-  <div class="panel">
-    <p class="panel-title">表 2 · 每一项第一的资源对比</p>
-    <div class="tbl-wrap">
-      <table class="raw gap-table">
-        <thead><tr><th>目标</th><th>现在的第一</th><th>第一靠什么</th><th>我们现有</th><th>差距与补齐所需</th></tr></thead>
-        <tbody>
-          <tr><td><b>英文榜 · 开源第一</b></td><td>Musci-ASR 5.15<br>（全榜第 6）</td><td>Qwen3-ASR-1.7B 底座；公开榜单训练集 + 难例；强化学习微调</td><td>同一底座；强化学习流程已跑通；16 张 A800；单次微调约 20 卡时</td><td><b>资源够，差在方向。</b>需要单独做榜单版：用榜单领域的公开训练集（会议、财报电话、议会演讲等），按榜单的整理稿风格训练。约 3 周</td></tr>
-          <tr><td><b>英文榜 · 全榜第一</b></td><td>Zoom Scribe v2.1 Pro 4.19<br>（商用 API）</td><td>专有数据，规模未公开</td><td>英文公开语料约 1.5 万小时（GigaSpeech、Emilia、Common Voice、LibriSpeech）</td><td><b>数据差距。</b>所有开源模型目前都在 5.15 以上。追平需要专有或采购的英文数据，以及训练相应规模的算力</td></tr>
-          <tr><td><b>多语种榜 · 第一</b></td><td>Azure 3.27（商用 API）<br>开源最好 Nemotron 4.50</td><td>Azure 未公开；Nemotron 用 172 万小时、77 种语言，含采购数据</td><td>西语约 2,700 小时；德、法、意、葡、荷、印地语基本没有（每种只有 6,000 条恢复数据）</td><td><b>数据与算力差距。</b>公开的 Granary 约 65 万小时（25 种欧洲语言）可以用，但印地语是私有测试集，需另找数据；训练规模比现在大一到两个数量级，算力需单独评估</td></tr>
-          <tr><td><b>中文列</b>（FLEURS + AISHELL-1）</td><td>Azure 1.89<br>（商用 API）</td><td>未公开</td><td>中文训练数据充足（WenetSpeech、AISHELL-2、KeSpeech、Emilia 等）；恢复实验 1.57</td><td><b>数字已超，但不能这样报。</b>AISHELL-1 一半的分数来自测试句出现在训练数据里；干净的 FLEURS 中文与底座持平（2.73 对 2.70）。要干净地第一，需要提升普通话朗读识别本身</td></tr>
-        </tbody>
-      </table>
+    <div class="v-row">
+      <div class="v-goal"><b>目标说话人识别</b><small>只转写指定的人，公开榜单不测</small></div>
+      <span class="pill ahead">已领先</span>
+      <div class="v-reason">和小米开源模型、7 家商用 API 逐条对比：中文 44 个场景组全部最好，英文 40 组里 39 组最好。</div>
     </div>
-    <p class="fig-cap">我们的资源：训练数据约 7 万小时，几乎全是公开语料（WenetSpeech、Emilia、GigaSpeech、LibriSpeech、AISHELL、KeSpeech、Common Voice、MLS 等），少量客户数据；算力为 ACP 上约 2 个节点、16 张 A800。</p>
-  </div>
 
-  <h2>三、我们领先的地方：目标说话人识别</h2>
-  <p>场景是会议、多人对话、旁边有人说话或放音乐的时候，只转写指定那个人。用户先录 5 秒注册音，模型据此判断谁是目标。</p>
+    <div class="label">建议</div>
+    <div class="tracks">
+      <div class="track"><span class="k">A 线</span><span class="t">英文榜单版，争开源第一</span><span class="d">从底座出发单独训练，不动交付模型。</span><span class="m">约 3 周 · 现有算力</span></div>
+      <div class="track"><span class="k">B 线</span><span class="t">开辟目标说话人识别赛道</span><span class="d">开源权重，发布评测集、排行榜和技术报告。</span><span class="m">约 3 周 · 与 A 线并行</span></div>
+      <div class="track c"><span class="k">C 项</span><span class="t">全榜第一、多语种第一</span><span class="d">先评估要投入多少数据和算力，再决定做不做。</span><span class="m">需单独立项</span></div>
+    </div>
 
-  <div class="panel">
-    <p class="panel-title">任务示意</p>
-    <div class="schema">
-      <div class="lane"><span class="tag">注册音 5 秒</span><svg data-wave="enroll" aria-hidden="true"></svg></div>
-      <div class="lane"><span class="tag">现场录音</span><svg data-wave="mix" aria-hidden="true"></svg></div>
-      <div class="outcomes">
-        <div class="outcome"><span class="who">AMPHIONASR</span><span class="txt"><mark>下午三点在二号会议室开评审会。</mark></span></div>
-        <div class="outcome"><span class="who">普通语音识别 / 商用 API</span><span class="txt">下午三点 <s>你那边投影仪好了吗</s> 在二号会议室 <s>还差一根线</s> 开评审会。</span></div>
+    <div class="label">需要决定</div>
+    <div class="decide">
+      <ol>
+        <li>是否启动 A 线。</li>
+        <li>是否同意 B 线：开源权重，发布评测集和排行榜。</li>
+        <li>是否为 C 项立项，评估数据和算力投入。</li>
+        <li>两条线的负责人和期望发布时间。</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>一、英文榜：我们排第 25，落后于底座</h2>
+    <p>我们按榜单的规则自己搭了一套评测。用它复测底座 Qwen3-ASR-1.7B，每个数据集和榜单公布值相差不超过 0.11，所以下面的名次可以直接对照榜单。</p>
+
+    <div class="panel" id="fig-board">
+      <p class="panel-title">图 1 · Open ASR Leaderboard 英文榜</p>
+      <p class="panel-sub">7 个公开英文测试集的平均词错率（%），越低越好。榜上共 68 个模型，这里列出代表性的 8 个。</p>
+      <div class="chart-box">
+        <div class="legend"><span><i class="ours"></i>AmphionASR 11.17</span><span><i class="peer"></i>底座 Qwen3-ASR-1.7B</span><span><i class="other"></i>其他上榜模型</span></div>
+        <div class="plot" data-chart="board"></div>
+      </div>
+      <details class="data"><summary>查看数据表</summary><div class="tbl-wrap" data-table="board"></div></details>
+    </div>
+
+    <p><b>11.17 比底座差，有三个原因：</b></p>
+    <ul class="plain">
+      <li>它是为业务训练的交付模型，目标是中文、目标说话人识别和警务场景，没有针对这个榜做过。</li>
+      <li>我们的英文训练标注保留了口语重复（比如 “the the”），榜单的参考答案把重复删掉了，模型学的是前一种写法。</li>
+      <li>训练只用了中、英、西三种语言，其他语言在微调后变差，见表 1。</li>
+    </ul>
+
+    <div class="panel">
+      <p class="panel-title">表 1 · 各语种错误率（%）</p>
+      <p class="panel-sub">按榜单规则实测，越低越好，中文为字错率。</p>
+      <div class="tbl-wrap">
+        <table class="raw">
+          <thead><tr><th>模型</th><th>英文</th><th>中文</th><th>西</th><th>德</th><th>法</th><th>意</th><th>葡</th><th>荷</th><th>多语种平均</th></tr></thead>
+          <tbody>
+            <tr><td>底座 Qwen3-ASR-1.7B</td><td class="best">5.73</td><td class="best">2.10</td><td class="best">3.69</td><td class="best">3.86</td><td class="best">5.64</td><td class="best">5.38</td><td class="best">6.17</td><td class="best">7.93</td><td class="best">4.97</td></tr>
+            <tr class="ours"><td>AmphionASR 11.17</td><td>6.12</td><td>2.24</td><td>4.50</td><td class="worse">8.53</td><td class="worse">11.85</td><td class="worse">14.90</td><td class="worse">12.01</td><td class="worse">24.25</td><td class="worse">11.18</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="fig-cap">中文列：榜单第一是 Azure 1.89。我们后来一次训练做到 1.57，但其中的 AISHELL-1 测试句有 96.5% 出现在我们的训练数据里，这个数不能对外用。</p>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>二、第一名靠什么：资源对比</h2>
+    <p class="lead">英文榜开源第一靠的是公开数据加小规模微调，这些条件我们都有。全榜第一和多语种第一靠的是专有数据或上百万小时的数据，这是我们缺的。</p>
+
+    <div class="panel">
+      <p class="panel-title">我们现有的资源</p>
+      <div class="cards">
+        <div class="card"><span class="lbl">训练数据</span><span class="num">约 7 万小时</span><span class="sub">几乎全是公开语料</span></div>
+        <div class="card"><span class="lbl">其中英文</span><span class="num">约 1.5 万小时</span><span class="sub">GigaSpeech、Emilia 等</span></div>
+        <div class="card"><span class="lbl">德法意葡荷印地语</span><span class="num gap">几乎为 0</span><span class="sub">西语约 2,700 小时</span></div>
+        <div class="card"><span class="lbl">常用算力</span><span class="num">16 张 A800</span><span class="sub">单次微调约 20 GPU 小时</span></div>
       </div>
     </div>
-    <p class="fig-cap">蓝色是注册人（目标）的声音，灰色是旁边其他人。示例文字为示意。</p>
-  </div>
 
-  <div class="panel" id="fig-ts">
-    <p class="panel-title">图 3 · 目标说话人识别：与 9 个系统逐条对比</p>
-    <p class="panel-sub">同一批 49,771 条测试（中文 26,750 条约 75 小时，英文 23,021 条约 64 小时），同一套打分。对手包括小米开源的同类模型 CocktailASR-1，以及 7 家商用语音 API。</p>
-    <div class="cards">
-      <div class="card"><span class="lbl">中文场景组最好（含并列）</span><span class="num">44 / 44</span><span class="sub">合成场景、真实注册录音、真实会议</span></div>
-      <div class="card"><span class="lbl">英文场景组最好（含并列）</span><span class="num">39 / 40</span><span class="sub">唯一例外：目标一个人单独说话</span></div>
-      <div class="card"><span class="lbl">真实会议录音最好</span><span class="num">5 / 5</span><span class="sub">AliMeeting · AISHELL-4 · AMI · NOTSOFAR-1 · ICSI</span></div>
-      <div class="card"><span class="lbl">目标不在场时误输出（中文）</span><span class="num">2.5%</span><span class="sub">CocktailASR 60.5% 起，商用 API 87%–94%</span></div>
+    <div class="panel" id="fig-data">
+      <p class="panel-title">图 2 · 训练数据规模</p>
+      <p class="panel-sub">训练音频小时数，对数刻度，每格差 10 倍。前五行是模型训练的数据总量，后三行是在 Qwen3-ASR 底座上再微调的数据量。</p>
+      <div class="chart-box">
+        <div class="legend"><span><i class="ours dot"></i>AmphionASR</span><span><i class="peer dot"></i>底座（我们和其他微调模型共用）</span><span><i class="other dot"></i>其他模型</span></div>
+        <div class="plot" data-chart="data"></div>
+      </div>
+      <details class="data"><summary>查看数据表</summary><div class="tbl-wrap" data-table="data"></div></details>
+      <p class="fig-cap">来源见文末。</p>
     </div>
-    <div class="seg" role="group" aria-label="切换语言"><button type="button" id="lang-zh" aria-pressed="true">中文</button><button type="button" id="lang-en" aria-pressed="false">英文</button></div>
-    <div class="chart-box">
-      <div class="chart-head"><span class="chart-title" id="ts-title-err">目标在场：字错率（%）</span><span class="chart-note">越低越好</span></div>
-      <div class="legend"><span><i class="ours"></i>AmphionASR 11.17</span><span><i class="peer"></i>开源同类（小米 CocktailASR-1）</span><span><i class="other"></i>商用 API</span></div>
-      <div class="plot" data-chart="ts-err"></div>
-    </div>
-    <div class="chart-box">
-      <div class="chart-head"><span class="chart-title">目标不在场：误把别人的话写出来的比例（%）</span><span class="chart-note">越低越好</span></div>
-      <div class="plot" data-chart="ts-fa"></div>
-    </div>
-    <p class="fig-cap">商用 API 都没有“只转写指定的人”的接口，只能把混合音频整段转写，别人的话全算作错误，所以错误率会超过 100%。正式发布时会补上“说话人分离 + 声纹匹配 + 识别”的流水线基线。</p>
-    <details class="data"><summary>查看数据表</summary><div class="tbl-wrap" data-table="ts"></div></details>
-  </div>
 
-  <div class="panel" id="fig-meet">
-    <p class="panel-title">图 4 · 真实会议录音（目标在场）</p>
-    <p class="panel-sub">5 个公开会议语料，中文为字错率、英文为词错率（%），越低越好。CocktailASR 取两种模式中较好的一个，商用 API 取 7 家中最好的一家。</p>
-    <div class="chart-box">
-      <div class="legend"><span><i class="ours"></i>AmphionASR 11.17</span><span><i class="peer"></i>CocktailASR-1（较好模式）</span><span><i class="other"></i>商用 API（最好的一家）</span></div>
-      <div class="plot" data-chart="meet"></div>
+    <div class="panel">
+      <p class="panel-title">表 2 · 要拿第一，还差什么</p>
+      <div class="tbl-wrap">
+        <table class="raw gap-table">
+          <thead><tr><th>目标</th><th>第一名用了什么</th><th>我们现有</th><th>还需要什么</th></tr></thead>
+          <tbody>
+            <tr><td>英文榜<br>开源第一</td><td>同一个底座；公开的榜单训练集和难例；强化学习微调</td><td>同一个底座；强化学习流程已跑通；16 张 A800</td><td>调整方向：用榜单领域的公开训练集，按榜单的文本写法训练。约 3 周</td></tr>
+            <tr><td>英文榜<br>全榜第一</td><td>专有数据，规模未公开</td><td>公开英文语料约 1.5 万小时</td><td>专有或采购的英文数据，以及相应的训练算力</td></tr>
+            <tr><td>多语种榜<br>第一</td><td>开源最好的 NVIDIA：172 万小时、77 种语言，含采购数据</td><td>西语约 2,700 小时，其他语种几乎没有</td><td>公开的 Granary 数据集（约 65 万小时、25 种欧洲语言）可用；印地语要另找数据；训练规模要大一到两个数量级</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="fig-cap">参考：orukqwen 第一版只用了 54.6 小时英文、14.3 个 A100 GPU 小时，就排到第 16；第二版继续训练，从底座的 5.75 降到 5.42。</p>
     </div>
-    <p class="fig-cap">同一批会议录音里，目标不在场时我们误输出 2%–9%，其他系统 92%–100%。</p>
-    <details class="data"><summary>查看数据表</summary><div class="tbl-wrap" data-table="meet"></div></details>
-  </div>
+  </section>
 
-  <div class="panel" id="fig-quiet">
-    <p class="panel-title">图 5 · 不该出字的时候不出字</p>
-    <p class="panel-sub">只有环境声、或只有带人声的歌曲时，模型凭空写出文字的比例（%），越低越好。</p>
-    <div class="chart-box">
-      <div class="legend"><span><i class="ours dot"></i>AmphionASR 11.17</span><span><i class="peer dot"></i>CocktailASR-1</span><span><i class="range"></i>7 家商用 API 的范围</span></div>
-      <div class="plot" data-chart="quiet"></div>
+  <section class="sec">
+    <h2>三、我们已经领先的：目标说话人识别</h2>
+    <p class="lead">在会议、多人对话、旁边有人说话的场合，只转写指定的那个人。用户先录 5 秒注册音，模型据此认出目标。</p>
+
+    <div class="panel">
+      <p class="panel-title">这项任务是什么</p>
+      <div class="schema">
+        <div class="lane"><span class="tag">注册音 5 秒</span><svg data-wave="enroll" aria-hidden="true"></svg></div>
+        <div class="lane"><span class="tag">现场录音</span><svg data-wave="mix" aria-hidden="true"></svg></div>
+        <div class="outcomes">
+          <div class="outcome"><span class="who">AmphionASR</span><span><mark>下午三点在二号会议室开评审会。</mark></span></div>
+          <div class="outcome"><span class="who">普通语音识别、商用 API</span><span>下午三点 <s>你那边投影仪好了吗</s> 在二号会议室 <s>还差一根线</s> 开评审会。</span></div>
+        </div>
+      </div>
+      <p class="fig-cap">蓝色是注册人（目标）的声音，灰色是旁边的人。示例文字仅作示意。</p>
     </div>
-    <details class="data"><summary>查看数据表</summary><div class="tbl-wrap" data-table="quiet"></div></details>
-  </div>
 
-  <h2>四、目前不占优的地方</h2>
-  <p>下面是交付模型 11.17 目前不占优的项目，技术报告里会如实写。其中英文和多语种的原因见第二节。</p>
-  <div class="panel">
-    <p class="panel-title">表 3 · 不占优的项目</p>
-    <div class="tbl-wrap">
-      <table class="raw">
-        <thead><tr><th>项目</th><th>对手最好</th><th>AmphionASR</th><th>说明</th></tr></thead>
-        <tbody>
-          <tr><td>Open ASR 英文 7 集平均（%）</td><td class="best">5.73</td><td>6.12</td><td>对手为底座 Qwen3-ASR</td></tr>
-          <tr><td>Open ASR 多语种平均（%）</td><td class="best">4.97</td><td>11.18</td><td>德法意葡荷退化 2–3 倍</td></tr>
-          <tr><td>WenetSpeech 网络（%）</td><td class="best">4.49</td><td>5.46</td><td>11-16 版本，与 11.17 同一训练线</td></tr>
-          <tr><td>四川话（%）</td><td class="best">12.85</td><td>15.75</td><td>同上</td></tr>
-          <tr><td>公开热词集召回（越高越好）</td><td class="best">98.2</td><td>94.0</td><td>Ming-3.0-tiny；底座 97.1</td></tr>
-          <tr><td>英文目标单独说话（%）</td><td class="best">3.8</td><td>5.4</td><td>AssemblyAI；没有干扰人时比的是识别本身</td></tr>
-        </tbody>
-      </table>
+    <div class="panel" id="fig-ts">
+      <p class="panel-title">图 3 · 和 9 个系统逐条对比</p>
+      <p class="panel-sub">同一批 49,771 条测试（中文约 75 小时、英文约 64 小时），同一套打分。对手是小米开源的 CocktailASR-1 和 7 家商用语音 API。</p>
+      <div class="cards">
+        <div class="card"><span class="lbl">中文场景组最好</span><span class="num">44 / 44</span><span class="sub">含并列</span></div>
+        <div class="card"><span class="lbl">英文场景组最好</span><span class="num">39 / 40</span><span class="sub">只输在“目标一个人说话”</span></div>
+        <div class="card"><span class="lbl">目标不在场时误写别人的话（中文）</span><span class="num">2.5%</span><span class="sub">其他系统 60%–94%</span></div>
+        <div class="card"><span class="lbl">只有环境声时凭空出字</span><span class="num">0.1%</span><span class="sub">其他系统 3%–75%</span></div>
+      </div>
+      <div class="seg" role="group" aria-label="切换语言"><button type="button" id="lang-zh" aria-pressed="true">中文</button><button type="button" id="lang-en" aria-pressed="false">英文</button></div>
+      <div class="chart-box">
+        <div class="chart-head"><span class="chart-title" id="ts-title-err">目标在场时的字错率（%）</span><span class="chart-note">越低越好</span></div>
+        <div class="legend"><span><i class="ours"></i>AmphionASR 11.17</span><span><i class="peer"></i>小米 CocktailASR-1</span><span><i class="other"></i>商用 API</span></div>
+        <div class="plot" data-chart="ts-err"></div>
+      </div>
+      <p class="fig-cap">商用 API 没有“只转写指定的人”的功能，只能整段转写，别人的话都算错，所以错误率会超过 100%。正式发布时会补上“说话人分离 + 声纹匹配 + 识别”的组合基线。</p>
+      <details class="data"><summary>查看数据表</summary><div class="tbl-wrap" data-table="ts"></div></details>
     </div>
-    <p class="fig-cap">警务业务集上我们明显领先（例如录音鲁棒性平均 1.57 对 5.31），但这些是客户数据，不能公开。</p>
-  </div>
 
-  <h2>五、建议方案：两条线并行</h2>
-  <p><b>A 线：英文榜单版，争开源第一。</b>资源已经具备。从 Qwen3-ASR 底座出发，不改交付模型；用榜单领域的公开训练集，按榜单的整理稿风格做强化学习微调，只用开发集选模型，另用榜单没用过的数据核验，避免被认为是刷榜。参考：orukqwen 第一版只用 54.6 小时英文、14.3 个 A100 卡时，榜上排第 16；第二版继续强化学习后，7 个公开集从底座的 5.75 降到 5.42。Musci-ASR 降到 5.15。我们的目标是进入开源前三，争第一。</p>
-  <p><b>B 线：目标说话人识别赛道。</b>由 Amphion 开放评测、定义这个赛道：开源 AmphionASR 权重，发布评测集、排行榜和技术报告。</p>
-  <p><b>C 项：全榜第一、多语种第一。</b>需要先投入数据（采购或大规模处理公开多语种数据）和更多算力，建议单独立项评估成本，再决定是否做。</p>
+    <div class="panel" id="fig-meet">
+      <p class="panel-title">图 4 · 真实会议录音</p>
+      <p class="panel-sub">5 个公开会议语料，目标在场时的错误率（%），越低越好。我们比 CocktailASR 低 41%–80%。</p>
+      <div class="chart-box">
+        <div class="legend"><span><i class="ours"></i>AmphionASR 11.17</span><span><i class="peer"></i>CocktailASR-1（两种模式取较好）</span><span><i class="other"></i>商用 API（7 家取最好）</span></div>
+        <div class="plot" data-chart="meet"></div>
+      </div>
+      <details class="data"><summary>查看数据表</summary><div class="tbl-wrap" data-table="meet"></div></details>
+    </div>
+  </section>
 
-  <div class="panel">
-    <p class="panel-title">图 6 · 三周路线</p>
-    <div class="chart-box">
-      <div class="legend"><span><i class="ours"></i>A 线 · 英文榜单版</span><span><i class="peer"></i>B 线 · 目标说话人识别赛道</span></div>
-      <div class="gantt" role="table" aria-label="三周路线">
-        <div class="wk" style="border-left:0;text-align:left">任务</div><div class="wk">第 1 周</div><div class="wk">第 2 周</div><div class="wk">第 3 周</div>
-        <div class="task">A1 榜单领域训练数据<small>会议、财报电话、议会演讲等公开训练集；核对许可，排除测试集</small></div><div class="bar" style="grid-column:2 / span 1"></div>
-        <div class="task">A2 强化学习微调<small>从 Qwen3-ASR 底座出发；开发集选模型，未见数据核验</small></div><div class="bar" style="grid-column:2 / span 2"></div>
-        <div class="task">A3 同口径评测与提交<small>本地镜像预估名次，向 Open ASR Leaderboard 提交</small></div><div class="bar" style="grid-column:4 / span 1"></div>
-        <div class="task">B1 公开版评测集与基线<small>去掉客户录音，核对来源许可；补“说话人分离 + 声纹 + 识别”基线</small></div><div class="bar b" style="grid-column:2 / span 1"></div>
-        <div class="task">B2 开源发布包与排行榜<small>Hugging Face 权重、模型卡、排行榜页面，公开逐条预测</small></div><div class="bar b" style="grid-column:3 / span 1"></div>
-        <div class="task">B3 技术报告与发布<small>方法、评测集、对比结果，弱项如实写</small></div><div class="bar b" style="grid-column:3 / span 2"></div>
+  <section class="sec">
+    <h2>四、目前不占优的地方</h2>
+    <p>这些会在技术报告里如实写。</p>
+    <div class="panel">
+      <p class="panel-title">表 3 · 不占优的项目</p>
+      <div class="tbl-wrap">
+        <table class="raw">
+          <thead><tr><th>项目</th><th>对手最好</th><th>AmphionASR</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td>英文榜 7 集平均（%）</td><td class="best">5.73</td><td>6.12</td><td>对手是底座，原因见第一节</td></tr>
+            <tr><td>多语种平均（%）</td><td class="best">4.97</td><td>11.18</td><td>德法意葡荷差了 2–3 倍</td></tr>
+            <tr><td>WenetSpeech 网络音频（%）</td><td class="best">4.49</td><td>5.46</td><td>11-16 版，与 11.17 同一训练线</td></tr>
+            <tr><td>四川话（%）</td><td class="best">12.85</td><td>15.75</td><td>同上</td></tr>
+            <tr><td>公开热词集召回（越高越好）</td><td class="best">98.2</td><td>94.0</td><td>Ming-3.0-tiny 最好，底座 97.1</td></tr>
+            <tr><td>英文目标一个人说话（%）</td><td class="best">3.8</td><td>5.4</td><td>AssemblyAI；没有干扰人时比的是识别本身</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="fig-cap">警务业务集上我们明显领先（例如录音鲁棒性平均 1.57 对 5.31），但这些是客户数据，不能公开。</p>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>五、建议方案</h2>
+    <div class="plan-lines">
+      <p><b>A 线 · 英文榜单版，争开源第一。</b>从底座出发，用榜单领域的公开训练集（会议、财报电话、议会演讲等）做强化学习微调，不动交付模型。只用开发集挑模型，另用榜单没用过的数据核验，避免刷榜嫌疑。目标是进入开源前三，争第一。</p>
+      <p><b>B 线 · 开辟目标说话人识别赛道。</b>开源 AmphionASR 权重，发布评测集、排行榜和技术报告，由 Amphion 定义这条赛道。</p>
+      <p><b>C 项 · 全榜第一、多语种第一。</b>需要先投入数据（采购，或大规模处理公开多语种数据）和更多算力，建议单独评估成本后再定。</p>
+    </div>
+
+    <div class="panel">
+      <p class="panel-title">图 5 · 三周路线</p>
+      <div class="chart-box">
+        <div class="legend"><span><i class="ours"></i>A 线</span><span><i class="peer"></i>B 线</span></div>
+        <div class="gantt" role="table" aria-label="三周路线">
+          <div class="wk" style="border-left:0;text-align:left">任务</div><div class="wk">第 1 周</div><div class="wk">第 2 周</div><div class="wk">第 3 周</div>
+          <div class="task">A1 准备训练数据<small>榜单领域的公开训练集，核对许可，排除测试集</small></div><div class="bar" style="grid-column:2 / span 1"></div>
+          <div class="task">A2 强化学习微调<small>开发集挑模型，未见过的数据核验</small></div><div class="bar" style="grid-column:2 / span 2"></div>
+          <div class="task">A3 评测与提交<small>本地预估名次后提交榜单</small></div><div class="bar" style="grid-column:4 / span 1"></div>
+          <div class="task">B1 公开版评测集与基线<small>去掉客户录音，核对许可，补组合基线</small></div><div class="bar b" style="grid-column:2 / span 1"></div>
+          <div class="task">B2 开源发布与排行榜<small>Hugging Face 权重、模型卡、排行榜页面</small></div><div class="bar b" style="grid-column:3 / span 1"></div>
+          <div class="task">B3 技术报告<small>方法、评测集、对比结果，弱项如实写</small></div><div class="bar b" style="grid-column:3 / span 2"></div>
+        </div>
+      </div>
+      <p class="fig-cap">时间为预估，前提是两条线各有一位同事负责。</p>
+    </div>
+
+    <div class="two">
+      <div class="sec" style="gap:8px">
+        <h3>已经具备</h3>
+        <ul class="plain">
+          <li>和榜单规则一致的本地评测，提交前能预估名次</li>
+          <li>强化学习微调流程（交付模型已用过多轮）和 16 张 A800</li>
+          <li>中英目标说话人识别测试集约 139 小时，以及 7 家商用 API、小米 CocktailASR 的全部结果</li>
+          <li>权重可以公开（负责人已确认）</li>
+        </ul>
+      </div>
+      <div class="sec" style="gap:8px">
+        <h3>风险</h3>
+        <ul class="plain">
+          <li><b>A 线不保证第一。</b>别人在同一底座上做到了，说明可行，名次以实测为准。榜单另有两个私有测试集，我们只能预估公开部分。</li>
+          <li><b>刷榜嫌疑。</b>测试集不参与训练和挑模型，训练数据来源写进模型卡。</li>
+          <li><b>B 线的公平性。</b>评测集、代码和全部预测公开；“目标一个人说话”一组我们英文不领先，照实展示。</li>
+          <li><b>数据许可。</b>部分训练集（如 SPGISpeech）限制商用或再分发，用前逐一核对。</li>
+        </ul>
       </div>
     </div>
-    <p class="fig-cap">时间为预估，前提是两条线各有一位同事负责。A 线的算力在现有 2 个节点内。</p>
-  </div>
-
-  <div class="checks">
-    <div><h4>已经具备</h4><ul>
-      <li class="ok"><span>与 Open ASR Leaderboard 同口径的本地评测，提交前可预估名次</span></li>
-      <li class="ok"><span>强化学习微调流程（交付模型已用过多轮）和 16 张 A800</span></li>
-      <li class="ok"><span>中英目标说话人识别测试集（约 139 小时）、AmphionEval 评测代码</span></li>
-      <li class="ok"><span>7 家商用 API 和小米 CocktailASR 的全集结果与逐条预测</span></li>
-      <li class="ok"><span>公开测试集去重工具；权重可以公开（负责人已确认）</span></li>
-    </ul></div>
-    <div><h4>还要做</h4><ul>
-      <li class="todo"><span>A 线：榜单领域训练数据、榜单版训练与提交</span></li>
-      <li class="todo"><span>B 线：公开版评测集、流水线基线、发布包、排行榜页面、技术报告</span></li>
-      <li class="todo"><span>C 项：多语种和全榜第一的数据与算力成本评估</span></li>
-    </ul></div>
-  </div>
-
-  <h3>风险与应对</h3>
-  <ul class="doc-list">
-    <li><strong>A 线不一定能拿到第一：</strong>开源第一 5.15 是别人在同一底座上做出来的，说明可行，但最终名次要看实测。榜单还有两个私有测试集由维护方评测，我们只能预估公开部分。</li>
-    <li><strong>被看作刷榜：</strong>测试集不参与训练和选模型，额外用榜单没用过的数据核验，训练数据来源在模型卡里写清楚。</li>
-    <li><strong>B 线的公信力与公平性：</strong>评测集、代码、全部预测公开；商用 API 没有指定说话人的功能，要补流水线基线，并单列“目标单独说话”的对照组，那一组里我们英文并不领先，照实展示。</li>
-    <li><strong>数据许可：</strong>部分榜单领域训练集（如 SPGISpeech）和部分会议、噪声语料限制商用或再分发，用之前逐一核对。</li>
-  </ul>
-
-  <h2>六、需要决定</h2>
-  <div class="decide">
-    <ol>
-      <li>是否启动 A 线：英文榜单版，目标开源第一，现有资源可做，约 3 周。</li>
-      <li>是否同意 B 线：开源权重 + 目标说话人识别评测集和排行榜 + 技术报告。</li>
-      <li>是否为全榜第一和多语种第一立项评估数据与算力投入。</li>
-      <li>两条线的负责人和期望发布时间。</li>
-    </ol>
-  </div>
+  </section>
 
   <footer>
-    <div>数据与口径：Open ASR Leaderboard v1.16.2（2026-11-20）同口径复现，Qwen3-ASR-1.7B 逐数据集误差 ±0.11。目标说话人识别测试集为中文 ts-asr-benchmark v12 与英文 ts-asr-benchmark-en v1，打分口径版本 4，注册音 5 秒，所有系统逐条配对。AmphionASR 11.17 为当前交付版，vLLM 部署推理。</div>
+    <div><b>评测口径：</b>Open ASR Leaderboard v1.16.2（2026-11-20）规则复现，底座逐数据集误差 ±0.11。目标说话人识别测试集为中文 ts-asr-benchmark v12 和英文 ts-asr-benchmark-en v1，注册音 5 秒，所有系统逐条配对、同一套打分。AmphionASR 11.17 为当前交付版，用 vLLM 部署推理。</div>
+    <div><b>数据来源：</b>
+      <a href="https://arxiv.org/abs/2601.21337" target="_blank" rel="noopener">Qwen3-ASR 技术报告</a>（编码器预训练约 4,000 万小时伪标注）；
+      <a href="https://huggingface.co/openai/whisper-large-v3" target="_blank" rel="noopener">Whisper large-v3 模型卡</a>（100 万小时弱标注 + 400 万小时伪标注）；
+      <a href="https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Transcribe-30B-A4B" target="_blank" rel="noopener">Nemotron 3.5 Transcribe 模型卡</a>（172 万小时，含采购数据）；
+      <a href="https://arxiv.org/abs/2509.14128" target="_blank" rel="noopener">Canary-1B-v2 论文</a>（170 万小时、25 种语言）；
+      <a href="https://huggingface.co/Musci-research/Musci-ASR-qwen-1019-hf" target="_blank" rel="noopener">Musci-ASR 模型卡</a>（公开榜单训练集 + 难例 + 非母语英语，未给小时数）；
+      <a href="https://huggingface.co/oruk/orukqwen-asr-1.7b-v2" target="_blank" rel="noopener">orukqwen 模型卡</a>（第一版 54.6 小时、14.3 A100 GPU 小时）。AmphionASR 的数据量按本项目训练配方统计。</div>
     <div>详细实验记录：open-audio-llm PR #174。</div>
   </footer>
 </div>
@@ -363,7 +443,7 @@ footer { border-top: 1px solid var(--line); padding-top: 16px; font-size: 12.5px
 
 <script>
 (function () {
-  const DATA = {"rank":[{"m":"zoom/scribe_v2.1_pro","open":false,"v":4.19,"rank":1},{"m":"OtterAI/speech-v3.1","open":false,"v":4.57,"rank":2},{"m":"yoob/yoob-asr-pro-v1","open":false,"v":4.77,"rank":3},{"m":"microsoft/azure-speech-09-2026","open":false,"v":4.87,"rank":4},{"m":"opusclip/steno-v1-preview","open":false,"v":5.09,"rank":5},{"m":"Musci-research/Musci-ASR-qwen-1019-hf","open":true,"v":5.15,"rank":6},{"m":"p99lab/audrey-0.7","open":false,"v":5.19,"rank":7},{"m":"elevenlabs/scribe_v2","open":false,"v":5.37,"rank":8},{"m":"FluidVoice-Labs/fluid-speech-pro","open":true,"v":5.43,"rank":9},{"m":"salesforce-sovereign-intelligence/SOV-Transcribe-1","open":true,"v":5.44,"rank":10},{"m":"modulate/multilingual","open":false,"v":5.45,"rank":11},{"m":"reson8/rumble-2","open":false,"v":5.49,"rank":12},{"m":"sophea/asr-k1","open":false,"v":5.51,"rank":13},{"m":"nvidia/NVIDIA-Nemotron-3.5-Transcribe-30B-A4B","open":true,"v":5.51,"rank":14},{"m":"nvidia/NVIDIA-Nemotron-3.5-Transcribe-30B-A4B-FP8","open":true,"v":5.52,"rank":15},{"m":"oruk/orukqwen-asr-1.7b","open":true,"v":5.53,"rank":16},{"m":"Qwen/Qwen3-ASR-1.7B-hf","open":true,"v":5.75,"rank":17},{"m":"assemblyai/universal-3-5-pro","open":false,"v":5.8,"rank":18},{"m":"smallestai/pulse","open":false,"v":5.96,"rank":19},{"m":"Banafo/Kroko-ASR-XL-EN-Offline (fast-gpu-asr)","open":true,"v":5.98,"rank":20},{"m":"ibm-granite/granite-speech-5.0-2b","open":true,"v":6.05,"rank":21},{"m":"HojoAI/Hojo-ASR-V1","open":true,"v":6.07,"rank":22},{"m":"TheStageAI/thewhisper-large-v3-turbo","open":true,"v":6.07,"rank":23},{"m":"Reson8/Rumble-2-Flash","open":true,"v":6.08,"rank":24},{"m":"AmphionASR 11.17","open":true,"v":6.12,"rank":25,"ours":true},{"m":"bosonai/higgs-audio-v3-stt","open":true,"v":6.19,"rank":26},{"m":"CohereLabs/cohere-transcribe-03-2026","open":true,"v":6.26,"rank":27},{"m":"Edge0/ARK-ASR-0.6B","open":true,"v":6.29,"rank":28},{"m":"OpenMOSS-Team/MOSS-Transcribe-Diarize","open":true,"v":6.29,"rank":29},{"m":"sprag/symphony","open":false,"v":6.33,"rank":30},{"m":"nvidia/canary-qwen-2.5b","open":true,"v":6.37,"rank":31},{"m":"fonada/kapture-v3","open":false,"v":6.37,"rank":32},{"m":"openai/gpt-transcribe","open":false,"v":6.38,"rank":33},{"m":"nvidia/parakeet-tdt-0.6b-v3 (fast-gpu-asr)","open":true,"v":6.38,"rank":34},{"m":"ibm-granite/granite-speech-5.0-470m-turboctc-nc","open":true,"v":6.41,"rank":35},{"m":"ibm-granite/granite-speech-4.1-2b","open":true,"v":6.42,"rank":36},{"m":"nvidia/parakeet-tdt-0.6b-v2","open":true,"v":6.43,"rank":37},{"m":"nvidia/parakeet-tdt-0.6b-v2 (fast-gpu-asr)","open":true,"v":6.44,"rank":38},{"m":"ibm-granite/granite-speech-4.1-2b-nar","open":true,"v":6.45,"rank":39},{"m":"FermionResearch/Phonon-2.5-English","open":true,"v":6.46,"rank":40},{"m":"meta/muse-voice-transcribe","open":false,"v":6.48,"rank":41},{"m":"nvidia/parakeet-tdt-0.6b-v3","open":true,"v":6.51,"rank":42},{"m":"Edge0/ARK-ASR-3B","open":true,"v":6.53,"rank":43},{"m":"gladia/solaria-3","open":false,"v":6.57,"rank":44},{"m":"Qwen/Qwen3-ASR-0.6B-hf","open":true,"v":6.6,"rank":45},{"m":"FermionResearch/Phonon-2.5","open":true,"v":6.6,"rank":46},{"m":"ibm-granite/granite-speech-5.0-470m-turboctc","open":true,"v":6.84,"rank":47},{"m":"nvidia/nemotron-speech-streaming-en-0.6b","open":true,"v":6.89,"rank":48},{"m":"mistralai/Voxtral-Small-24B-2507","open":true,"v":6.9,"rank":49},{"m":"ibm-granite/granite-4.0-1b-speech","open":true,"v":7.02,"rank":50},{"m":"soundsgoodai/Zipformer-cr-ctc-transducer-XL-290M (fast-gpu-asr, transducer_modified_beam_search)","open":true,"v":7.38,"rank":51},{"m":"FunAudioLLM/Fun-ASR-Nano-2512-hf","open":true,"v":7.76,"rank":52},{"m":"openai/whisper-large-v3","open":true,"v":7.84,"rank":53},{"m":"mistralai/Voxtral-Mini-3B-2507","open":true,"v":7.84,"rank":54},{"m":"nvidia/canary-1b-v2","open":true,"v":7.91,"rank":55},{"m":"OpenLLM-France/Luciole-8B-Audio-1.0","open":true,"v":8.1,"rank":56},{"m":"microsoft/VibeVoice-ASR-HF","open":true,"v":8.23,"rank":57},{"m":"openai/whisper-large-v3-turbo","open":true,"v":8.39,"rank":58},{"m":"espnet/owsm_ctc_v4_1B","open":true,"v":8.55,"rank":59},{"m":"Edge0/Audio8-ASR-0.1B","open":true,"v":8.75,"rank":60},{"m":"hf-audio/omniasr-llm-7b-v2","open":true,"v":8.86,"rank":61},{"m":"mistralai/Voxtral-Mini-4B-Realtime-2602","open":true,"v":9.01,"rank":62},{"m":"soundsgoodai/Zipformer-cr-ctc-transducer-XL-290M (fast-gpu-asr, ctc_greedy_search)","open":true,"v":9.01,"rank":63},{"m":"futo-org/asr4all-l","open":true,"v":9.1,"rank":64},{"m":"abr-ai/niagara-84m-batch.en","open":true,"v":9.88,"rank":65},{"m":"qvac/TranscribePsy-250M-EU-sub","open":true,"v":10.11,"rank":66},{"m":"nvidia/nemotron-3.5-asr-streaming-0.6b","open":true,"v":10.51,"rank":67},{"m":"hf-audio/omniasr-ctc-7b-v2","open":true,"v":12.01,"rank":68},{"m":"google/gemma-4-E4B-it","open":true,"v":12.66,"rank":69}],"ts":{"zh":[{"m":"AmphionASR 11.17","g":"ours","err":12.8,"fa":2.5,"miss":2.8},{"m":"小米 CocktailASR-1","g":"open","err":33.4,"fa":61.5,"miss":2.7},{"m":"小米 CocktailASR-1（思维链）","g":"open","err":39.6,"fa":60.5,"miss":3.0},{"m":"Deepgram Nova-3","g":"api","err":97.4,"fa":86.7,"miss":1.7},{"m":"AssemblyAI Universal-3.5 Pro","g":"api","err":110.9,"fa":94.2,"miss":0.1},{"m":"MOSS transcribe-diarize","g":"api","err":260.0,"fa":90.1,"miss":0.4},{"m":"火山 豆包 ASR 2.0","g":"api","err":88.0,"fa":89.2,"miss":1.1},{"m":"阿里 Fun-ASR","g":"api","err":98.3,"fa":91.1,"miss":0.0},{"m":"阿里 Qwen3-ASR-Flash","g":"api","err":103.7,"fa":94.4,"miss":0.0},{"m":"腾讯 混元 ASR 3.0","g":"api","err":92.7,"fa":89.0,"miss":0.5}],"en":[{"m":"AmphionASR 11.17","g":"ours","err":13.6,"fa":6.2,"miss":3.0},{"m":"小米 CocktailASR-1","g":"open","err":26.3,"fa":50.6,"miss":5.0},{"m":"小米 CocktailASR-1（思维链）","g":"open","err":25.3,"fa":61.3,"miss":0.6},{"m":"Deepgram Nova-3","g":"api","err":129.6,"fa":89.6,"miss":0.8},{"m":"AssemblyAI Universal-3.5 Pro","g":"api","err":111.8,"fa":89.6,"miss":0.3},{"m":"MOSS transcribe-diarize","g":"api","err":160.1,"fa":88.2,"miss":1.5},{"m":"火山 豆包 ASR 2.0","g":"api","err":107.2,"fa":90.0,"miss":1.7},{"m":"阿里 Fun-ASR","g":"api","err":118.2,"fa":91.2,"miss":0.1},{"m":"阿里 Qwen3-ASR-Flash","g":"api","err":117.7,"fa":97.6,"miss":0.0},{"m":"腾讯 混元 ASR 3.0","g":"api","err":106.9,"fa":87.8,"miss":1.9}]},"meet":{"AliMeeting 远场会议（目标在场）":{"ours":7.4,"cock":36.9,"api":42.2,"n":115,"fa_ours":2.0,"fa_min_other":92.0},"AISHELL-4 远场会议（目标在场）":{"ours":13.6,"cock":23.0,"api":53.5,"n":141,"fa_ours":6.4,"fa_min_other":97.1},"AMI 远场会议（英文，目标在场）":{"ours":15.7,"cock":28.6,"api":50.1,"n":122,"fa_ours":9.3,"fa_min_other":94.9},"NOTSOFAR-1 远场会议（英文，目标在场）":{"ours":9.6,"cock":20.6,"api":49.3,"n":107,"fa_ours":7.3,"fa_min_other":91.7},"ICSI 会议（近讲耳麦混音，英文，目标在场）":{"ours":8.5,"cock":16.5,"api":61.7,"n":118,"fa_ours":3.2,"fa_min_other":96.0}},"quiet":{"没有说话声|zh":{"ours":0.1,"cock":10.8,"api_min":3.3,"api_max":47.1,"n":720},"只有歌声（带人声的歌曲）|zh":{"ours":0.0,"cock":5.0,"api_min":29.6,"api_max":100.0,"n":240},"没有说话声|en":{"ours":0.1,"cock":18.2,"api_min":4.6,"api_max":75.0,"n":720},"只有歌声（带人声的歌曲）|en":{"ours":0.0,"cock":4.2,"api_min":36.7,"api_max":95.0,"n":120}}};
+  const DATA = {"rank":[{"m":"zoom/scribe_v2.1_pro","open":false,"v":4.19,"rank":1},{"m":"OtterAI/speech-v3.1","open":false,"v":4.57,"rank":2},{"m":"yoob/yoob-asr-pro-v1","open":false,"v":4.77,"rank":3},{"m":"microsoft/azure-speech-09-2026","open":false,"v":4.87,"rank":4},{"m":"opusclip/steno-v1-preview","open":false,"v":5.09,"rank":5},{"m":"Musci-research/Musci-ASR-qwen-1019-hf","open":true,"v":5.15,"rank":6},{"m":"p99lab/audrey-0.7","open":false,"v":5.19,"rank":7},{"m":"elevenlabs/scribe_v2","open":false,"v":5.37,"rank":8},{"m":"FluidVoice-Labs/fluid-speech-pro","open":true,"v":5.43,"rank":9},{"m":"salesforce-sovereign-intelligence/SOV-Transcribe-1","open":true,"v":5.44,"rank":10},{"m":"modulate/multilingual","open":false,"v":5.45,"rank":11},{"m":"reson8/rumble-2","open":false,"v":5.49,"rank":12},{"m":"sophea/asr-k1","open":false,"v":5.51,"rank":13},{"m":"nvidia/NVIDIA-Nemotron-3.5-Transcribe-30B-A4B","open":true,"v":5.51,"rank":14},{"m":"nvidia/NVIDIA-Nemotron-3.5-Transcribe-30B-A4B-FP8","open":true,"v":5.52,"rank":15},{"m":"oruk/orukqwen-asr-1.7b","open":true,"v":5.53,"rank":16},{"m":"Qwen/Qwen3-ASR-1.7B-hf","open":true,"v":5.75,"rank":17},{"m":"assemblyai/universal-3-5-pro","open":false,"v":5.8,"rank":18},{"m":"smallestai/pulse","open":false,"v":5.96,"rank":19},{"m":"Banafo/Kroko-ASR-XL-EN-Offline (fast-gpu-asr)","open":true,"v":5.98,"rank":20},{"m":"ibm-granite/granite-speech-5.0-2b","open":true,"v":6.05,"rank":21},{"m":"HojoAI/Hojo-ASR-V1","open":true,"v":6.07,"rank":22},{"m":"TheStageAI/thewhisper-large-v3-turbo","open":true,"v":6.07,"rank":23},{"m":"Reson8/Rumble-2-Flash","open":true,"v":6.08,"rank":24},{"m":"AmphionASR 11.17","open":true,"v":6.12,"rank":25,"ours":true},{"m":"bosonai/higgs-audio-v3-stt","open":true,"v":6.19,"rank":26},{"m":"CohereLabs/cohere-transcribe-03-2026","open":true,"v":6.26,"rank":27},{"m":"Edge0/ARK-ASR-0.6B","open":true,"v":6.29,"rank":28},{"m":"OpenMOSS-Team/MOSS-Transcribe-Diarize","open":true,"v":6.29,"rank":29},{"m":"sprag/symphony","open":false,"v":6.33,"rank":30},{"m":"nvidia/canary-qwen-2.5b","open":true,"v":6.37,"rank":31},{"m":"fonada/kapture-v3","open":false,"v":6.37,"rank":32},{"m":"openai/gpt-transcribe","open":false,"v":6.38,"rank":33},{"m":"nvidia/parakeet-tdt-0.6b-v3 (fast-gpu-asr)","open":true,"v":6.38,"rank":34},{"m":"ibm-granite/granite-speech-5.0-470m-turboctc-nc","open":true,"v":6.41,"rank":35},{"m":"ibm-granite/granite-speech-4.1-2b","open":true,"v":6.42,"rank":36},{"m":"nvidia/parakeet-tdt-0.6b-v2","open":true,"v":6.43,"rank":37},{"m":"nvidia/parakeet-tdt-0.6b-v2 (fast-gpu-asr)","open":true,"v":6.44,"rank":38},{"m":"ibm-granite/granite-speech-4.1-2b-nar","open":true,"v":6.45,"rank":39},{"m":"FermionResearch/Phonon-2.5-English","open":true,"v":6.46,"rank":40},{"m":"meta/muse-voice-transcribe","open":false,"v":6.48,"rank":41},{"m":"nvidia/parakeet-tdt-0.6b-v3","open":true,"v":6.51,"rank":42},{"m":"Edge0/ARK-ASR-3B","open":true,"v":6.53,"rank":43},{"m":"gladia/solaria-3","open":false,"v":6.57,"rank":44},{"m":"Qwen/Qwen3-ASR-0.6B-hf","open":true,"v":6.6,"rank":45},{"m":"FermionResearch/Phonon-2.5","open":true,"v":6.6,"rank":46},{"m":"ibm-granite/granite-speech-5.0-470m-turboctc","open":true,"v":6.84,"rank":47},{"m":"nvidia/nemotron-speech-streaming-en-0.6b","open":true,"v":6.89,"rank":48},{"m":"mistralai/Voxtral-Small-24B-2507","open":true,"v":6.9,"rank":49},{"m":"ibm-granite/granite-4.0-1b-speech","open":true,"v":7.02,"rank":50},{"m":"soundsgoodai/Zipformer-cr-ctc-transducer-XL-290M (fast-gpu-asr, transducer_modified_beam_search)","open":true,"v":7.38,"rank":51},{"m":"FunAudioLLM/Fun-ASR-Nano-2512-hf","open":true,"v":7.76,"rank":52},{"m":"openai/whisper-large-v3","open":true,"v":7.84,"rank":53},{"m":"mistralai/Voxtral-Mini-3B-2507","open":true,"v":7.84,"rank":54},{"m":"nvidia/canary-1b-v2","open":true,"v":7.91,"rank":55},{"m":"OpenLLM-France/Luciole-8B-Audio-1.0","open":true,"v":8.1,"rank":56},{"m":"microsoft/VibeVoice-ASR-HF","open":true,"v":8.23,"rank":57},{"m":"openai/whisper-large-v3-turbo","open":true,"v":8.39,"rank":58},{"m":"espnet/owsm_ctc_v4_1B","open":true,"v":8.55,"rank":59},{"m":"Edge0/Audio8-ASR-0.1B","open":true,"v":8.75,"rank":60},{"m":"hf-audio/omniasr-llm-7b-v2","open":true,"v":8.86,"rank":61},{"m":"mistralai/Voxtral-Mini-4B-Realtime-2602","open":true,"v":9.01,"rank":62},{"m":"soundsgoodai/Zipformer-cr-ctc-transducer-XL-290M (fast-gpu-asr, ctc_greedy_search)","open":true,"v":9.01,"rank":63},{"m":"futo-org/asr4all-l","open":true,"v":9.1,"rank":64},{"m":"abr-ai/niagara-84m-batch.en","open":true,"v":9.88,"rank":65},{"m":"qvac/TranscribePsy-250M-EU-sub","open":true,"v":10.11,"rank":66},{"m":"nvidia/nemotron-3.5-asr-streaming-0.6b","open":true,"v":10.51,"rank":67},{"m":"hf-audio/omniasr-ctc-7b-v2","open":true,"v":12.01,"rank":68},{"m":"google/gemma-4-E4B-it","open":true,"v":12.66,"rank":69}],"ts":{"zh":[{"m":"AmphionASR 11.17","g":"ours","err":12.8,"fa":2.5,"miss":2.8},{"m":"小米 CocktailASR-1","g":"open","err":33.4,"fa":61.5,"miss":2.7},{"m":"小米 CocktailASR-1（思维链）","g":"open","err":39.6,"fa":60.5,"miss":3.0},{"m":"Deepgram Nova-3","g":"api","err":97.4,"fa":86.7,"miss":1.7},{"m":"AssemblyAI Universal-3.5 Pro","g":"api","err":110.9,"fa":94.2,"miss":0.1},{"m":"MOSS transcribe-diarize","g":"api","err":260.0,"fa":90.1,"miss":0.4},{"m":"火山 豆包 ASR 2.0","g":"api","err":88.0,"fa":89.2,"miss":1.1},{"m":"阿里 Fun-ASR","g":"api","err":98.3,"fa":91.1,"miss":0.0},{"m":"阿里 Qwen3-ASR-Flash","g":"api","err":103.7,"fa":94.4,"miss":0.0},{"m":"腾讯 混元 ASR 3.0","g":"api","err":92.7,"fa":89.0,"miss":0.5}],"en":[{"m":"AmphionASR 11.17","g":"ours","err":13.6,"fa":6.2,"miss":3.0},{"m":"小米 CocktailASR-1","g":"open","err":26.3,"fa":50.6,"miss":5.0},{"m":"小米 CocktailASR-1（思维链）","g":"open","err":25.3,"fa":61.3,"miss":0.6},{"m":"Deepgram Nova-3","g":"api","err":129.6,"fa":89.6,"miss":0.8},{"m":"AssemblyAI Universal-3.5 Pro","g":"api","err":111.8,"fa":89.6,"miss":0.3},{"m":"MOSS transcribe-diarize","g":"api","err":160.1,"fa":88.2,"miss":1.5},{"m":"火山 豆包 ASR 2.0","g":"api","err":107.2,"fa":90.0,"miss":1.7},{"m":"阿里 Fun-ASR","g":"api","err":118.2,"fa":91.2,"miss":0.1},{"m":"阿里 Qwen3-ASR-Flash","g":"api","err":117.7,"fa":97.6,"miss":0.0},{"m":"腾讯 混元 ASR 3.0","g":"api","err":106.9,"fa":87.8,"miss":1.9}]},"meet":{"AliMeeting 远场会议（目标在场）":{"ours":7.4,"cock":36.9,"api":42.2,"n":115,"fa_ours":2.0,"fa_min_other":92.0},"AISHELL-4 远场会议（目标在场）":{"ours":13.6,"cock":23.0,"api":53.5,"n":141,"fa_ours":6.4,"fa_min_other":97.1},"AMI 远场会议（英文，目标在场）":{"ours":15.7,"cock":28.6,"api":50.1,"n":122,"fa_ours":9.3,"fa_min_other":94.9},"NOTSOFAR-1 远场会议（英文，目标在场）":{"ours":9.6,"cock":20.6,"api":49.3,"n":107,"fa_ours":7.3,"fa_min_other":91.7},"ICSI 会议（近讲耳麦混音，英文，目标在场）":{"ours":8.5,"cock":16.5,"api":61.7,"n":118,"fa_ours":3.2,"fa_min_other":96.0}}};
   const NS = "http://www.w3.org/2000/svg";
   const tip = document.getElementById("tip");
   function S(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
@@ -456,32 +536,6 @@ footer { border-top: 1px solid var(--line); padding-top: 16px; font-size: 12.5px
     });
   }
 
-  // Range rows: {label, ours, peer, lo, hi, tips}
-  function ranges(host, rows) {
-    host.innerHTML = "";
-    const W = Math.max(280, host.clientWidth || 600);
-    const stacked = W < 560;
-    const labelW = stacked ? 0 : 190, right = 24, rowH = stacked ? 52 : 40, top = 6, axisH = 24, max = 100;
-    const plotW = W - labelW - right;
-    const H = top + rows.length * rowH + axisH;
-    const svg = S("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "误输出比例对比" }, host);
-    const x = v => labelW + v / max * plotW;
-    for (const t of ticks(max)) {
-      S("line", { x1: x(t), x2: x(t), y1: top, y2: H - axisH, class: t === 0 ? "axis" : "grid" }, svg);
-      S("text", { x: x(t), y: H - axisH + 16, class: "tick", "text-anchor": "middle" }, svg).textContent = t + "%";
-    }
-    rows.forEach((r, i) => {
-      const rowTop = top + i * rowH;
-      const cy = stacked ? rowTop + 34 : rowTop + rowH / 2;
-      S("text", stacked ? { x: 0, y: rowTop + 14, class: "rowlabel" } : { x: labelW - 10, y: cy + 4.5, class: "rowlabel", "text-anchor": "end" }, svg).textContent = r.label;
-      const band = S("rect", { x: x(r.lo), y: cy - 5, width: Math.max(2, x(r.hi) - x(r.lo)), height: 10, rx: 5, class: "band" }, svg);
-      S("circle", { cx: x(r.peer), cy, r: 5.5, class: "dot peer ring" }, svg);
-      S("circle", { cx: x(r.ours), cy, r: 6.5, class: "dot ours ring" }, svg);
-      bind(S("rect", { x: 0, y: rowTop, width: W, height: rowH, class: "hit" }, svg), r.tip);
-    });
-  }
-
-
   // Log-scale dot plot for data volume (hours). rows: {label, value|null, cls, text, note, tip}
   function logdots(host, rows) {
     host.innerHTML = "";
@@ -515,10 +569,10 @@ footer { border-top: 1px solid var(--line); padding-top: 16px; font-size: 12.5px
     { label: "Whisper large-v3", value: 5e6, cls: "other", text: "500 万", src: "100 万弱标注 + 400 万伪标注", tip: "<b>Whisper large-v3</b><br>100 万小时弱标注 + 400 万小时伪标注<br>来源：模型卡" },
     { label: "NVIDIA Nemotron 3.5 Transcribe", value: 1718453, cls: "other", text: "172 万", src: "77 种语言，含采购数据", tip: "<b>NVIDIA Nemotron 3.5 Transcribe 30B</b><br>172 万小时不重复（按重复使用计 653 万）<br>77 种语言，含从 David AI 采购的数据<br>来源：模型卡" },
     { label: "NVIDIA Canary-1B-v2", value: 1.7e6, cls: "other", text: "170 万", src: "25 种语言", tip: "<b>NVIDIA Canary-1B-v2</b><br>170 万小时，25 种语言<br>来源：论文 arXiv 2509.14128" },
-    { label: "商用 API（Zoom、Azure、MAI 等）", value: null, note: "未公开（专有数据）", src: "专有", tip: "<b>商用 API</b><br>英文榜、多语种榜第一都是商用 API<br>训练数据均未公开" },
+    { label: "商用 API（Zoom、Azure 等）", value: null, note: "未公开（专有数据）", src: "专有", tip: "<b>商用 API</b><br>英文榜、多语种榜第一都是商用 API<br>训练数据均未公开" },
     { label: "AmphionASR 11.17（微调）", value: 7e4, cls: "ours", text: "约 7 万", src: "公开语料为主，中英为主", tip: "<b>AmphionASR 11.17</b><br>在 Qwen3-ASR 底座上微调<br>约 7 万小时，几乎全是公开语料，以中英为主<br>16 张 A800" },
     { label: "Musci-ASR（微调，开源第一）", value: null, note: "未公开小时数（公开榜单训练集）", src: "公开榜单训练集 + 难例", tip: "<b>Musci-ASR</b>（英文榜开源第一，5.15）<br>在 Qwen3-ASR 底座上做强化学习<br>数据：公开榜单训练集 + 难例 + 非母语英语" },
-    { label: "orukqwen 第一版（微调，英文第 16）", value: 54.6, cls: "other", text: "54.6", src: "公开英文数据；第一版训练 14.3 A100 卡时", tip: "<b>orukqwen 第一版</b>（英文榜第 16，5.53）<br>在 Qwen3-ASR 底座上做强化学习<br>54.6 小时英文，训练 14.3 A100 卡时<br>第二版另加两个候选池（80.5、35.7 小时），7 个公开集 5.75 → 5.42" },
+    { label: "orukqwen 第一版（微调，第 16 名）", value: 54.6, cls: "other", text: "54.6", src: "公开英文数据；14.3 A100 GPU 小时", tip: "<b>orukqwen 第一版</b>（英文榜第 16，5.53）<br>在 Qwen3-ASR 底座上做强化学习<br>54.6 小时英文，训练 14.3 A100 GPU 小时<br>第二版另加两个候选池（80.5、35.7 小时），7 个公开集 5.75 → 5.42" },
   ];
 
   function table(host, head, rows, oursIndex) {
@@ -542,42 +596,35 @@ footer { border-top: 1px solid var(--line); padding-top: 16px; font-size: 12.5px
              tip: `<b>${nice[r.m]}</b><br>第 ${r.rank} 名 · 词错率 ${fmt(r.v, 2)}%<br>${r.open ? "开源" : "商用 API"}` };
   });
 
-  // ---- Figure 2: TS ----
+  // ---- Figure 3: target-speaker ASR ----
   let lang = "zh";
   const grpName = { ours: "AmphionASR", open: "开源同类", api: "商用 API" };
-  function tsRows(key) {
+  function tsRows() {
     const rows = DATA.ts[lang].slice().sort((a, b) => a.err - b.err);
-    return rows.map(r => ({ label: r.m, value: r[key], cls: r.g === "ours" ? "ours" : r.g === "open" ? "peer" : "other", strong: r.g === "ours",
-      text: key === "fa" ? fmt(r[key]) + "%" : fmt(r[key]),
-      tip: `<b>${r.m}</b>（${grpName[r.g]}）<br>目标在场错误率 ${fmt(r.err)}<br>目标缺席误输出 ${fmt(r.fa)}%<br>漏识 ${fmt(r.miss)}%` }));
+    return rows.map(r => ({ label: r.m, value: r.err, cls: r.g === "ours" ? "ours" : r.g === "open" ? "peer" : "other", strong: r.g === "ours",
+      text: fmt(r.err),
+      tip: `<b>${r.m}</b>（${grpName[r.g]}）<br>目标在场错误率 ${fmt(r.err)}<br>目标不在场误输出 ${fmt(r.fa)}%<br>漏识 ${fmt(r.miss)}%` }));
   }
 
-  // ---- Figure 3: meetings ----
+  // ---- Figure 4: meetings ----
   const meetLabel = { "AliMeeting 远场会议（目标在场）": "AliMeeting 中文", "AISHELL-4 远场会议（目标在场）": "AISHELL-4 中文",
     "AMI 远场会议（英文，目标在场）": "AMI 英文", "NOTSOFAR-1 远场会议（英文，目标在场）": "NOTSOFAR-1 英文", "ICSI 会议（近讲耳麦混音，英文，目标在场）": "ICSI 英文" };
   const meetGroups = Object.entries(DATA.meet).map(([k, v]) => ({ label: meetLabel[k], bars: [
-    { cls: "ours", value: v.ours, text: fmt(v.ours), tip: `<b>${meetLabel[k]}</b>（${v.n} 条）<br>AmphionASR ${fmt(v.ours)}<br>目标缺席误输出 ${fmt(v.fa_ours)}%` },
+    { cls: "ours", value: v.ours, text: fmt(v.ours), tip: `<b>${meetLabel[k]}</b>（${v.n} 条）<br>AmphionASR ${fmt(v.ours)}<br>目标不在场误输出 ${fmt(v.fa_ours)}%` },
     { cls: "peer", value: v.cock, text: fmt(v.cock), tip: `<b>${meetLabel[k]}</b><br>CocktailASR-1（较好模式）${fmt(v.cock)}` },
     { cls: "other", value: v.api, text: fmt(v.api), tip: `<b>${meetLabel[k]}</b><br>商用 API 最好一家 ${fmt(v.api)}` } ] }));
 
-  // ---- Figure 4: quiet ----
-  const qLabel = { "没有说话声|zh": "没有人说话 · 中文", "只有歌声（带人声的歌曲）|zh": "只有歌声 · 中文", "没有说话声|en": "没有人说话 · 英文", "只有歌声（带人声的歌曲）|en": "只有歌声 · 英文" };
-  const quietRows = Object.entries(DATA.quiet).map(([k, v]) => ({ label: qLabel[k], ours: v.ours, peer: v.cock, lo: v.api_min, hi: v.api_max,
-    tip: `<b>${qLabel[k]}</b>（${v.n} 条）<br>AmphionASR ${fmt(v.ours)}%<br>CocktailASR-1 ${fmt(v.cock)}%<br>商用 API ${fmt(v.api_min)}%–${fmt(v.api_max)}%` }));
-
   function renderTS() {
-    document.getElementById("ts-title-err").textContent = lang === "zh" ? "目标在场：字错率（%）" : "目标在场：词错率（%）";
-    hbars(document.querySelector('[data-chart="ts-err"]'), tsRows("err"), { labelW: 220, max: lang === "zh" ? 270 : 170, aria: "目标在场错误率" });
-    hbars(document.querySelector('[data-chart="ts-fa"]'), tsRows("fa"), { labelW: 220, max: 100, unit: "%", aria: "目标缺席误输出比例" });
+    document.getElementById("ts-title-err").textContent = lang === "zh" ? "目标在场时的字错率（%）" : "目标在场时的词错率（%）";
+    hbars(document.querySelector('[data-chart="ts-err"]'), tsRows(), { labelW: 220, max: lang === "zh" ? 270 : 170, aria: "目标在场错误率" });
     const rows = DATA.ts[lang].slice().sort((a, b) => a.err - b.err);
-    table(document.querySelector('[data-table="ts"]'), ["模型", lang === "zh" ? "字错率" : "词错率", "漏识 %", "目标缺席误输出 %"],
+    table(document.querySelector('[data-table="ts"]'), ["模型", lang === "zh" ? "字错率" : "词错率", "漏识 %", "目标不在场误输出 %"],
           rows.map(r => [r.m, fmt(r.err), fmt(r.miss), fmt(r.fa)]), rows.findIndex(r => r.g === "ours"));
   }
   function renderAll() {
     hbars(document.querySelector('[data-chart="board"]'), boardRows, { labelW: 230, max: 8, aria: "Open ASR 英文榜词错率" });
     renderTS();
     grouped(document.querySelector('[data-chart="meet"]'), meetGroups, { labelW: 150, max: 70, aria: "真实会议错误率" });
-    ranges(document.querySelector('[data-chart="quiet"]'), quietRows);
     logdots(document.querySelector('[data-chart="data"]'), dataRows);
   }
   table(document.querySelector('[data-table="board"]'), ["名次", "模型", "词错率 %", "类型"],
@@ -585,10 +632,8 @@ footer { border-top: 1px solid var(--line); padding-top: 16px; font-size: 12.5px
         pick.indexOf("AmphionASR 11.17"));
   table(document.querySelector('[data-table="data"]'), ["模型", "训练音频（小时）", "说明"],
         dataRows.map(r => [r.label, r.value ? r.text : r.note, r.src]), dataRows.findIndex(r => r.cls === "ours"));
-  table(document.querySelector('[data-table="meet"]'), ["会议语料", "条数", "AmphionASR", "CocktailASR", "商用 API 最好", "缺席误输出：我们 %"],
+  table(document.querySelector('[data-table="meet"]'), ["会议语料", "条数", "AmphionASR", "CocktailASR", "商用 API 最好", "我们的不在场误输出 %"],
         Object.entries(DATA.meet).map(([k, v]) => [meetLabel[k], String(v.n), fmt(v.ours), fmt(v.cock), fmt(v.api), fmt(v.fa_ours)]), -1);
-  table(document.querySelector('[data-table="quiet"]'), ["场景", "条数", "AmphionASR %", "CocktailASR %", "商用 API %"],
-        Object.entries(DATA.quiet).map(([k, v]) => [qLabel[k], String(v.n), fmt(v.ours), fmt(v.cock), `${fmt(v.api_min)}–${fmt(v.api_max)}`]), -1);
 
   for (const id of ["lang-zh", "lang-en"]) {
     document.getElementById(id).addEventListener("click", () => {
