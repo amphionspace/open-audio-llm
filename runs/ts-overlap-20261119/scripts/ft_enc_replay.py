@@ -9,9 +9,11 @@ forgetting in the LLM; the tower still drifted on data the simulator does not co
   supervised token, no CE. The teacher is 11.17 itself (its audio tower, frozen, with the shared frozen LLM), so the
   replay loss is 0 at the start and only resists drift. CE on that mix drifted even with the LLM frozen (task 08).
 loss = CE_sim + LAMBDA * aux_sim + KL_WEIGHT * KL_replay, one simulated micro-batch and one replay batch per step.
-usage: [POOLS=train_final2 HEAD_LAYERS=5,11 WANDB_READY_FILE=F] REPLAY_CONFIG=Y.yaml torchrun ... ft_enc_replay.py
-       OUT_DIR STEPS [MICRO_BATCH WORKERS LAMBDA TAG SAVE_EVERY KL_WEIGHT REPLAY_WORKERS]   (oal-train python)"""
-import copy, math, os, random, sys, time
+tasks/28 (MEETING_PLAN = a meeting_train_plan.py dir): plus CE_meeting on one micro-batch per step of real meetings sent
+the way speaker-enroll sends them (Meetings below); without it the script is task 25's.
+usage: [POOLS=train_final2 HEAD_LAYERS=5,11 WANDB_READY_FILE=F MEETING_PLAN=DIR] REPLAY_CONFIG=Y.yaml torchrun ...
+       ft_enc_replay.py OUT_DIR STEPS [MICRO_BATCH WORKERS LAMBDA TAG SAVE_EVERY KL_WEIGHT REPLAY_WORKERS]   (oal-train python)"""
+import copy, gzip, json, math, os, random, sys, time
 from pathlib import Path
 import numpy as np, torch, torch.distributed as dist, torch.nn as nn, torch.nn.functional as F
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tse"))
@@ -48,6 +50,23 @@ fe = processor.feature_extractor; MELF = torch.from_numpy(fe.mel_filters).float(
 POOLS = os.environ.get("POOLS", "train_final2")
 recipe, pools, splits, n_spk = tse_data.setup(POOLS)
 REPLAY_CONFIG = os.environ["REPLAY_CONFIG"]
+MEETING_PLAN = os.environ.get("MEETING_PLAN")
+# tasks/28 meeting stream. Weights: the recipe's weights of these ts_real_train sources (alimeeting 1.5 + 2.0, aishell4
+# 1.8 + 2.0, ramc 1.7). NEG_PROB: speaker-enroll sends every segment to every registered person, about half absent in
+# the downstream meeting (task 26). SIM_TEMP: a negative span is drawn with p ~ exp(sim / SIM_TEMP), sim = ECAPA cosine
+# with the closest talker of the sent audio (task 27's impostor_sim), so similar voices dominate. NEAR_PROB (AliMeeting):
+# the enrollment comes from the person's headset, for targets and non-targets alike, so the channel says nothing about
+# the answer. NOISE_*: one meeting-room noise recording on both enrollment and segment at one gain (one recorder), the
+# segment NOISE_SNR dB above it, the enrollment at least ENROLL_SNR_MIN dB (speaker-enroll only keeps such pieces).
+# CROP_PROB: send one utterance of the window's target (up to CROP_PAD s around it, not touching its other utterances),
+# the shape of a speaker-enroll segment; the same crop is sent to targets and non-targets. A non-target is a participant
+# silent in the audio sent (so in a crop also one who talks elsewhere in the window), with TALK_MARGIN s of slack for
+# the annotation's boundaries.
+M_WEIGHTS = {"alimeeting": 3.5, "aishell4": 3.8, "ramc": 1.7}
+NEG_PROB, SIM_TEMP, NEAR_PROB, CROP_PROB, CROP_PAD = 0.5, 0.1, 0.35, 0.5, 0.5
+TALK_MARGIN = 0.3
+NOISE_PROB, NOISE_SNR, ENROLL_SNR_MIN = 0.35, (3.0, 15.0), 6.0
+NOISE = ("meeting_room_noise", "v2-20261014", "train")  # the recipe's interference source
 
 
 def mel_power(w):
@@ -90,6 +109,107 @@ class Scenes(torch.utils.data.IterableDataset):
 
 def collate(items):
     return template.data_collator([e for e, _ in items]), [i for _, i in items]
+
+
+def rms(x):
+    return float(np.sqrt(np.mean(np.square(x, dtype=np.float64)) + 1e-12))
+
+
+def read_span(path, start, dur):
+    w, sr = tse_data.sf.read(path, start=int(round(start * 16000)), frames=int(round(dur * 16000)), dtype="float32", always_2d=True)
+    assert sr == 16000, path
+    return w[:, 0]
+
+
+class Meetings(torch.utils.data.IterableDataset):
+    """Real meeting windows (meeting_train_plan.py) sent to their target or to a similar-voiced other participant of
+    the same recording; yields (encoding, facts) with facts = (negative, sim, near, noise, crop) for the logs."""
+
+    def __init__(self, plan_dir):
+        plan = json.loads((Path(plan_dir) / "plan.json").read_text())
+        self.windows = plan["windows"]; self.corpora = [c for c in M_WEIGHTS if self.windows.get(c)]
+        self.span = {}  # corpus -> span index -> (start, duration, speaker)
+        for c in self.corpora:
+            for rec in plan["recordings"][c].values():
+                for spk, items in rec["spans"].items():
+                    for s, d, i in items: self.span.setdefault(c, {})[i] = (s, d, spk)
+        self.near = {(c, p): r["near"] for c in self.corpora for p, r in plan["recordings"][c].items()}
+        import yaml
+        from audio_data_contract import load_catalog, resolve_split
+        catalog = load_catalog(yaml.safe_load(Path(REPLAY_CONFIG).read_text())["catalog"])
+        roots = json.loads(Path("/workspace/data/registry/roots.json").read_text())
+        self.noises = []
+        for p in resolve_split(catalog, *NOISE, "recordings", roots):
+            for line in gzip.open(p, "rt"):
+                r = json.loads(line); self.noises.append((r["sources"][0]["source"], r["num_samples"]))
+
+    def noise(self, rng, n):
+        """n samples of one noise recording from a random offset, wrapping around its end."""
+        path, total = self.noises[rng.randrange(len(self.noises))]
+        parts, pos = [], rng.randrange(total)
+        while n > 0:
+            x = tse_data.sf.read(path, start=pos, frames=min(n, total - pos), dtype="float32", always_2d=True)[0][:, 0]
+            if not len(x):
+                raise ValueError(f"{path}: no samples at {pos} of {total}")
+            parts.append(x); n -= len(x); pos = 0
+        return np.concatenate(parts)
+
+    def __iter__(self):
+        info = torch.utils.data.get_worker_info(); rng = random.Random(f"meeting-{tag}-r{rank}-w{info.id if info else 0}")
+        weights = [M_WEIGHTS[c] for c in self.corpora]
+        while True:
+            c = rng.choices(self.corpora, weights)[0]; w = rng.choice(self.windows[c])
+            lo, hi = w["start"], w["start"] + w["duration"]; text = w["text"]
+            crop = rng.random() < CROP_PROB
+            if crop:  # one utterance of the target, not touching its other utterances
+                own = [u for u in w["utts"] if u[0] == w["target"]]; k = rng.randrange(len(own))
+                us, ud = w["start"] + own[k][1], own[k][2]
+                prev_end = max([w["start"] + u[1] + u[2] for u in own[:k]], default=lo)
+                next_start = min([w["start"] + u[1] for u in own[k + 1:]], default=hi)
+                lo = max(lo, prev_end, us - rng.uniform(0, CROP_PAD)); hi = min(hi, next_start, us + ud + rng.uniform(0, CROP_PAD))
+                if hi - lo < 0.3:
+                    continue
+                text = w["pieces"][k].lstrip("，。、；：！？,.;:!? ").rstrip("，、；：,;:")
+                if not text:
+                    continue
+                if text[-1] not in "。？！?!…":
+                    text += "。"
+            # who talks in the audio sent (annotation boundaries are not exact: TALK_MARGIN s either side)
+            talkers = sorted({u[0] for u in w["utts"] if w["start"] + u[1] < hi + TALK_MARGIN and w["start"] + u[1] + u[2] > lo - TALK_MARGIN})
+            if w["target"] not in talkers:
+                continue
+            cand = [x for x in w["neg"] if x[0] not in talkers]
+            neg = rng.random() < NEG_PROB and bool(cand)
+            if neg:
+                cols = [w["talkers"].index(t) for t in talkers]
+                sims = np.array([max(x[2][j] for j in cols) for x in cand])
+                p = np.exp((sims - sims.max()) / SIM_TEMP); j = rng.choices(range(len(sims)), p.tolist())[0]
+                spk, si, sim = cand[j][0], cand[j][1], float(sims[j])
+            else:
+                spk, si, sim = w["target"], rng.choice(w["pos"]), float("nan")
+            s, d, _ = self.span[c][si]
+            ed = min(d, 5.0); e = read_span(w["path"], s, ed); m = read_span(w["path"], lo, hi - lo)
+            near = c == "alimeeting" and spk in self.near[(c, w["path"])] and rng.random() < NEAR_PROB
+            if near:
+                h = read_span(self.near[(c, w["path"])][spk], s, ed)[: len(e)]
+                if rms(h) < 1e-6:
+                    continue
+                e = h * (rms(e) / rms(h))
+            noisy = rng.random() < NOISE_PROB
+            if noisy:
+                ne, nm = self.noise(rng, len(e)), self.noise(rng, len(m))
+                g = rms(m) / max(rms(nm), 1e-6) / 10 ** (rng.uniform(*NOISE_SNR) / 20)
+                ge = min(g, rms(e) / max(rms(ne), 1e-6) / 10 ** (ENROLL_SNR_MIN / 20))
+                m = m + g * nm; e = e + ge * ne
+            peak = max(np.abs(e).max(), np.abs(m).max())
+            if peak > 0.99:
+                e, m = e * (0.99 / peak), m * (0.99 / peak)
+            cn = 5 * 16000; e = np.pad(e[:cn], (0, max(0, cn - len(e)))).astype(np.float32); m = m.astype(np.float32)
+            content = "language None<asr_text>" if neg else "language Chinese<asr_text>" + text
+            e1, m1 = prepare_ts_clips([e, m], 16000)
+            enc = template.encode({"messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": "<audio>"},
+                                                {"role": "assistant", "content": content}], "audios": [e1], "mix_wav": m1})
+            yield enc, (bool(neg), sim, near, noisy, crop)
 
 
 replay_set = CatalogSwiftDataset(read_data_config(REPLAY_CONFIG), encode=template.encode, message_format="qwen3_asr")
@@ -156,6 +276,10 @@ cap = {i: [] for i in HEAD_LAYERS}
 for _i in HEAD_LAYERS:
     tower.layers[_i].register_forward_hook(lambda mod, inp, o, _i=_i: cap[_i].append(o[0] if isinstance(o, tuple) else o))
 loader = torch.utils.data.DataLoader(Scenes(), batch_size=mb, num_workers=nw, collate_fn=collate, prefetch_factor=2, persistent_workers=True)
+meetings = Meetings(MEETING_PLAN) if MEETING_PLAN else None
+mloader = iter(torch.utils.data.DataLoader(meetings, batch_size=mb, num_workers=nw, collate_fn=collate, prefetch_factor=2,
+                                           persistent_workers=True)) if meetings else None
+m_facts = []  # (negative, sim, near, noise, crop) of the meeting requests since the last log, this rank
 run = None
 if rank == 0:
     import wandb
@@ -172,7 +296,13 @@ if rank == 0:
                              "start": "11.17 model-afea989da22b77adc0ce9365", "trainable": "audio tower (LLM frozen)",
                              "train_speakers": n_spk, "pools": POOLS, "neg_prob": 0.15, "replay_config": REPLAY_CONFIG,
                              "replay_loss": "token KL(11.17 || student), no CE", "kl_weight": kl_w,
-                             "replay_records": len(replay_set), "trainable_params_M": sum(p.numel() for p in params) / 1e6})
+                             "replay_records": len(replay_set), "trainable_params_M": sum(p.numel() for p in params) / 1e6,
+                             **({"meeting_plan": MEETING_PLAN, "meeting_loss": "target-text CE, weight 1", "meeting_weights": M_WEIGHTS,
+                                 "meeting_windows": {c: len(meetings.windows[c]) for c in meetings.corpora},
+                                 "meeting_neg_prob": NEG_PROB, "meeting_sim_temp": SIM_TEMP, "meeting_near_prob": NEAR_PROB,
+                                 "meeting_crop_prob": CROP_PROB, "meeting_crop_pad": CROP_PAD, "meeting_noise_prob": NOISE_PROB,
+                                 "meeting_noise_snr_db": NOISE_SNR, "meeting_enroll_snr_min_db": ENROLL_SNR_MIN,
+                                 "meeting_noise": "@".join(NOISE[:2]) + ":" + NOISE[2]} if meetings else {})})
     print(f"{sum(p.numel() for p in params) / 1e6:.1f}M trainable; speakers {n_spk}; replay {len(replay_set)}; {run.url}", flush=True)
 model.train(); teacher_tower.eval(); t0 = time.time(); it = iter(loader); rit = replay_batches()
 task_sum = torch.zeros(len(TASKS), device=dev); task_n = torch.zeros(len(TASKS), device=dev)
@@ -195,6 +325,12 @@ for step in range(1, steps + 1):
         aux = torch.stack(terms).mean()
         (ce + lam * aux).backward()
     for v in cap.values(): v.clear()
+    if mloader is not None:
+        mbatch, facts = next(mloader); m_facts += facts
+        with torch.autocast("cuda", dtype=torch.bfloat16):
+            ce_m = model(**to_dev(mbatch), use_cache=False).loss
+            ce_m.backward()
+        for v in cap.values(): v.clear()
     rb = to_dev(next(rit)); tasks = rb["catalog_task"]
     with torch.autocast("cuda", dtype=torch.bfloat16):
         kl, per = replay_kl(rb)
@@ -207,14 +343,24 @@ for step in range(1, steps + 1):
     if step % 20 == 0:
         stats = torch.stack([task_sum, task_n])
         if ddp: dist.all_reduce(stats)
+        mlog = {}
+        if mloader is not None:  # what the meeting stream actually sent since the last log, over all ranks
+            f = np.array([(n, n and s >= 0.4, nr, nz, cr) for n, s, nr, nz, cr in m_facts], dtype=np.float64)
+            fs = torch.tensor(np.concatenate([f.sum(0), [len(f)]]), device=dev)
+            if ddp: dist.all_reduce(fs)
+            fs = (fs[:5] / fs[5].clamp_min(1)).tolist(); m_facts.clear()
+            mlog = {"train/ce_meeting": ce_m.item(), "train/meeting_neg_frac": fs[0], "train/meeting_neg_sim_ge_0.4_frac": fs[1],
+                    "train/meeting_near_frac": fs[2], "train/meeting_noise_frac": fs[3], "train/meeting_crop_frac": fs[4]}
+            if rank == 0 and (step % 200 == 0 or os.environ.get("SMOKE")):
+                print("meeting stream", {k.split("/")[1]: round(v, 3) for k, v in mlog.items()}, flush=True)
         if rank == 0:
-            run.log({"train/ce_sim": ce.item(), "train/aux_mask_mse": aux.item(), "train/replay_kl": kl.item(), "train/grad_norm": gn.item(),
+            run.log({**mlog, "train/ce_sim": ce.item(), "train/aux_mask_mse": aux.item(), "train/replay_kl": kl.item(), "train/grad_norm": gn.item(),
                      "train/lr": sched.get_last_lr()[0], **{f"train/aux_mask_mse_l{li + 1}": v.item() for li, v in per_layer.items()},
                      **{f"train/replay_kl_{name}": (stats[0, k] / stats[1, k]).item() for k, name in enumerate(TASKS) if stats[1, k] > 0}},
                     step=step)
         task_sum.zero_(); task_n.zero_()
     if rank == 0 and (step % 200 == 0 or step <= 3 or (os.environ.get("SMOKE") and step % 10 == 0)):
-        print(f"step {step} ce {ce.item():.4f} aux {aux.item():.4f} kl {kl.item():.5f} gn {gn.item():.2f} mem {torch.cuda.max_memory_allocated() / 2**30:.1f}G {time.time() - t0:.0f}s", flush=True)
+        print(f"step {step} ce {ce.item():.4f} {'ce_m %.4f ' % ce_m.item() if mloader is not None else ''}aux {aux.item():.4f} kl {kl.item():.5f} gn {gn.item():.2f} mem {torch.cuda.max_memory_allocated() / 2**30:.1f}G {time.time() - t0:.0f}s", flush=True)
     if (step % save_every == 0 or step == steps) and rank == 0:
         state = {n: p.detach().to(torch.bfloat16).cpu() for n, p in model.named_parameters() if p.requires_grad}
         torch.save({"arm": "encreplay", "step": step, "init_step": 0, "state": state,

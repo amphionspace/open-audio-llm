@@ -31,6 +31,7 @@ from rapidfuzz.distance import Levenshtein
 MATCH = 0.05  # |cosine gap| of a matched -xrec pair
 BOOT = 2000
 SIM_BINS = (-1.0, 0.2, 0.3, 0.4, 0.5, 1.01)
+SIMILAR = 0.4  # impostor_sim from which task 27's false alarms rise to 30-50% (AliMeeting, RAMC)
 DUR_BINS = (0.0, 2.0, 4.0, 6.0, 10.0, 1e9)
 OVL_BINS = (0.0, 1e-3, 0.5, 1e9)
 BOX_BINS = (0, 3, 4, 5, 6, 100)
@@ -182,6 +183,10 @@ def compare(ref, other, rng):
             by_split[x["split"]].append((ref[rid], x))
     for split, pairs in sorted(by_split.items()):
         out[split] = paired(pairs, rng)
+        # tasks/28 gate: absent requests with similar voices (task 27: they carry the false alarms)
+        similar = [(a, b) for a, b in pairs if not a["present"] and (a["labels"].get("impostor_sim") or -1) >= SIMILAR]
+        if similar:
+            out[split][f"sim_ge_{SIMILAR:g}"] = paired(similar, rng)
     return out
 
 
