@@ -58,3 +58,9 @@
 - 2026-11-25 11:30Z 启动提交器，执行器目录 `/workspace/workspace/mingdong/scratch/acp-ctx-cleanpair`。
   - 等有 8 张空闲卡才提交，排在其他会话已排的任务之后；TS 重叠、英文榜单、icefall 三个会话已确认。
   - `stop_when_done.sh` 已挂上：节点脚本成功退出后自动停任务。
+- 13:02Z 提交 `pt-p5ajf6pq`，状态 PENDING。
+  - 集群预留 40 卡全部占满：本项目 4 个节点，另 8 卡是列表之外的任务。所以一直等不到 8 张空闲卡。
+  - 会议榜单会话请我们先排，就改为直接进 ACP 队列；它排在我们后面。
+- 14:32Z 分到节点 10.119.17.225，14:33Z 开始训练（`tasks/01-train-noclean/attempts/001`）。
+  - 节点上的数据预检用了约 55 分钟，主要是给 WenetSpeech 原版（`train-punc-v1-20261102`，1,457 万条）建索引。对照组用的版本不同，缓存里没有这个版本。
+  - 15:30Z 打出第 1 步 loss。W&B 远端 run 状态为 running，已能看到 `train/loss`。

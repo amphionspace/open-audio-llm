@@ -7,5 +7,6 @@
 - **完成条件**：
   - 3000 步跑完，checkpoint 上传到 whai；
   - W&B 远端 run 为 finished，并能看到 `global_step` 3000。
-- **进展**：待提交。
+- **进展**：2026-11-25 ACP `pt-p5ajf6pq` 在训练（attempt 001），15:30Z 打出第 1 步 loss。
+  - W&B：https://wandb.ai/1016097967-amphion/open-audio-llm/runs/AmphionASR-ctx-cleanpair-noclean-from-v10interp050-v7set34-3k-1node-codev1-001
 - **结果 / 证据**：执行记录在 `attempts/<编号>/`（status.json、W&B 核验）。
