@@ -1,0 +1,26 @@
+# tasks/27 整场会议基准（alinear 通道）：由 scripts/make_meeting_bench_configs.py 生成，eval_lanes.sh 只改模型名、服务地址与输出目录。
+suite_id: asr-regression-native@1
+model_name: meeting-bench
+evaluator: ts-asr
+data_config: /workspace/workspace/mingdong/repo/oal-clean-teacher/runs/ts-overlap-20261119/configs/meeting-bench/meeting/data-alinear.yaml
+tsasr_server_url: http://127.0.0.1:0
+tsasr_served_model: meeting-bench
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/meeting-bench
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+  enroll_seconds: 5
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false
+  model_info:
+    origin: ours
+    mode: offline
+    params: 1.7B
+    license: internal

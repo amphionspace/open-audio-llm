@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Evaluate one cached model on 11.17's suites, each lane = one ASR + one TS server on two GPUs (pack-mtp/serve.sh, no MTP,
 # the stack of the 11.17 gate runs). Configs are written to configs/eval-TAG/ from the 11.17-era templates.
-# Usage: [PACK=DIR] eval_lanes.sh CACHE_NAME TAG GPU_BASE PORT_BASE "LANE1 suites" "LANE2 suites" ...  (suite = <template dir>/<name>)
+# Usage: [PACK=DIR] [TEMPLATES=DIR] [CATALOG=DIR] eval_lanes.sh CACHE_NAME TAG GPU_BASE PORT_BASE "LANE1 suites" "LANE2 suites" ...
+# (suite = <template dir>/<name>; TEMPLATES holds the template dirs, CATALOG is the data catalog, default the registry)
 set -u; umask 000
 NAME=$1; T=$2; GB=$3; PB=$4; shift 4
 ENVS=/workspace/workspace/mingdong/miniconda3/envs; PY=$ENVS/vllm-serving/bin/python
@@ -9,7 +10,7 @@ E=/workspace/workspace/mingdong/repo/oal-clean-teacher/runs/ts-overlap-20261119
 M=$(bash /workspace/workspace/mingdong/scratch/acp-dev/ae-models.sh fetch $NAME) || { echo "fetch $NAME failed"; exit 2; }
 # PACK picks the serving runtime; the looped encoder (tasks/11) needs shared/pack-loop, the old runtime skips its weights.
 P=${PACK:-/workspace/workspace/mingdong/repo/oal-joint-mtp/runs/joint-mtp-spec-20261107/shared/pack-mtp}
-G=/workspace/workspace/mingdong/repo/oal-grpo/runs/amphionasr2-grpo-20261101/configs
+G=${TEMPLATES:-/workspace/workspace/mingdong/repo/oal-grpo/runs/amphionasr2-grpo-20261101/configs}
 O=$E/configs/eval-$T; L=$O/logs; mkdir -p $L
 OUT=/workspace/data/ae-runs/$NAME
 python3 - "$M" "$NAME" > $O/handoff.json <<'PY'
@@ -39,7 +40,7 @@ export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 PYTHONUNBUFFERED=1 AMPHION_EVAL_H
 # W&B goes through a dev-machine forwarder that only admits listed node IPs; WB_PROXY picks which one.
 WB=${WB_PROXY:-http://10.119.17.252:17920}
 export WANDB_HTTP_PROXY=$WB WANDB_HTTPS_PROXY=$WB
-export AUDIO_DATA_CATALOG=/workspace/data/registry/catalog AUDIO_DATA_ROOTS_FILE=/workspace/data/registry/roots.json
+export AUDIO_DATA_CATALOG=${CATALOG:-/workspace/data/registry/catalog} AUDIO_DATA_ROOTS_FILE=/workspace/data/registry/roots.json
 pids=(); i=0
 for spec in "$@"; do lane $((GB+2*i)) $((GB+2*i+1)) $((PB+10*i)) $((PB+10*i+1)) $spec & pids+=($!); i=$((i+1)); sleep 60; done
 rc=0; for x in "${pids[@]}"; do wait $x || rc=1; done; echo "$T evals done rc=$rc $(date -u +%FT%TZ)"; exit $rc
