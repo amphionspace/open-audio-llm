@@ -1,0 +1,19 @@
+ts-asr-benchmark@v12: 12953 with the target, 13797 without
+  r1117: misses 357 (2.76%), false alarms 340
+  pairmerge-g: misses 409 (3.16%), false alarms 338
+  pm-train-ts: misses 462 (3.57%), false alarms 304
+  pm-train: misses 460 (3.55%), false alarms 301
+  by corpus [n, misses of r1117, pairmerge-g, pm-train-ts, pm-train]: {None: [11763, 338, 378, 428, 434], 'aishell4': [155, 7, 11, 11, 10], 'alimeeting': [780, 10, 16, 21, 13], 'emilia2': [155, 2, 4, 2, 3], 'ramc': [100, 0, 0, 0, 0]}
+  by enroll_domain [n, misses of r1117, pairmerge-g, pm-train-ts, pm-train]: {None: [12329, 347, 394, 442, 447], 'far': [312, 7, 12, 13, 11], 'near': [312, 3, 3, 7, 2]}
+  new misses of pm-train against r1117: 134; misses of r1117 that pm-train recovers: 31
+  new misses by (cell, corpus): [((None, None), 126), ((None, 'alimeeting'), 4), ((None, 'aishell4'), 3), ((None, 'emilia2'), 1)]
+    babble10-pos:0073: ref 爱在日落之前演员有什么 | r1117: 爱在日落之前的演员有什么？
+    babble20-pos:0073: ref 爱在日落之前演员有什么 | r1117: 爱在日落之前的演员有什么？
+    dom-clean-pos:0094: ref 黑黑的吴亦凡也难掩精致五官放射线式的指针显示有点特别 | r1117: 哈哈，个吴亦凡呀，男艺金枝无骨。放射显示的指征显示有点特别。
+    dom-phone-pos:0021: ref 夺下第二大股东位置的战役中 | r1117: 夺下第二打、不中出局的战役。
+    dom-phone-pos:0075: ref 员工可以选择合适的方式提出 | r1117: 员工可以选择合适的方式提出。
+  misses by reference length:
+    [0, 10) n=4215 r1117=124 pairmerge-g=149 pm-train-ts=148 pm-train=166
+    [10, 20) n=4620 r1117=155 pairmerge-g=180 pm-train-ts=211 pm-train=195
+    [20, 40) n=3176 r1117=73 pairmerge-g=71 pm-train-ts=93 pm-train=87
+    [40, ) n=942 r1117=5 pairmerge-g=9 pm-train-ts=10 pm-train=12
