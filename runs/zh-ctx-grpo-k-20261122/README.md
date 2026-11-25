@@ -750,6 +750,40 @@ MTP 草稿只影响接受长度和速度，不影响贪心输出。
 
 换来的真实录音收益只有约 1 个点，还集中在目标词训练里出现过的题上。K 在没出现过的题上有 +3.2\*，但来源分不开。
 
+## 不含合成数据的差值合并：11.17 + (G − 对照组)（2026-11-25 加，评测前写定，只评测）
+
+**要回答的问题**：把合成说字数据全部去掉，只留真实录音的纠偏 think 行，能不能拿到真实录音上的纠偏收益，同时 TS 不回退？
+- 上一节说明合成数据每一份都有 TS 代价，真实收益只有约 1 个点。
+- K 在目标词没出现过的真实题上 +3.2\*，但 K 里除了合成数据还有真实录音 think 行等几项，分不开。
+- 不直接从 11.17 续训：已确认在 GRPO 模型上续训会冲掉误触发上的收益（“TS 回退的来源”）。所以用差值合并，零训练。
+
+**模型**（`merge_increment.py`，底座 11.17 交付包，MTP 用 11.17 的）：`pm-real` = 11.17 + (G − 对照组)。
+- G `template-no-synth`：ae 模型缓存 `checkpoint-3000-90c9d6f4fa35`。它是第一轮数据（真实录音 think 行，没有合成数据）加第二轮的 think 分配、联合 MTP、code-v1。
+- 对照组：拼写 think 实验的 `02-train-control`，和它的 think 组只差数据配置里的 `think` 一节，没有任何纠偏 think 行。目录 `/workspace/data/ae-runs/ctx-grpo-k-20261122-pairmerge/control-3000`。
+- 两者都从 11.06 起训 3000 步。所以差值 = 真实录音 think 行 + 第二轮配方差别（think 分配、MTP、代码），没有合成数据。
+
+**评测**：一个节点（`scripts/acp-pmreal.sh`）。
+- GPU 0–3：`pm-real` 的交付评测 27 组。
+- GPU 4–7：纠偏 v2（think 关）。
+  - 先同时测 `pm-real` 和 G；
+  - 再测对照组。
+  - G 和对照组只记录，用来看同一份差值在 11.06 上有没有真实收益。11.17 用上一节的 run。
+
+**判定**（`pm-real` 对 11.17）：
+1. **TS 保住**：同前三次诊断。
+   - v12、跟错人、英文 TS 的误触发率和漏识别率；
+   - 西语 TS v1/v2、跨语种（西语）的误触发率；
+   - 都不显著变差。
+2. **真实录音的纠偏收益**：纠偏 v2（think 关）上，目标词训练里没出现过的真实录音题（1,680 条），准确率显著好于 11.17（CI 下限 > 0）。
+
+**分支**：
+- **1、2 都成立**：纠偏线去掉合成说字数据。`pm-real` 本身就是不用训练的候选，交付评测全表交给用户决定是否替换 11.17。
+- **1 不成立**：真实录音 think 行（或配方差别）同样有 TS 代价，记录后看漏识别和误触发的方向再定。
+- **2 不成立**：真实收益不在这份差值里。记录 G 对对照组在 11.06 上的结果：
+  - 那里也没有，说明 K 的收益来自 K 独有的部分（合成长对话、西语、终版文本）或直接训练；
+  - 那里有，说明是合并带不过来。
+- **只记录、不判定**：长对话漏人、西语 WER、英文无语音误触发、场景 TS、ctx-v1 合成题、纠偏 v2 的其他数字。
+
 ## 执行记录
 
 - **ACP 任务** `pt-cwectlc6`（`AmphionASR-ctx-q10-K-grpo400-v10recipe-ctxplan-mine-avg3-ctxv2-delivery27-1node`，节点 10.119.16.243），执行器目录 `/workspace/workspace/mingdong/scratch/acp-ctx-kgrpo`。13:05Z 提交，13:18Z 开始。
@@ -818,6 +852,12 @@ MTP 草稿只影响接受长度和速度，不影响贪心输出。
     - `runs/zh-ctx-grpo-20261120` 里跑 `compare_delivery.py r1117 pm-train`（和 `pm-train-ts`）、`scene_asr_drops.py`；
     - 本实验里跑 `compare_datasplit.sh`、`split_synth_1117.py`、`miss_breakdown.py`。
     - 输出都在 `tasks/09-datasplit/`。
+- **不含合成数据的差值合并 ACP 任务** `pt-hbeeis8i`（`AmphionASR-ctx-pmreal-1117-plus-g-minus-control-nosynth-delivery27-ctxv2x3-1node`，节点 10.119.18.87）。
+  - 执行器目录 `/workspace/workspace/mingdong/scratch/acp-ctx-pmreal`，节点脚本 `scripts/acp-pmreal.sh`。
+  - 合并模型 `/workspace/data/ae-runs/ctx-grpo-k-20261122-pairmerge/1117-plus-g-minus-control`：709 个张量里 650 个有增量，MTP 用 11.17 的。
+  - 提交前和 TS 重叠、icefall 两个会话确认过，它们近期都不用这个节点。
+  - 11-25 09:04Z 提交，当时本项目在跑 3 个节点，集群空 8 张卡；09:05Z 开始，09:06Z W&B 放行，交付评测已启动。
+  - 成功后由 `stop_when_done.sh` 停掉节点。
 
 <!-- execution-status -->
 
