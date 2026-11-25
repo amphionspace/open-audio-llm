@@ -1,0 +1,897 @@
+{
+  "run_a": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-control1106/runs/run-20261123T163849Z-4b2540dd",
+  "run_b": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-g1106/runs/run-20261123T192042Z-468ce7c4",
+  "scoring": {
+    "version": 4,
+    "normalization": "v4: zh varieties and ja by character, others by word (CJK ideographs one each); zh: NFKC, lower, GigaSpeech tags, OpenCC t2s, Arabic numerals read in Chinese (4+ digit runs digit by digit, else cn2an an2cn), punctuation and symbols, SpeechIO fillers 呃啊 and erhua; v3: 幺/两/〇 read as 一/二/零 inside 3+ Chinese digit runs; v4: ja by character on v1 text; en: Whisper EnglishTextNormalizer; presence on v1 text",
+    "normalizers": {
+      "cn2an": "0.5.24",
+      "opencc": "0.1.7",
+      "whisper-normalizer": "0.1.15"
+    }
+  },
+  "resamples": 2000,
+  "confidence": 0.95,
+  "seed": 20261112,
+  "cluster_by": null,
+  "samples": 253415,
+  "clusters": 253415,
+  "protocol_differences": {},
+  "skipped_sources": [],
+  "overall": {
+    "all/CER": {
+      "error_rate": {
+        "a": 0.03673684660109496,
+        "b": 0.03687425046054177,
+        "diff": 0.0001374038594468066,
+        "ci": [
+          -0.0005175953358582974,
+          0.0012748314064110749
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0005140651182102625,
+        "b": 0.0005536085888418211,
+        "diff": 3.954347063155864e-05,
+        "ci": [
+          0.0,
+          7.899976446518074e-05
+        ],
+        "significant": false
+      },
+      "term_hit_rate": {
+        "a": 0.9878048780487805,
+        "b": 0.9874028410613777,
+        "diff": -0.0004020369874028207,
+        "ci": [
+          -0.0013369185149205791,
+          0.0005389274465647186
+        ],
+        "significant": false
+      }
+    },
+    "all/WER": {
+      "error_rate": {
+        "a": 0.07421285588033767,
+        "b": 0.0740498315210663,
+        "diff": -0.00016302435927137426,
+        "ci": [
+          -0.00047705220946664693,
+          0.00014050601144084785
+        ],
+        "significant": false
+      },
+      "false_alarm_rate": {
+        "a": 0.3837679030481087,
+        "b": 0.3670583914799853,
+        "diff": -0.016709511568123392,
+        "ci": [
+          -0.02169003258794552,
+          -0.011966393701690852
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.0014454664914586072,
+        "b": 0.0014454664914586072,
+        "diff": 0.0,
+        "ci": [
+          -0.00015514382295608086,
+          0.00015393301737154374
+        ],
+        "significant": false
+      }
+    }
+  },
+  "sources": {
+    "aishell2@icefall-20260908:test/asr/Chinese": {
+      "error_rate": {
+        "a": 0.027349597443055387,
+        "b": 0.02708662054456447,
+        "diff": -0.00026297689849091865,
+        "ci": [
+          -0.0010259432963203579,
+          0.0005490380793528321
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "aishell3@icefall-20260908:test/asr/Chinese": {
+      "error_rate": {
+        "a": 0.007827999323316365,
+        "b": 0.007839533703458777,
+        "diff": 1.153438014241115e-05,
+        "ci": [
+          -0.0001762296910116116,
+          0.00019055410476726347
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "aishell@icefall-20260908:test/asr/Chinese": {
+      "error_rate": {
+        "a": 0.0037710990605667153,
+        "b": 0.0036756281982738867,
+        "diff": -9.547086229282856e-05,
+        "ci": [
+          -0.0003157999716066357,
+          0.0001253115120970742
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "common_voice_en@icefall-20260908:test/asr/en": {
+      "error_rate": {
+        "a": 0.07828834476251986,
+        "b": 0.07754117356533632,
+        "diff": -0.0007471711971835382,
+        "ci": [
+          -0.0014558259287820413,
+          -6.3090840111350314e-06
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.0011583953176441898,
+        "b": 0.0011583953176441898,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "common_voice_zh@icefall-20260908:test/asr/zh-CN": {
+      "error_rate": {
+        "a": 0.05212086925508234,
+        "b": 0.05097711256779525,
+        "diff": -0.0011437566872870841,
+        "ci": [
+          -0.0019628353433423576,
+          -0.00034472141684973077
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.00018784634169249554,
+        "b": 0.00018784634169249554,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "gigaspeech@icefall-20260908:test/asr/English": {
+      "error_rate": {
+        "a": 0.09105455446157656,
+        "b": 0.09110904699981423,
+        "diff": 5.449253823766598e-05,
+        "ci": [
+          -0.00041697744169528117,
+          0.0005191251477279726
+        ],
+        "significant": false
+      },
+      "false_alarm_rate": {
+        "a": 0.3837679030481087,
+        "b": 0.3670583914799853,
+        "diff": -0.016709511568123392,
+        "ci": [
+          -0.02169003258794552,
+          -0.011966393701690852
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.0022579026593075764,
+        "b": 0.002308078273958856,
+        "diff": 5.0175614651279486e-05,
+        "ci": [
+          -0.0003012433910274585,
+          0.0004021358460084866
+        ],
+        "significant": false
+      }
+    },
+    "kespeech@eval-southwestern-20261012:test/asr/Southwestern": {
+      "error_rate": {
+        "a": 0.058263816475495306,
+        "b": 0.05894160583941606,
+        "diff": 0.0006777893639207527,
+        "ci": [
+          -0.0009298261505516871,
+          0.00219454655707784
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "kespeech@icefall-20260908:test/asr/Beijing": {
+      "error_rate": {
+        "a": 0.04886423666138404,
+        "b": 0.0491283676703645,
+        "diff": 0.00026413100898045605,
+        "ci": [
+          -0.002239751597668636,
+          0.002996064887579465
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "kespeech@icefall-20260908:test/asr/Ji-Lu": {
+      "error_rate": {
+        "a": 0.0591215798709805,
+        "b": 0.05877555055735436,
+        "diff": -0.00034602931362613665,
+        "ci": [
+          -0.0016817315154172483,
+          0.0010912359672027472
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "kespeech@icefall-20260908:test/asr/Jiang-Huai": {
+      "error_rate": {
+        "a": 0.09228986214468708,
+        "b": 0.09375381237037941,
+        "diff": 0.0014639502256923315,
+        "ci": [
+          -0.00041961736623841265,
+          0.0033265752702081003
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "kespeech@icefall-20260908:test/asr/Jiao-Liao": {
+      "error_rate": {
+        "a": 0.0642672289849516,
+        "b": 0.06369213073900125,
+        "diff": -0.0005750982459503534,
+        "ci": [
+          -0.0025634503187173777,
+          0.0012654689012593925
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "kespeech@icefall-20260908:test/asr/Lan-Yin": {
+      "error_rate": {
+        "a": 0.06350275824314651,
+        "b": 0.06143933970606814,
+        "diff": -0.0020634185370783723,
+        "ci": [
+          -0.003766357579447303,
+          -0.0004955990194787672
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "kespeech@icefall-20260908:test/asr/Mandarin": {
+      "error_rate": {
+        "a": 0.02384907122885696,
+        "b": 0.02416742795448883,
+        "diff": 0.00031835672563186937,
+        "ci": [
+          -0.00019145516262035424,
+          0.0008983363487658774
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "kespeech@icefall-20260908:test/asr/Northeastern": {
+      "error_rate": {
+        "a": 0.06538704914574985,
+        "b": 0.06454334528580469,
+        "diff": -0.000843703859945158,
+        "ci": [
+          -0.0032312358468511554,
+          0.001426782354544371
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "kespeech@icefall-20260908:test/asr/Southwestern": {
+      "error_rate": {
+        "a": 0.058472367049009384,
+        "b": 0.05907194994786236,
+        "diff": 0.0005995828988529725,
+        "ci": [
+          -0.0010094521142427026,
+          0.002158836043362031
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "kespeech@icefall-20260908:test/asr/Zhongyuan": {
+      "error_rate": {
+        "a": 0.04612316665237156,
+        "b": 0.04644480658718587,
+        "diff": 0.00032163993481430786,
+        "ci": [
+          -0.0009881577854360178,
+          0.0016027770222203624
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "librispeech@icefall-20260908:test_clean/asr/English": {
+      "error_rate": {
+        "a": 0.016688981500688302,
+        "b": 0.016292971770163495,
+        "diff": -0.00039600973052480656,
+        "ci": [
+          -0.0009245504724120678,
+          0.0001321602795827928
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "librispeech@icefall-20260908:test_other/asr/English": {
+      "error_rate": {
+        "a": 0.036135693215339236,
+        "b": 0.03715679600635353,
+        "diff": 0.0010211027910142917,
+        "ci": [
+          5.673620231814517e-05,
+          0.0019742257490178703
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "magicdata@icefall-20260908:test/asr/Chinese": {
+      "error_rate": {
+        "a": 0.019039469912832358,
+        "b": 0.018854006845273222,
+        "diff": -0.00018546306755913566,
+        "ci": [
+          -0.0005528699214928497,
+          0.0001475597655148301
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 4.118785781951481e-05,
+        "b": 4.118785781951481e-05,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "mls@icefall-20260908:test/asr/english": {
+      "error_rate": {
+        "a": 0.05816729843115566,
+        "b": 0.05769516126856511,
+        "diff": -0.0004721371625905496,
+        "ci": [
+          -0.0012006104276123231,
+          0.00023237044843021137
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0005306447333510214,
+        "b": 0.0002653223666755107,
+        "diff": -0.0002653223666755107,
+        "ci": [
+          -0.0008112602986521321,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_synthetic_zh_accent@icefall-20260908:test/asr/zh": {
+      "error_rate": {
+        "a": 0.01681985537573173,
+        "b": 0.017362858580775038,
+        "diff": 0.000543003205043309,
+        "ci": [
+          -0.0005811169006814072,
+          0.0018768858744129752
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      },
+      "term_hit_rate": {
+        "a": 0.9633967789165446,
+        "b": 0.9624206930209859,
+        "diff": -0.0009760858955587537,
+        "ci": [
+          -0.004940956052126924,
+          0.0030417149928948137
+        ],
+        "significant": false
+      }
+    },
+    "police_synthetic_zh_accent@icefall-20260908:test_cosyvoice3/asr/zh": {
+      "error_rate": {
+        "a": 0.025681812350873592,
+        "b": 0.025989686225209738,
+        "diff": 0.0003078738743361453,
+        "ci": [
+          -0.0014769956192348477,
+          0.0021969423641453084
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      },
+      "term_hit_rate": {
+        "a": 0.9419600380589914,
+        "b": 0.9457659372026641,
+        "diff": 0.0038058991436726863,
+        "ci": [
+          -0.001923262548262541,
+          0.010139186706284052
+        ],
+        "significant": false
+      }
+    },
+    "police_synthetic_zh_accent@icefall-20260908:test_qwen3_tts/asr/zh": {
+      "error_rate": {
+        "a": 0.0071450080757754116,
+        "b": 0.007172383585644282,
+        "diff": 2.7375509868870704e-05,
+        "ci": [
+          -0.0006021296862163061,
+          0.0005884421841813303
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      },
+      "term_hit_rate": {
+        "a": 0.9869739478957916,
+        "b": 0.9799599198396793,
+        "diff": -0.007014028056112287,
+        "ci": [
+          -0.012371674545222318,
+          -0.0021052631578948296
+        ],
+        "significant": true
+      }
+    },
+    "police_synthetic_zh_accent@legacy-rebalance-100k-20260916:test/asr/zh": {
+      "error_rate": {
+        "a": 0.0027795667943459543,
+        "b": 0.002777306983944047,
+        "diff": -2.2598104019071544e-06,
+        "ci": [
+          -0.00010372034863156042,
+          0.0001035970271800722
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      },
+      "term_hit_rate": {
+        "a": 0.997338065661047,
+        "b": 0.997338065661047,
+        "diff": 0.0,
+        "ci": [
+          -0.0007915443369805458,
+          0.0007844021696100073
+        ],
+        "significant": false
+      }
+    },
+    "police_terms_v5_test@icefall-20260908:test/asr/zh": {
+      "error_rate": {
+        "a": 0.006001091107474086,
+        "b": 0.006864884524458993,
+        "diff": 0.0008637934169849065,
+        "ci": [
+          -0.00028335729448865626,
+          0.0024166473170865598
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      },
+      "term_hit_rate": {
+        "a": 0.9912152269399708,
+        "b": 0.9897510980966325,
+        "diff": -0.0014641288433382416,
+        "ci": [
+          -0.004615562403698067,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_v6_8h@icefall-20260908:test/asr/zh": {
+      "error_rate": {
+        "a": 0.003235249991344456,
+        "b": 0.0033525806985216333,
+        "diff": 0.00011733070717717719,
+        "ci": [
+          -1.5211482141297685e-05,
+          0.00024214813085232564
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_v6_acceptance_205@icefall-20260908:test/asr/zh": {
+      "error_rate": {
+        "a": 0.0008688357600814908,
+        "b": 0.0009587153214692312,
+        "diff": 8.98795613877404e-05,
+        "ci": [
+          0.0,
+          0.000241127272124229
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "police_v6_expanded@icefall-20260908:test/asr/zh": {
+      "error_rate": {
+        "a": 0.0019116471446943102,
+        "b": 0.001946404365506934,
+        "diff": 3.475722081262389e-05,
+        "ci": [
+          -7.10062750799741e-05,
+          0.00016971105674519935
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "talcs@icefall-20260908:test/asr/Chinese": {
+      "error_rate": {
+        "a": 0.08068102901468409,
+        "b": 0.08303018299332861,
+        "diff": 0.0023491539786445192,
+        "ci": [
+          -0.003311111887754963,
+          0.01230027368148606
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.00013333333333333334,
+        "b": 0.0002666666666666667,
+        "diff": 0.00013333333333333334,
+        "ci": [
+          0.0,
+          0.00033615987856403906
+        ],
+        "significant": false
+      }
+    },
+    "thchs30@icefall-20260908:test/asr/Chinese": {
+      "error_rate": {
+        "a": 0.03732310084023245,
+        "b": 0.03795234981307604,
+        "diff": 0.0006292489728435893,
+        "ci": [
+          -0.00015349089933327712,
+          0.0014269935726832412
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "wenetspeech@icefall-20260908:test_meeting/asr/Chinese": {
+      "error_rate": {
+        "a": 0.059360944747468586,
+        "b": 0.05913113623892581,
+        "diff": -0.00022980850854277535,
+        "ci": [
+          -0.0008749157806528579,
+          0.0004581573732469965
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "wenetspeech@icefall-20260908:test_net/asr/Chinese": {
+      "error_rate": {
+        "a": 0.05574404667533373,
+        "b": 0.05516597110597808,
+        "diff": -0.0005780755693556502,
+        "ci": [
+          -0.0010708067926445592,
+          -0.00014584962330395408
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.00044401388552514734,
+        "b": 0.0005651085815774603,
+        "diff": 0.00012109469605231293,
+        "ci": [
+          0.0,
+          0.000283391918782299
+        ],
+        "significant": false
+      }
+    },
+    "wenetspeech_chuan@eval-20261012:test_easy/asr/Sichuanese": {
+      "error_rate": {
+        "a": 0.15348339095145047,
+        "b": 0.151745453179017,
+        "diff": -0.0017379377724334732,
+        "ci": [
+          -0.003318217112095881,
+          -0.00015256512329445514
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.005156854318865492,
+        "b": 0.00558659217877095,
+        "diff": 0.00042973785990545795,
+        "ci": [
+          -0.00014528706976068472,
+          0.0010330954047522226
+        ],
+        "significant": false
+      }
+    },
+    "wenetspeech_chuan@eval-20261012:test_hard/asr/Sichuanese": {
+      "error_rate": {
+        "a": 0.2652812520043615,
+        "b": 0.2670771598999423,
+        "diff": 0.0017959078955808172,
+        "ci": [
+          -0.002683706753316094,
+          0.00710713056910534
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.03735632183908046,
+        "b": 0.03735632183908046,
+        "diff": 0.0,
+        "ci": [
+          -0.0035087719298245654,
+          0.003536193107372251
+        ],
+        "significant": false
+      }
+    }
+  }
+}

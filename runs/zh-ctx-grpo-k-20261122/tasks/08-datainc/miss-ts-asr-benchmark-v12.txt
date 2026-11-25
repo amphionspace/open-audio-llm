@@ -1,0 +1,21 @@
+ts-asr-benchmark@v12: 12953 with the target, 13797 without
+  r1117: misses 357 (2.76%), false alarms 340
+  control1106: misses 393 (3.03%), false alarms 484
+  g1106: misses 377 (2.91%), false alarms 492
+  startj: misses 411 (3.17%), false alarms 368
+  pairmerge: misses 407 (3.14%), false alarms 345
+  pairmerge-g: misses 409 (3.16%), false alarms 338
+  by corpus [n, misses of r1117, control1106, g1106, startj, pairmerge, pairmerge-g]: {None: [11763, 338, 370, 354, 382, 376, 378], 'aishell4': [155, 7, 5, 5, 7, 10, 11], 'alimeeting': [780, 10, 15, 16, 19, 18, 16], 'emilia2': [155, 2, 3, 2, 3, 3, 4], 'ramc': [100, 0, 0, 0, 0, 0, 0]}
+  by enroll_domain [n, misses of r1117, control1106, g1106, startj, pairmerge, pairmerge-g]: {None: [12329, 347, 378, 362, 393, 390, 394], 'far': [312, 7, 13, 12, 16, 12, 12], 'near': [312, 3, 2, 3, 2, 5, 3]}
+  new misses of pairmerge-g against r1117: 99; misses of r1117 that pairmerge-g recovers: 47
+  new misses by (cell, corpus): [((None, None), 86), ((None, 'alimeeting'), 7), ((None, 'aishell4'), 4), ((None, 'emilia2'), 2)]
+    babble10-pos:0073: ref 爱在日落之前演员有什么 | r1117: 爱在日落之前的演员有什么？
+    babble20-pos:0073: ref 爱在日落之前演员有什么 | r1117: 爱在日落之前的演员有什么？
+    dom-phone-pos:0021: ref 夺下第二大股东位置的战役中 | r1117: 夺下第二打、不中出局的战役。
+    dom-phone-pos:0075: ref 员工可以选择合适的方式提出 | r1117: 员工可以选择合适的方式提出。
+    dom-reverb-noise-pos:0036: ref 全面升级的途途锐锐耀耀锐版新添全封闭施工时间为二零一六年七月二十一日 | r1117: 摄像头尖上都是将目光放在人手上的。孩子人类交往的能力不是与生俱来的。
+  misses by reference length:
+    [0, 10) n=4215 r1117=124 control1106=132 g1106=130 startj=143 pairmerge=147 pairmerge-g=149
+    [10, 20) n=4620 r1117=155 control1106=186 g1106=171 startj=183 pairmerge=176 pairmerge-g=180
+    [20, 40) n=3176 r1117=73 control1106=68 g1106=69 startj=75 pairmerge=71 pairmerge-g=71
+    [40, ) n=942 r1117=5 control1106=7 g1106=7 startj=10 pairmerge=13 pairmerge-g=9
