@@ -15,7 +15,10 @@ Per corpus, from the recipe's sources (REPLAY_CONFIG entries of ts_real_train wi
   participant's spans are offered as negatives (the stream keeps those of people silent in the audio it sends: the
   whole window, or one of the target's utterances, where people who talk elsewhere in the window are silent too);
 - ECAPA (the benchmark's speaker model, voice_check.Embedder) of each span's first 5 s on channel 0 (what the client
-  sends); a speaker's profile is the normalized mean of its spans; per window and offered negative span the cosine with
+  sends); spans failing task 27's speaker quarantine (another participant's profile beats the labelled speaker's by
+  >= 0.1) are dropped: with similarity-weighted negatives, a mislabelled span that is the target's own voice is drawn
+  far more often than its share (attempt 001: 11-13% of RAMC negatives, 1-2% of the pool), which taught the model to
+  reject the target; a speaker's profile is the normalized mean of its kept spans; per window and offered negative span the cosine with
   the profile of each talker of the window (task 27's impostor_sim is the max over talkers);
 - AliMeeting: each speaker's headset file (Train_Ali_near) for the cross-channel enrollments.
 
@@ -35,6 +38,7 @@ NEAR = Path("/workspace/data/datasets/alimeeting/source/openslr-119-local-202608
 EMBED_PY = Path("/workspace/workspace/mingdong/miniconda3/envs/k2/bin/python")
 EMBED_MODEL = Path("/workspace/model/wespeaker-ecapa-tdnn512-LM/voxceleb_ECAPA512_LM.onnx")
 ROOTS = "/workspace/data/registry/roots.json"
+SPEAKER_SOLO, SPEAKER_MARGIN = 3.0, 0.1  # task 27's speaker quarantine rule (adc scripts/ts_real/meeting_quarantine.py)
 
 
 def strip(s):
@@ -91,6 +95,23 @@ def embed_spans(job):
     return out
 
 
+def quarantine(by, vecs):
+    """Task 27's speaker check (meeting_quarantine.py) on the spans of one recording: a span of at least SPEAKER_SOLO s
+    whose embedding another participant's profile beats its own speaker's leave-one-out profile on by SPEAKER_MARGIN
+    or more is mislabelled, and is dropped. A speaker's only span is not judged."""
+    unit = lambda x: x / np.linalg.norm(x)
+    sums = {spk: np.sum([vecs[i] for _, _, i in items], 0) for spk, items in by.items()}
+    kept, dropped = {}, 0
+    for spk, items in by.items():
+        for s, d, i in items:
+            if d >= SPEAKER_SOLO and len(items) > 1:
+                own = float(vecs[i] @ unit(sums[spk] - vecs[i]))
+                if max((float(vecs[i] @ unit(sums[t])) for t in by if t != spk), default=-1.0) - own >= SPEAKER_MARGIN:
+                    dropped += 1; continue
+            kept.setdefault(spk, []).append((s, d, i))
+    return kept, dropped
+
+
 def main():
     cfg_path, out = Path(sys.argv[1]), Path(sys.argv[2]); workers = int(sys.argv[3]) if len(sys.argv) > 3 else 24
     cfg = yaml.safe_load(cfg_path.read_text()); out.mkdir(parents=True, exist_ok=True)
@@ -122,13 +143,14 @@ def main():
     plan = {"sources": sources, "recordings": {}, "windows": {}}
     stats = {}
     for corpus in CORPORA:
-        recs, prof, vecs = {}, {}, []
+        recs, prof, vecs, quarantined = {}, {}, [], 0
         for (split, path), ss in spans.items():
             if split != corpus:
                 continue
             by = collections.defaultdict(list)
             for spk, s, d, _ in sorted(ss):
-                v = E[(path, s, d)]; vecs.append(v); by[spk].append((s, d, len(vecs) - 1))
+                v = E[(path, s, d)]; vecs.append(v / np.linalg.norm(v)); by[spk].append((s, d, len(vecs) - 1))
+            by, dropped = quarantine(by, vecs); quarantined += dropped
             near = {}
             if corpus == "alimeeting":
                 rid = Path(path).stem.rsplit("_", 1)[0]  # R1019_M1963_MS116 -> R1019_M1963
@@ -167,7 +189,7 @@ def main():
             return {"offers": len(x), "sim_quantiles": [round(float(q), 3) for q in np.quantile(x, [0.1, 0.5, 0.9])] if len(x) else [],
                     "sim_bins": {b: int(((x >= lo_) & (x < hi_)).sum()) for b, lo_, hi_ in
                                  (("<0.2", -1, 0.2), ("0.2-0.3", 0.2, 0.3), ("0.3-0.4", 0.3, 0.4), ("0.4-0.5", 0.4, 0.5), (">=0.5", 0.5, 2))}}
-        stats[corpus] = {"recordings": len(recs), "windows": len(ws), "spans": len(vecs),
+        stats[corpus] = {"recordings": len(recs), "windows": len(ws), "spans": len(vecs), "quarantined_spans": quarantined,
                          "near_speakers": sum(len(r["near"]) for r in recs.values()), "speakers": sum(len(r["spans"]) for r in recs.values()),
                          "windows_with_silent_participant": sum(any(x[0] not in w["talkers"] for x in w["neg"]) for w in ws),
                          "windows_with_other_participant": sum(bool(w["neg"]) for w in ws),

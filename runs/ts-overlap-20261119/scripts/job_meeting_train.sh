@@ -4,9 +4,9 @@
 # meetings sent the way speaker-enroll sends them), then task 25's evaluation of steps 10k/20k/30k on the 16 GPUs.
 # The simulator modules (gen/, tse/) and the evaluation lists are the ones task 25 ran, under P (scratchpad copy).
 # W&B goes through the dev-machine forwarder on 17923 (admits node 0 only after its IP is added, then the wandb-ready flag).
-# usage: job_meeting_train.sh   (outputs under /workspace/data/ts-overlap-20261119/task28-meeting)
+# usage: job_meeting_train.sh [OUT_DIR TAG]   (default /workspace/data/ts-overlap-20261119/task28-meeting meeting-001; the plan is OUT_DIR/plan)
 set -u
-NR=${SENSECORE_PYTORCH_NODE_RANK:-0}; NN=${SENSECORE_PYTORCH_NNODES:-1}; O=/workspace/data/ts-overlap-20261119/task28-meeting; mkdir -p $O/logs
+NR=${SENSECORE_PYTORCH_NODE_RANK:-0}; NN=${SENSECORE_PYTORCH_NNODES:-1}; O=${1:-/workspace/data/ts-overlap-20261119/task28-meeting}; TAG=${2:-meeting-001}; mkdir -p $O/logs
 E=/workspace/workspace/mingdong/repo/oal-clean-teacher/runs/ts-overlap-20261119
 P=/workspace/workspace/mingdong/.claude/tmp/claude-1001/-workspace-workspace-mingdong-repo-open-audio-llm/ca9aa6d0-4ecc-4cfc-b526-5322bf6c9de5/scratchpad/ovdiag/probe
 echo "node $NR of $NN ip $(hostname -I) master ${MASTER_ADDR:-?}:${MASTER_PORT:-?} $(date -u +%FT%TZ)" > $O/logs/node-$NR.txt
@@ -17,7 +17,7 @@ source /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh >/d
 export WANDB_HTTP_PROXY=http://10.119.17.252:17923 WANDB_HTTPS_PROXY=http://10.119.17.252:17923 WANDB_DIR=$O WANDB_READY_FILE=$O/wandb-ready
 ENV=/workspace/workspace/mingdong/miniconda3/envs/oal-train/bin
 $ENV/torchrun --nnodes $NN --node_rank $NR --nproc_per_node 8 --master_addr $MASTER_ADDR --master_port $MASTER_PORT \
-  $P/ft_enc_replay_meeting.py $O/ckpt 30000 4 4 4.0 meeting-001 10000 1.0 6 > $O/logs/train-node$NR.log 2>&1
+  $P/ft_enc_replay_meeting.py $O/ckpt 30000 4 4 4.0 $TAG 10000 1.0 6 > $O/logs/train-node$NR.log 2>&1
 echo "train rc=$? node $NR $(date -u +%FT%TZ)" >> $O/logs/node-$NR.txt
 until [ -f $O/ckpt/step30000.pt ] || grep -q "Traceback" $O/logs/train-node0.log 2>/dev/null; do sleep 30; done
 chmod -R a+rX $O; export OMP_NUM_THREADS=8
