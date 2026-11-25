@@ -59,7 +59,7 @@
 | Earnings22 `earnings22@github-c05ab6fd8b4b` | 同上 | 125 场财报电话 | CC-BY-SA 4.0 | 去掉榜单测试的 6 场（4468919、4471586、4474955、4475604、4482968、4483046），按对齐文件切成短句训练；另留几场作开发集 |
 | Earnings21 `earnings21@github-c05ab6fd8b4b` | 同上 | 44 场 | CC-BY-SA 4.0 | 榜单没用过，作核验集 |
 | AMI 近讲 `ami_ihm@hf-edinburghcstr-20261023` | 已登记 train/dev/test | — | CC-BY 4.0 | 训练（需终版文本）；配方里现有的是远场 `ami_sdm` |
-| SPGISpeech 2.0 `spgispeech2@hf-f4ce91de393c` | 已下载并校验，只登记了来源 | 3,649 小时 | Kensho 非商用研究条款 | **待用户决定**：权重公开发布时用非商用数据训练的许可风险 |
+| SPGISpeech 2.0 `spgispeech2@hf-f4ce91de393c` | 已下载并校验，只登记了来源 | 3,649 小时 | Kensho 非商用研究条款 | 训练（11-25 用户：不用管许可风险） |
 | GigaSpeech | 已在配方里 | 约 1 万小时 | — | 沿用，必要时加权 |
 
 所有新训练数据都要先过去重：参考文本与榜单测试句相同的条目排除（open-audio-llm #175 的工具）。SPGISpeech 2.0 要额外查它是否包含 SPGISpeech 1 的测试音频。
@@ -88,3 +88,4 @@
 | 日期 | 事项 |
 | --- | --- |
 | 11-25 | 用户批准启动，加“基于 AmphionASR、不能丢能力”的条件；完成差距定位；向数据侧申请登记训练版本 |
+| 11-25 | 用户决定 SPGISpeech 2.0 照用，不用管许可风险；已补充给数据侧 |
