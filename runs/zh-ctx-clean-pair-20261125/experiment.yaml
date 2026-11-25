@@ -1,0 +1,12 @@
+version: 1
+name: zh-ctx-clean-pair-20261125
+purpose: 说字清洗配对：与 spelling-think 对照组只差说字清洗数据的 noclean 臂，用 11.17 + (对照组 − noclean) 单独检验“改对字的真实说明录音”能否在不回退 TS 的前提下带来真实录音纠偏收益
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training_coverage: replay_quota
+  training_steps: 3000
+inputs:
+  init_model: /workspace/data/ae-runs/amphionasr2-grpo-v10interp050/checkpoint
+tasks:
+- {id: train-noclean, name: noclean 臂 1 节点 8 卡全参 3000 步（对照组配置，数据换回交付配方原版）, config: configs/train-noclean.yaml, depends_on: []}
