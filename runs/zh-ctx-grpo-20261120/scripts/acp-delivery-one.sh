@@ -8,7 +8,7 @@ set -u; umask 002
 E=/workspace/workspace/mingdong/repo/oal-ctx-grpo/runs/zh-ctx-grpo-20261120; cd $E
 PY=/workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
 AE=/workspace/workspace/mingdong/.local-tools/amphion-eval-0.14.0-eedcf15/bin/ae
-PROXY=http://10.119.17.252:17920
+PROXY=http://10.119.18.89:17920  # dev container IP since 2026-11-26 (was 10.119.17.252)
 now() { date -u +%FT%TZ; }
 N=$1
 $PY scripts/make_delivery_configs.py "$N" "$2" "$3" "$4" "$5" "$6" "$7" "$8" || exit 3

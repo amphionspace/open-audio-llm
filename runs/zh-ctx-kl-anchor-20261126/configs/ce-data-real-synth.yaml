@@ -1,0 +1,194 @@
+# CE 流（臂 B）：臂 A 加合成说字数据 train（普通识别）；每个来源的权重 = 记录数，一个 epoch 共 5059 条。
+# 由 scripts/make_configs.py 生成，不要手改。
+augmentation:
+  enrollment_noise_snr_db:
+  - 10.0
+  - 20.0
+  far_rir_prob: 0.25
+  level_dbfs:
+  - -55.0
+  - -20.0
+  level_prob: 0.8
+  noise_prob: 0.5
+  noise_snr_db:
+  - 0.0
+  - 20.0
+  rir_prob: 0.25
+catalog: /workspace/data/registry/catalog
+floor_sources:
+- dataset_id: dns5_noise_train
+  split: stationary
+  version: v1-20261016
+  weight: 1
+- dataset_id: wham
+  split: train
+  version: tr-20261014
+  weight: 1
+hotwords:
+  hotword_confusable_miss_prob: 0.8
+  hotword_confusable_prob: 0.5
+  hotword_miss_prob: 0.15
+  hotword_prompt_prob: 1.0
+  max_hotwords: 30
+  same_language_distractor_prob: 0.5
+  ts_hotword_prompt_prob: 0.5
+interference_sources:
+- dataset_id: ts_interference_pool
+  language: zh
+  split: zh
+  version: v3-20261018
+  weight: 1
+- dataset_id: ts_interference_pool
+  language: en
+  split: en
+  version: v3-20261018
+  weight: 1
+- dataset_id: aishellmix
+  language: zh
+  lookalike_table: /workspace/data/lookalike/v2-samecorpus-20261108/samecorpus-zh-aishellmix.npz
+  split: train_1spk
+  version: pack3-current-audio-record-20260910
+  weight: 1.0e-06
+- dataset_id: librimix
+  language: en
+  lookalike_table: /workspace/data/lookalike/v2-samecorpus-20261108/samecorpus-en-librimix.npz
+  split: train_1spk
+  version: 960-current-audio-record-20260910
+  weight: 1.0e-06
+- dataset_id: ts_interference_pool
+  language: es
+  split: es
+  version: es-v2-20261110
+  weight: 1
+metadata_cache: ../shared/metadata-cache
+noise_sources:
+- dataset_id: audioset_road_traffic
+  split: all
+  version: legacy-20260804
+  weight: 10
+- dataset_id: dns5_noise_train
+  split: audioset
+  version: v1-20261016
+  weight: 12
+- dataset_id: dns5_noise_train
+  split: freesound
+  version: v1-20261016
+  weight: 6
+- dataset_id: wham
+  split: train
+  version: tr-20261014
+  weight: 30
+- dataset_id: musan
+  split: noise
+  version: legacy-20260804
+  weight: 17.5
+- dataset_id: farfield_speech_noise_1spk
+  split: train
+  version: '20261014'
+  weight: 17.5
+- dataset_id: farfield_speech_noise_2spk
+  split: train
+  version: '20261014'
+  weight: 17.5
+- dataset_id: farfield_speech_noise_3spk
+  split: train
+  version: '20261014'
+  weight: 17.5
+- dataset_id: musan
+  split: music
+  version: legacy-20260804
+  weight: 15
+- dataset_id: babble_noise_train
+  split: zh
+  version: v1-20261017
+  weight: 12.0
+- dataset_id: babble_noise_train
+  split: en
+  version: v1-20261017
+  weight: 5.5
+- dataset_id: meeting_room_noise
+  split: train
+  version: v2-20261014
+  weight: 17.5
+nonspeech_sources:
+- dataset_id: audioset_road_traffic
+  split: all
+  version: legacy-20260804
+  weight: 1
+- dataset_id: musan
+  split: noise
+  version: legacy-20260804
+  weight: 1
+- dataset_id: musan
+  split: music
+  version: legacy-20260804
+  weight: 1
+- dataset_id: babble_noise_train
+  split: zh
+  version: v1-20261017
+  weight: 0.7
+- dataset_id: babble_noise_train
+  split: en
+  version: v1-20261017
+  weight: 0.3
+record_index: lance
+rir_sources:
+- dataset_id: dns5_noise_train
+  split: rir
+  version: v1-20261016
+- dataset_id: sim_rir_slr26
+  split: all
+  version: legacy-20260804
+- dataset_id: sim_rir_slr28
+  exclude_media: /workspace/data/datasets/ts_asr_benchmark/source/v3-20261013/excluded-media-sim_rir_slr28.txt
+  split: all
+  version: legacy-20260804
+- dataset_id: mit_ir_survey
+  split: all
+  version: flac16k-20261026
+roots: /workspace/data/registry/roots.json
+sampling_rate: 16000
+seed: 20261106
+replay:
+  epoch_samples: 5059
+  window_samples: 5059
+batching:
+  max_duration: 240
+  max_samples: 1
+  num_buckets: 30
+  buffer_size: 2000
+  drop_last: false
+  packing: sorted
+train:
+- dataset_id: emilia2_mix
+  include_records: /workspace/data/datasets/context_correction_clean_zh/versions/think-v2-20261113-final-v1-20261120/emilia2_mix_utts/include-emilia2_mix_mix-20261013-utts-final-v1-20261120-train_2spk.txt
+  split: train_2spk
+  version: mix-20261013-utts-final-v2-20261123
+  weight: 326
+- dataset_id: emilia2_mix
+  include_records: /workspace/data/datasets/context_correction_clean_zh/versions/think-v2-20261113-final-v1-20261120/emilia2_mix_utts/include-emilia2_mix_mix-20261013-utts-final-v1-20261120-train_3spk.txt
+  split: train_3spk
+  version: mix-20261013-utts-final-v2-20261123
+  weight: 316
+- dataset_id: emilia2_dialog
+  include_records: /workspace/data/datasets/context_correction_clean_zh/versions/think-v2-20261113-final-v1-20261120/emilia2_dialog/include-emilia2_dialog_dialog-turn-taking-20261013-enroll-final-v1-20261120-train_2spk.txt
+  split: train_2spk
+  version: dialog-turn-taking-20261013-enroll-final-v2-20261123
+  weight: 229
+- dataset_id: wenetspeech_clean
+  include_records: /workspace/workspace/mingdong/repo/oal-ctx-grpo/runs/zh-ctx-kl-anchor-20261126/configs/records/include-wenetspeech_clean_train-punc-v1-20261102-final-v2-20261123-train.txt
+  max_duration: 120
+  require_clean_pass: true
+  split: train
+  task: asr
+  version: train-punc-v1-20261102-final-v2-20261123
+  weight: 923
+- dataset_id: emilia2_short
+  include_records: /workspace/data/datasets/context_correction_clean_zh/versions/think-v2-20261113-final-v1-20261120/emilia2_short/include-emilia2_short_short-lance-20261023-final-v1-20261120-train_zh.txt
+  split: train_zh
+  version: short-lance-20261023-final-v2-20261123
+  weight: 281
+- dataset_id: context_correction_synth_zh
+  version: train-v1-20261114
+  split: train
+  weight: 2984

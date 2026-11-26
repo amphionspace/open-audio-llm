@@ -1,0 +1,13 @@
+version: 1
+name: zh-ctx-kl-anchor-20261126
+purpose: 从 11.17 起训上下文纠偏 SFT，回放 11.17 原有任务只算对 11.17 的 KL（不算交叉熵），检验去掉“在 GRPO 模型上续训的漂移”之后，纠偏数据能否在 TS 不回退的前提下带来真实录音纠偏收益；两臂只差 CE 流是否加合成说字数据
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training_coverage: replay_quota
+  training_steps: views x CE batches per epoch (views 3)
+inputs:
+  init_model: /workspace/data/ae-state/model-cache/entries/model-afea989da22b77adc0ce9365
+tasks:
+- {id: train-real, name: 臂 A：CE 为 5 个说明录音子集（2,075 条 x 3 次），回放 KL 拉住 11.17，4 卡, config: configs/train-real.yaml, depends_on: []}
+- {id: train-real-synth, name: 臂 B：CE 另加合成说字数据 train（5,059 条 x 3 次），回放 KL 拉住 11.17，4 卡, config: configs/train-real-synth.yaml, depends_on: []}
