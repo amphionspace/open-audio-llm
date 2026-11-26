@@ -1,6 +1,6 @@
 # 上下文纠偏 SFT 加回放 KL：从 11.17 起训（2026-11-26）
 
-**状态**：2026-11-26 写定设计和判定，待启动。
+**状态**：2026-11-26 写定设计和判定；两臂训练中（attempt 002）。
 
 ## 要回答的问题
 
@@ -95,9 +95,17 @@
 
 - 2026-11-26：配置 dry-run 通过（两臂的命令、GPU 0-3 / 4-7、端口、W&B 转发 10.119.18.89:17920、两项数据预检）。
 - 开发机 IP 从 10.119.17.252 换成 10.119.18.89，`runs/zh-ctx-grpo-20261120/scripts/acp-delivery-one.sh` 的 W&B 转发地址已改为新 IP。
+- 2026-11-26 15:55Z：提交 ACP pt-53size8p（1 节点 8 卡），节点上的 dev_runner 执行 `scripts/acp-node.sh`。
+- 17:23Z：臂 A attempt 001 在第 1 步崩溃，原因是老师模型的复制方式。
+  - 老师原来是 `copy.deepcopy(model)`。`attach_sep_token` 把加载出来的 thinker 原有的 `forward`、`get_audio_features` 存在闭包里，deepcopy 不复制闭包，老师的前向实际调用学生的 thinker，又读不到 `enroll_n_frames`，TS 样本少插 sep token，`masked_scatter` 断言失败。
+  - 就算没有 TS 样本，这个“老师”也等于学生，KL 恒为 0，等于没有锚定。
+  - 修复：老师单独再加载一份 11.17。臂 B attempt 001 启动在修复之前，在数据预检阶段中断。
+- 17:27Z：同一节点上两臂都以 attempt 002 重跑，之后接着评测（节点脚本 `20-klanchor-retry`）。
 
 <!-- execution-status -->
 
-执行状态：未开始。
+执行状态：partial；质量状态：未核实。
+
+开始：未知；结束：未结束；退出码：未知。
 
 <!-- /execution-status -->

@@ -6,7 +6,7 @@ no context-correction data, from 11.06: v12 FA 2.70 -> 3.49*). Here CE is only o
 11.17's own task mix is replayed with token KL(11.17 || student) and no CE, as the TS line's tasks 25/28 do for the
 audio tower (oal-clean-teacher runs/ts-overlap-20261119/scripts/ft_enc_replay.py). The KL is 0 at the start and only
 resists drift.
-- start and teacher: 11.17; the teacher is a frozen bf16 copy of the whole model. Trainable as in the spelling-think
+- start and teacher: 11.17; the teacher is a second, frozen bf16 load of the whole model. Trainable as in the spelling-think
   control: everything except parameters.frozen_prefixes (token embedding, tied to lm_head; the audio tower's conv front
   end). MTP is not loaded; the exported checkpoints link 11.17's mtp/ (greedy outputs do not depend on it).
 - each step, every rank: one batch of the CE stream (one sample) and one replay batch; loss = CE + kl_weight * KL;
@@ -20,7 +20,6 @@ resists drift.
 usage: torchrun ... -m ctx_kl_train --config EFFECTIVE.yaml --output_dir DIR   (the experiment launcher passes both)
 """
 import argparse
-import copy
 import json
 import math
 import os
@@ -66,10 +65,17 @@ def main():
         out.mkdir(parents=True, exist_ok=True)
     torch.manual_seed(P["seed"])
 
-    model, processor = get_model_processor(P["init_model"], model_type="amphion_asr_1.7b", torch_dtype=torch.bfloat16,
+    def load():
+        loaded, proc = get_model_processor(P["init_model"], model_type="amphion_asr_1.7b", torch_dtype=torch.bfloat16,
                                            attn_impl="sdpa", device_map=dev)
-    model.thinker.audio_tower.config._attn_implementation = "sdpa"
-    teacher = copy.deepcopy(model).eval().requires_grad_(False)
+        loaded.thinker.audio_tower.config._attn_implementation = "sdpa"
+        return loaded, proc
+
+    model, processor = load()
+    # A second load, not copy.deepcopy(model): attach_sep_token keeps the loaded thinker's own forward and
+    # get_audio_features in closures, which deepcopy shares, so a copied teacher ran the student's thinker without its
+    # enroll_n_frames (attempt 001: masked_scatter assertion on the first TS replay sample; the KL would have been 0).
+    teacher = load()[0].eval().requires_grad_(False)
     template = get_template(processor, max_length=None, template_type="amphion_asr_1.7b")
     template.set_mode("train")
 

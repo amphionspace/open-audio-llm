@@ -9,5 +9,15 @@
 - **完成条件**：
   - 训练跑完，`/workspace/data/ae-runs/ctx-kl-anchor-20261126/real-synth/` 下有一半处和最后的 checkpoint；
   - W&B 远端 run 为 finished，并能看到 `train/ce_asr`、`train/replay_kl` 到最后一步。
-- **进展**：待启动。
+- **进展**：
+  - attempt 001（11-26 17:20–17:26Z）：启动在老师加载的修复之前（见 01 的 attempt 001），数据预检阶段用 SIGTERM 中断，没有训练。
+  - attempt 002：臂 A 的 attempt 002 数据预检做完以后启动，用修复后的脚本。
 - **结果 / 证据**：执行记录在 `attempts/<编号>/`（status.json、W&B 核验、`artifacts/training/logging.jsonl`、`replay-kl-by-task.jsonl`）。
+
+<!-- execution-status -->
+
+执行状态：interrupted；质量状态：未核实。
+
+开始：2026-11-26T17:20:09.078280+00:00；结束：2026-11-26T17:26:51.580373+00:00；退出码：143。
+
+<!-- /execution-status -->
