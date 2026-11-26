@@ -1,6 +1,6 @@
 # 上下文纠偏 SFT 加回放 KL：从 11.17 起训（2026-11-26）
 
-**状态**：2026-11-26 写定设计和判定；两臂训练中（attempt 002）。
+**状态**：2026-11-26 写定设计和判定；两臂训练完成，评测中。
 
 ## 要回答的问题
 
@@ -101,10 +101,16 @@
   - 就算没有 TS 样本，这个“老师”也等于学生，KL 恒为 0，等于没有锚定。
   - 修复：老师单独再加载一份 11.17。臂 B attempt 001 启动在修复之前，在数据预检阶段中断。
 - 17:27Z：同一节点上两臂都以 attempt 002 重跑，之后接着评测（节点脚本 `20-klanchor-retry`）。
+- 18:09Z 臂 A、19:00Z 臂 B 训练完成，W&B 远端都是 finished（数字见 `tasks/01`、`tasks/02`）。
+- 19:01Z：评测阶段给臂 A 选成了一半处的 `checkpoint-778`。
+  - 原因：`acp-node.sh` 的 `final_ckpt` 用 `sort -t- -k2 -n`，但路径里的 `ctx-kl-anchor-20261126` 自己带连字符，第 2 个字段不是步数，结果按字典序排。臂 B 碰巧选对。
+  - 19:02Z 全部停下（节点脚本 `21-stop-eval`）：还没有评测进程启动，只留下 4 个服务端的 attempt 001 记录（interrupted，生效配置里是 checkpoint-778），没有评测产物，没有 W&B run。
+  - 修复：改用 `sort -V`，并要求选中的 checkpoint 的 `SOURCE.json` 满足 `step == steps`。
+- 19:03Z：只重跑评测阶段（节点脚本 `30-klanchor-eval`），klreal = `real/checkpoint-1557`，klsynth = `real-synth/checkpoint-3795`。
 
 <!-- execution-status -->
 
-执行状态：partial；质量状态：未核实。
+执行状态：completed；质量状态：未核实。
 
 开始：未知；结束：未结束；退出码：未知。
 

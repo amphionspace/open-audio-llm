@@ -58,7 +58,13 @@ train() {
   completed 01-train-real && completed 02-train-real-synth
 }
 
-final_ckpt() { ls -d $M/$1/checkpoint-[0-9]* 2>/dev/null | sort -t- -k2 -n | tail -n 1; }
+# The arm's last checkpoint, only if its SOURCE.json says it is the final step (2026-11-26: `sort -t- -k2 -n` keyed on a
+# '-' of the path itself and picked checkpoint-778 over checkpoint-1557).
+final_ckpt() {
+  local c; c=$(ls -d $M/$1/checkpoint-[0-9]* 2>/dev/null | sort -V | tail -n 1)
+  [ -n "$c" ] && $PY -c "import json,sys;d=json.load(open(sys.argv[1]+'/SOURCE.json'));sys.exit(d['step']!=d['steps'])" "$c" \
+    && echo "$c"
+}
 
 ctx() { (cd $K && bash scripts/run_eval.sh configs/eval-$1 $PROXY $AE context-correction-v2); local r=$?
         echo "ctx v2 $1 exit $r $(now)"; return $r; }
