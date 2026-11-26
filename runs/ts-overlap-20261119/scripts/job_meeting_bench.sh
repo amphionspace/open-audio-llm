@@ -12,7 +12,7 @@ VERSION=$(cat $E/configs/meeting-bench/VERSION)
 echo "node ip $(hostname -I) $(date -u +%FT%TZ) version $VERSION catalog $CATALOG" > $O/logs/node.txt
 for _ in $(seq 120); do [ -f $O/wandb-ready ] && break; sleep 20; done
 [ -f $O/wandb-ready ] || { echo "no wandb-ready flag $(date -u +%FT%TZ)" >> $O/logs/node.txt; exit 3; }
-cd $E; WB_PROXY=http://10.119.17.252:17922 TEMPLATES=$E/configs/meeting-bench CATALOG=$CATALOG bash scripts/eval_lanes.sh $NAME $TAG 0 19900 \
+cd $E; WB_PROXY=http://10.119.18.89:17922 TEMPLATES=$E/configs/meeting-bench CATALOG=$CATALOG bash scripts/eval_lanes.sh $NAME $TAG 0 19900 \
   "meeting/a4ramc" "meeting/alibase" "meeting/alinear" "meeting/alisnr" > $O/logs/eval.log 2>&1
 echo "bench rc=$? $(date -u +%FT%TZ)" >> $O/logs/node.txt
 [ "$QC" = 1 ] || exit 0
