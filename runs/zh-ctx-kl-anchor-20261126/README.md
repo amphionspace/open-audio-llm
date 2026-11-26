@@ -143,6 +143,11 @@
 - **2 不成立**：纠偏收益有一部分和判断 token 绑在一起，看显式 / 隐式分组和 11-26 同臂的差。
 - **预计不变、只记录**：11-26 两臂的普通识别小幅回退（babble3/4、西语识别、asr-benchmark、police 的 CER/WER）出在正文上，这次的改动管不到；判定 3 会照样列出来。
 
+**执行**：
+- 2026-11-26 22:13Z 提交 ACP pt-mweqkx4c（1 节点 8 卡，节点 10.119.18.23；A 线、TS 线确认不冲突），执行器 `/workspace/workspace/mingdong/scratch/acp-ctx-klanchor-textce`，节点脚本 `acp-node.sh textce`，评测完成后由 `stop_when_done.sh` 停节点。
+- 22:14Z 臂 A（任务 04）启动，22:23Z 臂 B（任务 05）启动；两臂 W&B 远端都在更新。
+- 屏蔽生效的证据：第 1 步和 11-26 臂 A 是同一个 batch（同一种子），CE 从 0.1285 变成 0.1708。去掉的是容易预测的前缀 token，正文按 token 平均自然更高。
+
 <!-- execution-status -->
 
 执行状态：completed；质量状态：未核实。
