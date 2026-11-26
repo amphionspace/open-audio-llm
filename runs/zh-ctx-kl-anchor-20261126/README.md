@@ -121,6 +121,28 @@
 - TS 回退是“在场判断”token 的偏移：CE 流的每条样本都在训练 `language <语种>`，没有 `None`；回放 KL 对全部 token 取平均，拉不住临界样本。
 - 数字、逐条翻转和诊断见 `tasks/03-eval/README.md`。
 
+## 后续：CE 只训正文（2026-11-26 加，训练前写定）
+
+**要回答的问题**：CE 流不训“在场判断”token，只训正文，TS 能不能保住，纠偏收益还在不在？
+
+**依据**（`tasks/03-eval/README.md`“TS 回退的诊断”）：
+- 两臂的 TS 回退都是 `language` 后面那个 token（`None` 还是语种）在动，正文没有问题。
+- CE 流的每条样本标签都以 `language Chinese<asr_text>` 开头（开发机 CPU 抽查 60 条，全是这个前缀，`<asr_text>` 各出现一次；`/workspace/workspace/mingdong/scratch/ctx-kl-anchor/label_prefix_check.py`），没有 `None`。所以 CE 一直在直接训练这个判断 token。
+- 纠偏收益在正文 token 上，在场判断本来就应该由 11.17 和回放 KL 决定。
+
+**设计**：只改一处，其余和 11-26 的两臂完全相同（数据、步数、学习率、回放 KL、起点、种子）。
+- `scripts/ctx_kl_train.py` 的参数 `ce_text_only: true`：CE 标签里第一个 `<asr_text>` 及之前的部分（`language Chinese<asr_text>`）设为 -100，不算交叉熵；每条 CE 样本都必须有 `<asr_text>`，否则报错。
+- 两臂：`configs/train-real-textce.yaml`（任务 04，模型名 `kltreal`）、`configs/train-real-synth-textce.yaml`（任务 05，模型名 `kltsynth`）。
+- 评测同 11-26（`scripts/acp-node.sh textce`），任务 06。
+
+**判定**：同上面“判定”1–3，候选对 11.17。另外和 11-26 同臂比较，只记录。
+
+**分支**：
+- **1、2 都成立**：看第 3 条，规则同上；交付全表交给用户。
+- **1 不成立**：在场判断是经由共享表示偏的，不是 CE 直接训判断 token。用同样的逐条翻转看偏的方向，再考虑让回放 KL 在判断 token 上不被稀释（改设计，不扫权重）。
+- **2 不成立**：纠偏收益有一部分和判断 token 绑在一起，看显式 / 隐式分组和 11-26 同臂的差。
+- **预计不变、只记录**：11-26 两臂的普通识别小幅回退（babble3/4、西语识别、asr-benchmark、police 的 CER/WER）出在正文上，这次的改动管不到；判定 3 会照样列出来。
+
 <!-- execution-status -->
 
 执行状态：completed；质量状态：未核实。

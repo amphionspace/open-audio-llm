@@ -1,0 +1,90 @@
+# 后续（README“后续：CE 只训正文”）：与 configs/train-real-synth.yaml 只差 ce_text_only: true，CE 标签里第一个 <asr_text> 及之前的部分
+# （“language <语种>”，在场判断所在的 token）不算交叉熵，CE 流只训正文。回放 KL 不变。
+# 臂 B（real-synth）：同臂 A（train-real.yaml），CE 流另加合成说字数据 train（普通识别，2,984 条；ce-data-real-synth.yaml），
+# 11.17 原有任务的回放（replay-data.yaml）只算对 11.17 的 KL，不算交叉熵。scripts/ctx_kl_train.py，同节点 GPU 4-7。
+# 学习率、warmup 比例、min_lr、梯度裁剪、冻结范围同 spelling-think 对照组（train-control.yaml）；KL 权重 1.0 同 TS 线任务 25/28；
+# weight decay 取 0：起点是交付模型，往 0 衰减是 KL 拉不住的漂移（TS 线任务 25/28 同样取 0）。
+version: 1
+runtime:
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  cwd: /workspace/workspace/mingdong/repo/oal-ctx-grpo
+  pythonpath:
+  - /workspace/workspace/mingdong/repo/oal-ctx-grpo/runs/zh-ctx-grpo-20261120/shared/code-v3/src
+  - /workspace/workspace/mingdong/repo/oal-ctx-grpo/runs/zh-ctx-grpo-20261120/shared/code-v3/audio-data-contract-src
+  - /workspace/workspace/mingdong/repo/oal-ctx-grpo/runs/zh-ctx-kl-anchor-20261126/scripts
+  gpus: [4, 5, 6, 7]
+  threads: {omp: 2, openblas: 1}
+  environment:
+    TOKENIZERS_PARALLELISM: false
+    HF_HUB_OFFLINE: '1'
+    PYTHONUNBUFFERED: '1'
+    PYTORCH_ALLOC_CONF: expandable_segments:True
+    # ACP 出口被 api.wandb.ai 封禁：经开发容器转发（10.119.18.89:17920，2026-11-26 起的开发机 IP，只放行本节点 IP）走海外代理。
+    WANDB_HTTP_PROXY: http://10.119.18.89:17920
+    WANDB_HTTPS_PROXY: http://10.119.18.89:17920
+    # Emilia2 m4a 经 lhotse 调用 PATH 上的 ffmpeg（ACP 上已验证的静态版本）。
+    PATH: /workspace/workspace/mingdong/.local-tools/ffmpeg-7.0.2-static/bin:/workspace/workspace/mingdong/miniconda3/envs/oal-train/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  distributed: {processes: 4, port: 29846}
+task:
+  kind: train
+  module: ctx_kl_train
+  accepts_config: true
+  arguments:
+    --output_dir: {path: '{attempt}/artifacts/training'}
+parameters:
+  # 11.17 的权重（ae 模型缓存，与交付包 model.safetensors 逐字节相同）；导出 checkpoint 以交付包为底，mtp/ 链到交付包。
+  init_model: /workspace/data/ae-state/model-cache/entries/model-afea989da22b77adc0ce9365
+  export_base: /workspace/data/packages/amphionasr-1.7b-v3-v18aes-mtp-candidate/model
+  ce_data: /workspace/workspace/mingdong/repo/oal-ctx-grpo/runs/zh-ctx-kl-anchor-20261126/configs/ce-data-real-synth.yaml
+  replay_data: /workspace/workspace/mingdong/repo/oal-ctx-grpo/runs/zh-ctx-kl-anchor-20261126/configs/replay-data.yaml
+  # 每条 CE 记录约见 3 次：第二轮配方的 EXPLAINED_VIEWS（对照组的说明记录上采样也按它定）。
+  views: 3
+  kl_weight: 1.0
+  ce_text_only: true
+  lr: 3.55e-06
+  min_lr: 1.0e-06
+  warmup_ratio: 0.1
+  weight_decay: 0.0
+  max_grad_norm: 1.0
+  frozen_prefixes:
+  - thinker.model.embed_tokens
+  - thinker.audio_tower.conv2d1
+  - thinker.audio_tower.conv2d2
+  - thinker.audio_tower.conv2d3
+  - thinker.audio_tower.conv_out
+  # 一半处的 checkpoint 只留作剂量诊断，判定只看最后一个。
+  save_fractions: [0.5, 1.0]
+  checkpoint_root: /workspace/data/ae-runs/ctx-kl-anchor-20261126/real-synth-textce
+  seed: 20261126
+  ce_workers: 2
+  replay_workers: 6
+  log_every: 10
+preflight:
+- kind: prepare
+  module: open_audio_llm.data.catalog_cache
+  arguments:
+    --data_config: /workspace/workspace/mingdong/repo/oal-ctx-grpo/runs/zh-ctx-kl-anchor-20261126/configs/ce-data-real-synth.yaml
+    --batch-size: 1
+    --world-size: 4
+    --preflight-report: {path: '{attempt}/artifacts/data-preflight-ce.json'}
+- kind: prepare
+  module: open_audio_llm.data.catalog_cache
+  arguments:
+    --data_config: /workspace/workspace/mingdong/repo/oal-ctx-grpo/runs/zh-ctx-kl-anchor-20261126/configs/replay-data.yaml
+    --batch-size: 1
+    --world-size: 4
+    --preflight-report: {path: '{attempt}/artifacts/data-preflight-replay.json'}
+recording:
+  attempts_dir: {path: ../tasks/05-train-real-synth-textce/attempts}
+tracking:
+  pythonpath:
+  - /workspace/workspace/mingdong/repo/oal-ctx-grpo/runs/zh-ctx-grpo-20261120/shared/code-v3/src
+  enabled: true
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/python
+  credentials_file: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: AmphionASR-ctx-klanchor-textce-realsynth-from1117-ce-desc2075-synth2984x3-textonly-replaykl1-4gpu
+  interval: 5
+  startup_timeout: 180
+  finish_timeout: 300

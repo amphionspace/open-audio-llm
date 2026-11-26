@@ -11,6 +11,9 @@ resists drift.
   end). MTP is not loaded; the exported checkpoints link 11.17's mtp/ (greedy outputs do not depend on it).
 - each step, every rank: one batch of the CE stream (one sample) and one replay batch; loss = CE + kl_weight * KL;
   gradients averaged over the ranks by hand (as ft_enc_replay.py), clipped, AdamW in fp32 under bf16 autocast.
+- parameters.ce_text_only (README "后续：CE 只训正文"): CE labels up to and including the first <asr_text> are dropped,
+  so the CE stream trains the transcript only, not the "language <X>" token that carries the presence decision (None or a
+  language); every CE sample must have one <asr_text> in its labels. Off when absent (the 11-26 arms).
 - steps = views x the CE batches of one epoch per rank, so each CE record is seen about `views` times; linear warmup,
   then cosine from lr to min_lr.
 - rank 0 appends ms-swift shaped rows to <output_dir>/logging.jsonl (read by the launcher's W&B recorder) and the
@@ -78,6 +81,16 @@ def main():
     teacher = load()[0].eval().requires_grad_(False)
     template = get_template(processor, max_length=None, template_type="amphion_asr_1.7b")
     template.set_mode("train")
+    asr_text = processor.tokenizer.convert_tokens_to_ids("<asr_text>")
+    text_only = bool(P.get("ce_text_only", False))
+
+    def drop_prefix(labels):
+        """Labels with every position up to and including each row's first <asr_text> set to -100."""
+        hit = labels == asr_text
+        assert bool(hit.any(1).all()), "a CE sample without <asr_text> in its labels"
+        first = hit.int().argmax(1, keepdim=True)
+        pos = torch.arange(labels.shape[1], device=labels.device)[None]
+        return labels.masked_fill(pos <= first, -100)
 
     frozen = tuple(P["frozen_prefixes"])
     names, params = [], []
@@ -203,6 +216,8 @@ def main():
         for group in opt.param_groups:
             group["lr"] = lr
         cb = to_dev(next(ce_it))
+        if text_only:
+            cb["labels"] = drop_prefix(cb["labels"])
         with torch.autocast("cuda", dtype=torch.bfloat16):
             ce = model(**{k: v for k, v in cb.items() if k not in DROP}, use_cache=False).loss
         ce.backward()
