@@ -1042,4 +1042,9 @@ open-audio-llm experiment run --config runs/zh-ctx-clue-target-20261117/experime
     - 模型确实学到了。交付评测 73 万条输出里，11.17 没有一条带竖线；K SFT 有 85 条，kgrpo 有 57 条（例如“确认是麓山街吗|麓山街的麓是岳”）。
     - 已请 amphiondata-58 在 v4 里把这些记录隔离。主线一轮的成对对照（oal-ctx-grpo `runs/zh-ctx-mainline-pair-20261127`）两边都含 asr-dialog，K 多含 222 条。
   - **asr-dialog-v1-20261122 没有出 v4**：按 zh_numbers.convert，2,000 条里 914 条会被改。已请补出 v4。
+  - **修正后复核**（11-27，`scripts/check_text_final_v4.py`）：
+    - amphiondata-58 已把带竖线的记录移到 quarantine：train-v1 的 train 74 条、train_ts 74 条，ts-twins 74 条，asr-dialog 159 条，provenance 里写了原因。
+    - 已补出 `asr-dialog-v1-20261122-final-v4-20261127`：剩 1,841 条，turns 拼起来等于 target。
+    - 5 个训练划分都没有竖线了；有标签的划分里，segments 和 cot.final 都等于新 target；说字写法都保留了。
+    - 等 Lance 索引建好、注册表同步以后，下一次纠偏配方用这四个 v4，think 表的键同时换成新版本名。
 - 实验目录里只放配置、脚本、执行记录和分析结果，不放数据文件。
