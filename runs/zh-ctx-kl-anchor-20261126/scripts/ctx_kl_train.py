@@ -14,6 +14,10 @@ resists drift.
 - parameters.ce_text_only (README "后续：CE 只训正文"): CE labels up to and including the first <asr_text> are dropped,
   so the CE stream trains the transcript only, not the "language <X>" token that carries the presence decision (None or a
   language); every CE sample must have one <asr_text> in its labels. Off when absent (the 11-26 arms).
+- parameters.decision_kl_weight (README "后续 2：回放 KL 加在场判断项"): replay loss = token-mean KL + decision_kl_weight x
+  the KL at each replay sample's presence decision, its second supervised token (the first must be "language"), which
+  the token mean gives only about 5% of the weight. 0 when absent (the 11-26 and "CE 只训正文" arms); the decision KL is
+  logged either way.
 - steps = views x the CE batches of one epoch per rank, so each CE record is seen about `views` times; linear warmup,
   then cosine from lr to min_lr.
 - rank 0 appends ms-swift shaped rows to <output_dir>/logging.jsonl (read by the launcher's W&B recorder) and the
@@ -83,6 +87,8 @@ def main():
     template.set_mode("train")
     asr_text = processor.tokenizer.convert_tokens_to_ids("<asr_text>")
     text_only = bool(P.get("ce_text_only", False))
+    (language,) = processor.tokenizer.encode("language", add_special_tokens=False)
+    decision_weight = float(P.get("decision_kl_weight", 0.0))
 
     def drop_prefix(labels):
         """Labels with every position up to and including each row's first <asr_text> set to -100."""
@@ -137,7 +143,8 @@ def main():
         return batch
 
     def replay_kl(batch):
-        """Mean over supervised tokens of KL(teacher || student), and per-sample means for the task log."""
+        """Mean over supervised tokens of KL(teacher || student); the KL at each sample's presence decision (the token
+        after "language": None or a language); per-sample values of both for the task log."""
         labels = batch["labels"][:, 1:]
         mask = labels != -100
         inputs = {k: v for k, v in batch.items() if k not in DROP and k != "labels"}
@@ -147,7 +154,11 @@ def main():
         tok = F.kl_div(s_logits.log_softmax(-1), t_logits.log_softmax(-1), log_target=True, reduction="none").sum(-1)
         rows = mask.nonzero()[:, 0]
         per = torch.zeros(mask.shape[0], device=dev).index_add_(0, rows, tok.detach()) / mask.sum(1).clamp_min(1)
-        return tok.mean(), per
+        order = mask.cumsum(1)[mask]  # 1-based place of each supervised token in its own row, in tok's order
+        assert bool((labels[mask][order == 1] == language).all()), "a replay sample not starting with 'language'"
+        decision = tok[order == 2]
+        assert decision.numel() == mask.shape[0], "a replay sample without a presence-decision token"
+        return tok.mean(), decision.mean(), per, decision.detach()
 
     def allreduce():
         group, size = [], 0
@@ -207,8 +218,9 @@ def main():
     model.train()
     ce_it = batches(ce_set, ce_sampler, P["ce_workers"])
     rp_it = batches(rp_set, rp_sampler, P["replay_workers"])
-    acc = torch.zeros(3, device=dev)  # CE sum, KL sum, steps since the last log
+    acc = torch.zeros(4, device=dev)  # CE sum, KL sum, steps since the last log, decision KL sum
     task_sum = torch.zeros(len(TASKS), device=dev)
+    task_dec = torch.zeros(len(TASKS), device=dev)
     task_n = torch.zeros(len(TASKS), device=dev)
     t_log = time.time()
     for step in range(1, steps + 1):
@@ -224,36 +236,41 @@ def main():
         rb = to_dev(next(rp_it))
         tasks = rb["catalog_task"]
         with torch.autocast("cuda", dtype=torch.bfloat16):
-            kl, per = replay_kl(rb)
-            (P["kl_weight"] * kl).backward()
+            kl, dec, per, per_dec = replay_kl(rb)
+            (P["kl_weight"] * (kl + decision_weight * dec)).backward()
         allreduce()
         grad_norm = torch.nn.utils.clip_grad_norm_(params, P["max_grad_norm"])
         opt.step()
         opt.zero_grad(set_to_none=True)
-        acc += torch.stack([ce.detach().float(), kl.detach().float(), torch.ones((), device=dev)])
+        acc += torch.stack([ce.detach().float(), kl.detach().float(), torch.ones((), device=dev), dec.detach().float()])
         task_sum.index_add_(0, tasks, per)
+        task_dec.index_add_(0, tasks, per_dec)
         task_n.index_add_(0, tasks, torch.ones_like(per))
         if step % P["log_every"] == 0 or step == steps or step <= 3:
-            stats = torch.cat([acc, task_sum, task_n])
+            stats = torch.cat([acc, task_sum, task_dec, task_n])
             dist.all_reduce(stats)
             n = stats[2].clamp_min(1)
-            ce_mean, kl_mean = (stats[0] / n).item(), (stats[1] / n).item()
-            ts, tn = stats[3:3 + len(TASKS)], stats[3 + len(TASKS):]
+            ce_mean, kl_mean, dec_mean = (stats[0] / n).item(), (stats[1] / n).item(), (stats[3] / n).item()
+            k = len(TASKS)
+            ts, td, tn = stats[4:4 + k], stats[4 + k:4 + 2 * k], stats[4 + 2 * k:]
             if rank == 0:
                 speed = (time.time() - t_log) / max(1, int(acc[2].item()))
-                row = {"loss": ce_mean + P["kl_weight"] * kl_mean, "ce_asr": ce_mean, "replay_kl": kl_mean,
+                row = {"loss": ce_mean + P["kl_weight"] * (kl_mean + decision_weight * dec_mean), "ce_asr": ce_mean,
+                       "replay_kl": kl_mean, "replay_kl_decision": dec_mean,
                        "grad_norm": grad_norm.item(), "learning_rate": lr,
                        "memory(GiB)": torch.cuda.max_memory_allocated() / 2 ** 30, "train_speed(s/it)": speed,
                        "global_step/max_steps": f"{step}/{steps}"}
                 with (out / "logging.jsonl").open("a") as f:
                     f.write(json.dumps(row) + "\n")
-                by_task = {name: (ts[k] / tn[k]).item() for k, name in enumerate(TASKS) if tn[k] > 0}
+                by_task = {name: (ts[i] / tn[i]).item() for i, name in enumerate(TASKS) if tn[i] > 0}
+                by_task.update({f"{name}_decision": (td[i] / tn[i]).item() for i, name in enumerate(TASKS) if tn[i] > 0})
                 with (out / "replay-kl-by-task.jsonl").open("a") as f:
                     f.write(json.dumps({"step": step, **by_task}) + "\n")
-                print(f"step {step}/{steps} ce {ce_mean:.4f} kl {kl_mean:.5f} gn {grad_norm.item():.2f} lr {lr:.3g} "
-                      f"mem {row['memory(GiB)']:.1f}G {speed:.2f}s/it", flush=True)
+                print(f"step {step}/{steps} ce {ce_mean:.4f} kl {kl_mean:.5f} dec {dec_mean:.5f} gn {grad_norm.item():.2f} "
+                      f"lr {lr:.3g} mem {row['memory(GiB)']:.1f}G {speed:.2f}s/it", flush=True)
             acc.zero_()
             task_sum.zero_()
+            task_dec.zero_()
             task_n.zero_()
             t_log = time.time()
         if step in saves:

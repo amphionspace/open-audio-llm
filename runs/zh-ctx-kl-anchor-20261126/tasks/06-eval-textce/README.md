@@ -7,7 +7,8 @@
   - 按 README“后续：CE 只训正文”的判定逐项给出结论，并和 11-26 同臂比较。
 - **进展**：
   - 23:57Z 评测开始：kltreal = `real-textce/checkpoint-1557`，kltsynth = `real-synth-textce/checkpoint-3795`（两个纠偏 v2 run 的快照里都只出现这个路径）。
-  - 00:11Z 两臂纠偏 v2 完成，退出码 0；交付 27 组进行中。
+  - 00:11Z 两臂纠偏 v2 完成，退出码 0；
+  - 03:08Z 两臂交付 27 组完成，退出码全部 0；03:09Z 节点由 `stop_when_done.sh` 停掉。
 - **结果**：
   - **纠偏 v2（think 关），对 11.17 配对比较**（`cmp-ctxv2-r1117-{kltreal,kltsynth}.json`，`*` = 95% CI 不含 0；括号里是 11-26 同臂）：
 
@@ -40,3 +41,49 @@
     - 逐条配对（新不出字 / 新出字，精确 McNemar）：11.17 → kltsynth 109 / 71（p = 0.006，漏识别显著变多）；klsynth → kltsynth 140 / 20（p < 1e-20）；11.17 → kltreal 36 / 99（变少）；klreal → kltreal 32 / 41（p = 0.35，无差别）。
     - 也就是说，CE 不再训判断 token 后，合成数据那一臂的在场判断换了个方向偏：11-26 往“出字”偏（漏识别少、误触发多），这次往“不出字”偏。交付 27 组的 TS 项要看这个方向是否在真实 TS 数据上也出现。
   - W&B：kltreal <https://wandb.ai/1016097967-amphion/open-audio-llm/runs/run-20261127T000447Z-d9ebe564>，kltsynth <https://wandb.ai/1016097967-amphion/open-audio-llm/runs/run-20261127T000447Z-36398a81>，远端都是 finished、有指标。
+
+  - **交付 27 组**（`runs/zh-ctx-grpo-20261120/tasks/04-delivery/delivery-r1117-vs-{kltreal,kltsynth}.md`，比较日志 `compare-delivery-{kltreal,kltsynth}.log`；两臂各 27 个 W&B run 远端 finished、有指标，快照里只出现各自最后的 checkpoint）。
+    - 判定 1 的 TS 项（`*` 显著，**粗体**为显著变差；括号里是 11-26 同臂）：
+
+      | 项目 | 11.17 | kltreal（klreal） | kltsynth（klsynth） |
+      |---|---|---|---|
+      | v12 FA | 2.46 | **2.65\***（2.72\*） | **2.91\***（3.65\*） |
+      | v12 miss | 2.76 | **2.93\***（2.79） | 2.41\*（2.05\*） |
+      | 跟错人 FA | 2.58 | 2.43（2.96\*） | **4.30\***（4.07\*） |
+      | 跟错人 miss | 1.66 | 1.84（1.40\*） | 0.64\*（1.02\*） |
+      | 英文 TS FA | 6.20 | 5.57\*（5.85\*） | 6.30（8.41\*） |
+      | 英文 TS miss | 2.94 | **3.41\***（3.28\*） | 2.43\*（1.97\*） |
+      | 西语 TS v1 FA | 3.21 | 3.01（2.56\*） | **3.72\***（4.69\*） |
+      | 西语 TS v2 FA | 3.03 | 2.86（2.44\*） | **3.58\***（4.68\*） |
+      | 跨语种（西语）FA | 1.04 | 1.46（1.04） | 1.67（2.29\*） |
+
+    - 显著变差的全部项目：
+      - kltreal（15 组，23 项指标）：v12 CER、FA、miss；西语 TS v1、v2 的 WER 和 miss；babble3、babble4 的 CER 和 WER；英文 TS 的 WER 和 miss；跟错人 CER；asr-benchmark WER 和 miss；police CER；跨语种 miss；长对话 scene-asr miss；跨语种（英文）miss；场景 TS CER；babble-es WER；跨语种（西语）WER。
+      - kltsynth（13 组，21 项指标）：v12 FA；西语识别 WER；西语 TS v1、v2 的 WER 和 FA；babble4 的 CER、FA 和 WER；babble3 的 CER 和 WER；跟错人 CER 和 FA；asr-benchmark CER、热词命中率、英文 FA；police 热词命中率；跨语种 miss；长对话 scene-asr CER（4.72 → 8.17\*）；ctx-v1 miss（5.32 → 7.23\*）；babble-es WER。
+    - 纠偏相关：ctx-v1 CER kltreal 7.87 → 6.31\*；kltsynth 8.36（不显著，11-26 的 klsynth 是 5.76\*），因为 ctx-v1 的合成 TS 题整句不出字变多（同纠偏 v2）。chime4 kltsynth 9.42 → 6.69\*。
+  - **在场判断的翻转**（同 11-26 的做法：同一批 predictions 逐条比“出字 / 不出字”）：
+
+    | 目标不在场：新出字 / 新不出字 | 11.17 → kltreal | 11.17 → kltsynth | klsynth → kltsynth |
+    |---|---|---|---|
+    | v12 | 65 / 39 | 112 / 51 | 40 / 143 |
+    | 跟错人 | 11 / 17 | 69 / 0 | 30 / 21 |
+    | 英文 TS | 41 / 108 | 103 / 92 | 28 / 251 |
+    | 西语 TS v2 | 46 / 61 | 87 / 40 | 28 / 123 |
+
+    | 目标在场：新不出字 / 新出字 | 11.17 → kltreal | 11.17 → kltsynth |
+    |---|---|---|
+    | v12 | 66 / 43 | 35 / 80 |
+    | 英文 TS | 90 / 32 | 28 / 91 |
+    | 西语 TS v2 | 53 / 21 | 21 / 48 |
+
+    - kltsynth：往“出字”的偏移比 klsynth 少了约一半（v12 不在场新出字 187 → 112，英文 TS 256 → 103，西语 v2 166 → 87），但还在，所有语种同一方向。
+    - kltreal：和 klreal 一样两个方向都有翻转；英文、西语往“不出字”偏（漏识别多），v12 误触发和漏识别同时变差，是小幅的分辨力损失，不只是门槛移动。幅度 0.2–0.5 个百分点，和 K 记录的两次独立 SFT 之间的波动（约 0.4）同量级。
+    - 纠偏 v2、ctx-v1 的合成 TS 题（TTS 音色）上，kltsynth 反而往“不出字”偏（上面“kltsynth 的 CER 为什么变差”）。
+  - **kltsynth 长对话 scene-asr CER 4.72 → 8.17\* 的原因**：长段口述（约 300 字）只转写前一两句就结束，结尾是完整的句号。输出不到参考一半长度的条数 11.17 60、klsynth 57、kltsynth 92；没有截断到最大长度的（finish_reason 都是 stop）。是结束 token 提前，和在场判断一样，是 CE 流（都是短句）在训的一个“决定” token。
+- **判定**（README“后续：CE 只训正文”，同“判定”1–3）：
+  1. TS 保住：**两臂都不成立**。kltreal 3 项（v12 FA 2.65\*、v12 miss 2.93\*、英文 TS miss 3.41\*），kltsynth 4 项（v12 FA 2.91\*、跟错人 FA 4.30\*、西语 TS v1/v2 FA 3.72\* / 3.58\*）。
+  2. 真实录音纠偏收益：**两臂都成立**。没见过的真实题 kltreal +2.8\*、kltsynth +5.5\*，和 11-26 同臂没有显著差别。
+  3. 交付评测：kltreal 15 组、kltsynth 13 组有显著变差，都不是替换候选。
+- **结论**：
+  - CE 直接训在场判断 token 是 TS 回退的一部分原因：去掉以后，合成数据那一臂往“出字”的偏移少了一半，纠偏收益不变。
+  - 剩下的偏移经由共享参数传过来（按写定的分支“1 不成立”）。训练脚本和回放标签的核查（README“后续 2”）表明回放 KL 里在场判断 token 只占约 5% 的权重，而回放的不在场样本上这个 token 的 KL 已经从开训时约 1e-4 涨到约 0.02，锚定看得到偏移，但给它的权重太小。

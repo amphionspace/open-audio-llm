@@ -13,3 +13,5 @@ tasks:
 - {id: train-real-synth, name: 臂 B：CE 另加合成说字数据 train（5,059 条 x 3 次），回放 KL 拉住 11.17，4 卡, config: configs/train-real-synth.yaml, depends_on: []}
 - {id: train-real-textce, name: 后续臂 A：同臂 A，CE 只训正文（ce_text_only），4 卡, config: configs/train-real-textce.yaml, depends_on: []}
 - {id: train-real-synth-textce, name: 后续臂 B：同臂 B，CE 只训正文（ce_text_only），4 卡, config: configs/train-real-synth-textce.yaml, depends_on: []}
+- {id: train-real-deckl, name: 后续 2 臂 A：同后续臂 A，回放 KL 加在场判断项（decision_kl_weight 1.0），4 卡, config: configs/train-real-deckl.yaml, depends_on: []}
+- {id: train-real-synth-deckl, name: 后续 2 臂 B：同后续臂 B，回放 KL 加在场判断项（decision_kl_weight 1.0），4 卡, config: configs/train-real-synth-deckl.yaml, depends_on: []}
