@@ -1,0 +1,16 @@
+# 由 scripts/make_configs.py 生成，不要手改。
+version: 1
+name: zh-ctx-mainline-pair-20261127
+purpose: 主线一轮（SFT → GRPO）的成对对照：K 那一轮去掉上下文纠偏部分（合成说字数据、think、GRPO 的纠偏计划和奖励），其余同 K；和已有的 K + GRPO（kgrpo）比，得到纠偏数据和方法在一轮 SFT → GRPO 里的净收益和回退
+policy:
+  evaluation_backend: vllm
+  human_review_required: false
+  training_coverage: replay_quota
+  training_steps: SFT 3000, GRPO 400 (as K)
+inputs:
+  init_model: /workspace/data/packages/amphionasr-1.7b-v3-v18aes-mtp-candidate/model
+tasks:
+- id: sft-k0
+  name: K0 SFT：K 的数据去掉纠偏部分，从 11.17 起训 3000 步（1 节点 8 卡，K 的参数）
+  config: configs/train-k0.yaml
+  depends_on: []
