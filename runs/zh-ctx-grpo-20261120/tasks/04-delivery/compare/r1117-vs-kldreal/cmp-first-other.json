@@ -1,0 +1,417 @@
+{
+  "run_a": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-r1117/runs/run-20261122T010525Z-2c88f5ee",
+  "run_b": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-kldreal/runs/run-20261127T054721Z-e4212b3a",
+  "scoring": {
+    "version": 4,
+    "normalization": "v4: zh varieties and ja by character, others by word (CJK ideographs one each); zh: NFKC, lower, GigaSpeech tags, OpenCC t2s, Arabic numerals read in Chinese (4+ digit runs digit by digit, else cn2an an2cn), punctuation and symbols, SpeechIO fillers 呃啊 and erhua; v3: 幺/两/〇 read as 一/二/零 inside 3+ Chinese digit runs; v4: ja by character on v1 text; en: Whisper EnglishTextNormalizer; presence on v1 text",
+    "normalizers": {
+      "cn2an": "0.5.24",
+      "opencc": "0.1.7",
+      "whisper-normalizer": "0.1.15"
+    }
+  },
+  "resamples": 2000,
+  "confidence": 0.95,
+  "seed": 20261112,
+  "cluster_by": null,
+  "samples": 9030,
+  "clusters": 9030,
+  "protocol_differences": {},
+  "skipped_sources": [],
+  "overall": {
+    "all/CER": {
+      "error_rate": {
+        "a": 0.20113125061031947,
+        "b": 0.2091762001697627,
+        "diff": 0.008044949559443237,
+        "ci": [
+          0.004900358001840448,
+          0.011203275652861906
+        ],
+        "significant": true
+      },
+      "false_alarm_rate": {
+        "a": 0.025832091405861898,
+        "b": 0.023596621957277696,
+        "diff": -0.0022354694485842014,
+        "ci": [
+          -0.0063201407527704685,
+          0.0014892402750863684
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.016586730615507594,
+        "b": 0.017985611510791366,
+        "diff": 0.0013988808952837724,
+        "ci": [
+          -0.0014065263706711582,
+          0.004417759462286445
+        ],
+        "significant": false
+      }
+    }
+  },
+  "sources": {
+    "ts_asr_nearfar@firstother-v3-20261105:control-aishell4-ef-mf-neg/ts_asr/zh": {
+      "false_alarm_rate": {
+        "a": 0.1016260162601626,
+        "b": 0.08943089430894309,
+        "diff": -0.01219512195121951,
+        "ci": [
+          -0.043859649122807015,
+          0.01852548036758559
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_nearfar@firstother-v3-20261105:control-aishell4-ef-mf-pos/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.15937149270482603,
+        "b": 0.15404945512472396,
+        "diff": -0.005322037580102079,
+        "ci": [
+          -0.015358502799286952,
+          0.0024003378958461414
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.008130081300813009,
+        "b": 0.0,
+        "diff": -0.008130081300813009,
+        "ci": [
+          -0.021099281270113703,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_nearfar@firstother-v3-20261105:control-alimeeting-ed-mf-neg/ts_asr/zh": {
+      "false_alarm_rate": {
+        "a": 0.03409090909090909,
+        "b": 0.011363636363636364,
+        "diff": -0.022727272727272724,
+        "ci": [
+          -0.04666959064327485,
+          -0.005208333333333334
+        ],
+        "significant": true
+      }
+    },
+    "ts_asr_nearfar@firstother-v3-20261105:control-alimeeting-ed-mf-pos/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.0779870512065921,
+        "b": 0.075927015891701,
+        "diff": -0.002060035314891101,
+        "ci": [
+          -0.00786428730775573,
+          0.0025989338261141618
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_nearfar@firstother-v3-20261105:control-alimeeting-ef-mf-neg/ts_asr/zh": {
+      "false_alarm_rate": {
+        "a": 0.03409090909090909,
+        "b": 0.022727272727272728,
+        "diff": -0.01136363636363636,
+        "ci": [
+          -0.03508771929824561,
+          0.010473974348319882
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_nearfar@firstother-v3-20261105:control-alimeeting-ef-mf-pos/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.07293505983912105,
+        "b": 0.08181283107710417,
+        "diff": 0.008877771237983126,
+        "ci": [
+          0.002632858916894123,
+          0.01699662807118496
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_nearfar@firstother-v3-20261105:control-alimeeting-en-mf-neg/ts_asr/zh": {
+      "false_alarm_rate": {
+        "a": 0.022727272727272728,
+        "b": 0.011363636363636364,
+        "diff": -0.011363636363636364,
+        "ci": [
+          -0.029247688185982182,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_nearfar@firstother-v3-20261105:control-alimeeting-en-mf-pos/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.06778497155189327,
+        "b": 0.07013929762605454,
+        "diff": 0.002354326074161278,
+        "ci": [
+          -0.0015557773821477036,
+          0.006287632387292034
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_nearfar@firstother-v3-20261105:crowded-aishell4-ef-mf-neg/ts_asr/zh": {
+      "false_alarm_rate": {
+        "a": 0.078125,
+        "b": 0.08854166666666667,
+        "diff": 0.010416666666666671,
+        "ci": [
+          -0.008000534759358295,
+          0.02799035644792268
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_nearfar@firstother-v3-20261105:crowded-aishell4-ef-mf-pos/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.3212395489759914,
+        "b": 0.330827644396717,
+        "diff": 0.00958809542072564,
+        "ci": [
+          -0.0058125393227659,
+          0.028873617902503885
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0390625,
+        "b": 0.0390625,
+        "diff": 0.0,
+        "ci": [
+          -0.012787723785166238,
+          0.012853470437017993
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_nearfar@firstother-v3-20261105:crowded-alimeeting-ed-mf-neg/ts_asr/zh": {
+      "false_alarm_rate": {
+        "a": 0.010460251046025104,
+        "b": 0.011506276150627616,
+        "diff": 0.0010460251046025115,
+        "ci": [
+          -0.005279970575825295,
+          0.008386626944720286
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_nearfar@firstother-v3-20261105:crowded-alimeeting-ed-mf-pos/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.23455648793438583,
+        "b": 0.24681173849144267,
+        "diff": 0.01225525055705684,
+        "ci": [
+          0.002562352835850462,
+          0.022150363931290905
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.02405857740585774,
+        "b": 0.02510460251046025,
+        "diff": 0.0010460251046025097,
+        "ci": [
+          -0.007322367412210563,
+          0.010548801678852608
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_nearfar@firstother-v3-20261105:crowded-alimeeting-ef-mf-neg/ts_asr/zh": {
+      "false_alarm_rate": {
+        "a": 0.013598326359832637,
+        "b": 0.012552301255230125,
+        "diff": -0.0010460251046025115,
+        "ci": [
+          -0.006493858635941064,
+          0.00422855376787186
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_nearfar@firstother-v3-20261105:crowded-alimeeting-ef-mf-pos/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.22870146494097568,
+        "b": 0.24176267008012137,
+        "diff": 0.013061205139145687,
+        "ci": [
+          0.006109017845238947,
+          0.0203577302281401
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.006276150627615063,
+        "b": 0.008368200836820083,
+        "diff": 0.0020920502092050203,
+        "ci": [
+          -0.0011061946902654867,
+          0.00635643878672166
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_nearfar@firstother-v3-20261105:crowded-alimeeting-en-mf-neg/ts_asr/zh": {
+      "false_alarm_rate": {
+        "a": 0.010460251046025104,
+        "b": 0.008368200836820083,
+        "diff": -0.002092050209205021,
+        "ci": [
+          -0.008687157882771676,
+          0.004210859778802866
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_nearfar@firstother-v3-20261105:crowded-alimeeting-en-mf-pos/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.2221353055516048,
+        "b": 0.23313421514246432,
+        "diff": 0.010998909590859529,
+        "ci": [
+          0.00517238534785424,
+          0.016812807522099796
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.014644351464435146,
+        "b": 0.01778242677824268,
+        "diff": 0.0031380753138075326,
+        "ci": [
+          -0.003154657147600863,
+          0.00954528033970429
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_nearfar@firstother-v3-20261105:crowded-lowsim-aishell4-ef-mf-pos/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.3910469848316685,
+        "b": 0.37920828708842025,
+        "diff": -0.01183869774324825,
+        "ci": [
+          -0.04168204684284453,
+          0.015019341253238876
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.08247422680412371,
+        "b": 0.07216494845360824,
+        "diff": -0.010309278350515469,
+        "ci": [
+          -0.03371744126659855,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_nearfar@firstother-v3-20261105:crowded-lowsim-alimeeting-ed-mf-pos/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.2866293532338308,
+        "b": 0.292226368159204,
+        "diff": 0.005597014925373178,
+        "ci": [
+          -0.014941823739599338,
+          0.024943554534387614
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0234375,
+        "b": 0.026041666666666668,
+        "diff": 0.002604166666666668,
+        "ci": [
+          -0.013228390383562796,
+          0.01823155268324606
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_nearfar@firstother-v3-20261105:crowded-lowsim-alimeeting-ef-mf-pos/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.3297637447560168,
+        "b": 0.3631044380657982,
+        "diff": 0.0333406933097814,
+        "ci": [
+          0.005027058372914185,
+          0.06218860200999227
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.00847457627118644,
+        "b": 0.012711864406779662,
+        "diff": 0.004237288135593221,
+        "ci": [
+          0.0,
+          0.013334821428571422
+        ],
+        "significant": false
+      }
+    },
+    "ts_asr_nearfar@firstother-v3-20261105:crowded-lowsim-alimeeting-en-mf-pos/ts_asr/zh": {
+      "error_rate": {
+        "a": 0.29263430678760094,
+        "b": 0.30110634904814115,
+        "diff": 0.008472042260540213,
+        "ci": [
+          -0.006081205330742459,
+          0.0221130807173212
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.01532567049808429,
+        "b": 0.022988505747126436,
+        "diff": 0.007662835249042146,
+        "ci": [
+          0.0,
+          0.02032520325203252
+        ],
+        "significant": false
+      }
+    }
+  }
+}
