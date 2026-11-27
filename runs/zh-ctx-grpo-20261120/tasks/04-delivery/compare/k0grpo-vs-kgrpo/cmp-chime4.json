@@ -1,0 +1,69 @@
+{
+  "run_a": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-k0grpo/runs/run-20261127T181735Z-b189d5f0",
+  "run_b": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-kgrpo/runs/run-20261122T152347Z-0b60557b",
+  "scoring": {
+    "version": 4,
+    "normalization": "v4: zh varieties and ja by character, others by word (CJK ideographs one each); zh: NFKC, lower, GigaSpeech tags, OpenCC t2s, Arabic numerals read in Chinese (4+ digit runs digit by digit, else cn2an an2cn), punctuation and symbols, SpeechIO fillers 呃啊 and erhua; v3: 幺/两/〇 read as 一/二/零 inside 3+ Chinese digit runs; v4: ja by character on v1 text; en: Whisper EnglishTextNormalizer; presence on v1 text",
+    "normalizers": {
+      "cn2an": "0.5.24",
+      "opencc": "0.1.7",
+      "whisper-normalizer": "0.1.15"
+    }
+  },
+  "resamples": 2000,
+  "confidence": 0.95,
+  "seed": 20261112,
+  "cluster_by": null,
+  "samples": 1320,
+  "clusters": 1320,
+  "protocol_differences": {},
+  "skipped_sources": [],
+  "overall": {
+    "all/WER": {
+      "error_rate": {
+        "a": 0.08965410268341864,
+        "b": 0.11385140375368388,
+        "diff": 0.024197301070265242,
+        "ci": [
+          0.015050278779123804,
+          0.03362568689493861
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.055303030303030305,
+        "b": 0.0803030303030303,
+        "diff": 0.025,
+        "ci": [
+          0.015151515151515152,
+          0.034848484848484844
+        ],
+        "significant": true
+      }
+    }
+  },
+  "sources": {
+    "chime4@isolated-1ch-20261026:et05_real/asr/en": {
+      "error_rate": {
+        "a": 0.08965410268341864,
+        "b": 0.11385140375368388,
+        "diff": 0.024197301070265242,
+        "ci": [
+          0.015050278779123804,
+          0.03362568689493861
+        ],
+        "significant": true
+      },
+      "miss_rate": {
+        "a": 0.055303030303030305,
+        "b": 0.0803030303030303,
+        "diff": 0.025,
+        "ci": [
+          0.015151515151515152,
+          0.034848484848484844
+        ],
+        "significant": true
+      }
+    }
+  }
+}
