@@ -1031,4 +1031,8 @@ open-audio-llm experiment run --config runs/zh-ctx-clue-target-20261117/experime
 - **已知问题**：train-v1 的 `train` 有 66/2,984 条、`train_ts` 有 63/2,917 条完全没有标点，ts-twins 里的 63 条是同一批句子（约 2.2%，本地复核过，例如“喂一一零吗我要报案我捡到个黑色钱包……”）。implicit-v1 没有这个问题。
   - 补标点会移动 `labels.context_correction.segments` 的字符位置，要和 think 表、`metadata.scene.targets` 一起改。
   - 现在没有训练在用这几份数据，放到下一版合成数据里修，到时一并重定 GRPO 目标表。
+- **训练文本终版 v4**（2026-11-27，阿拉伯数字，规则 9；adc #318）：三份合成数据都出了 `-final-v4-20261127`，修好之前纠偏线不切。核对脚本 `scripts/check_text_final_v4.py`，11-27 的结果如下，已报给 amphiondata-58：
+  - **`labels.context_correction` 没跟着改**：target 改了的 1,564 条记录（train-v1 train 472、train_ts 456，implicit-v1 两份各 90，ts-twins 456）里，segments 拼接和 cot.final 都还是原文，等于新 target 的是 0 条。think 行由 cot 生成，GRPO 的 context targets 由 segments 生成，切过去会和答案对不上。
+  - **说字说明里指字本身的数字被改了**：只有“一百的百”这一种，被改成“100的百”。共 7 句，三份数据合计 19 条，比如“不是数字一百的百”。同样的写法有 2 处被保留了。建议加例外：数字词后面跟“的”，再接一个包含在这个数字词里的字时，保留汉字。
+  - **没问题的**：笔画、部首说明都保留了（“三点水”“一横”等）；尾号、套餐价、钟点的改法都对。
 - 实验目录里只放配置、脚本、执行记录和分析结果，不放数据文件。
