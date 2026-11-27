@@ -56,3 +56,11 @@ K0 = K 那一轮去掉纠偏部分，其余完全照 K 的实际配置（`script
 
 - ACP pt-f4eiiqi0（1 节点 8 卡），11-27 14:01Z 提交，14:02Z 分到节点 10.119.16.252（W&B 转发已放行）。节点脚本 14:11Z 放入，K0 SFT 随即开始。执行器 `/workspace/workspace/mingdong/scratch/acp-ctx-mainline-pair`，节点脚本 `scripts/acp-node.sh`，跑完由 `stop_when_done.sh` 停节点。
 - 预计：SFT 约 1.5 小时，挖题约 1 小时，GRPO 约 40 分钟，评测约 2.5 小时，合计约 6 小时。
+
+<!-- execution-status -->
+
+执行状态：completed；质量状态：未核实。
+
+开始：未知；结束：未结束；退出码：未知。
+
+<!-- /execution-status -->

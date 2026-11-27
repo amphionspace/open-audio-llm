@@ -17,7 +17,7 @@ a=; for d in $E/tasks/01-sft-k0/attempts/*/; do grep -q '"execution": "completed
 START=$(bash /workspace/workspace/mingdong/scratch/acp-dev/ae-models.sh fetch \
   whai:open-audio-llm/runs/zh-ctx-mainline-pair-20261127/tasks/01-sft-k0/attempts/$a/artifacts/training/checkpoint-3000/) || exit 5
 grep -q "path: $START\$" $C/serve-asr-0.yaml || { echo "start checkpoint is $START; rerun scripts/make_configs.py"; exit 5; }
-! grep -q "context_targets\|plan-ctx" configs/train-data-grpo.yaml || { echo "data config still has the ctx plan"; exit 5; }
+! grep -v "^#" configs/train-data-grpo.yaml | grep -q "context_targets\|plan-ctx" || { echo "data config still has the ctx plan"; exit 5; }  # skip the header comment, which names both
 echo "start $START $(date -u +%FT%TZ)"
 for i in $(seq 360); do [ $(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | awk '$1>2000' | wc -l) -eq 0 ] && break; sleep 10; done
 nvidia-smi --query-gpu=index,memory.used --format=csv,noheader

@@ -14,3 +14,8 @@ tasks:
   name: K0 SFT：K 的数据去掉纠偏部分，从 11.17 起训 3000 步（1 节点 8 卡，K 的参数）
   config: configs/train-k0.yaml
   depends_on: []
+- id: grpo
+  name: K0 GRPO 400 步（1 节点 8 卡，K 那一轮的配方去掉 ctx 计划和奖励，计划在 K0 上重挖）
+  config: configs/train-grpo.yaml
+  depends_on:
+  - sft-k0
