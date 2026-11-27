@@ -3,14 +3,15 @@
 #   train  both arms of the set through the experiment launcher: arm A (real) on GPUs 0-3 first; arm B (real-synth) on
 #          GPUs 4-7 starts once arm A's data preflight of the shared replay config has finished (the two preflights would
 #          build the same index cache at once); waits for both, requires execution "completed" for both;
-#   eval   the last checkpoint of each arm (base: klreal, klsynth; textce: kltreal, kltsynth; deckl: kldreal, kldsynth):
+#   eval   the last checkpoint of each arm (base: klreal, klsynth; textce: kltreal, kltsynth; deckl: kldreal, kldsynth;
+#          decbatch: kldbreal, kldbsynth):
 #          context-correction v2
 #          think off of both first (GPUs 4/5, 6/7, runs/zh-ctx-grpo-k-20261122 configs and run_eval.sh) while arm A runs
 #          the 27 delivery suites (GPUs 0-3, runs/zh-ctx-grpo-20261120 acp-delivery-one.sh); then arm B's on GPUs 4-7.
 # Outputs: /workspace/data/ae-runs/ctx-kl-anchor-20261126/<arm dir>/checkpoint-<step> (models),
 #          /workspace/data/ae-runs/ctx-grpo-20261120-delivery-<name> and ctx-grpo-k-20261122-<name> (evaluations).
 # usage: acp-node.sh SET [stage ...]   (SET: base = the 11-26 arms, textce = README "后续：CE 只训正文",
-#        deckl = README "后续 2：回放 KL 加在场判断项";
+#        deckl = README "后续 2：回放 KL 加在场判断项", decbatch = README "后续 3：判断项用大批 TS 样本";
 #        stages: train eval; default both, in that order)
 set -u; umask 002
 R=/workspace/workspace/mingdong/repo/oal-ctx-grpo; X=$R/runs/zh-ctx-kl-anchor-20261126
@@ -28,7 +29,9 @@ case ${1:-} in
           DA=real-textce DB=real-synth-textce NA=kltreal NB=kltsynth;;
   deckl) IA=train-real-deckl IB=train-real-synth-deckl TA=07-train-real-deckl TB=08-train-real-synth-deckl
          DA=real-deckl DB=real-synth-deckl NA=kldreal NB=kldsynth;;
-  *) echo "usage: acp-node.sh base|textce|deckl [stage ...]"; exit 2;;
+  decbatch) IA=train-real-decbatch IB=train-real-synth-decbatch TA=10-train-real-decbatch TB=11-train-real-synth-decbatch
+            DA=real-decbatch DB=real-synth-decbatch NA=kldbreal NB=kldbsynth;;
+  *) echo "usage: acp-node.sh base|textce|deckl|decbatch [stage ...]"; exit 2;;
 esac
 shift
 for i in $(seq 60); do  # the forward only lets registered node IPs through; training and every eval log to W&B

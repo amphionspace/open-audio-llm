@@ -18,6 +18,12 @@ resists drift.
   the KL at each replay sample's presence decision, its second supervised token (the first must be "language"), which
   the token mean gives only about 5% of the weight. 0 when absent (the 11-26 and "CE 只训正文" arms); the decision KL is
   logged either way.
+- parameters.decision_batch (README "后续 3：判断项用大批 TS 样本"): when > 0, decision_kl_weight applies instead to the
+  mean decision KL of decision_batch TS samples (ts_positive / ts_negative) per rank per step, drawn from a second
+  instance of the replay data with seed decision_seed (an independent stream; other tasks are skipped) and run in
+  chunks of decision_micro_batch; the replay sample keeps only its token-mean KL, as the "CE 只训正文" arms, and its
+  decision KL is logged as before (first sight, before any update on it). Follow-up 2 put the term on the one replay
+  sample per rank, whose decision gradients barely agree between samples (tasks/09-eval-deckl "判定").
 - steps = views x the CE batches of one epoch per rank, so each CE record is seen about `views` times; linear warmup,
   then cosine from lr to min_lr.
 - rank 0 appends ms-swift shaped rows to <output_dir>/logging.jsonl (read by the launcher's W&B recorder) and the
@@ -55,6 +61,28 @@ DROP = ("catalog_task", "twin_enroll_features", "ts_activity")
 GRAD_BUCKET = 200_000_000  # floats per all-reduce, as ft_enc_replay.py
 # Rank 0 writes a 4.7 GB checkpoint to quarkfs while the others wait in a barrier; NCCL's default 10 min may not cover it.
 PG_TIMEOUT = timedelta(hours=1)
+DECISION_TASKS = (1, 2)  # catalog_task codes of ts_positive, ts_negative
+
+
+def first_item(items):
+    """collate_fn of the decision stream: the one uncollated sample of a size-1 batch (kept or skipped by task)."""
+    return items[0]
+
+
+def decision_kl(model, teacher, batch, language):
+    """Per-row KL(teacher || student) at the presence decision, each row's second supervised token (the first must be
+    "language"). Rows are right padded by the collator; the model is causal, so each row's logits ignore the padding."""
+    labels = batch["labels"][:, 1:]
+    mask = labels != -100
+    order = mask.cumsum(1)
+    first, second = mask & (order == 1), mask & (order == 2)
+    assert bool((first.sum(1) == 1).all()) and bool((labels[first] == language).all()), "a row not starting with 'language'"
+    assert bool((second.sum(1) == 1).all()), "a row without a presence-decision token"
+    inputs = {k: v for k, v in batch.items() if k not in DROP and k != "labels"}
+    with torch.no_grad():
+        t_logits = teacher(**inputs, use_cache=False).logits[:, :-1][second].float()
+    s_logits = model(**inputs, use_cache=False).logits[:, :-1][second].float()
+    return F.kl_div(s_logits.log_softmax(-1), t_logits.log_softmax(-1), log_target=True, reduction="none").sum(-1)
 
 
 def main():
@@ -89,6 +117,8 @@ def main():
     text_only = bool(P.get("ce_text_only", False))
     (language,) = processor.tokenizer.encode("language", add_special_tokens=False)
     decision_weight = float(P.get("decision_kl_weight", 0.0))
+    decision_n = int(P.get("decision_batch", 0))
+    replay_decision_weight = 0.0 if decision_n else decision_weight  # the replay sample's own term (follow-up 2)
 
     def drop_prefix(labels):
         """Labels with every position up to and including each row's first <asr_text> set to -100."""
@@ -117,6 +147,12 @@ def main():
     ce_sampler = CatalogBatchSampler(ce_set, batch_size=1, rank=rank, world_size=world, shuffle=True)
     rp_sampler = CatalogBatchSampler(rp_set, batch_size=1, rank=rank, world_size=world, shuffle=True)
     ce_sampler.set_epoch(0)
+    if decision_n:
+        dc_config = read_data_config(P["replay_data"])
+        assert int(P["decision_seed"]) != int(dc_config["seed"]), "the decision stream would repeat the replay stream"
+        dc_config["seed"] = int(P["decision_seed"])
+        dc_set = CatalogSwiftDataset(dc_config, encode=template.encode, message_format="qwen3_asr")
+        dc_sampler = CatalogBatchSampler(dc_set, batch_size=1, rank=rank, world_size=world, shuffle=True)
     per_epoch = torch.tensor([len(ce_sampler)], device=dev)
     dist.all_reduce(per_epoch, op=dist.ReduceOp.MIN)
     steps = math.ceil(P["views"] * int(per_epoch))
@@ -129,12 +165,12 @@ def main():
         progress = (step - warmup) / max(1, steps - warmup)
         return P["min_lr"] + (P["lr"] - P["min_lr"]) * 0.5 * (1 + math.cos(math.pi * progress))
 
-    def batches(dataset, sampler, workers):
+    def batches(dataset, sampler, workers, collate=template.data_collator, generator=None):
         epoch = 0
         while True:
             sampler.set_epoch(epoch)
             yield from torch.utils.data.DataLoader(dataset, batch_sampler=sampler, num_workers=workers,
-                                                   collate_fn=template.data_collator, prefetch_factor=2)
+                                                   collate_fn=collate, prefetch_factor=2, generator=generator)
             epoch += 1
 
     def to_dev(batch):
@@ -218,10 +254,17 @@ def main():
     model.train()
     ce_it = batches(ce_set, ce_sampler, P["ce_workers"])
     rp_it = batches(rp_set, rp_sampler, P["replay_workers"])
+    if decision_n:
+        # Its own generator: the loaders' worker seeds come from the default generator otherwise, and drawing them for
+        # this stream would shift the CE and replay streams away from the "CE 只训正文" arms' (paired windows).
+        dc_it = batches(dc_set, dc_sampler, P["decision_workers"], collate=first_item,
+                        generator=torch.Generator().manual_seed(int(P["decision_seed"])))
     acc = torch.zeros(4, device=dev)  # CE sum, KL sum, steps since the last log, decision KL sum
     task_sum = torch.zeros(len(TASKS), device=dev)
     task_dec = torch.zeros(len(TASKS), device=dev)
     task_n = torch.zeros(len(TASKS), device=dev)
+    dcb_sum = torch.zeros(len(TASKS), device=dev)  # decision-batch KL by task
+    dcb_n = torch.zeros(len(TASKS), device=dev)
     t_log = time.time()
     for step in range(1, steps + 1):
         lr = lr_at(step)
@@ -237,7 +280,20 @@ def main():
         tasks = rb["catalog_task"]
         with torch.autocast("cuda", dtype=torch.bfloat16):
             kl, dec, per, per_dec = replay_kl(rb)
-            (P["kl_weight"] * (kl + decision_weight * dec)).backward()
+            (P["kl_weight"] * (kl + replay_decision_weight * dec)).backward()
+        if decision_n:
+            kept = []
+            while len(kept) < decision_n:
+                item = next(dc_it)
+                if int(item["catalog_task"]) in DECISION_TASKS:
+                    kept.append(item)
+            for i in range(0, decision_n, P["decision_micro_batch"]):
+                db = to_dev(template.data_collator(kept[i:i + P["decision_micro_batch"]]))
+                with torch.autocast("cuda", dtype=torch.bfloat16):
+                    d = decision_kl(model, teacher, db, language)
+                    (P["kl_weight"] * decision_weight * d.sum() / decision_n).backward()
+                dcb_sum.index_add_(0, db["catalog_task"], d.detach())
+                dcb_n.index_add_(0, db["catalog_task"], torch.ones_like(d.detach()))
         allreduce()
         grad_norm = torch.nn.utils.clip_grad_norm_(params, P["max_grad_norm"])
         opt.step()
@@ -247,16 +303,20 @@ def main():
         task_dec.index_add_(0, tasks, per_dec)
         task_n.index_add_(0, tasks, torch.ones_like(per))
         if step % P["log_every"] == 0 or step == steps or step <= 3:
-            stats = torch.cat([acc, task_sum, task_dec, task_n])
+            stats = torch.cat([acc, task_sum, task_dec, task_n, dcb_sum, dcb_n])
             dist.all_reduce(stats)
             n = stats[2].clamp_min(1)
             ce_mean, kl_mean, dec_mean = (stats[0] / n).item(), (stats[1] / n).item(), (stats[3] / n).item()
             k = len(TASKS)
-            ts, td, tn = stats[4:4 + k], stats[4 + k:4 + 2 * k], stats[4 + 2 * k:]
+            ts, td, tn = stats[4:4 + k], stats[4 + k:4 + 2 * k], stats[4 + 2 * k:4 + 3 * k]
+            bs, bn = stats[4 + 3 * k:4 + 4 * k], stats[4 + 4 * k:]
+            batch_mean = (bs.sum() / bn.sum().clamp_min(1)).item()
             if rank == 0:
                 speed = (time.time() - t_log) / max(1, int(acc[2].item()))
-                row = {"loss": ce_mean + P["kl_weight"] * (kl_mean + decision_weight * dec_mean), "ce_asr": ce_mean,
+                anchored = batch_mean if decision_n else dec_mean
+                row = {"loss": ce_mean + P["kl_weight"] * (kl_mean + decision_weight * anchored), "ce_asr": ce_mean,
                        "replay_kl": kl_mean, "replay_kl_decision": dec_mean,
+                       **({"decision_batch_kl": batch_mean} if decision_n else {}),
                        "grad_norm": grad_norm.item(), "learning_rate": lr,
                        "memory(GiB)": torch.cuda.max_memory_allocated() / 2 ** 30, "train_speed(s/it)": speed,
                        "global_step/max_steps": f"{step}/{steps}"}
@@ -264,14 +324,19 @@ def main():
                     f.write(json.dumps(row) + "\n")
                 by_task = {name: (ts[i] / tn[i]).item() for i, name in enumerate(TASKS) if tn[i] > 0}
                 by_task.update({f"{name}_decision": (td[i] / tn[i]).item() for i, name in enumerate(TASKS) if tn[i] > 0})
+                by_task.update({f"{name}_decision_batch": (bs[i] / bn[i]).item() for i, name in enumerate(TASKS)
+                                if bn[i] > 0})
                 with (out / "replay-kl-by-task.jsonl").open("a") as f:
                     f.write(json.dumps({"step": step, **by_task}) + "\n")
-                print(f"step {step}/{steps} ce {ce_mean:.4f} kl {kl_mean:.5f} dec {dec_mean:.5f} gn {grad_norm.item():.2f} "
+                print(f"step {step}/{steps} ce {ce_mean:.4f} kl {kl_mean:.5f} dec {dec_mean:.5f} "
+                      f"{f'decbatch {batch_mean:.5f} ' if decision_n else ''}gn {grad_norm.item():.2f} "
                       f"lr {lr:.3g} mem {row['memory(GiB)']:.1f}G {speed:.2f}s/it", flush=True)
             acc.zero_()
             task_sum.zero_()
             task_dec.zero_()
             task_n.zero_()
+            dcb_sum.zero_()
+            dcb_n.zero_()
             t_log = time.time()
         if step in saves:
             if rank == 0:
