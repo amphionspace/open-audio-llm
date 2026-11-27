@@ -18,5 +18,5 @@ while [ ${#left[@]} -gt 0 ]; do
       else echo "forwarder not up for $allow"; exit 1; fi
     else rest+=("$O"); fi
   done
-  left=("${rest[@]+"${rest[@]}"}"); [ ${#left[@]} -gt 0 ] && sleep 30
+  left=("${rest[@]+"${rest[@]}"}"); if [ ${#left[@]} -gt 0 ]; then sleep 30; fi
 done
