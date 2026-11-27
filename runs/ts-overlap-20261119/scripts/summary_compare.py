@@ -14,7 +14,9 @@ SUITE_ROWS_MAX = 60  # print per-suite rows only for small summaries (plain ASR 
 
 
 def load(run):
-    return json.load(open(glob.glob(f"/workspace/data/ae-runs/*/runs/{run}")[0] + "/summary.json"))["metrics"]
+    # A .json path is a summary written aside (rescore_v5.py); otherwise an AmphionEval run ID.
+    path = run if run.endswith(".json") else glob.glob(f"/workspace/data/ae-runs/*/runs/{run}")[0] + "/summary.json"
+    return json.load(open(path))["metrics"]
 
 
 def aggregate(metrics):
