@@ -68,9 +68,17 @@ def sft():
     d["train"] = drop_ctx(d["train"])
     assert "think" in d
     d.pop("think")
+    # K's window of 2000 passes only by the largest-remainder rounding: without the three sources, the smallest one
+    # (chime6 train_2spk) is rounded to a quota of 0 and the sampler refuses to start (01-sft-k0 attempt 001's
+    # preflight). Same rule as kgrpo's make_configs.py: the smallest divisor of epoch_samples at which every source's
+    # exact quota is at least 1; source shares are unchanged.
+    weights = [s["weight"] for s in d["train"]]
+    epoch, window = d["replay"]["epoch_samples"], d["replay"]["window_samples"]
+    need = max(window, math.ceil(sum(weights) / min(weights)))
+    d["replay"]["window_samples"] = next(x for x in range(need, epoch + 1) if epoch % x == 0)
     data = HERE / "configs/train-data-k0.yaml"
     dump(data, f"# 由 scripts/make_configs.py sft 生成，不要手改。= K 的 SFT 数据配置（zh-ctx-clue-target-20261117 configs/train-data-{K_ARM}.yaml），"
-               "去掉合成说字数据 train、train_ts、train_ts_twins 和 think 段；其余来源、版本、权重不变。\n", d)
+               "去掉合成说字数据 train、train_ts、train_ts_twins 和 think 段；replay.window_samples 按 kgrpo 的规则加大到每个来源配额至少 1；其余来源、版本、权重不变。\n", d)
     t = yaml.safe_load((Q9 / f"configs/train-{K_ARM}.yaml").read_text())
     t["data"]["config"] = str(data)
     assert len(t["preflight"]) == 1

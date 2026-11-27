@@ -1,4 +1,4 @@
-# 由 scripts/make_configs.py sft 生成，不要手改。= K 的 SFT 数据配置（zh-ctx-clue-target-20261117 configs/train-data-template-twins-dialog-final-1117.yaml），去掉合成说字数据 train、train_ts、train_ts_twins 和 think 段；其余来源、版本、权重不变。
+# 由 scripts/make_configs.py sft 生成，不要手改。= K 的 SFT 数据配置（zh-ctx-clue-target-20261117 configs/train-data-template-twins-dialog-final-1117.yaml），去掉合成说字数据 train、train_ts、train_ts_twins 和 think 段；replay.window_samples 按 kgrpo 的规则加大到每个来源配额至少 1；其余来源、版本、权重不变。
 augmentation:
   enrollment_noise_snr_db:
   - 10.0
@@ -129,7 +129,7 @@ nonspeech_sources:
 record_index: lance
 replay:
   epoch_samples: 2000000
-  window_samples: 2000
+  window_samples: 5000
 rir_sources:
 - dataset_id: dns5_noise_train
   split: rir
