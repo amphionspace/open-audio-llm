@@ -1035,4 +1035,11 @@ open-audio-llm experiment run --config runs/zh-ctx-clue-target-20261117/experime
   - **`labels.context_correction` 没跟着改**：target 改了的 1,564 条记录（train-v1 train 472、train_ts 456，implicit-v1 两份各 90，ts-twins 456）里，segments 拼接和 cot.final 都还是原文，等于新 target 的是 0 条。think 行由 cot 生成，GRPO 的 context targets 由 segments 生成，切过去会和答案对不上。
   - **说字说明里指字本身的数字被改了**：只有“一百的百”这一种，被改成“100的百”。共 7 句，三份数据合计 19 条，比如“不是数字一百的百”。同样的写法有 2 处被保留了。建议加例外：数字词后面跟“的”，再接一个包含在这个数字词里的字时，保留汉字。
   - **没问题的**：笔画、部首说明都保留了（“三点水”“一横”等）；尾号、套餐价、钟点的改法都对。
+  - **原地修正后**（11-27，amphiondata-58，版本名不变，等 PR 合并和注册表同步）：标签同步和“一百的百”例外都通过了核对。
+  - **v4 之前就有的问题：target 里带受保护词的备选**（amphiondata-58 发现，我复核）：
+    - 现象：比如“反应|反映”“必须|必需”。原因是展开 `[[P:反应|反映]]` 时没去掉备选，TTS 把两种写法都念了（质检 ASR 听到“反应反应”）。光去掉竖线修不好，这些记录要隔离。
+    - 范围：train-v1 的 train 74 条、train_ts 74 条，ts-twins 74 条，asr-dialog-v1-20261122 159/2,000 条；implicit-v1 没有。
+    - 模型确实学到了。交付评测 73 万条输出里，11.17 没有一条带竖线；K SFT 有 85 条，kgrpo 有 57 条（例如“确认是麓山街吗|麓山街的麓是岳”）。
+    - 已请 amphiondata-58 在 v4 里把这些记录隔离。主线一轮的成对对照（oal-ctx-grpo `runs/zh-ctx-mainline-pair-20261127`）两边都含 asr-dialog，K 多含 222 条。
+  - **asr-dialog-v1-20261122 没有出 v4**：按 zh_numbers.convert，2,000 条里 914 条会被改。已请补出 v4。
 - 实验目录里只放配置、脚本、执行记录和分析结果，不放数据文件。
