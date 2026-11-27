@@ -66,8 +66,9 @@ parameters:
   seed: 20261126
   ce_workers: 2
   replay_workers: 6
-  # 每步约 27 条（TS 占 59%）；开发机 CPU 单进程约 0.22 s/条。
-  decision_workers: 4
+  # 每步约 27 条（TS 占 59%）。节点上约 1.5 s/条：attempt 001 用 4 个 worker 时每步约 10 s，worker 占满、GPU 间歇空闲
+  # （节点 128 核里 77% 空闲）；12 个够每步约 4.5 s。只影响读取吞吐，样本顺序和在线混合不变。
+  decision_workers: 12
   log_every: 10
 preflight:
 - kind: prepare
