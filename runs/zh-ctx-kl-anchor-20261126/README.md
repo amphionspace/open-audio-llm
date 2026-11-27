@@ -193,7 +193,11 @@
 - **2 不成立**：拉住判断 token 和纠偏收益有冲突，看显式 / 隐式分组和后续 1 同臂的差。
 - **预计不变、只记录**：普通识别的小幅回退（babble3/4、西语识别、asr-benchmark、police）出在正文上；kltsynth 的长段提前结束出在结束 token 上。这次的改动都管不到，判定 3 会照样列出来。
 
-**执行**：待启动。
+**执行**：
+- 2026-11-27 03:48Z 提交 ACP pt-zmbgv4z9（1 节点 8 卡，节点 10.119.18.90；A 线、TS 线确认不冲突），执行器 `/workspace/workspace/mingdong/scratch/acp-ctx-klanchor-deckl`，节点脚本 `acp-node.sh deckl`，评测完成后由 `stop_when_done.sh` 停节点。
+- 03:50Z 臂 A（任务 07）启动，03:58Z 臂 B（任务 08）启动。
+- 生效核查第一条通过：第 1 步和后续 1 臂 A 是同一个 batch，CE 0.17080、token 平均 KL 1.893e-4 都相同；判断 token KL 1.9e-5（第 3 步 6.6e-4），只有数值差、不为 0；各类任务的 `_decision` 都在记录。
+- 04:11Z 两臂 W&B 远端都在更新（臂 A 到第 400 步），`train/ce_asr`、`train/replay_kl`、`train/loss` 都在。但 `train/replay_kl_decision` 没有上传：启动器的同步脚本（`runs/zh-ctx-grpo-20261120/shared/code-v3/src/open_audio_llm/scripts/sync_wandb.py` 的 `TRAIN_KEYS`）只传白名单里的键。不改代码快照、不重启训练，训练结束后从本地 `logging.jsonl` 把这个键补录到同一个 run。
 
 <!-- execution-status -->
 
