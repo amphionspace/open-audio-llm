@@ -12,7 +12,7 @@ usage: gate.py   (after eval_after_training.sh and compare_delivery.py k0grpo kg
 """
 import gzip
 import json
-import random
+import numpy as np
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -32,13 +32,17 @@ B, SEED, MARGIN = 2000, 20261127, 0.5  # resamples and seed as ae compare's 2000
 HIGHER_BETTER = {"term_hit_rate", "recall", "correction_rate", "keep_rate", "accuracy"}
 
 
-def bootstrap(pairs, stat):
-    """pairs: list of (a_item, b_item); stat(items) -> value; returns a, b, diff, (lo, hi) in points."""
-    rng = random.Random(SEED)
-    a = stat([p[0] for p in pairs]); b = stat([p[1] for p in pairs])
-    diffs = sorted(stat([pairs[i][1] for i in idx]) - stat([pairs[i][0] for i in idx])
-                   for idx in ([rng.randrange(len(pairs)) for _ in pairs] for _ in range(B)))
-    return 100 * a, 100 * b, 100 * (b - a), (100 * diffs[int(0.025 * B)], 100 * diffs[int(0.975 * B) - 1])
+def bootstrap(an, ad, bn, bd):
+    """Paired bootstrap of a pooled ratio sum(num) / sum(den), one entry per resampling unit (a mean: den = 1).
+    Returns a, b, diff and the percentile 95% CI of b - a, in points."""
+    an, ad, bn, bd = (np.asarray(x, dtype=float) for x in (an, ad, bn, bd))
+    rng, diffs = np.random.default_rng(SEED), []
+    for _ in range(B // 200):  # 200 resamples at a time keeps the index matrix small
+        idx = rng.integers(0, len(an), (200, len(an)))
+        diffs.append(bn[idx].sum(1) / bd[idx].sum(1) - an[idx].sum(1) / ad[idx].sum(1))
+    lo, hi = np.percentile(np.concatenate(diffs), [2.5, 97.5])
+    a, b = an.sum() / ad.sum(), bn.sum() / bd.sum()
+    return 100 * a, 100 * b, 100 * (b - a), (100 * lo, 100 * hi)
 
 
 def identity(config):  # compare_delivery.py's (it reads sys.argv on import, so copied)
@@ -86,13 +90,13 @@ def ctx_gate():
                 groups[(f"{src} {s['mode']}", f"{s['kind']} · {s['category']}", metric)].append(key)
     out = []
     for (src, g, metric), keys in sorted(groups.items()):
-        pairs = [(rows["k0grpo"][k][metric], rows["kgrpo"][k][metric]) for k in keys]
-        a, b, d, ci = bootstrap(pairs, lambda xs: sum(xs) / len(xs))
+        ones = [1] * len(keys)
+        a, b, d, ci = bootstrap([rows["k0grpo"][k][metric] for k in keys], ones, [rows["kgrpo"][k][metric] for k in keys], ones)
         out.append({"source": src, "group": g, "metric": metric, "items": len(keys), "k0grpo": a, "kgrpo": b,
                     "diff": d, "ci": ci})
     gate = [x for x in out if x["source"] == "emilia_zh" and x["group"] == "需要纠正 · explicit"]
     assert len(gate) == 1 and gate[0]["items"] == 516, gate
-    return out, gate[0]["ci"][0] > 0
+    return out, bool(gate[0]["ci"][0] > 0)
 
 
 def hotword(model, suffix):
@@ -112,16 +116,14 @@ def delivery_gate():
             for k in a:
                 by_utt[(k[0], k[1])].append(k)
             units = list(by_utt.values())
-            pairs = [([a[k] for k in ks], [b[k] for k in ks]) for ks in units]
-            flat = lambda xs: [s for u in xs for s in u]  # noqa: E731
-            cer = lambda xs: sum(s["errors"] for s in flat(xs)) / sum(s["units"] for s in flat(xs))  # noqa: E731
-            listed = lambda xs: [s for s in flat(xs) if s["condition"] != "none"]  # noqa: E731
-            rec = lambda xs: sum(s["hits"] for s in listed(xs)) / max(1, sum(s["gold_total"] for s in listed(xs)))  # noqa: E731
-            metrics = [("CER", "error_rate", cer)]
-            if sum(s["gold_total"] for s in listed([p[0] for p in pairs])):
-                metrics.append(("CER", "recall", rec))
-            for group, name, stat in metrics:
-                av, bv, d, ci = bootstrap(pairs, stat)
+            total = lambda run, field, listed=False: [sum(run[k][field] for k in ks if not listed or k[2] != "none")  # noqa: E731
+                                                      for ks in units]
+            metrics = [("CER", "error_rate", "errors", "units", False)]  # pooled as compare_delivery.py's pooled()
+            if sum(total(a, "gold_total", True)):
+                metrics.append(("CER", "recall", "hits", "gold_total", True))
+            for group, name, num, den, listed in metrics:
+                av, bv, d, ci = bootstrap(total(a, num, listed), total(a, den, listed), total(b, num, listed),
+                                          total(b, den, listed))
                 out.append({"suite": key, "group": group, "metric": name, "k0grpo": av, "kgrpo": bv, "diff": d,
                             "ci": ci})
             continue
@@ -134,9 +136,9 @@ def delivery_gate():
                             "diff": 100 * x["diff"], "ci": (100 * x["ci"][0], 100 * x["ci"][1])})
     for x in out:
         hb = x["metric"] in HIGHER_BETTER
-        x["worse"] = x["ci"][1] < 0 if hb else x["ci"][0] > 0
-        x["better"] = x["ci"][0] > 0 if hb else x["ci"][1] < 0
-        x["material"] = abs(x["diff"]) > MARGIN
+        x["worse"] = bool(x["ci"][1] < 0 if hb else x["ci"][0] > 0)
+        x["better"] = bool(x["ci"][0] > 0 if hb else x["ci"][1] < 0)
+        x["material"] = bool(abs(x["diff"]) > MARGIN)
     regressions, moves = [], []
     for x in out:
         if not (x["worse"] and x["material"]):
