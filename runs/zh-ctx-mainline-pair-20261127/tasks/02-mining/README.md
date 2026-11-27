@@ -8,5 +8,9 @@
   - 第一次（节点脚本 20-k0-retry，16:31Z）：`mining.sh` 开头的检查报 “data config still has the ctx plan” 并退出 5，没有开始挖题。
     - 原因：检查用 grep 找 `context_targets`，匹配到的是 make_configs.py 写的文件头注释（“去掉 ctx 计划和 context_targets”）。解析后的配置里没有 context_targets，计划也只有五份。
     - 修正：检查跳过注释行。第一次修改把注释写在了 `{ ... }` 里，造成语法错误（30-k0-mining，立即退出 2，没有运行任何东西），再改正后通过 `bash -n`。
-  - 第二次（31-k0-mining，16:35Z 起）：挖题 → GRPO → 评测。
+  - 第二次（31-k0-mining，16:33Z 起）：完成。
+    - 普通识别和漏识别 14 路在 16:57Z 跑完，TS 7 路在 17:20Z 跑完，17:22Z 切出计划，退出码全是 0。
+    - 计划条数（括号里是 kgrpo）：hotword 3708（3653）、nonspeech 1158（1274）、miss 810（760）、ts-absent 4467（4102）、ts-present 2467（3015），没有 ctx 计划（kgrpo 是 4149）。差别来自两个起点挖出的题不同。训练按份额抽题，条数不改变配方。
+    - W&B：`AmphionASR-ctx-mainline-pair-k0-mining-3000-n16-noctxplan`，远端 finished（https://wandb.ai/1016097967-amphion/open-audio-llm/runs/pw9iwcbz）。
+    - 产物：`plan-*.jsonl`、`summary.json`、`plans.log`。
   - 记录位置：挖题服务的执行记录写在 `tasks/01-mining/serve-*/attempts`。这个路径是从 kgrpo 的服务配置照搬的（kgrpo 的挖题是任务 01），相对于本实验，不碰 kgrpo 的记录。服务配置文件头里的模型名也还写着 K 的臂名，实际加载的路径是 K0 的 checkpoint-3000（`checkpoint-3000-29899967e537`）。挖题产物（计划、summary）在 `tasks/02-mining/`。
