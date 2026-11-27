@@ -11,7 +11,13 @@ forgetting in the LLM; the tower still drifted on data the simulator does not co
 loss = CE_sim + LAMBDA * aux_sim + KL_WEIGHT * KL_replay, one simulated micro-batch and one replay batch per step.
 tasks/28 (MEETING_PLAN = a meeting_train_plan.py dir): plus CE_meeting on one micro-batch per step of real meetings sent
 the way speaker-enroll sends them (Meetings below); without it the script is task 25's.
-usage: [POOLS=train_final2 HEAD_LAYERS=5,11 WANDB_READY_FILE=F MEETING_PLAN=DIR] REPLAY_CONFIG=Y.yaml torchrun ...
+tasks/29 (each off when unset, then the script is task 28's):
+- SIM_NEG = p: with probability p a simulated sample is a v12-generator scene without the target (NEG_FAMILIES below,
+  CE on "language None"), and the short target-present scenes of the nearshort recipe join the present splits;
+- SPK_EMB = train_speaker_embeddings.py output: the speaker cosine the generator's hard (similar-voice) negatives need;
+- ASR_REPLAY_CONFIG = a data config: a second replay batch per step from it, same token KL and weight.
+usage: [POOLS=train_final2 HEAD_LAYERS=5,11 WANDB_READY_FILE=F MEETING_PLAN=DIR SIM_NEG=p SPK_EMB=F.npz
+        ASR_REPLAY_CONFIG=A.yaml ASR_REPLAY_WORKERS=n] REPLAY_CONFIG=Y.yaml torchrun ...
        ft_enc_replay.py OUT_DIR STEPS [MICRO_BATCH WORKERS LAMBDA TAG SAVE_EVERY KL_WEIGHT REPLAY_WORKERS]   (oal-train python)"""
 import copy, gzip, json, math, os, random, sys, time
 from pathlib import Path
@@ -49,6 +55,45 @@ template = get_template(processor, max_length=None, template_type="amphion_asr_1
 fe = processor.feature_extractor; MELF = torch.from_numpy(fe.mel_filters).float(); WIN = torch.hann_window(fe.n_fft)
 POOLS = os.environ.get("POOLS", "train_final2")
 recipe, pools, splits, n_spk = tse_data.setup(POOLS)
+# tasks/29: the CE above had one negative only (a swapped enrollment, below), so the target-absent shapes v12 counts as
+# false alarms that it lacked (no speech at all; one short phrase by someone else, often a similar voice) were held
+# only by the replay KL. SIM_NEG draws them from the generator's own target-absent splits (recipe v4-20261022, train
+# pools), three families with equal probability; splits with a recorded registration (enroll_file: the business
+# testers' recordings that v12 uses) are left out. NEARSHORT: the nearshort recipe's 1.5-3 s scenes (adc
+# scripts/ts_benchmark/recipe-nearshort.yaml v3-20261022): the two absent ones go to "short", their target-present
+# counterparts (the enrolled speaker says one short phrase, alone or with another short phrase) to the present splits.
+SIM_NEG = float(os.environ.get("SIM_NEG", "0"))
+NEARSHORT = [
+    {"group": "nearshort", "name": "short-rand-neg", "kind": "neg", "k": 1, "duration": [1.5, 3.0], "interferer_utts": "single_short", "interferer_start": [0.1, 0.6]},
+    {"group": "nearshort", "name": "short-hard-neg", "kind": "neg", "k": 1, "duration": [1.5, 3.0], "interferer_utts": "single_short", "interferer_start": [0.1, 0.6], "hard": True},
+    {"group": "nearshort", "name": "solo-short-pos", "kind": "pos", "schedule": "short", "k": 0, "duration": [1.5, 3.0]},
+    {"group": "nearshort", "name": "short-k1-pos", "kind": "pos", "schedule": "short", "k": 1, "duration": [1.5, 3.0], "interferer_utts": "single_short", "interferer_start": [0.1, 0.6]}]
+NEG_FAMILIES = ("nonspeech", "short", "absent")
+neg_splits = {f: [] for f in NEG_FAMILIES}
+if SIM_NEG:
+    for s in tse_data.build.expand_splits(recipe) + tse_data.build.expand_splits({**recipe, "splits": NEARSHORT}):
+        kind = s["params"].get("kind")
+        if s["params"].get("enroll_file"):
+            continue
+        if kind == "nonspeech":
+            neg_splits["nonspeech"].append(s)
+        elif kind == "neg":
+            neg_splits["short" if s["name"] in ("abs-short", "short-rand-neg", "short-hard-neg") else "absent"].append(s)
+        elif s["name"] in ("solo-short-pos", "short-k1-pos"):
+            splits = splits + [s]
+# A hard negative's enrollment is one of the 5 pool speakers closest to an interferer. v12 drew them from its test pool;
+# among the 26,585 train speakers the 5 closest are closer (chosen cosine median 0.66, p90 0.73, against v12's
+# short-hard-neg 0.56 / 0.66 and abs-hard 0.53 / 0.62). A random HARD_POOL-speaker candidate pool per scene gives v12's
+# difficulty (median 0.56, p10 0.48, p90 0.64; simulated on the same embeddings), so the CE does not teach rejecting
+# voices closer than any the benchmark or the 11.17 recipe asks to tell apart.
+HARD_POOL = 600
+SPK_EMB = os.environ.get("SPK_EMB")
+similarity = None
+if SPK_EMB:
+    _z = np.load(SPK_EMB); _vec = dict(zip(_z["keys"].tolist(), _z["vectors"]))
+    similarity = lambda a, b: float(_vec[a] @ _vec[b])
+hard_candidates = sorted(pools["mixed"]["speakers"])
+ASR_REPLAY_CONFIG = os.environ.get("ASR_REPLAY_CONFIG")
 REPLAY_CONFIG = os.environ["REPLAY_CONFIG"]
 MEETING_PLAN = os.environ.get("MEETING_PLAN")
 # tasks/28 meeting stream. Weights: the recipe's weights of these ts_real_train sources (alimeeting 1.5 + 2.0, aishell4
@@ -74,15 +119,42 @@ def mel_power(w):
     return MELF.T @ (s[..., :-1].abs() ** 2)
 
 
+def load_noise(kind, path):
+    """The generator's noise loader (build.render_job): `quiet` is generated."""
+    if kind == "quiet":
+        return np.random.default_rng(0).standard_normal(16000 * 30).astype(np.float32)
+    return tse_data.build._cached_noise(path)
+
+
 class Scenes(torch.utils.data.IterableDataset):
+    """Yields (encoding, (mel IRM, family, hard cosine or nan)); family is present / swap / one of NEG_FAMILIES."""
+
     def __iter__(self):
         info = torch.utils.data.get_worker_info(); rng = random.Random(f"encreplay-{tag}-r{rank}-w{info.id if info else 0}")
         prev = []
         while True:
-            split = rng.choice(splits)
+            fam = rng.choice(NEG_FAMILIES) if SIM_NEG and rng.random() < SIM_NEG else "present"
+            split = rng.choice(neg_splits[fam] if fam != "present" else splits)
+            view = pools
+            if split["params"].get("hard"):  # candidates: HARD_POOL random speakers of the union pool
+                mixed = pools["mixed"]; sub = rng.sample(hard_candidates, HARD_POOL)
+                view = {**pools, "mixed": {"speakers": {s: mixed["speakers"][s] for s in sub},
+                                           "short": {s: mixed["short"][s] for s in sub if s in mixed["short"]}}}
             try:
-                plan = tse_data.mixer.plan_scene(rng, split["params"], pools, None)
+                plan = tse_data.mixer.plan_scene(rng, split["params"], view, similarity)
             except (tse_data.mixer.PlanError, IndexError, ValueError):
+                continue
+            if fam != "present":  # no target: the generator's own rendering (mixture effects included), empty mask
+                load = lambda utt: tse_data.build.read_audio(utt.path)
+                load_rir = lambda p: tse_data.sf.read(p, dtype="float32")[0]
+                m = tse_data.mixer.render_mixture(plan, load, load_rir, load_noise).astype(np.float32)
+                e = tse_data.mixer.render_enrollment(plan, load, load_rir, load_noise)
+                c = 5 * 16000; e = np.pad(e[:c], (0, max(0, c - len(e)))).astype(np.float32)
+                e1, m1 = prepare_ts_clips([e, m], 16000)
+                enc = template.encode({"messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": "<audio>"},
+                                                    {"role": "assistant", "content": "language None<asr_text>"}], "audios": [e1], "mix_wav": m1})
+                n_fr = mel_power(m1).shape[1]
+                yield enc, (torch.zeros(128, n_fr), fam, float(plan.get("hard_cosine", math.nan)))
                 continue
             target = next((t for t in plan["tracks"] if t.role == "target"), None)
             if plan["params"].get("mix_effect") or target is None:
@@ -104,7 +176,8 @@ class Scenes(torch.utils.data.IterableDataset):
                                                 {"role": "assistant", "content": content}], "audios": [e1], "mix_wav": m1})
             tt = np.pad(t[:len(m1)], (0, max(0, len(m1) - len(t)))).astype(np.float32)
             pt, pr = mel_power(tt), mel_power(m1 - tt)
-            yield enc, (pt / (pt + pr).clamp_min(1e-10)).float()  # (128, frames), 0 where the target is absent
+            # (128, frames), 0 where the target is absent
+            yield enc, ((pt / (pt + pr).clamp_min(1e-10)).float(), "swap" if neg else "present", math.nan)
 
 
 def collate(items):
@@ -214,13 +287,15 @@ class Meetings(torch.utils.data.IterableDataset):
 
 replay_set = CatalogSwiftDataset(read_data_config(REPLAY_CONFIG), encode=template.encode, message_format="qwen3_asr")
 replay_sampler = CatalogBatchSampler(replay_set, batch_size=1, rank=rank, world_size=world, shuffle=True)
+asr_set = CatalogSwiftDataset(read_data_config(ASR_REPLAY_CONFIG), encode=template.encode, message_format="qwen3_asr") if ASR_REPLAY_CONFIG else None
+asr_sampler = CatalogBatchSampler(asr_set, batch_size=1, rank=rank, world_size=world, shuffle=True) if asr_set else None
 
 
-def replay_batches():
+def replay_batches(dataset=replay_set, sampler=replay_sampler, workers=rnw):
     epoch = 0
     while True:
-        replay_sampler.set_epoch(epoch)
-        yield from torch.utils.data.DataLoader(replay_set, batch_sampler=replay_sampler, num_workers=rnw,
+        sampler.set_epoch(epoch)
+        yield from torch.utils.data.DataLoader(dataset, batch_sampler=sampler, num_workers=workers,
                                                collate_fn=template.data_collator, prefetch_factor=2)
         epoch += 1
 
@@ -297,6 +372,10 @@ if rank == 0:
                              "train_speakers": n_spk, "pools": POOLS, "neg_prob": 0.15, "replay_config": REPLAY_CONFIG,
                              "replay_loss": "token KL(11.17 || student), no CE", "kl_weight": kl_w,
                              "replay_records": len(replay_set), "trainable_params_M": sum(p.numel() for p in params) / 1e6,
+                             **({"sim_neg": SIM_NEG, "sim_neg_families": {f: [s["name"] for s in v] for f, v in neg_splits.items()},
+                                 "sim_present_splits": len(splits), "speaker_embeddings": SPK_EMB} if SIM_NEG else {}),
+                             **({"asr_replay_config": ASR_REPLAY_CONFIG, "asr_replay_records": len(asr_set),
+                                 "asr_replay_loss": "token KL(11.17 || student), one more batch per step, weight kl_weight"} if asr_set else {}),
                              **({"meeting_plan": MEETING_PLAN, "meeting_loss": "target-text CE, weight 1", "meeting_weights": M_WEIGHTS,
                                  "meeting_windows": {c: len(meetings.windows[c]) for c in meetings.corpora},
                                  "meeting_neg_prob": NEG_PROB, "meeting_sim_temp": SIM_TEMP, "meeting_near_prob": NEAR_PROB,
@@ -305,9 +384,12 @@ if rank == 0:
                                  "meeting_noise": "@".join(NOISE[:2]) + ":" + NOISE[2]} if meetings else {})})
     print(f"{sum(p.numel() for p in params) / 1e6:.1f}M trainable; speakers {n_spk}; replay {len(replay_set)}; {run.url}", flush=True)
 model.train(); teacher_tower.eval(); t0 = time.time(); it = iter(loader); rit = replay_batches()
+ait = replay_batches(asr_set, asr_sampler, int(os.environ.get("ASR_REPLAY_WORKERS", "4"))) if asr_set else None
+SIM_FAMS = ("present", "swap") + NEG_FAMILIES
+s_facts = []  # (family, hard cosine or nan) of the simulated samples since the last log, this rank
 task_sum = torch.zeros(len(TASKS), device=dev); task_n = torch.zeros(len(TASKS), device=dev)
 for step in range(1, steps + 1):
-    batch, irms = next(it)
+    batch, sinfo = next(it); irms = [x[0] for x in sinfo]; s_facts += [x[1:] for x in sinfo]
     for v in cap.values(): v.clear()
     ef = batch["enroll_n_frames"].tolist(); fl = batch["feature_attention_mask"].sum(-1).tolist()
     batch = to_dev(batch)
@@ -336,6 +418,11 @@ for step in range(1, steps + 1):
         kl, per = replay_kl(rb)
         (kl_w * kl).backward()
     for v in cap.values(): v.clear()
+    if ait is not None:
+        with torch.autocast("cuda", dtype=torch.bfloat16):
+            kl_a, _ = replay_kl(to_dev(next(ait)))
+            (kl_w * kl_a).backward()
+        for v in cap.values(): v.clear()
     task_sum.index_add_(0, tasks, per); task_n.index_add_(0, tasks, torch.ones_like(per))
     if ddp:
         allreduce(trainable)
@@ -353,6 +440,20 @@ for step in range(1, steps + 1):
                     "train/meeting_near_frac": fs[2], "train/meeting_noise_frac": fs[3], "train/meeting_crop_frac": fs[4]}
             if rank == 0 and (step % 200 == 0 or os.environ.get("SMOKE")):
                 print("meeting stream", {k.split("/")[1]: round(v, 3) for k, v in mlog.items()}, flush=True)
+        if SIM_NEG:  # what the simulated stream actually sent since the last log, over all ranks
+            hc = [h for _, h in s_facts if h == h]
+            fs = torch.tensor([sum(f == k for f, _ in s_facts) for k in SIM_FAMS] + [len(hc), len(s_facts), sum(hc)],
+                              device=dev, dtype=torch.float64)
+            if ddp: dist.all_reduce(fs)
+            hard_cos = (fs[-1] / fs[-3].clamp_min(1)).item(); fs = (fs[:-2] / fs[-2].clamp_min(1)).tolist(); s_facts.clear()
+            mlog.update({f"train/sim_{k}_frac": fs[j] for j, k in enumerate(SIM_FAMS)})
+            mlog.update({"train/sim_hard_frac": fs[-1], "train/sim_hard_cosine_mean": hard_cos})
+            if rank == 0 and (step % 200 == 0 or os.environ.get("SMOKE")):
+                print("sim stream", {k: round(fs[j], 3) for j, k in enumerate(SIM_FAMS + ("hard",))}, "hard cosine", round(hard_cos, 3), flush=True)
+        else:
+            s_facts.clear()
+        if ait is not None:
+            mlog["train/replay_kl_asr_stream"] = kl_a.item()
         if rank == 0:
             run.log({**mlog, "train/ce_sim": ce.item(), "train/aux_mask_mse": aux.item(), "train/replay_kl": kl.item(), "train/grad_norm": gn.item(),
                      "train/lr": sched.get_last_lr()[0], **{f"train/aux_mask_mse_l{li + 1}": v.item() for li, v in per_layer.items()},
@@ -360,7 +461,7 @@ for step in range(1, steps + 1):
                     step=step)
         task_sum.zero_(); task_n.zero_()
     if rank == 0 and (step % 200 == 0 or step <= 3 or (os.environ.get("SMOKE") and step % 10 == 0)):
-        print(f"step {step} ce {ce.item():.4f} {'ce_m %.4f ' % ce_m.item() if mloader is not None else ''}aux {aux.item():.4f} kl {kl.item():.5f} gn {gn.item():.2f} mem {torch.cuda.max_memory_allocated() / 2**30:.1f}G {time.time() - t0:.0f}s", flush=True)
+        print(f"step {step} ce {ce.item():.4f} {'ce_m %.4f ' % ce_m.item() if mloader is not None else ''}aux {aux.item():.4f} kl {kl.item():.5f} {'kl_a %.5f ' % kl_a.item() if ait is not None else ''}gn {gn.item():.2f} mem {torch.cuda.max_memory_allocated() / 2**30:.1f}G {time.time() - t0:.0f}s", flush=True)
     if (step % save_every == 0 or step == steps) and rank == 0:
         state = {n: p.detach().to(torch.bfloat16).cpu() for n, p in model.named_parameters() if p.requires_grad}
         torch.save({"arm": "encreplay", "step": step, "init_step": 0, "state": state,
