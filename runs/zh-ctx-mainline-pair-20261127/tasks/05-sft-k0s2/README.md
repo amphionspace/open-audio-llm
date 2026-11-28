@@ -8,13 +8,19 @@
   - 11-27 21:05Z 放进 inbox（`ctx-k0s2.sh`，等 8 张卡全空）。
   - attempt 001 失败（与运行无关的冲突）：22:05Z 卡全空的那一刻正好是 TS 线 t29-gate10k 两段之间的空档，SFT 启动后 t29 的下一对 vLLM 服务又占上 GPU 0/1（各约 40 GB），rank 1 在 22:06Z 显存不足退出。22:17–22:18Z 只停了自己的进程树（acp-node.sh k0s2 的子进程），t29 的两个服务没受影响；已告知 71。W&B run `…-codev1-seed2-001` 会显示失败。
   - 22:18Z 重新排队 `ctx-k0s2-retry.sh`：先等 `done/t29-gate10k.exit` 出现，再等 8 张卡连续 5 分钟全空，然后 `acp-node.sh k0s2`（SFT 为 attempt 002）。
+  - attempt 002（22:27:33Z 起）：23:51Z 完成，退出码 0，3000 步。W&B `…-codev1-seed2-002` 远端 finished。
+  - 挖题（`tasks/06-mining-k0s2`，`scripts/mining.sh k0s2`；06、07 两个目录由节点上的 root 建立，开发机写不进去，记录都写在这里）：23:54Z 开始，11-28 00:43Z 切出计划，退出码全是 0。
+    - 计划条数（括号里是 02 的 K0）：hotword 3903（3708）、nonspeech 1617（1158）、miss 934（810）、ts-absent 4265（4467）、ts-present 2836（2467），没有 ctx 计划。nonspeech 多约 40%，说明这个起点在非语音上输出得更多；训练按份额抽题，条数不改变配方。
+    - 挖题服务的执行记录在 `tasks/06-mining-k0s2/serve-*/attempts`（`make_configs.py` 对非 k0 臂改写了路径）。
+    - W&B `AmphionASR-ctx-mainline-pair-k0s2-mining-3000-n16-noctxplan` 远端 finished（https://wandb.ai/1016097967-amphion/open-audio-llm/runs/8es39s10）。
+  - GRPO（`tasks/07-grpo-k0s2/attempts/001`，`configs/train-grpo-k0s2.yaml`，同 03，训练种子 43）：11-28 00:43Z 开始，00:54Z 在第 40/400 步，约 4.4 s/步。W&B `…-400steps-seed2-001` 远端 running，有 loss 和奖励指标。
 
 <!-- execution-status -->
 
-执行状态：failed；质量状态：未核实。
+执行状态：completed；质量状态：未核实。
 
-开始：2026-11-27T22:05:13.944932+00:00；结束：2026-11-27T22:17:04.799735+00:00；退出码：1。
+开始：2026-11-27T22:27:34.102656+00:00；结束：2026-11-27T23:51:33.145280+00:00；退出码：0。
 
-对象存储：已同步到 `whai:open-audio-llm/runs/zh-ctx-mainline-pair-20261127/tasks/05-sft-k0s2/attempts/001`。
+对象存储：已同步到 `whai:open-audio-llm/runs/zh-ctx-mainline-pair-20261127/tasks/05-sft-k0s2/attempts/002`。
 
 <!-- /execution-status -->
