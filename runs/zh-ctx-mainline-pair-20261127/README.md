@@ -67,6 +67,119 @@ K0 = K 那一轮去掉纠偏部分，其余完全照 K 的实际配置（`script
 - **新发现**：对 11.17 的真实录音纠偏收益大部分已经在 K0 里（没见过的明确说明：11.17 40.30 → K0 45.84 → K 48.19）。K0 保留了 finals 里的 ctxclean 改正文本和 5 个带说明录音子集的上采样（按普通识别训），去掉的合成数据 + think + GRPO 纠偏只多约 2.4 个点。
 - **第二个种子**：收益 CI 下限只有 +0.19，按“风险”第一条加跑 k0s2（`scripts/make_configs.py` ARMS：训练种子 43、数据种子 20261128、挖题 epoch +100，其余同 K0；任务 05-sft-k0s2、06-mining-k0s2、07-grpo-k0s2、评测名 k0s2grpo）。节点 pt-bije92x2（A 线让出，`/workspace/workspace/mingdong/scratch/acp-v99e` 的 `ctx-k0s2.sh`），等 TS 线 t29 守门约 22:45Z 结束、8 张卡全空后启动，约 6 小时。kgrpo 对 k0s2grpo 用同一个 gate.py 再算一遍；两个 K0 之间的差就是运行间波动。
 
+## 并入主线交接单（2026-11-28，草稿；标“待 k0s2”的地方等 `tasks/08-eval-k0s2` 出来后补）
+
+**定位**（用户 11-28，经 open-audio-llm-71 转达）：上下文纠偏是单点研究，成果并入 71 的交付线。不单独出替换 11.17 的 checkpoint，kgrpo 不进交付。并入时机是任务 29 判定之后的下一轮主线（文本切到 final v4），门槛由 71 按本单加。
+
+**推荐**：第 1–3 项进主线 SFT，第 5 项作为门槛；第 4 项（GRPO 纠偏奖励）标成“可选，代价未消除”。合成说字数据和 think 不进主线：它们是第 4 项那一包的主要代价来源，原因见“没解决的问题”。
+
+| # | 项目 | 阶段 | 状态 |
+|---|---|---|---|
+| 1 | ctxclean 改正文本 | SFT | 已在 finals 里，不用做事 |
+| 2 | 带说明录音上采样（+ 仅正文 CE） | SFT | 上采样推荐；仅正文 CE 在主线**未验证** |
+| 3 | train_asr_dialog | SFT | 推荐，用 v4（竖线记录已隔离） |
+| 4 | GRPO 纠偏奖励 + context targets | GRPO | 可选，代价未消除；targets 要在 v4 上重建 |
+| 5 | ctx-v2 真实录音门槛集 | 评测 | 推荐 |
+
+### 1. ctxclean 改正文本
+
+- **数据版本**：9 个数据集的 `*-ctxclean-20261110` 版本（16 个条目）是 text-final-v1 的 `derived_from`，v2 / v3 / v4 一路继承。主线用 final v4 就已经包含，不用加配置，也不用改 trainer。
+- **证据**：在 11.06 上成对比较（`runs/zh-ctx-clean-pair-20261125`），control 对 noclean，训练没见过的真实录音 +1.6*（新对比新错多 27 条：明确说明 +17，语义推断 +10）；noclean 对 11.06 只有 +0.1，不显著。
+- **已知代价**：同一对里 TS 门槛有移动（v12 误触发 +1.25*、漏识别 -1.47*，两者之和 6.75 → 6.54，CER 14.51 → 13.32 变好）。两次 SFT 之间门槛本身就会移动 1–1.7 个点，单对分不开。
+- **门槛**：第 5 项。
+
+### 2. 带说明录音上采样（+ 仅正文 CE）
+
+- **数据版本**：`context_correction_clean_zh@think-v2-20261113-final-v1-20261120` 的 5 个 include 列表，共 2,075 条，是说话人在录音里解释了写法的真实录音。
+
+  | 来源 · split | 条数 | 权重（K0） |
+  |---|---:|---:|
+  | wenetspeech_clean · train（`task: asr`、`require_clean_pass: true`、`max_duration: 120`） | 923 | 0.7987 |
+  | emilia2_mix · train_2spk | 326 | 0.2821 |
+  | emilia2_mix · train_3spk | 316 | 0.2734 |
+  | emilia2_short · train_zh | 281 | 0.2432 |
+  | emilia2_dialog · train_2spk | 229 | 0.1982 |
+
+  权重合计 1.7956，占 K0 SFT 总权重 192.19 的 0.93%。列表按 `split:record_id` 选；v4 只改文本，id 不变（抽查 emilia2_short：281 条全部在 `short-lance-20261023-final-v4-20261127` 里），并入时把 `version` 换成对应的 `-final-v4-20261127`，其余 4 个列表同样核对一遍命中数。
+- **配置片段**（主线数据配置 `train:` 下加；版本换成主线当时的 v4 名）：
+
+  ```yaml
+  - dataset_id: wenetspeech_clean
+    split: train
+    version: train-punc-v1-20261102-final-v4-20261127
+    include_records: /workspace/data/datasets/context_correction_clean_zh/versions/think-v2-20261113-final-v1-20261120/wenetspeech_clean/include-wenetspeech_clean_train-punc-v1-20261102-final-v1-20261120-train.txt
+    task: asr
+    require_clean_pass: true
+    max_duration: 120
+    weight: 0.7987
+  # emilia2_mix train_2spk / train_3spk、emilia2_short train_zh、emilia2_dialog train_2spk 同样写法，
+  # 列表路径和权重见 configs/train-data-k0.yaml 里带 include_records 的 5 个条目
+  ```
+- **trainer 改动**：K0 按普通识别训，标签前缀 `language Chinese<asr_text>` 也算 CE。“仅正文 CE”（屏蔽到第一个 `<asr_text>` 为止）只在 `runs/zh-ctx-kl-anchor-20261126` 的自写 trainer（`ce_text_only: true`）里测过：纠偏收益不变（kltreal 对 klreal 不显著），带合成数据那一臂“总要输出”的漂移减半（v12 不在场新输出 187 → 112）。但那是从 11.17 续训加 KL 锚定，不是主线配方，**主线上未验证**。主线 SFT trainer（ms-swift）没有按来源屏蔽标签前缀的开关，71 在主线实现。
+- **证据**：K0 这一轮（第 1–3 项都在）对 11.17，训练没见过的明确说明 469 条：SFT 后 40.30 → 46.48*，GRPO 后 45.84*；没见过的全部 1,680 条 67.20 → 69.94*。三项各占多少，本实验分不开。
+- **已知代价**：k0grpo 对 11.17 有 TS 误触发上升（v12 +1.49、first-other +2.19、scene-ts +10.0、西语 +1.2 / +1.3），漏识别和 CER 下降。这和“在 GRPO 模型 11.17 上再做一轮 SFT”的已知代价同一形态，分不开。主线从自己的 SFT 底座起训，不会有这一层。（待 k0s2：两个 K0 之间这些项的波动幅度）
+
+### 3. train_asr_dialog
+
+- **数据版本**：`context_correction_synth_zh@asr-dialog-v1-20261122-final-v4-20261127`，split `train_asr_dialog`（1,841 条）。不要用 `train_asr_dialog-records-quarantine`（159 条目标里残留“反应|反映”这类竖线，TTS 把两个写法都念了）。K0 用的是旧版 `asr-dialog-v1-20261122`（2,000 条，含这 159 条）。
+- **配置片段**：
+
+  ```yaml
+  - dataset_id: context_correction_synth_zh
+    version: asr-dialog-v1-20261122-final-v4-20261127
+    split: train_asr_dialog
+    weight: 1.8274   # K0 的 0.95%
+  ```
+- **trainer 改动**：无，按普通识别训。
+- **作用**：K 为修长对话漏人加的普通识别长对话（scene-asr 一人被整段漏掉：J 129 条 → K 4 条）。J 的漏人来自 ts-twins，而 twins 不进主线，所以它在主线里是否必要没有单独对照。k0grpo 对 11.17 scene-asr CER -2.49*。
+- **已知代价**：旧版里的竖线被模型学会了（交付输出带竖线：k0grpo 126、kgrpo 54，11.17 0）；v4 已隔离。
+- **门槛**：交付 27 组输出里，参考没有而输出带“|”的条数为 0（`scripts/gate.py` 的 `pipes()` 会数）。
+
+### 4. GRPO 纠偏奖励 + context targets（可选，代价未消除）
+
+- **代码**：`qwen3_asr_context` 奖励，open-audio-llm PR #170（11-20 已合入 main），kgrpo 用的 code-v3 = main 15eacbf。
+- **配置片段**（kgrpo 实际用的，`runs/zh-ctx-grpo-k-20261122/configs/`）：
+
+  ```yaml
+  # train-grpo.yaml：--reward_funcs 加 qwen3_asr_context，--reward_weights 对应加 1.0
+  # train-data-grpo.yaml 的 grpo:
+    mined:
+    - plan: .../plan-ctx.jsonl     # 挖题时多两路 ctx（带 context targets 的来源）
+      share: 0.08                  # 从回放份额里拿出来
+    context_targets:
+    - /workspace/data/datasets/context_correction_clean_zh/versions/grpo-targets-v2-20261121/targets.jsonl
+  ```
+- **数据版本**：`grpo-targets-v2-20261121`，7,011 条。其中 5,901 条是合成说字数据（train 2,984、train_ts 2,917），约 1,110 条是带说明的真实录音（wenetspeech 320、emilia2_mix 404、emilia2_dialog 215、emilia2_short 143 等）。targets 按 final-v1 版本名和字符位置记录。v4 把数字换成阿拉伯数字后位置会变，**并入前要在 v4 上重建 targets**（新版本，不能沿用 v2）。只用真实录音部分时，ctx 计划会小很多（kgrpo 的 plan-ctx 是 4,149 条）。
+- **收益**：这一包（合成说字数据 + think + GRPO 纠偏）的净收益：Emilia 需要纠正 · 明确说明 +2.13 [+0.19, +4.07]（k0grpo 基线）。待 k0s2：换第二个 K0 基线后的数字。合成题 correct 率 +13 到 +32 个点。
+- **已知代价**（同一包，kgrpo 对 k0grpo）：
+  - 西语 TS 误触发 v1 / v2 4.4 → 9.3 / 4.3 → 9.0，出在 K 的 SFT（合成数据 + think）；
+  - chime4 WER 8.97 → 11.39，漏识别，出在 K 的 GRPO；
+  - ts-hotwords-es CER +1.45，ts-en 误触发 +1.31，scene-ts CER +1.06，first-other CER +0.65，ts-hotwords CER +0.51。
+  - 本实验没有“只加 GRPO 纠偏、不加合成 SFT 数据”的一臂，GRPO 纠偏单独的代价未测。
+- **门槛**（如果加）：第 5 项的明确说明组，CI 下限 > 0（对不加它的同一轮）；交付 27 组不新增“显著且 > 0.5 个点”的回退，TS 误触发和漏识别按两者之和判。
+
+### 5. ctx-v2 真实录音门槛集
+
+- **评测集**：`asr/context-correction-zh@v2-20261117`，ae `ts-asr` evaluator，think 关，`split_group: evaluation`、`samples_per_source: 0`（全量），配置样例 `configs/eval-k0grpo-avg3/after-training-context-correction-v2.yaml`。
+- **分组**（`scripts/gate.py` 的 `ctx_gate()`）：真实录音按 `context_correction_zh` 的 `mined_real.jsonl.gz`（Emilia 用 v2-20261116，播客用 v1-20261018），按 `metadata.corpus_transcript_correct` 分“需要纠正 / 原转写已对”，再按 category（explicit / implicit）分；训练是否见过按 `train_overlap` 拆。
+- **基线数字**（ae 0.14.0-eedcf15，打分版本 4，think 关）：
+
+  | 组 | 11.17 | K0 一轮（k0grpo） | 带纠偏一包（kgrpo） |
+  |---|---:|---:|---:|
+  | Emilia 需要纠正 · 明确说明（516） | 39.15 | 45.54 | 47.67 |
+  | 其中没见过的（469） | 40.30 | 45.84 | 48.19 |
+  | 没见过的全部（1,680） | 67.20 | 69.94 | 71.13 |
+  | Emilia 原转写已对 · 明确说明（662，保持） | 待补 | 90.94 | 91.84 |
+
+- **建议门槛**：没见过的全部 1,680 条对 11.17 CI 下限 > 0；“原转写已对”的 662 条保持率不显著变差。
+- **注意**：主线切到 final v4 后，模型输出阿拉伯数字。ctx-v2 的参考没有转换，打分版本 5 的数字转换两边不对称（v6 待用户定）。基线和候选必须用同一个打分版本重打，不能拿上表的数字直接比。
+
+### 没解决的问题（研究继续，不阻塞并入）
+
+- **合成说字数据让中文 TS 偏向“不在场”、西语 TS 偏向“总输出”**：在场判断的 token（`language` 后面那个）被整体推移，不是个别难例。KL 锚定和加在场判断项都没稳住（`runs/zh-ctx-kl-anchor-20261126`）。
+- **长句提前结束**：带合成数据的臂 scene-asr CER 4.72 → 8.17*，长口述提前出 EOS。
+- **多语种纠偏**（阿语、葡语）：用户 11-28 定了先不做，等主线加完语种。所有纠偏数据目前只有中文；amphiondata 的 `scripts/context_correction` 流程结构上不绑语种，但提示词、分类和质检 ASR 是中文专用的。
+
 <!-- execution-status -->
 
 执行状态：completed；质量状态：未核实。
