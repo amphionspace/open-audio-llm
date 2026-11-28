@@ -1,0 +1,25 @@
+# 阿拉伯语评测全量模板（取自 d9 的 ar-benchmarks-20261127 冒烟配置，samples_per_source 改为 0）；eval_lanes.sh 填入模型名、端口与服务名。
+suite_id: asr-regression-native@1
+model_name: whitebox-merge-v18a-es116inc
+evaluator: ts-asr
+eval_set: asr/ar-asr-test@v1-20261127
+server_url: http://127.0.0.1:19900
+served_model: r1117-asr-19900
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/whitebox-merge-v18a-es116inc
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false
+  model_info:
+    origin: ours
+    mode: offline
+    params: 1.7B
+    license: internal
