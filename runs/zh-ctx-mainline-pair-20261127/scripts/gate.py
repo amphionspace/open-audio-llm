@@ -28,6 +28,8 @@ MINED = [f"/workspace/data/datasets/context_correction_zh/versions/{v}/records/m
          for v in ("v1-20261018", "v2-20261116")]  # podcast items are v1's, Emilia v2's (ctx_v2_mined_groups.py)
 MODELS = ("k0grpo", "kgrpo")  # baseline, candidate (delivery model names of acp-delivery-one.sh)
 CMP = G / "tasks/04-delivery/compare" / f"{MODELS[0]}-vs-{MODELS[1]}"
+OUT = HERE / "tasks/04-eval"  # gate.md / gate.json; gate_seed2.py points these at task 08 for its pairs
+TITLE = "# 判定：kgrpo（带纠偏）对 k0grpo（不带），think 关，配对 bootstrap 95% CI，差 = kgrpo − k0grpo（百分点）"
 B, SEED, MARGIN = 2000, 20261127, 0.5  # resamples and seed as ae compare's 2000; margin: README 判定 2
 HIGHER_BETTER = {"term_hit_rate", "recall", "correction_rate", "keep_rate", "accuracy"}
 
@@ -178,12 +180,12 @@ def main():
     ctx, gain = ctx_gate()
     dl, regressions, moves = delivery_gate()
     bars = pipes()
-    lines = ["# 判定：kgrpo（带纠偏）对 k0grpo（不带），think 关，配对 bootstrap 95% CI，差 = kgrpo − k0grpo（百分点）", "",
-             "## 1. 收益：纠偏 v2", "", "| 来源 · 组 · 指标（条数） | k0grpo | kgrpo | 差 [95% CI] |", "|---|---:|---:|---|"]
+    cols = f"| {MODELS[0]} | {MODELS[1]} | 差 [95% CI] |"  # columns: baseline, candidate (CTX keys k0grpo, kgrpo)
+    lines = [TITLE, "", "## 1. 收益：纠偏 v2", "", "| 来源 · 组 · 指标（条数） " + cols, "|---|---:|---:|---|"]
     for x in ctx:
         lines.append(fmt(x, f"{x['source']} · {x['group']} · {x['metric']}（{x['items']}）"))
     lines += ["", f"判定 1（Emilia 需要纠正 · explicit，516 条，CI 下限 > 0）：{'成立' if gain else '不成立'}", "",
-              "## 2. 回退：交付 27 组", "", "| 项目 · 指标 | k0grpo | kgrpo | 差 [95% CI] |", "|---|---:|---:|---|"]
+              "## 2. 回退：交付 27 组", "", "| 项目 · 指标 " + cols, "|---|---:|---:|---|"]
     for x in dl:
         tag = "（回退）" if x in regressions else ("（门槛移动）" if any(x is m[0] for m in moves) else "")
         lines.append(fmt(x, f"{x['suite']} · {x['group']} {x['metric']}{tag}"))
@@ -201,9 +203,8 @@ def main():
               ("1 成立且 2 没有回退：纠偏这一包在主线一轮里有净收益，可以进主线。" if gain and not regressions else
                "1 成立但 2 有回退：收益和回退的全表交给用户取舍。" if gain else
                "1 不成立：在一轮 SFT → GRPO 里纠偏这一包拿不到明确说明类的收益，不进主线。")]
-    out = HERE / "tasks/04-eval/gate.md"
-    out.write_text("\n".join(lines) + "\n")
-    (HERE / "tasks/04-eval/gate.json").write_text(json.dumps({"ctx": ctx, "delivery": dl, "gain": gain,
+    (OUT / "gate.md").write_text("\n".join(lines) + "\n")
+    (OUT / "gate.json").write_text(json.dumps({"ctx": ctx, "delivery": dl, "gain": gain,
         "regressions": regressions, "pipes": bars, "moves": [[x, y] for x, y in moves]}, ensure_ascii=False, indent=1))
     print("\n".join(lines))
 
