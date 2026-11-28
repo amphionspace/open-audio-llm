@@ -1,0 +1,41 @@
+task: asr
+tags: &id001
+- zh
+- police
+- synthetic
+- noise
+sampling_rate: 16000
+groups:
+- name: scene-asr ≥30 秒多人对话 · cut-first
+  section: 通用识别对照
+  labels:
+  - asr-quiet-discussion-cut-first
+  - asr-quiet-interview-cut-first
+  - asr-quiet-reception-cut-first
+  aggregate: macro
+  description: cut-first：见 catalog 版本说明；记录 ID 与原 scene-asr 相同，可逐条配对
+evaluation:
+- dataset_id: police_scene_bench
+  version: scene-asr-cut-20261128
+  split: asr-quiet-discussion-cut-first
+  task: asr
+  label: asr-quiet-discussion-cut-first
+  tags: *id001
+  display: asr-quiet-discussion-cut-first
+  description: asr-quiet-discussion 的 ≥30 秒多人对话，cut-first（见版本说明）
+- dataset_id: police_scene_bench
+  version: scene-asr-cut-20261128
+  split: asr-quiet-interview-cut-first
+  task: asr
+  label: asr-quiet-interview-cut-first
+  tags: *id001
+  display: asr-quiet-interview-cut-first
+  description: asr-quiet-interview 的 ≥30 秒多人对话，cut-first（见版本说明）
+- dataset_id: police_scene_bench
+  version: scene-asr-cut-20261128
+  split: asr-quiet-reception-cut-first
+  task: asr
+  label: asr-quiet-reception-cut-first
+  tags: *id001
+  display: asr-quiet-reception-cut-first
+  description: asr-quiet-reception 的 ≥30 秒多人对话，cut-first（见版本说明）
