@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Evaluate one cached model on 11.17's suites, each lane = one ASR + one TS server on two GPUs (pack-mtp/serve.sh, no MTP,
 # the stack of the 11.17 gate runs). Configs are written to configs/eval-TAG/ from the 11.17-era templates.
-# Usage: [PACK=DIR] [TEMPLATES=DIR] [CATALOG=DIR] [AE_PATH=DIR] eval_lanes.sh CACHE_NAME TAG GPU_BASE PORT_BASE "LANE1 suites" ...
+# Usage: [PACK=DIR] [TEMPLATES=DIR] [CATALOG=DIR] [AE_ENV=DIR] eval_lanes.sh CACHE_NAME TAG GPU_BASE PORT_BASE "LANE1 suites" ...
 # (suite = <template dir>/<name>; TEMPLATES holds the template dirs, CATALOG is the data catalog, default the registry;
-# AE_PATH = a pinned amphion-eval installed with pip --target, put first on PYTHONPATH of the shared amphion-eval env,
-# for eval sets and scoring newer than that env, e.g. the Arabic sets)
+# AE_ENV = a venv made with --system-site-packages on the shared amphion-eval env plus a pinned amphion-eval, for eval
+# sets and scoring newer than that env, e.g. the Arabic sets. Not PYTHONPATH: after-training drops it when it starts the
+# evaluator, which then scores with the shared env's version.)
 set -u; umask 000
 NAME=$1; T=$2; GB=$3; PB=$4; shift 4
 ENVS=/workspace/workspace/mingdong/miniconda3/envs; PY=$ENVS/vllm-serving/bin/python
@@ -34,9 +35,7 @@ lane() { local ga=$1 gt=$2 pa=$3 pt=$4; shift 4
   echo "servers $pa/$pt ready $(date -u +%FT%TZ)"
   local r=0
   for x in "$@"; do local src=${x%%/*} s=${x##*/}; mk $src $s $pa $pt || { r=1; continue; }
-    if [ -n "${AE_PATH:-}" ]; then env PYTHONPATH=$AE_PATH $ENVS/amphion-eval/bin/python -m amphion_eval.cli open-audio-llm after-training \
-      --handoff $O/handoff.json --config $O/after-training-$s.yaml > $L/eval-$s.log 2>&1
-    else env -u PYTHONPATH $ENVS/amphion-eval/bin/ae open-audio-llm after-training --handoff $O/handoff.json --config $O/after-training-$s.yaml > $L/eval-$s.log 2>&1; fi
+    env -u PYTHONPATH ${AE_ENV:-$ENVS/amphion-eval}/bin/ae open-audio-llm after-training --handoff $O/handoff.json --config $O/after-training-$s.yaml > $L/eval-$s.log 2>&1
     e=$?; echo "$T $s exit=$e $(date -u +%FT%TZ)"; [ $e = 0 ] || r=1; done
   kill -TERM -$a -$b; wait $a $b 2>/dev/null; return $r; }
 source /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh >/dev/null 2>&1
