@@ -223,7 +223,8 @@ K0 = K 那一轮去掉纠偏部分，其余完全照 K 的实际配置（`script
 | wenetspeech_clean · train（`task: asr`、`require_clean_pass: true`、`max_duration: 120`） | `train-punc-v1-20261102-final-v4-20261127` | 本实验 `configs/records/include-wenetspeech_clean_train-punc-v1-20261102-final-v4-20261127-train.txt`（编号带版本前缀，已改写，923 / 923） | 923 |
 | emilia2_short · train_zh | `short-lance-20261023-final-v4-20261127` | `think-v2-20261113-final-v1-20261120/emilia2_short/include-emilia2_short_short-lance-20261023-final-v1-20261120-train_zh.txt`（281 / 281） | 281 |
 
-- include 列表目录前缀是 `/workspace/data/datasets/context_correction_clean_zh/versions/`。除 wenetspeech_clean 外，列表按 `split:record_id` 记，不带版本，71 并入时核对命中数。
+- include 列表目录前缀是 `/workspace/data/datasets/context_correction_clean_zh/versions/`。除 wenetspeech_clean 外，列表按 `split:record_id` 记，不带版本。71 11-28 在 v4 文本记录上核过：emilia2_mix 326 / 326、316 / 316，emilia2_dialog 229 / 229，emilia2_short 281 / 281，加上 wenetspeech_clean 923 / 923，共 2,075 / 2,075。
+- 71 11-28 按本节原样采用（只进第 2 项、不用仅正文 CE、G1–G3 和分支、打分版本 6 重打、老师单独加载）。同一 CE 流里纠偏样本的语种前缀是中文，没有任何来源做屏蔽；单次前向按行分 CE / KL 的实现由 71 对照第 2 节核对。节点紧时先按退一步的做法，G1、G2 对阶段 1 比。
 - **权重**：5 个来源之间按条数（K0、klreal 都是这样）。总量按剂量定：整个阶段 2 每条约见 3 次，即纠偏样本共约 3 × 2,075 ≈ 6,200 次。纠偏占 CE 流的份额 = 6,200 ÷ 阶段 2 的 CE 样本总数。三次成立的证据（11.06 上的 clean 对照、K0、klreal）都是约 3 次。
 - emilia2_mix、emilia2_dialog 的 871 条是目标人在场的 TS 样本，按注册时的模板训练（带注册音，标签 `language Chinese<asr_text>…`）。这是剩下的 TS 风险来源：CE 里全是“在场”，没有 `None`。klreal 的中文 TS 因此往出字小幅偏移（v12 误触发 +0.25\*）。
 
