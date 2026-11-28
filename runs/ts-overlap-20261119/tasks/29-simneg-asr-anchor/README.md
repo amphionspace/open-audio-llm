@@ -268,7 +268,7 @@
   - AISHELL-1 test 有 96.4% 的句子在训练里出现过，AISHELL-3 74.2%，MagicData 59.7%，KeSpeech 3.7%，WenetSpeech test_net 1.1%。
   - 任务 29 的回放配置没有排除这些同句记录。11.17 本身就训过这些句子，回放又是对 11.17 做 KL，所以与 11.17 比仍是对等的，但这几个集的绝对值偏乐观。
   - 阶段 1 的回放不加排除，以保持与 11.17 对等。守门仍按全集判，另外并列报告去掉同句后的成绩。
-  - **去掉同句后的成绩**（干净子集）：测试集侧名单由数据侧给出，训练侧取 11.17 任务混合加任务 29 两个回放配置共 121 个来源，中文参考不到 8 字的算干净。用 [clean_subset_report.py](../../scripts/clean_subset_report.py) 计算，全集逐条重算与 summary 完全一致，输出在 `report/clean-subset-asr.txt`。
+  - **去掉同句后的成绩**（干净子集）：测试集侧名单由数据侧给出，现已正式登记为 `eval_overlap@oal-text-v1-20261128`（audio-data-contract #327），内容与计算时用的 15 份逐条一致；训练侧取 11.17 任务混合加任务 29 两个回放配置共 121 个来源，中文参考不到 8 字的算干净。用 [clean_subset_report.py](../../scripts/clean_subset_report.py) 计算，全集逐条重算与 summary 完全一致，输出在 `report/clean-subset-asr.txt`。
 
     | 字错率 %（全集 / 干净子集） | 干净条数 | 11.17 | attempt 002 | 第 3 万步 |
     |---|---:|---|---|---|
