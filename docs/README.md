@@ -39,6 +39,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [公开 ASR 榜单](research/2026-11-23-public-asr-leaderboards.md) | Open ASR / SpeechIO / Artificial Analysis 现状与上榜方式；AmphionASR 与 Qwen3-ASR 对比；AISHELL-1/3、MagicData 训练测试文本重合核查（2026-11-23） |
 | [上下文纠偏相关工作](research/2026-11-20-context-correction-related-work.md) | 说字、上下文偏置、RL 奖励、误改控制与合成到真实迁移；对应上下文纠偏线的下一步（2026-11-20） |
 | [会话级上下文 ASR](research/2026-11-04-context-aware-asr-survey.md) | 会话历史作上下文的方法、数据与评测设计（2026-11-04） |
 
@@ -53,6 +54,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [2026-11-24 Open ASR 榜同口径评测](experiments/2026-11-24-open-asr-leaderboard/README.md) | 按 Hugging Face Open ASR 榜的数据和打分复现 Qwen3-ASR（逐集差 ±0.11）；11.17 英文公开集 6.12（第 25）、中文列 2.24，FLEURS 中文训练文本括注导致幻觉 |
 | [2026-11-05 MOSS 拼注册做 TS](experiments/2026-11-05-moss-ts-concat/README.md) | 说话人日志模型拼注册取 S01 能否替代 TS-ASR：不能，v12 全集 CER 54.3 对 13.1，失败在跨录音条件认人 |
 | [2026-10-10 至 10-15](experiments/2026-10-16/README.md) | 中文会议 Diarization 训练系列总结：7 轮均未超过起点，沉淀的结论与可复用工具 |
 | [2026-10-06 至 10-08](experiments/2026-10-08/README.md) | 8×A800 续训、数据质检、180 秒会议评测集，与 MOSS 同口径对比 |
