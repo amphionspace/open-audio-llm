@@ -114,7 +114,7 @@ K0 = K 那一轮去掉纠偏部分，其余完全照 K 的实际配置（`script
   | emilia2_short · train_zh | 281 | 0.2432 |
   | emilia2_dialog · train_2spk | 229 | 0.1982 |
 
-  权重合计 1.7956，占 K0 SFT 总权重 192.19 的 0.93%。列表按 `split:record_id` 选；v4 只改文本，id 不变（抽查 emilia2_short：281 条全部在 `short-lance-20261023-final-v4-20261127` 里；11-28 PR #322 原地修正后又核了一遍，文件 sha256 和修正后的注册表一致，仍是 281 / 281）。这 4 个来源的 v4 都在 #322 原地修正的 44 个版本里，版本名不变、内容和 sha 变了，引用时重新读注册表，不用 #322 之前缓存的索引或哈希，并入时把 `version` 换成对应的 `-final-v4-20261127`，其余 4 个列表同样核对一遍命中数。wenetspeech_clean 的列表不一样：它的记录编号带版本前缀（`wenetspeech_clean@<version>:train:<id>`，加载时按 `dataset@version:split:` 前缀匹配），换了 `version` 原列表就一条也对不上，启动时报 `Empty source`；改用按 v4 改写好的 `configs/records/include-wenetspeech_clean_train-punc-v1-20261102-final-v4-20261127-train.txt`（11-28 在 v4 记录索引上核过，923 / 923）。
+  权重合计 1.7956，占 K0 SFT 总权重 192.19 的 0.93%。列表按 `split:record_id` 选；v4 只改文本，id 不变（抽查 emilia2_short：281 条全部在 `short-lance-20261023-final-v4-20261127` 里；11-28 PR #322 原地修正后又核了一遍，文件 sha256 和修正后的注册表一致，仍是 281 / 281）。这 4 个来源的 v4 都在 #322 原地修正的 44 个版本里，版本名不变、内容和 sha 变了，引用时重新读注册表，不用 #322 之前缓存的索引或哈希，并入时把 `version` 换成对应的 `-final-v4-20261127`，其余 4 个列表同样核对一遍命中数。wenetspeech_clean 的列表不一样：它的记录编号带版本前缀（`wenetspeech_clean@<version>:train:<id>`，加载时按 `dataset@version:split:` 前缀匹配），换了 `version` 原列表就一条也对不上，启动时报 `Empty source`；改用按 v4 改写好的 `configs/records/include-wenetspeech_clean_train-punc-v1-20261102-final-v4-20261127-train.txt`（`scripts/wenet_v4_include.py` 生成，11-28 在 v4 记录索引上核过，923 / 923）。
 - **配置片段**（主线数据配置 `train:` 下加；版本换成主线当时的 v4 名）：
 
   ```yaml
