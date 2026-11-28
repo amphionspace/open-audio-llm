@@ -1,0 +1,59 @@
+sampling_rate: 16000
+enroll_seconds: 5
+tags:
+- zh
+- target-speaker
+groups:
+- name: 开头注册换成稍后语句 · 目标在场
+  section: 真实对话 · 整场会议对照
+  labels:
+  - meeting-aishell4-pos-later
+  - meeting-ramc-pos-later
+  description: 原评测的开头注册（AISHELL-4 头 60 秒、RAMC 开头播报）换成本人稍后最早的合格语句；记录 ID 不变，与原 run 逐条配对
+- name: 对照：非开头注册换成稍后语句 · 目标在场
+  section: 真实对话 · 整场会议对照
+  labels:
+  - meeting-aishell4-pos-later-control
+  - meeting-ramc-pos-later-control
+  description: 同样数量的非开头注册换成本人原注册之后最早的合格语句
+evaluation:
+- dataset_id: ts_asr_real
+  version: meeting-enroll-later-20261128
+  split: meeting-aishell4-pos-later
+  task: ts_asr
+  label: meeting-aishell4-pos-later
+  tags:
+  - zh
+  - target-speaker
+  display: meeting-aishell4-pos-later
+  description: 'meeting-aishell4-pos-later: 30 enrollments swapped (see the version description)'
+- dataset_id: ts_asr_real
+  version: meeting-enroll-later-20261128
+  split: meeting-aishell4-pos-later-control
+  task: ts_asr
+  label: meeting-aishell4-pos-later-control
+  tags:
+  - zh
+  - target-speaker
+  display: meeting-aishell4-pos-later-control
+  description: 'meeting-aishell4-pos-later-control: 30 enrollments swapped (see the version description)'
+- dataset_id: ts_asr_real
+  version: meeting-enroll-later-20261128
+  split: meeting-ramc-pos-later
+  task: ts_asr
+  label: meeting-ramc-pos-later
+  tags:
+  - zh
+  - target-speaker
+  display: meeting-ramc-pos-later
+  description: 'meeting-ramc-pos-later: 30 enrollments swapped (see the version description)'
+- dataset_id: ts_asr_real
+  version: meeting-enroll-later-20261128
+  split: meeting-ramc-pos-later-control
+  task: ts_asr
+  label: meeting-ramc-pos-later-control
+  tags:
+  - zh
+  - target-speaker
+  display: meeting-ramc-pos-later-control
+  description: 'meeting-ramc-pos-later-control: 30 enrollments swapped (see the version description)'

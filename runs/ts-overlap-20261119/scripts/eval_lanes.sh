@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Evaluate one cached model on 11.17's suites, each lane = one ASR + one TS server on two GPUs (pack-mtp/serve.sh, no MTP,
 # the stack of the 11.17 gate runs). Configs are written to configs/eval-TAG/ from the 11.17-era templates.
-# Usage: [PACK=DIR] [TEMPLATES=DIR] [CATALOG=DIR] [AE_ENV=DIR] eval_lanes.sh CACHE_NAME TAG GPU_BASE PORT_BASE "LANE1 suites" ...
+# Usage: [PACK=DIR] [TEMPLATES=DIR] [CATALOG=DIR] [ROOTS=FILE] [AE_ENV=DIR] eval_lanes.sh CACHE_NAME TAG GPU_BASE PORT_BASE "LANE1 suites" ...
 # (suite = <template dir>/<name>; TEMPLATES holds the template dirs, CATALOG is the data catalog, default the registry;
 # AE_ENV = a venv made with --system-site-packages on the shared amphion-eval env plus a pinned amphion-eval, for eval
 # sets and scoring newer than that env, e.g. the Arabic sets. Not PYTHONPATH: after-training drops it when it starts the
@@ -46,7 +46,7 @@ export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 PYTHONUNBUFFERED=1 AMPHION_EVAL_H
 # W&B goes through a dev-machine forwarder that only admits listed node IPs; WB_PROXY picks which one.
 WB=${WB_PROXY:-http://10.119.17.252:17920}
 export WANDB_HTTP_PROXY=$WB WANDB_HTTPS_PROXY=$WB
-export AUDIO_DATA_CATALOG=${CATALOG:-/workspace/data/registry/catalog} AUDIO_DATA_ROOTS_FILE=/workspace/data/registry/roots.json
+export AUDIO_DATA_CATALOG=${CATALOG:-/workspace/data/registry/catalog} AUDIO_DATA_ROOTS_FILE=${ROOTS:-/workspace/data/registry/roots.json}
 pids=(); i=0
 for spec in "$@"; do lane $((GB+2*i)) $((GB+2*i+1)) $((PB+10*i)) $((PB+10*i+1)) $spec & pids+=($!); i=$((i+1)); sleep 60; done
 rc=0; for x in "${pids[@]}"; do wait $x || rc=1; done; echo "$T evals done rc=$rc $(date -u +%FT%TZ)"; exit $rc
