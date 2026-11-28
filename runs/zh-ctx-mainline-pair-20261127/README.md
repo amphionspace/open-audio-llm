@@ -83,13 +83,14 @@ K0 = K 那一轮去掉纠偏部分，其余完全照 K 的实际配置（`script
 - 时机：任务 29 判定之后的下一轮主线，文本切到 final v4，打分切到版本 6。
 - 并入前三件事由 71 在并入时做：在 v4 上重建 GRPO targets（第 4 项）、核对描述录音另外 4 个 include 列表的命中数（第 2 项）、ctx-v2 基线和候选用同一打分版本重打（第 5 项）。
 - 门槛：scene-ts CER、chime4 WER / 漏识别的余量放到 2 个点，或用两个种子的基线；TS 误触发按 GRPO 之后的结果判。
+- 71 后来定下一轮主线分两段，纠偏并入阶段 2（训 LLM）。按阶段 2 形态的规格和门槛见下面“并入阶段 2 的规格”，和本单不一致的地方以那一节为准。
 
 **推荐**：第 1–3 项进主线 SFT，第 5 项作为门槛；第 4 项（GRPO 纠偏奖励）标成“可选，代价未消除”。合成说字数据和 think 不进主线：它们是第 4 项那一包的主要代价来源，原因见“没解决的问题”。
 
 | # | 项目 | 阶段 | 状态 |
 |---|---|---|---|
 | 1 | ctxclean 改正文本 | SFT | 已在 finals 里，不用做事 |
-| 2 | 带说明录音上采样（+ 仅正文 CE） | SFT | 上采样推荐；仅正文 CE 在主线**未验证** |
+| 2 | 带说明录音上采样（+ 仅正文 CE） | SFT | 上采样推荐；仅正文 CE 不用（只对带合成数据的臂有用，见“并入阶段 2 的规格”第 2 节） |
 | 3 | train_asr_dialog | SFT | 推荐，用 v4（竖线记录已隔离） |
 | 4 | GRPO 纠偏奖励 + context targets | GRPO | 可选，代价未消除；targets 要在 v4 上重建 |
 | 5 | ctx-v2 真实录音门槛集 | 评测 | 推荐 |
@@ -113,14 +114,14 @@ K0 = K 那一轮去掉纠偏部分，其余完全照 K 的实际配置（`script
   | emilia2_short · train_zh | 281 | 0.2432 |
   | emilia2_dialog · train_2spk | 229 | 0.1982 |
 
-  权重合计 1.7956，占 K0 SFT 总权重 192.19 的 0.93%。列表按 `split:record_id` 选；v4 只改文本，id 不变（抽查 emilia2_short：281 条全部在 `short-lance-20261023-final-v4-20261127` 里；11-28 PR #322 原地修正后又核了一遍，文件 sha256 和修正后的注册表一致，仍是 281 / 281）。这 4 个来源的 v4 都在 #322 原地修正的 44 个版本里，版本名不变、内容和 sha 变了，引用时重新读注册表，不用 #322 之前缓存的索引或哈希，并入时把 `version` 换成对应的 `-final-v4-20261127`，其余 4 个列表同样核对一遍命中数。
+  权重合计 1.7956，占 K0 SFT 总权重 192.19 的 0.93%。列表按 `split:record_id` 选；v4 只改文本，id 不变（抽查 emilia2_short：281 条全部在 `short-lance-20261023-final-v4-20261127` 里；11-28 PR #322 原地修正后又核了一遍，文件 sha256 和修正后的注册表一致，仍是 281 / 281）。这 4 个来源的 v4 都在 #322 原地修正的 44 个版本里，版本名不变、内容和 sha 变了，引用时重新读注册表，不用 #322 之前缓存的索引或哈希，并入时把 `version` 换成对应的 `-final-v4-20261127`，其余 4 个列表同样核对一遍命中数。wenetspeech_clean 的列表不一样：它的记录编号带版本前缀（`wenetspeech_clean@<version>:train:<id>`，加载时按 `dataset@version:split:` 前缀匹配），换了 `version` 原列表就一条也对不上，启动时报 `Empty source`；改用按 v4 改写好的 `configs/records/include-wenetspeech_clean_train-punc-v1-20261102-final-v4-20261127-train.txt`（11-28 在 v4 记录索引上核过，923 / 923）。
 - **配置片段**（主线数据配置 `train:` 下加；版本换成主线当时的 v4 名）：
 
   ```yaml
   - dataset_id: wenetspeech_clean
     split: train
     version: train-punc-v1-20261102-final-v4-20261127
-    include_records: /workspace/data/datasets/context_correction_clean_zh/versions/think-v2-20261113-final-v1-20261120/wenetspeech_clean/include-wenetspeech_clean_train-punc-v1-20261102-final-v1-20261120-train.txt
+    include_records: /workspace/workspace/mingdong/repo/oal-ctx-grpo/runs/zh-ctx-mainline-pair-20261127/configs/records/include-wenetspeech_clean_train-punc-v1-20261102-final-v4-20261127-train.txt  # 编号带版本前缀，已改写到 v4
     task: asr
     require_clean_pass: true
     max_duration: 120
@@ -128,7 +129,7 @@ K0 = K 那一轮去掉纠偏部分，其余完全照 K 的实际配置（`script
   # emilia2_mix train_2spk / train_3spk、emilia2_short train_zh、emilia2_dialog train_2spk 同样写法，
   # 列表路径和权重见 configs/train-data-k0.yaml 里带 include_records 的 5 个条目
   ```
-- **trainer 改动**：K0 按普通识别训，标签前缀 `language Chinese<asr_text>` 也算 CE。“仅正文 CE”（屏蔽到第一个 `<asr_text>` 为止）只在 `runs/zh-ctx-kl-anchor-20261126` 的自写 trainer（`ce_text_only: true`）里测过：纠偏收益不变（kltreal 对 klreal 不显著），带合成数据那一臂“总要输出”的漂移减半（v12 不在场新输出 187 → 112）。但那是从 11.17 续训加 KL 锚定，不是主线配方，**主线上未验证**。主线 SFT trainer（ms-swift）没有按来源屏蔽标签前缀的开关，71 在主线实现。
+- **trainer 改动**：K0 按普通识别训，标签前缀 `language Chinese<asr_text>` 也算 CE。“仅正文 CE”（屏蔽到第一个 `<asr_text>` 为止）只在 `runs/zh-ctx-kl-anchor-20261126` 的自写 trainer（`ce_text_only: true`）里测过：纠偏收益不变（kltreal 对 klreal 不显著），带合成数据那一臂“总要输出”的漂移减半（v12 不在场新输出 187 → 112）。但那是从 11.17 续训加 KL 锚定，不是主线配方，**主线上未验证**。后来核对：只用真实录音时它没有好处（kltreal 对 klreal），阶段 2 不用，也就不需要按来源屏蔽标签前缀的开关（见“并入阶段 2 的规格”第 2 节）。
 - **证据**：K0 这一轮（第 1–3 项都在）对 11.17，训练没见过的明确说明 469 条：SFT 后 40.30 → 46.48*，GRPO 后 45.84*；没见过的全部 1,680 条 67.20 → 69.94*。三项各占多少，本实验分不开。
 - **已知代价**：两个 K0 对 11.17 都有 TS 误触发上升，两次结果一致（k0grpo / k0s2grpo）：v12 +1.49 / +1.89，first-other +2.19 / +1.66，西语 v1 +1.19 / +1.33、v2 +1.30 / +1.24，crosslingual +0.80 / +1.59，scene-ts +10.0 / +7.1。同时漏识别和 CER 下降（v12 CER -0.27 / -0.41，西语 TS WER -1.0 到 -1.5）。k0s2grpo 另有 scene-ts CER +1.88、chime4 漏识别 +2.20，k0grpo 这两项不显著，属于波动大的组。这和“在 GRPO 模型 11.17 上再做一轮 SFT”的已知代价同一形态，本实验分不开它和第 1–3 项各占多少。主线从自己的 SFT 底座起训，预计没有这一层，但没验证过，并入后按第 5 项和交付门槛看 GRPO 之后的结果。
 
@@ -192,6 +193,87 @@ K0 = K 那一轮去掉纠偏部分，其余完全照 K 的实际配置（`script
 - **合成说字数据让中文 TS 偏向“不在场”、西语 TS 偏向“总输出”**：在场判断的 token（`language` 后面那个）被整体推移，不是个别难例。KL 锚定和加在场判断项都没稳住（`runs/zh-ctx-kl-anchor-20261126`）。
 - **长句提前结束**：带合成数据的臂 scene-asr CER 4.72 → 8.17*，长口述提前出 EOS。
 - **多语种纠偏**（阿语、葡语）：用户 11-28 定了先不做，等主线加完语种。所有纠偏数据目前只有中文；amphiondata 的 `scripts/context_correction` 流程结构上不绑语种，但提示词、分类和质检 ASR 是中文专用的。
+
+## 并入阶段 2 的规格（2026-11-28，训练前写定）
+
+**阶段 2 的形态**（71 11-28 定）：下一轮主线分两段。阶段 1 只训编码器（simneg-asr 配方），阶段 2 训 LLM：从阶段 1 起训；阿语 v1 + custom.hotwords 只算 CE，前缀 `language Arabic`；加纠偏增量；中英和 TS 回放算对阶段 1 的 KL。本节只管纠偏这部分，阿语的门槛归 71。
+
+**最接近的证据**：`runs/zh-ctx-kl-anchor-20261126` 的 klreal 臂和阶段 2 是同一形态。
+- 做法：从 11.17 起训，LLM 放开（只冻结词嵌入和音频塔卷积前端）；CE 流只有下面 5 个说明录音列表；11.17 的任务回放只算对 11.17 的 KL，权重 1.0。
+- 收益：对 11.17，训练没见过的真实题 1,680 条 +3.40 [+2.08, +4.77]。
+- 代价：TS 判定项都在 0.5 个点以内（v12 误触发 +0.25\*、跟错人误触发 +0.37\*、英文 TS 漏识别 +0.34\*）。超过 0.5 个点的显著变差见第 3 节“最可能出问题的项”。
+- 局限：那一臂没有不带纠偏数据的对照，代价里纠偏和“放开 LLM 续训”各占多少分不开。
+- 阶段 2 和它不同的地方：老师是阶段 1（编码器变了，LLM 还是 11.17 的），CE 流里还有阿语，学习率由主线定（klreal 峰值 3.55e-6）。
+
+### 1. 进阶段 2 的数据
+
+| 交接单项 | 进不进 | 原因 |
+|---|---|---|
+| 1 ctxclean 改正文本 | 不单独加 | 阶段 2 的中文只走 KL 回放，老师的 LLM 是 11.17 的，改正文本不经过 CE，起不了作用。它的 +1.6 证据来自全量 SFT，下一轮全量 SFT 自然带上 |
+| 2 说明录音 5 个列表 | 进，只算 CE | klreal 的收益就是这一项单独带来的 |
+| 3 train_asr_dialog | 不进 | 它修的是 ts-twins 造成的长对话漏人，twins 不在主线；klreal 没有它，scene-asr 漏识别 −0.26\*（变好） |
+| 4 GRPO 纠偏奖励 | 不进 | 阶段 2 只有 CE 和 KL，没有 GRPO |
+| 5 ctx-v2 门槛集 | 用作门槛 | 第 3 节 |
+
+| 来源 · split | version（final v4，#322 修正后） | include 列表 | 条数 |
+|---|---|---|---:|
+| emilia2_mix · train_2spk | `mix-20261013-utts-final-v4-20261127` | `think-v2-20261113-final-v1-20261120/emilia2_mix_utts/include-emilia2_mix_mix-20261013-utts-final-v1-20261120-train_2spk.txt` | 326 |
+| emilia2_mix · train_3spk | 同上 | 同目录 `…-train_3spk.txt` | 316 |
+| emilia2_dialog · train_2spk | `dialog-turn-taking-20261013-enroll-final-v4-20261127` | `think-v2-20261113-final-v1-20261120/emilia2_dialog/include-emilia2_dialog_dialog-turn-taking-20261013-enroll-final-v1-20261120-train_2spk.txt` | 229 |
+| wenetspeech_clean · train（`task: asr`、`require_clean_pass: true`、`max_duration: 120`） | `train-punc-v1-20261102-final-v4-20261127` | 本实验 `configs/records/include-wenetspeech_clean_train-punc-v1-20261102-final-v4-20261127-train.txt`（编号带版本前缀，已改写，923 / 923） | 923 |
+| emilia2_short · train_zh | `short-lance-20261023-final-v4-20261127` | `think-v2-20261113-final-v1-20261120/emilia2_short/include-emilia2_short_short-lance-20261023-final-v1-20261120-train_zh.txt`（281 / 281） | 281 |
+
+- include 列表目录前缀是 `/workspace/data/datasets/context_correction_clean_zh/versions/`。除 wenetspeech_clean 外，列表按 `split:record_id` 记，不带版本，71 并入时核对命中数。
+- **权重**：5 个来源之间按条数（K0、klreal 都是这样）。总量按剂量定：整个阶段 2 每条约见 3 次，即纠偏样本共约 3 × 2,075 ≈ 6,200 次。纠偏占 CE 流的份额 = 6,200 ÷ 阶段 2 的 CE 样本总数。三次成立的证据（11.06 上的 clean 对照、K0、klreal）都是约 3 次。
+- emilia2_mix、emilia2_dialog 的 871 条是目标人在场的 TS 样本，按注册时的模板训练（带注册音，标签 `language Chinese<asr_text>…`）。这是剩下的 TS 风险来源：CE 里全是“在场”，没有 `None`。klreal 的中文 TS 因此往出字小幅偏移（v12 误触发 +0.25\*）。
+
+### 2. trainer 和数据契约
+
+- **不用仅正文 CE**。只用真实录音时，加屏蔽（kltreal）对不加（klreal）没有好处：
+  - 纠偏收益没差别：70.00 对 70.60，配对不显著；
+  - TS 没变好：v12 漏识别 2.79 → 2.93\*；
+  - 交付显著变差的组更多：12 → 15。
+
+  它只对带合成数据的臂有用（往出字的偏移减半），而合成数据不进阶段 2。所以阶段 2 不需要按来源屏蔽标签前缀的开关。
+- **那个开关在哪**（答 71）：`ce_text_only`，在 `runs/zh-ctx-kl-anchor-20261126/scripts/ctx_kl_train.py` 里（oal-ctx-grpo 分支 `feat/ctx-grpo-context-plan`，c2f95ef 加入，当前 44c80e0）。
+  - 它是实验自写的 trainer，不在 open-audio-llm main。
+  - 它对整个 CE 流生效，不分来源。阿语 CE 放进同一个流再打开它，会把 `language Arabic` 屏蔽掉，而阶段 2 要修的正是这个 token。
+- **每条样本只算一种损失**：纠偏样本只算 CE，不算 KL。
+  - 老师（阶段 1）的 LLM 是 11.17 的，输出的是没改正的写法，对纠偏样本算 KL 会把收益拉回去。
+  - `ctx_kl_train.py` 用两个 loader：CE 流和回放流分开前向，梯度相加，同一条样本不会两种损失都算。
+  - 主线 trainer 如果把 CE 样本和 KL 样本放进同一个前向，要按行区分损失：CE 和 KL 各自按自己的 token 取平均，不让一条长纠偏样本改变 KL 的分量。
+- **回放里抽到说明录音**：wenetspeech_clean、emilia2_* 的完整来源在回放里时，抽到说明录音，KL 会把它拉回旧写法。
+  - klreal 估算整个训练抽到不到 10 次，相对 CE 的约 6,200 次可以忽略。
+  - 主线回放配比不同时按同样的方法估一下。超过 CE 次数的 1%，就在这些回放来源上用同一份列表做 `exclude_records`。
+- **老师单独加载一份**，不要 `copy.deepcopy(student)`。`attach_sep_token` 把 thinker 原来的 `forward`、`get_audio_features` 存在闭包里，deepcopy 共享闭包，老师实际跑的是学生：KL 恒为 0，第一个 TS 样本还会断言失败（klreal attempt 001）。
+- **打分**：ctx-v2 和交付都用阶段 2 的同一个 ae 和打分版本 6 重打。上面 klreal 的数字是打分版本 4，只用来估计方向和大小，不直接比。
+
+### 3. 门槛（训练前写定）
+
+**对比**：S2（带纠偏）对 S2-noctx（同一配置去掉上面 5 个来源，同一种子、同一步数）。
+- 两边都是 think 关，配对 bootstrap 95% CI，差 = S2 − S2-noctx。
+- S2-noctx 多一次阶段 2 训练，同时也是阿语单独的对照。
+- 节点不够时退一步：G1、G2 对阶段 1 比；G3 照常按交付门槛看，但出现回退时分不清来自纠偏还是阿语，那时再补训 S2-noctx 归因。
+
+| 门槛 | 项目 | 成立条件 |
+|---|---|---|
+| G1 收益 | ctx-v2 Emilia 训练没见过的全部 1,680 条准确率 | CI 下限 > 0（klreal 对 11.17 +3.40） |
+| G2 保持 | Emilia 原转写已对 · 明确说明 662 条 | 不显著变差 |
+| G3 回退 | 交付 27 组，热词组按 `scripts/gate.py` 自助抽样 | 没有“显著且 > 0.5 个点”的变差；TS 误触发和漏识别反向移动、两者之和 ≤ +0.5 算门槛移动，不算回退；scene-ts CER、chime4 WER / 漏识别余量 2 个点；badcase 条数少，只记录 |
+
+**最可能出问题的项**（klreal 对 11.17 显著且 > 0.5；已在 G3 里，门槛不另放宽）：
+- 西语 TS v1 / v2 WER +1.40 / +1.39：漏识别 +0.83 / +0.93，误触发 −0.65 / −0.59。门槛往“不出字”移，两者之和不到 0.5，但 WER 本身变差，按 G3 算回退。
+- 跨语种误触发 +0.68；跨语种（英文）漏识别 +0.91（误触发 −0.45，不显著）；英文 TS WER +0.54。
+- ts-hotwords-es CER +1.21、customer-hotwords CER +1.62（召回 −2.1）、ts-hotwords CER +0.61。
+
+**预计不会出现的项**：
+- K0 那种 TS 误触发上升（对 11.17 v12 +1.49 等）来自全量 SFT；KL 形态下 klreal 只有 +0.25。
+- kgrpo 一包的西语 TS 误触发 +4.7 来自合成数据和 think，二者都不进阶段 2。
+
+**分支**：
+- G1、G2 成立，G3 没有回退：纠偏并入，S2 作为本轮阶段 2 的产出。
+- G1 成立，G3 有回退：收益和回退的全表交给用户定用 S2 还是 S2-noctx。
+- G1 不成立：纠偏不进本轮，用 S2-noctx。不调权重、不重跑。
 
 <!-- execution-status -->
 
