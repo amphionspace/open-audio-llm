@@ -1,0 +1,26 @@
+# 阿拉伯语评测全量模板（取自 d9 的 ar-benchmarks-20261127 冒烟配置，samples_per_source 改为 0）；eval_lanes.sh 填入模型名、端口与服务名。
+suite_id: asr-regression-native@1
+model_name: arbench-smoke-v18aespt-pkg
+evaluator: ts-asr
+eval_set: asr/ts-asr-crosslingual-ar@v1-20261127
+tsasr_server_url: http://127.0.0.1:18811
+tsasr_served_model: pkg-tsasr
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/arbench-smoke-v18aespt-pkg
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+  enroll_seconds: 5
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false
+  model_info:
+    origin: ours
+    mode: offline
+    params: 1.7B
+    license: internal

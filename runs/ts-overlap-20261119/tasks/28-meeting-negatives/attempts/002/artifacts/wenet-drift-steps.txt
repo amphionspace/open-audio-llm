@@ -1,0 +1,26 @@
+wenetspeech@icefall-20260908:test_net: 24774 utterances, 409981 reference chars (runaway alignments skipped: 0)
+  base  S  14861 D   5635 I   1598  CER 5.39
+  a001s10k S  17594 (+2733) D   5661 (  +26) I   1828 ( +230)  CER 6.12
+  a001s30k S  15855 ( +994) D   5543 (  -92) I   1687 (  +89)  CER 5.63
+
+per-utterance deltas vs base
+  a001s10k worse  3055 (+5490)  better  1589 (-2501)  net +2989
+  a001s30k worse  2164 (+3582)  better  1583 (-2591)  net +991
+  a001s30k worse utterances also worse in every other model: 1399 of 2164, their a001s30k delta +2423
+    same set in a001s10k: +2683
+    corr(delta a001s10k, delta a001s30k) +0.594
+    sum|err a001s10k - err a001s30k| 6780   sum|err a001s30k - err base| 6173
+
+a001s30k: character edits that grew most vs base (count base -> a001s30k, delta)
+  D (net -92): 我→∅ 201→215  你→∅ 184→194  不→∅ 76→85  们→∅ 54→62  给→∅ 12→20  也→∅ 47→54  么→∅ 22→29  可→∅ 8→15  跟→∅ 5→11  快→∅ 8→14  真→∅ 8→14  之→∅ 9→15  谢→∅ 8→14  走→∅ 15→20  以→∅ 13→18
+  I (net +89): ∅→了 69→90  ∅→你 55→73  ∅→我 43→56  ∅→k 1→9  ∅→v 1→8  ∅→别 2→7  ∅→大 2→6  ∅→说 6→10  ∅→好 1→5  ∅→在 10→14  ∅→爸 0→3  ∅→呢 20→23  ∅→可 5→8  ∅→们 8→11  ∅→还 6→9
+  S (net +994): 它→他 150→175  得→的 45→58  的→呢 16→26  羽→雨 14→23  了→的 33→40  再→在 14→21  地→的 162→169  就→这 9→15  袖→秀 17→23  救→求 0→6  莲→连 8→13  是→说 2→7  推→对 0→5  祈→起 2→7  莲→林 1→6
+  net edit growth +991; top-20 edit types sum +215; edit types that grew 4411, shrank 3500
+
+a001s30k: delta by duration (s)
+  [  0,    2)  n  9976  ref  61706  base 10.07  a001s10k 12.09  a001s30k 11.13
+  [  2,    4)  n  7238  ref  96188  base  5.44  a001s10k  6.33  a001s30k  5.80
+  [  4,    6)  n  3202  ref  76866  base  4.60  a001s10k  5.09  a001s30k  4.75
+  [  6,   10)  n  3875  ref 140742  base  4.15  a001s10k  4.39  a001s30k  4.05
+  [ 10,   15)  n   401  ref  26739  base  3.40  a001s10k  3.97  a001s30k  3.42
+  [ 15, 1000)  n    82  ref   7740  base  4.57  a001s10k  5.06  a001s30k  4.82

@@ -1,0 +1,52 @@
+sampling_rate: 16000
+enroll_seconds: 5
+tags:
+- zh
+- target-speaker
+groups:
+- name: 整场会议逐段发送 · 目标在场
+  section: 真实对话 · 整场会议
+  labels:
+  - meeting-alimeeting-pos
+  description: 复现下游 speaker-enroll 回放会议的发送方式：会上每人注册一次，每段话发给每个注册人的框。目标在场时的字错率与漏识率
+- name: 整场会议逐段发送 · 目标缺席
+  section: 真实对话 · 整场会议
+  labels:
+  - meeting-alimeeting-neg
+  description: 复现下游 speaker-enroll 回放会议的发送方式：会上每人注册一次，每段话发给每个注册人的框。目标缺席时的误输出率（下游串人 badcase：AISHELL-4 3.8%，手机远场会议 47.9%）
+- name: 定位对照 · 别场注册 · 目标缺席
+  section: 真实对话 · 整场会议对照
+  labels:
+  - meeting-alimeeting-neg-xrec
+  description: 同一批段，注册换成同语料另一场录音里的人：与段内最像的在场人的声纹相似度最接近原注册（labels.base_impostor_sim、xrec_sim_gap）。与基础组逐条配对，检验同一录音的注册是否被当成目标的证据；与同名基础组（不带后缀）逐条配对比较（metadata.base）
+evaluation:
+- dataset_id: ts_asr_real
+  version: meeting-v5-20261125
+  split: meeting-alimeeting-pos
+  task: ts_asr
+  label: meeting-alimeeting-pos
+  tags:
+  - zh
+  - target-speaker
+  display: 整场会议 · AliMeeting · 目标在场
+  description: AliMeeting test 20 场会议远场通道 0（2–4 人），按人工标注把同一人相邻语句并成段（同下游 MOSS 分段，落在别人话里的插话不单独成段），每段发给会上每个注册人（注册取本人会上最早的干净语句，客户端取前 5 秒）。本人在段内说话 ≥0.5 秒且语句完整在段内，参考为这些语句。
+- dataset_id: ts_asr_real
+  version: meeting-v5-20261125
+  split: meeting-alimeeting-neg
+  task: ts_asr
+  label: meeting-alimeeting-neg
+  tags:
+  - zh
+  - target-speaker
+  display: 整场会议 · AliMeeting · 目标缺席
+  description: AliMeeting test 20 场会议远场通道 0（2–4 人），按人工标注把同一人相邻语句并成段（同下游 MOSS 分段，落在别人话里的插话不单独成段），每段发给会上每个注册人（注册取本人会上最早的干净语句，客户端取前 5 秒）。本人在段前后 0.5 秒内都没说话，段里是同场其他人，期望输出为空；labels.impostor_sim 为注册与段内最像的在场人的声纹相似度。
+- dataset_id: ts_asr_real
+  version: meeting-v5-20261125
+  split: meeting-alimeeting-neg-xrec
+  task: ts_asr
+  label: meeting-alimeeting-neg-xrec
+  tags:
+  - zh
+  - target-speaker
+  display: 整场会议 · AliMeeting · 目标缺席 · 别场注册
+  description: 同一批段，注册换成同语料另一场录音里的人：与段内最像的在场人的声纹相似度最接近原注册（labels.base_impostor_sim、xrec_sim_gap）。与基础组逐条配对，检验同一录音的注册是否被当成目标的证据。本人在段前后 0.5 秒内都没说话，段里是同场其他人，期望输出为空；labels.impostor_sim 为注册与段内最像的在场人的声纹相似度。

@@ -25,6 +25,7 @@ def native_language(language: str) -> str:
         "zh-cn": "Chinese", "chinese": "Chinese", "mandarin": "Chinese",
         "es": "Spanish", "spanish": "Spanish",
         "pt": "Portuguese", "portuguese": "Portuguese",
+        "ar": "Arabic", "arabic": "Arabic",
         # KeSpeech stores Chinese regional accents in supervision.language.
         "northeastern": "Chinese", "jiang-huai": "Chinese",
         "southwestern": "Chinese", "jiao-liao": "Chinese", "beijing": "Chinese",

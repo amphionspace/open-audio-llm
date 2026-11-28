@@ -409,6 +409,12 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             raise ValueError("objective.ts_activity_weight needs speed_prob 0: time warping moves the speakers")
         self._activity = None
         self._mix_info = {}
+        # The clean target of target-present online mixtures, for the clean-teacher KL and feature loss
+        # (integrations.ms_swift.retention).
+        objective = config.get("objective", {})
+        self.clean_teacher = bool(training and not grpo and (
+            objective.get("clean_teacher_kl_weight") or objective.get("clean_teacher_feature_weight")))
+        self._clean = None
         # Twin enrollments for the paired look-alike loss (integrations.ms_swift.paired_lookalike).
         self.paired_lookalike = config.get("objective", {}).get("paired_lookalike") if training and not grpo else None
         if self.paired_lookalike is not None:
@@ -953,6 +959,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
                     rir_loader=self._rir_loader(),
                 )
             if online:
+                unleveled = audio
                 audio = set_level(rng, audio, slot_level(
                     OnlineMixConfig(**online), resolved.record.metadata.get("online_nonspeech"), slot.name))
                 if slot.name == "enrollment" and self.paired_lookalike is not None:
@@ -973,6 +980,8 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             if self.training:
                 # FLOAT WAV would keep samples past full scale, which PCM16 input never has.
                 audio = limit_peak(audio)
+                if online and slot.name != "enrollment" and self._clean is not None:
+                    self._clean = self._level_like_mixture(resolved.record, self._clean, unleveled, audio)
                 buffer = BytesIO()
                 sf.write(buffer, audio, self.sampling_rate, format="WAV", subtype="FLOAT")
                 result[slot.name] = buffer.getvalue()
@@ -1227,6 +1236,16 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             clip = resample_poly(clip, self.sampling_rate // g, rate // g).astype(np.float32)
         return np.ascontiguousarray(clip, dtype=np.float32)
 
+    @staticmethod
+    def _level_like_mixture(record, clean, unleveled, mixture):
+        """The clean target with the gain set_level and limit_peak gave the mixture (both only scale the clip)."""
+        if len(clean) != len(mixture):
+            raise ValueError(f"{record.id}: the clean target ({len(clean)} samples) does not match the mixture "
+                             f"({len(mixture)})")
+        power = float(np.dot(unleveled, unleveled))
+        gain = float(np.dot(mixture, unleveled)) / power if power > 0 else 1.0
+        return np.ascontiguousarray(limit_peak((clean * gain).astype(np.float32)), dtype=np.float32)
+
     def _online_slot(self, record, name, audio, rng):
         """Rebuild one slot of an online-mixed sample; return audio and the slot's augmentation."""
         config = OnlineMixConfig(**record.metadata["online_mix"])
@@ -1259,6 +1278,9 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         if scene:
             audio = self._scene_mixture(record, scene, config, rng, info)
             self._set_activity(record, len(audio), info["target_spans"], info["other_spans"])
+            if self.clean_teacher:
+                # Scene targets are pool utterances: the target track alone is clean speech.
+                self._clean = info["clean"]
             self._mix_info["mixture"] = {"kind": f"scene-{scene['mode']}", "seconds": round(len(audio) / rate, 3),
                                          "overlap": round(info.get("overlap", 0.0), 3)}
             return degrade_mixture(rng, audio, config, floor, self.sampling_rate), augmentation
@@ -1281,6 +1303,8 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             if absent or "target_speaker" not in record.metadata:
                 # One clean target utterance (the online_mix contract), or only the drawn interferers.
                 self._set_activity(record, len(audio), info["target_spans"], info["other_spans"])
+                if self.clean_teacher:
+                    self._clean = info["clean"]
             elif utterances is not None:
                 # A recorded window stands in for the target: only its annotation says who speaks when.
                 self._window_activity(record, len(audio), round(info["lead"] * self.sampling_rate), info["other_spans"])
@@ -1299,6 +1323,7 @@ class CatalogSwiftDataset(OnlineAudioDataset):
         # Filled by _online_slot for analysis (GRPO rollout logs); never reaches the model.
         self._mix_info = {}
         self._twin = None
+        self._clean = None
         sample = super().__getitem__(idx)
         if self._twin is not None:
             from .qwen3_asr import MEL_HOP_SECONDS
@@ -1306,6 +1331,12 @@ class CatalogSwiftDataset(OnlineAudioDataset):
             # Hop-padded like the enrollment (prepare_ts_clips), so both give the same Mel frames.
             hop = int(self.sampling_rate * MEL_HOP_SECONDS)
             sample["twin_enroll_wav"] = np.pad(self._twin, (0, -len(self._twin) % hop))
+        if self._clean is not None:
+            from .qwen3_asr import MEL_HOP_SECONDS
+
+            # Hop-padded like the mixture (prepare_ts_clips), so both give the same Mel frames.
+            hop = int(self.sampling_rate * MEL_HOP_SECONDS)
+            sample["clean_mix_wav"] = np.pad(self._clean, (0, -len(self._clean) % hop))
         if self._activity is not None:
             # Read by the template, which turns it into per-Mel-frame labels of the mixture.
             sample["ts_activity"] = self._activity

@@ -1,0 +1,60 @@
+# tasks/16：soup（ts-overlap-grpo-soup-t13t14-avg3）的 MTP 接受长度（k=2）与关闭 MTP 的对照。由 joint-mtp-spec 的 spec-check-es116-esasr-1117pt-mtp126-4000.yaml（11.17 包同协议）改模型、草稿、输出与 lane，去掉 k3。
+version: 1
+parameters:
+  output: /workspace/workspace/mingdong/repo/oal-clean-teacher/runs/ts-overlap-20261119/tasks/16-candidate-soup/attempts/003/artifacts
+  pack: /workspace/workspace/mingdong/repo/oal-joint-mtp/runs/joint-mtp-spec-20261107/shared/pack-mtp
+  gpu_util: 0.3
+  max_model_len: 8192
+  model_name: spec-check
+  server_arguments:
+  - --max-num-seqs
+  - '48'
+  - --max-num-batched-tokens
+  - '4096'
+  server_startup_timeout_s: 1800
+  enroll_s: 5
+  ts_max_mix_s: 22
+  catalog: /workspace/data/registry/catalog
+  roots: /workspace/data/registry/roots.json
+  asr_samples: /workspace/data/ae-runs/whitebox-merge-sumfull-es116/runs/run-20261115T132823Z-e934be00/samples.jsonl
+  asr_per_source: 50
+  ts_samples: /workspace/data/ae-runs/amphionasr2-grpo-v16avg3-ckpt400/runs/run-20261107T022131Z-c6ec67e6/samples.jsonl
+  ts_count: 300
+  seed: 20261031
+  max_tokens: 256
+  request_timeout_s: 300
+  warmup_requests: 16
+  modes:
+  - asr
+  concurrency:
+  - 1
+  - 16
+  - 48
+  variants:
+  - name: base
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+    environment:
+      MODEL: /workspace/data/ae-state/model-cache/entries/model-9d858e123483d3131107c136
+  - name: mtp-k2
+    python: /workspace/workspace/mingdong/miniconda3/envs/vllm-serving/bin/python
+    arguments:
+    - --speculative-config
+    - '{"method": "eagle", "model": "/workspace/data/ae-state/model-cache/entries/model-9d858e123483d3131107c136/mtp",
+      "num_speculative_tokens": 2}'
+    environment:
+      MODEL: /workspace/data/ae-state/model-cache/entries/model-9d858e123483d3131107c136
+  lanes:
+  - gpu: 2
+    port: 18610
+    variants:
+    - base
+  - gpu: 3
+    port: 18710
+    variants:
+    - mtp-k2
+  wandb:
+    enabled: true
+    mode: online
+    entity: 1016097967-amphion
+    project: open-audio-llm
+    name: AmphionASR-ts-overlap-spec-soup-t13t14-mtp-k2-esasr-a003

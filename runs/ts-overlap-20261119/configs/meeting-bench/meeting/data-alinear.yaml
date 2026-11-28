@@ -1,0 +1,67 @@
+sampling_rate: 16000
+enroll_seconds: 5
+tags:
+- zh
+- target-speaker
+groups:
+- name: 定位对照 · 近讲注册 · 目标在场
+  section: 真实对话 · 整场会议对照
+  labels:
+  - meeting-alimeeting-pos-enear
+  description: 同一批注册语句改取本人头戴麦（按远场注册 RMS 缩放），段仍为远场：注册不再带会议室远场声学；与同名基础组（不带后缀）逐条配对比较（metadata.base）
+- name: 定位对照 · 近讲注册 · 目标缺席
+  section: 真实对话 · 整场会议对照
+  labels:
+  - meeting-alimeeting-neg-enear
+  description: 同一批注册语句改取本人头戴麦（按远场注册 RMS 缩放），段仍为远场：注册不再带会议室远场声学；与同名基础组（不带后缀）逐条配对比较（metadata.base）
+- name: 定位对照 · 全近讲 · 目标在场
+  section: 真实对话 · 整场会议对照
+  labels:
+  - meeting-alimeeting-pos-near
+  description: 注册取本人头戴麦，段为全部头戴麦之和（按远场 RMS 缩放）：两边都是近讲；与同名基础组（不带后缀）逐条配对比较（metadata.base）
+- name: 定位对照 · 全近讲 · 目标缺席
+  section: 真实对话 · 整场会议对照
+  labels:
+  - meeting-alimeeting-neg-near
+  description: 注册取本人头戴麦，段为全部头戴麦之和（按远场 RMS 缩放）：两边都是近讲；与同名基础组（不带后缀）逐条配对比较（metadata.base）
+evaluation:
+- dataset_id: ts_asr_real
+  version: meeting-v5-20261125
+  split: meeting-alimeeting-pos-enear
+  task: ts_asr
+  label: meeting-alimeeting-pos-enear
+  tags:
+  - zh
+  - target-speaker
+  display: 整场会议 · AliMeeting · 目标在场 · 近讲注册
+  description: 同一批注册语句改取本人头戴麦（按远场注册 RMS 缩放），段仍为远场：注册不再带会议室远场声学。本人在段内说话 ≥0.5 秒且语句完整在段内，参考为这些语句。
+- dataset_id: ts_asr_real
+  version: meeting-v5-20261125
+  split: meeting-alimeeting-neg-enear
+  task: ts_asr
+  label: meeting-alimeeting-neg-enear
+  tags:
+  - zh
+  - target-speaker
+  display: 整场会议 · AliMeeting · 目标缺席 · 近讲注册
+  description: 同一批注册语句改取本人头戴麦（按远场注册 RMS 缩放），段仍为远场：注册不再带会议室远场声学。本人在段前后 0.5 秒内都没说话，段里是同场其他人，期望输出为空；labels.impostor_sim 为注册与段内最像的在场人的声纹相似度。
+- dataset_id: ts_asr_real
+  version: meeting-v5-20261125
+  split: meeting-alimeeting-pos-near
+  task: ts_asr
+  label: meeting-alimeeting-pos-near
+  tags:
+  - zh
+  - target-speaker
+  display: 整场会议 · AliMeeting · 目标在场 · 全近讲
+  description: 注册取本人头戴麦，段为全部头戴麦之和（按远场 RMS 缩放）：两边都是近讲。本人在段内说话 ≥0.5 秒且语句完整在段内，参考为这些语句。
+- dataset_id: ts_asr_real
+  version: meeting-v5-20261125
+  split: meeting-alimeeting-neg-near
+  task: ts_asr
+  label: meeting-alimeeting-neg-near
+  tags:
+  - zh
+  - target-speaker
+  display: 整场会议 · AliMeeting · 目标缺席 · 全近讲
+  description: 注册取本人头戴麦，段为全部头戴麦之和（按远场 RMS 缩放）：两边都是近讲。本人在段前后 0.5 秒内都没说话，段里是同场其他人，期望输出为空；labels.impostor_sim 为注册与段内最像的在场人的声纹相似度。

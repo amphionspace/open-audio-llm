@@ -1,0 +1,58 @@
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from WANDB_API_KEY.
+wandb: Currently logged in as: 1016097967 (1016097967-amphion) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run qb223fxa
+wandb: Tracking run with wandb version 0.30.0
+wandb: Run data is saved locally in /workspace/data/ts-overlap-20261119/task19-tse/wandb/run-20261122_185027-qb223fxa
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run AmphionASR-ts-overlap-tse-mossformer2-campp-003
+wandb: ⭐️ View project at https://wandb.ai/1016097967-amphion/open-audio-llm
+wandb: 🚀 View run at https://wandb.ai/1016097967-amphion/open-audio-llm/runs/qb223fxa
+params 56.359538 M; dev SI-SDRi at init (blind output 0) -11.24 https://wandb.ai/1016097967-amphion/open-audio-llm/runs/qb223fxa
+/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/torch/distributed/c10d_logger.py:83: UserWarning: barrier(): using the device under current context. You can specify `device_id` in `init_process_group` to mute this warning.
+  return func(*args, **kwargs)
+step 1 loss 67.284 si_target -46.53 gn 1237.26 9s
+step 2 loss 37.525 si_target -28.90 gn 199.40 10s
+step 3 loss -3.743 si_target 4.81 gn 306.51 10s
+step 250 loss 3.382 si_target -5.64 gn 56.47 192s
+step 500 loss 2.442 si_target -4.81 gn 20.38 380s
+step 750 loss 3.065 si_target -2.64 gn 39.55 562s
+step 1000 loss -4.894 si_target 0.94 gn 65.12 745s
+step 1250 loss -5.851 si_target 1.57 gn 144.42 928s
+step 1500 loss -7.570 si_target 4.23 gn 132.76 1113s
+step 1500 dev SI-SDRi mean 0.51 median 0.94
+step 1750 loss 1.802 si_target -5.77 gn 260.69 1450s
+step 2000 loss -2.294 si_target -0.43 gn 112.43 1632s
+step 2250 loss -11.532 si_target 12.78 gn 73.24 1818s
+step 2500 loss 4.088 si_target -6.75 gn 171.88 2000s
+step 2750 loss -7.705 si_target 4.25 gn 147.74 2182s
+step 3000 loss -9.771 si_target 6.23 gn 109.84 2365s
+step 3000 dev SI-SDRi mean 0.70 median 1.39
+W1122 19:37:40.750000 852502 site-packages/torch/distributed/elastic/agent/server/api.py:739] Received 15 death signal, shutting down workers
+Traceback (most recent call last):
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/bin/torchrun", line 6, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 362, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/torch/distributed/run.py", line 991, in main
+    run(args)
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/torch/distributed/run.py", line 982, in run
+    elastic_launch(
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 170, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 308, in launch_agent
+    result = agent.run()
+             ^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/torch/distributed/elastic/metrics/api.py", line 134, in wrapper
+    result = f(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/torch/distributed/elastic/agent/server/api.py", line 731, in run
+    result = self._invoke_run(role)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/torch/distributed/elastic/agent/server/api.py", line 908, in _invoke_run
+    time.sleep(monitor_interval)
+  File "/workspace/workspace/mingdong/miniconda3/envs/oal-train/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/api.py", line 86, in _terminate_process_handler
+    raise SignalException(f"Process {os.getpid()} got signal: {sigval}", sigval=sigval)
+torch.distributed.elastic.multiprocessing.api.SignalException: Process 852502 got signal: 15

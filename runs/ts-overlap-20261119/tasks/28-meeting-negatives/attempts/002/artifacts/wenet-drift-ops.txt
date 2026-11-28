@@ -1,0 +1,64 @@
+wenetspeech@icefall-20260908:test_net: 24774 utterances, 409981 reference chars (runaway alignments skipped: 0)
+  base  S  14861 D   5635 I   1598  CER 5.39
+  t25   S  16057 (+1196) D   5699 (  +64) I   1663 (  +65)  CER 5.71
+  a001  S  15855 ( +994) D   5543 (  -92) I   1687 (  +89)  CER 5.63
+  a002  S  16142 (+1281) D   5623 (  -12) I   1691 (  +93)  CER 5.72
+
+per-utterance deltas vs base
+  t25   worse  2190 (+3792)  better  1515 (-2467)  net +1325
+  a001  worse  2164 (+3582)  better  1583 (-2591)  net +991
+  a002  worse  2234 (+3813)  better  1478 (-2451)  net +1362
+  a002 worse utterances also worse in every other model: 699 of 2234, their a002 delta +1347
+    same set in t25: +1393
+    same set in a001: +1270
+    corr(delta t25, delta a002) +0.656
+    corr(delta a001, delta a002) +0.618
+    sum|err t25 - err a002| 6337   sum|err a002 - err base| 6264
+    sum|err a001 - err a002| 6311   sum|err a002 - err base| 6264
+
+a002: character edits that grew most vs base (count base -> a002, delta)
+  D (net -12): 我→∅ 201→223  这→∅ 127→138  你→∅ 184→193  么→∅ 22→31  的→∅ 196→202  不→∅ 76→82  好→∅ 33→39  谢→∅ 8→14  对→∅ 29→35  可→∅ 8→13  让→∅ 6→11  别→∅ 11→16  快→∅ 8→13  分→∅ 2→7  一→∅ 155→159
+  I (net +93): ∅→你 55→69  ∅→们 8→19  ∅→我 43→50  ∅→o 11→18  ∅→了 69→76  ∅→t 12→18  ∅→c 7→12  ∅→说 6→11  ∅→给 3→8  ∅→w 4→9  ∅→e 24→28  ∅→也 10→14  ∅→是 75→79  ∅→得 10→13  ∅→可 5→8
+  S (net +1281): 得→的 45→60  了→来 5→13  它→他 150→158  地→的 162→169  他→她 117→124  了→的 33→39  魔→莫 0→6  救→求 0→6  莲→连 8→14  跟→给 10→16  焕→幻 6→12  那→你 4→10  推→对 0→5  大→骡 0→5  这→是 7→12
+  net edit growth +1362; top-20 edit types sum +178; edit types that grew 4531, shrank 3399
+
+a002: delta by duration (s)
+  [  0,    2)  n  9976  ref  61706  base 10.07  t25 11.08  a001 11.13  a002 11.38
+  [  2,    4)  n  7238  ref  96188  base  5.44  t25  5.89  a001  5.80  a002  5.78
+  [  4,    6)  n  3202  ref  76866  base  4.60  t25  4.82  a001  4.75  a002  4.76
+  [  6,   10)  n  3875  ref 140742  base  4.15  t25  4.22  a001  4.05  a002  4.23
+  [ 10,   15)  n   401  ref  26739  base  3.40  t25  3.46  a001  3.42  a002  3.35
+  [ 15, 1000)  n    82  ref   7740  base  4.57  t25  4.56  a001  4.82  a002  4.95
+
+wenetspeech@icefall-20260908:test_meeting: 8370 utterances, 213221 reference chars (runaway alignments skipped: 0)
+  base  S   6310 D   3610 I   1919  CER 5.55
+  t25   S   6651 ( +341) D   3311 ( -299) I   2133 ( +214)  CER 5.67
+  a001  S   6796 ( +486) D   3183 ( -427) I   2123 ( +204)  CER 5.68
+  a002  S   6695 ( +385) D   3299 ( -311) I   2192 ( +273)  CER 5.72
+
+per-utterance deltas vs base
+  t25   worse  1113 (+1764)  better   959 (-1508)  net +256
+  a001  worse  1171 (+1870)  better  1030 (-1607)  net +263
+  a002  worse  1185 (+1882)  better  1000 (-1535)  net +347
+  a002 worse utterances also worse in every other model: 358 of 1185, their a002 delta +605
+    same set in t25: +615
+    same set in a001: +633
+    corr(delta t25, delta a002) +0.473
+    corr(delta a001, delta a002) +0.527
+    sum|err t25 - err a002| 3523   sum|err a002 - err base| 3417
+    sum|err a001 - err a002| 3326   sum|err a002 - err base| 3417
+
+a002: character edits that grew most vs base (count base -> a002, delta)
+  D (net -311): 嗯→∅ 651→668  是→∅ 190→196  不→∅ 19→25  说→∅ 26→30  了→∅ 89→92  嘞→∅ 8→11  噢→∅ 12→14  业→∅ 2→4  下→∅ 8→10  谈→∅ 0→2  负→∅ 2→4  啦→∅ 12→14  面→∅ 1→3  可→∅ 7→9  西→∅ 4→6
+  I (net +273): ∅→的 175→210  ∅→们 39→57  ∅→个 51→68  ∅→我 24→40  ∅→然 43→57  ∅→是 159→173  ∅→了 66→77  ∅→这 40→51  ∅→呀 33→41  ∅→也 20→28  ∅→一 85→92  ∅→后 23→30  ∅→和 3→9  ∅→有 20→26  ∅→人 4→10
+  S (net +385): 它→他 72→84  呢→的 45→56  就→这 33→43  那→这 212→220  了→啦 2→9  这→就 35→41  个→是 15→20  嘛→吧 12→17  是→个 12→17  得→的 16→21  在→再 11→16  是→说 6→10  咱→我 6→10  跟→给 3→7  他→咱 1→5
+  net edit growth +347; top-20 edit types sum +243; edit types that grew 1878, shrank 1552
+
+a002: delta by duration (s)
+  [  0,    2)  n   389  ref   2761  base  8.98  t25  9.42  a001  9.96  a002 10.11
+  [  2,    4)  n  2047  ref  24373  base  6.88  t25  7.12  a001  7.18  a002  7.14
+  [  4,    6)  n  1923  ref  37198  base  6.38  t25  6.42  a001  6.48  a002  6.47
+  [  6,   10)  n  2508  ref  75625  base  5.48  t25  5.65  a001  5.55  a002  5.63
+  [ 10,   15)  n  1399  ref  66495  base  4.62  t25  4.67  a001  4.71  a002  4.76
+  [ 15, 1000)  n   104  ref   6769  base  4.76  t25  4.98  a001  4.96  a002  5.02
+

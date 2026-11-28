@@ -1,0 +1,127 @@
+# 由 scripts/make_grpo_present_configs.py 从 configs/train-grpo-hard.yaml（tasks/13）生成，不要手改。只改数据配置（ts-present 份额 0.12）、记录目录、端口和名字。
+version: 1
+runtime:
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train-vllm/bin/python
+  cwd:
+    path: ../../..
+  pythonpath:
+  - path: ../shared/code-v4/src
+  - path: ../shared/code-v4/audio-data-contract-src
+  gpus:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  threads:
+    omp: 2
+    openblas: 1
+  environment:
+    TOKENIZERS_PARALLELISM: false
+    HF_HUB_OFFLINE: '1'
+    PYTHONUNBUFFERED: '1'
+    PYTORCH_ALLOC_CONF: expandable_segments:True
+    AUDIO_ENCODER_BATCHING: '1'
+    AUDIO_FEATURE_DEVICE: cuda
+    GRPO_EFFICIENT_LOGPS: '1'
+    GRPO_EFFICIENT_LOGPS_VERIFY: '4'
+    WANDB_HTTP_PROXY: http://10.119.17.252:17922
+    WANDB_HTTPS_PROXY: http://10.119.17.252:17922
+    PATH: /workspace/workspace/mingdong/.local-tools/ffmpeg-7.0.2-static/bin:/workspace/workspace/mingdong/miniconda3/envs/oal-train-vllm/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  distributed:
+    processes: 8
+    port: 29743
+data:
+  config:
+    path: train-data-grpo-hard-present.yaml
+task:
+  kind: train
+  module: open_audio_llm.integrations.ms_swift.train
+  positional:
+  - grpo
+  arguments:
+    --rlhf_type: grpo
+    --model: /workspace/data/ae-state/model-cache/entries/model-afea989da22b77adc0ce9365
+    --model_type: amphion_asr_1.7b
+    --external_plugins:
+    - path: ../shared/code-v4/src/open_audio_llm/integrations/ms_swift/register_qwen3_asr.py
+    - path: ../shared/code-v4/src/open_audio_llm/integrations/ms_swift/rewards/plugin.py
+    --tuner_type: full
+    --freeze_vit: false
+    --freeze_aligner: false
+    --freeze_llm: false
+    --freeze_parameters:
+    - thinker.model.embed_tokens
+    - thinker.audio_tower.conv2d1
+    - thinker.audio_tower.conv2d2
+    - thinker.audio_tower.conv2d3
+    - thinker.audio_tower.conv_out
+    --deepspeed:
+      path: zero1-bf16-no-overflow-check.json
+    --torch_dtype: bfloat16
+    --attn_impl: sdpa
+    --max_length: 2048
+    --max_completion_length: 512
+    --num_generations: 8
+    --per_device_train_batch_size: 8
+    --gradient_accumulation_steps: 4
+    --temperature: 1.0
+    --beta: 0.04
+    --learning_rate: 1.0e-06
+    --lr_scheduler_type: constant_with_warmup
+    --warmup_steps: 20
+    --max_steps: 400
+    --max_grad_norm: 1.0
+    --reward_funcs:
+    - qwen3_asr_accuracy
+    - qwen3_asr_presence
+    - qwen3_asr_hotword
+    - qwen3_asr_format
+    --reward_weights:
+    - 1.0
+    - 1.0
+    - 1.0
+    - 0.25
+    --use_vllm: false
+    --log_completions: true
+    --log_rollout_offpolicy_metrics: true
+    --logging_steps: 1
+    --save_steps: 100
+    --save_only_model: true
+    --joint_mtp_weight: 0.1
+    --joint_mtp_steps: 3
+    --joint_mtp_step_decay: 0.8
+    --joint_mtp_init: /workspace/data/packages/amphionasr-1.7b-v3-v18aes-mtp-candidate/model/mtp/model.safetensors
+    --joint_mtp_lr: 1.0e-05
+    --report_to: none
+    --seed: 42
+    --dataloader_num_workers: 8
+    --check_model: false
+    --load_args: false
+    --add_version: false
+    --ddp_timeout: 1800
+    --output_dir:
+      path: '{attempt}/artifacts/training'
+recording:
+  attempts_dir:
+    path: ../tasks/14-grpo-hard-present/attempts
+tracking:
+  pythonpath:
+  - path: ../shared/code-v4/src
+  enabled: true
+  python: /workspace/workspace/mingdong/miniconda3/envs/oal-train-vllm/bin/python
+  credentials_file: /workspace/workspace/mingdong/.config/open-audio-llm/wandb-cluster.sh
+  entity: 1016097967-amphion
+  project: open-audio-llm
+  name: AmphionASR-ts-overlap-grpo-v26recipe-ts-hard-plan-ts-present0.12-from1117-textfinal-mtp-8gpu-400steps
+  interval: 5
+  startup_timeout: 600
+  finish_timeout: 300
+storage:
+  executable: /workspace/workspace/mingdong/.local/share/amphion-bucket/cluster-venv/bin/ab
+  remote: whai:open-audio-llm
+  local_root:
+    path: ../../..

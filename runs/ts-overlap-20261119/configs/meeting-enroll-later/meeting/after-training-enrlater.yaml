@@ -1,0 +1,26 @@
+# tasks/29 换注册因果验证（本地评测变体 ts_asr_real@meeting-enroll-later-20261128，数据侧 amphiondata-58 构建；数据配置抄自其 data-enroll-later.yaml）。复制自 meeting-bench/meeting/after-training-a4ramc.yaml，eval_lanes.sh 只改模型名、服务地址与输出目录。
+suite_id: asr-regression-native@1
+model_name: meeting-bench
+evaluator: ts-asr
+data_config: /workspace/workspace/mingdong/repo/oal-clean-teacher/runs/ts-overlap-20261119/configs/meeting-enroll-later/meeting/data-enrlater.yaml
+tsasr_server_url: http://127.0.0.1:0
+tsasr_served_model: meeting-bench
+worker_timeout: 600
+output_root: /workspace/data/ae-runs/meeting-bench
+parameters:
+  split_group: evaluation
+  samples_per_source: 0
+  batch_size: 32
+  max_new_tokens: 512
+  seed: 42
+  enroll_seconds: 5
+wandb:
+  entity: 1016097967-amphion
+  project: open-audio-llm
+publish:
+  enabled: false
+  model_info:
+    origin: ours
+    mode: offline
+    params: 1.7B
+    license: internal

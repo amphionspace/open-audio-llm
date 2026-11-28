@@ -107,6 +107,98 @@ def sample_losses(logits, targets, rows, counts, teacher_logits=None, ordinary=N
     return ce + kl_weight * kl, ce, kl
 
 
+def token_kl(student, teacher):
+    """Per-token KL(teacher || student) over the vocabulary, in 128-token FP32 blocks."""
+    pieces = []
+    for s, t in zip(student.split(128), teacher.detach().split(128)):
+        pieces.append(F.kl_div(s.float().log_softmax(-1), t.float().softmax(-1), reduction="none").sum(-1))
+    return torch.cat(pieces) if pieces else student.new_zeros(0, dtype=torch.float32)
+
+
+def clean_teacher_kl(student_model, head, inputs, labels, logits, targets, rows, counts, clean_rows, clean_features):
+    """Per-example KL from the model's own prediction on the clean target to its prediction on the mixture.
+
+    Rows in ``clean_rows`` are target-present TS samples mixed online: ``clean_features`` holds their enrollment
+    followed by the target alone, on the mixture's timeline, so the teacher has the student's input ids and
+    supervised positions. The teacher is the student itself, without gradient: it pulls the mixture's answer
+    distribution toward what the model says when nobody talks over the target.
+    Returns (per-example KL, zero outside ``clean_rows``; the selected row indexes).
+    """
+    indexes = clean_rows.nonzero().flatten()
+    kl = logits.new_zeros(len(counts), dtype=torch.float32)
+    if not indexes.numel():
+        return kl, indexes
+    with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16):
+        teacher_inputs = select_examples(inputs, indexes)
+        teacher_inputs["input_features"] = clean_features.index_select(0, indexes).to(inputs["input_features"].dtype)
+        teacher_outputs, teacher_targets, _, _ = supervised_forward(
+            student_model, head, teacher_inputs, labels.index_select(0, indexes))
+    picked = torch.zeros(len(counts), dtype=torch.bool, device=rows.device)
+    picked[indexes] = True
+    positions = picked[rows]
+    if not torch.equal(targets[positions], teacher_targets):
+        raise ValueError("Clean teacher and student labels differ")
+    values = token_kl(logits[positions], teacher_outputs.logits)
+    kl = average_answer_parts(values, rows[positions], counts)
+    return kl, indexes
+
+
+def frozen_tower_copy(tower):
+    """A frozen BF16 copy of the (SEP-patched) audio tower: the clean-target feature teacher.
+
+    ``attach_sep_token`` binds the SEP-aware ``forward`` on the instance; a deep copy would keep that method bound
+    to the student, so the copy is taken without it and patched again.
+    """
+    import copy
+
+    from open_audio_llm.tsasr.sep_token import _patch_hf_encoder_forward
+
+    forward = tower.__dict__.pop("forward", None)
+    try:
+        teacher = copy.deepcopy(tower)
+    finally:
+        if forward is not None:
+            tower.forward = forward
+    teacher._sep_token_patched = False
+    _patch_hf_encoder_forward(teacher)
+    return teacher.to(torch.bfloat16).eval().requires_grad_(False)
+
+
+def tower_tokens(tower, features, feature_lens, enroll_frames):
+    """Audio tokens (enrollment, SEP, mixture) per row, as ``get_audio_features`` computes them."""
+    return [tower(feature[:, :int(length)], feature_lens=length.reshape(1), enroll_n_frames=int(frames)).last_hidden_state
+            for feature, length, frames in zip(features, feature_lens, enroll_frames)]
+
+
+def clean_teacher_features(student_tower, teacher_tower, inputs, clean_rows, clean_features, n_examples):
+    """Per-example relative squared error from the student's audio tokens on the mixture to the frozen teacher
+    tower's audio tokens on the clean target: sum_tokens ||s - t||^2 / sum_tokens ||t||^2.
+
+    ``clean_features`` hold the enrollment followed by the target alone on the mixture's timeline, so both towers
+    emit the same tokens in the same places. The teacher is the starting audio tower: what the LLM receives when
+    nobody talks over the target. Gradient reaches the student tower only.
+    Returns (per-example error, zero outside ``clean_rows``; the selected row indexes).
+    """
+    indexes = clean_rows.nonzero().flatten()
+    error = torch.zeros(n_examples, dtype=torch.float32, device=clean_rows.device)
+    if not indexes.numel():
+        return error, indexes
+    lengths = inputs["feature_attention_mask"].index_select(0, indexes).sum(-1)
+    frames = inputs["enroll_n_frames"].index_select(0, indexes)
+    dtype = inputs["input_features"].dtype
+    with torch.autocast("cuda", dtype=torch.bfloat16):
+        student = tower_tokens(student_tower, inputs["input_features"].index_select(0, indexes), lengths, frames)
+        with torch.no_grad():
+            teacher = tower_tokens(teacher_tower, clean_features.index_select(0, indexes).to(dtype), lengths, frames)
+    values = []
+    for s, t in zip(student, teacher):
+        if s.shape != t.shape:
+            raise ValueError(f"student audio tokens {tuple(s.shape)} != clean teacher tokens {tuple(t.shape)}")
+        s, t = s.float(), t.float()
+        values.append((s - t).square().sum() / t.square().sum().clamp_min(1e-6))
+    return error.index_put((indexes,), torch.stack(values)), indexes
+
+
 def answer_parts(labels, asr_text_id, think_end_id):
     """(think rows, header mask over supervised tokens) for ``separate_prefix``.
 
@@ -172,6 +264,14 @@ def install_retention_objective(trainer, args):
         raise ValueError("replay_kl_weight must be finite and nonnegative")
     if coefficient and not args.retention_teacher:
         raise ValueError("Positive replay_kl_weight requires retention_teacher")
+    clean_weight = float(args._catalog_config["objective"].get("clean_teacher_kl_weight", 0.0))
+    if not math.isfinite(clean_weight) or clean_weight < 0:
+        raise ValueError("clean_teacher_kl_weight must be finite and nonnegative")
+    if clean_weight and separate_prefix:
+        raise ValueError("clean_teacher_kl_weight averages KL over the whole answer; use separate_prefix false")
+    feature_weight = float(args._catalog_config["objective"].get("clean_teacher_feature_weight", 0.0))
+    if not math.isfinite(feature_weight) or feature_weight < 0:
+        raise ValueError("clean_teacher_feature_weight must be finite and nonnegative")
     if coefficient and not has_plain_asr_source(trainer.train_dataset):
         raise ValueError("ASR replay KL has no plain-ASR examples after task conversion; "
                          "set replay_kl_weight=0 for supervised diarization replay")
@@ -183,10 +283,17 @@ def install_retention_objective(trainer, args):
     thinker.generation_config.use_cache = True
     if any(p.requires_grad for p in thinker.audio_tower.parameters()) and args.audio_encoder_parallel:
         raise ValueError("Trainable audio encoder requires audio_encoder_parallel=false")
-    if args.tuner_type == 'full' and (
-        not all(p.requires_grad for p in thinker.model.parameters()) or not thinker.lm_head.weight.requires_grad
-    ):
+    llm = [*thinker.model.parameters(), thinker.lm_head.weight]
+    if feature_weight and not any(p.requires_grad for p in thinker.audio_tower.parameters()):
+        raise ValueError("clean_teacher_feature_weight trains the audio tower; unfreeze it")
+    if args.tuner_type == 'full' and getattr(args, "freeze_llm", False):
+        # An encoder-only round: the LLM stays exactly as it starts.
+        if any(p.requires_grad for p in llm):
+            raise ValueError("freeze_llm left LLM parameters trainable")
+    elif args.tuner_type == 'full' and not all(p.requires_grad for p in llm):
         raise ValueError("All LLM parameters, including embeddings and output head, must be trainable")
+    # Taken before the FP32 cast below: the starting tower, in BF16.
+    feature_teacher = frozen_tower_copy(thinker.audio_tower) if feature_weight else None
     # AdamW needs FP32 master weights/moments for small full-model updates.
     # Trainer's BF16 autocast still performs the expensive matrix multiplies in BF16.
     for parameter in student.parameters():
@@ -200,6 +307,9 @@ def install_retention_objective(trainer, args):
         ).model.eval().requires_grad_(False)
         teacher.thinker.config.use_cache = False
     trainer.retention_teacher = teacher
+    if feature_teacher is not None:
+        feature_teacher.to(trainer.accelerator.device)
+    trainer.clean_feature_teacher = feature_teacher
     trainer.model_accepts_loss_kwargs = True
     trainer.args.average_tokens_across_devices = True
 
@@ -220,6 +330,7 @@ def install_retention_objective(trainer, args):
         inputs.pop("text_position_ids", None)
         if inputs.pop("loss_scale", None) is not None:
             raise ValueError("Token loss_scale cannot be combined with the retention objective")
+        clean_rows, clean_features = inputs.pop("clean_rows", None), inputs.pop("clean_input_features", None)
         outputs, targets, rows, counts = supervised_forward(model, thinker.lm_head, inputs, labels)
         think_rows, prefix = answer_parts(labels, asr_text_id, think_end_id)
         if not separate_prefix:
@@ -244,8 +355,35 @@ def install_retention_objective(trainer, args):
             teacher_logits = teacher_outputs.logits
         losses, ce, kl = sample_losses(outputs.logits, targets, rows, counts,
                                       teacher_logits, ordinary, coefficient, prefix)
+        clean_indexes = None
+        if (clean_weight or feature_weight) and clean_rows is not None and model.training:
+            # Target-present TS rows without a think block (the clean target is only built for those).
+            clean_rows = clean_rows.to(tasks.device) & (tasks == 1) & ~think_rows
+        if clean_weight and clean_rows is not None and model.training:
+            clean_kl, clean_indexes = clean_teacher_kl(
+                student, thinker.lm_head, inputs, labels, outputs.logits, targets, rows, counts,
+                clean_rows, clean_features)
+            losses = losses + clean_weight * clean_kl
+        feature_indexes = None
+        if feature_weight and clean_rows is not None and model.training:
+            # Per example, like CE: token_mean weighs it by the row's supervised tokens.
+            clean_feat, feature_indexes = clean_teacher_features(
+                thinker.audio_tower, self.clean_feature_teacher, inputs, clean_rows, clean_features, len(counts))
+            losses = losses + feature_weight * clean_feat
         mode = "train" if model.training else "eval"
         metrics = self.custom_metrics[mode]
+        if clean_weight and mode == "train":
+            metric = metrics["clean_kl"]
+            if clean_indexes is not None and clean_indexes.numel():
+                metric.update(clean_kl.detach()[clean_indexes])
+        if feature_weight and mode == "train":
+            metric = metrics["clean_feat"]
+            if feature_indexes is not None and feature_indexes.numel():
+                metric.update(clean_feat.detach()[feature_indexes])
+        if (clean_weight or feature_weight) and mode == "train":
+            picked = clean_indexes if clean_indexes is not None else feature_indexes
+            metrics["clean_rows"].update(torch.tensor(
+                [float(picked.numel() if picked is not None else 0)], device=tasks.device))
         # Create the same metrics on every rank even when a batch lacks a task.
         for task, name in enumerate(("asr", "ts_positive", "ts_negative", "sot", "asr_hotwords", "asr_no_kl")):
             metric = metrics[f"ce_{name}"]
@@ -278,13 +416,19 @@ def install_retention_objective(trainer, args):
         "teacher_enabled": teacher is not None,
         "tuner_type": args.tuner_type,
         "objective": (
-            "sum_tokens(CE + ordinary_asr * replay_kl_weight * KL(base || student)) / supervised_tokens"
+            "sum_tokens(CE + ordinary_asr * replay_kl_weight * KL(base || student)"
+            " + ts_present_online * clean_teacher_kl_weight * KL(student(clean target) || student)"
+            " + ts_present_online * clean_teacher_feature_weight * |tower(mix) - start_tower(clean target)|^2 / |start_tower(clean target)|^2"
+            ") / supervised_tokens"
             if reduction == "token_mean" else
             "mean_examples(answer_reduction(CE) + ordinary_asr * replay_kl_weight * answer_reduction(KL(base || student)))"
         ),
         "reduction": reduction,
         "separate_prefix": separate_prefix,
         "replay_kl_weight": coefficient,
+        "clean_teacher_kl_weight": clean_weight,
+        "clean_teacher_feature_weight": feature_weight,
+        "freeze_llm": bool(getattr(args, "freeze_llm", False)),
         "trainable_parameters": sum(p.numel() for p in student.parameters() if p.requires_grad),
         "frozen_parameters": sum(p.numel() for p in student.parameters() if not p.requires_grad),
         "audio_trainable_parameters": sum(p.numel() for p in thinker.audio_tower.parameters() if p.requires_grad),

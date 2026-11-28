@@ -2002,6 +2002,15 @@ def test_native_language_maps_portuguese_to_the_qwen3_asr_label():
     validate_language(native_language("pt"))
 
 
+def test_native_language_maps_arabic_to_the_qwen3_asr_label():
+    from qwen_asr.inference.utils import validate_language
+
+    from open_audio_llm.data.qwen3_asr import native_language
+
+    assert native_language("ar") == "Arabic"
+    validate_language(native_language("ar"))
+
+
 def test_indexed_records_forward_the_language_hotword_pools():
     from open_audio_llm.data.catalog_dataset import _IndexedRecords
 
@@ -2081,3 +2090,21 @@ def test_holdout_paths_resolve_against_the_data_config(catalog_config, tmp_path)
     path.write_text(yaml.safe_dump({**catalog_config, 'holdouts': {'catalogue': 'x'}}))
     with pytest.raises(ValueError, match='holdouts'):
         read_data_config(path)
+
+
+def test_clean_target_takes_the_gain_the_mixture_got():
+    import numpy as np
+
+    from open_audio_llm.data.catalog_dataset import CatalogSwiftDataset
+
+    record = SimpleNamespace(id="r")
+    rng = np.random.default_rng(0)
+    unleveled = rng.standard_normal(1600).astype(np.float32) * 0.1
+    clean = unleveled * 0.5
+    leveled = CatalogSwiftDataset._level_like_mixture(record, clean, unleveled, unleveled * 3.0)
+    np.testing.assert_allclose(leveled, clean * 3.0, rtol=1e-5)
+    # A peak past full scale is brought back like the mixture's.
+    loud = CatalogSwiftDataset._level_like_mixture(record, clean, unleveled, unleveled * 40.0)
+    assert np.max(np.abs(loud)) <= 1.0 + 1e-6
+    with pytest.raises(ValueError, match="does not match the mixture"):
+        CatalogSwiftDataset._level_like_mixture(record, clean[:-1], unleveled, unleveled)
