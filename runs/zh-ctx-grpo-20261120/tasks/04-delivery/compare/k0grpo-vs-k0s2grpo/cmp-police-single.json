@@ -1,0 +1,89 @@
+{
+  "run_a": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-k0grpo/runs/run-20261127T200809Z-b958a475",
+  "run_b": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-k0s2grpo/runs/run-20261128T033010Z-7b673b91",
+  "scoring": {
+    "version": 4,
+    "normalization": "v4: zh varieties and ja by character, others by word (CJK ideographs one each); zh: NFKC, lower, GigaSpeech tags, OpenCC t2s, Arabic numerals read in Chinese (4+ digit runs digit by digit, else cn2an an2cn), punctuation and symbols, SpeechIO fillers 呃啊 and erhua; v3: 幺/两/〇 read as 一/二/零 inside 3+ Chinese digit runs; v4: ja by character on v1 text; en: Whisper EnglishTextNormalizer; presence on v1 text",
+    "normalizers": {
+      "cn2an": "0.5.24",
+      "opencc": "0.1.7",
+      "whisper-normalizer": "0.1.15"
+    }
+  },
+  "resamples": 2000,
+  "confidence": 0.95,
+  "seed": 20261112,
+  "cluster_by": null,
+  "samples": 3264,
+  "clusters": 3264,
+  "protocol_differences": {},
+  "skipped_sources": [],
+  "overall": {
+    "all/CER": {
+      "error_rate": {
+        "a": 0.003691221312790884,
+        "b": 0.003931953137538116,
+        "diff": 0.00024073182474723155,
+        "ci": [
+          -0.00040333559970109076,
+          0.000889124209610481
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      },
+      "term_hit_rate": {
+        "a": 0.991421568627451,
+        "b": 0.9911151960784313,
+        "diff": -0.00030637254901966227,
+        "ci": [
+          -0.0021446078431371918,
+          0.0015318627450979783
+        ],
+        "significant": false
+      }
+    }
+  },
+  "sources": {
+    "police_terms_single@v1-20261022:test/asr/zh": {
+      "error_rate": {
+        "a": 0.003691221312790884,
+        "b": 0.003931953137538116,
+        "diff": 0.00024073182474723155,
+        "ci": [
+          -0.00040333559970109076,
+          0.000889124209610481
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      },
+      "term_hit_rate": {
+        "a": 0.991421568627451,
+        "b": 0.9911151960784313,
+        "diff": -0.00030637254901966227,
+        "ci": [
+          -0.0021446078431371918,
+          0.0015318627450979783
+        ],
+        "significant": false
+      }
+    }
+  }
+}

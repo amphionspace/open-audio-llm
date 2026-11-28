@@ -1,0 +1,91 @@
+{
+  "run_a": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-k0grpo/runs/run-20261127T182213Z-7d68b86b",
+  "run_b": "/workspace/data/ae-runs/ctx-grpo-20261120-delivery-k0s2grpo/runs/run-20261128T014358Z-f3624d88",
+  "scoring": {
+    "version": 4,
+    "normalization": "v4: zh varieties and ja by character, others by word (CJK ideographs one each); zh: NFKC, lower, GigaSpeech tags, OpenCC t2s, Arabic numerals read in Chinese (4+ digit runs digit by digit, else cn2an an2cn), punctuation and symbols, SpeechIO fillers 呃啊 and erhua; v3: 幺/两/〇 read as 一/二/零 inside 3+ Chinese digit runs; v4: ja by character on v1 text; en: Whisper EnglishTextNormalizer; presence on v1 text",
+    "normalizers": {
+      "cn2an": "0.5.24",
+      "opencc": "0.1.7",
+      "whisper-normalizer": "0.1.15"
+    }
+  },
+  "resamples": 2000,
+  "confidence": 0.95,
+  "seed": 20261112,
+  "cluster_by": null,
+  "samples": 155,
+  "clusters": 155,
+  "protocol_differences": {},
+  "skipped_sources": [],
+  "overall": {
+    "all/CER": {
+      "error_rate": {
+        "a": 0.1781021897810219,
+        "b": 0.26423357664233577,
+        "diff": 0.08613138686131386,
+        "ci": [
+          -0.016738787004601925,
+          0.2840100492066076
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0064516129032258064,
+        "b": 0.0,
+        "diff": -0.0064516129032258064,
+        "ci": [
+          -0.01935483870967742,
+          0.0
+        ],
+        "significant": false
+      }
+    }
+  },
+  "sources": {
+    "tdtech_customer_bench@v5-20261105:general/asr/zh": {
+      "error_rate": {
+        "a": 0.16113744075829384,
+        "b": 0.4312796208530806,
+        "diff": 0.27014218009478674,
+        "ci": [
+          -0.02976412579957355,
+          1.0286011904761903
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.05555555555555555,
+        "b": 0.0,
+        "diff": -0.05555555555555555,
+        "ci": [
+          -0.1875,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "tdtech_customer_bench@v5-20261105:police-cmd/asr/zh": {
+      "error_rate": {
+        "a": 0.18565400843881857,
+        "b": 0.189873417721519,
+        "diff": 0.004219409282700426,
+        "ci": [
+          -0.03319663081579893,
+          0.04526971175639283
+        ],
+        "significant": false
+      },
+      "miss_rate": {
+        "a": 0.0,
+        "b": 0.0,
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    }
+  }
+}
