@@ -108,7 +108,7 @@ K0 = K 那一轮去掉纠偏部分，其余完全照 K 的实际配置（`script
   | emilia2_short · train_zh | 281 | 0.2432 |
   | emilia2_dialog · train_2spk | 229 | 0.1982 |
 
-  权重合计 1.7956，占 K0 SFT 总权重 192.19 的 0.93%。列表按 `split:record_id` 选；v4 只改文本，id 不变（抽查 emilia2_short：281 条全部在 `short-lance-20261023-final-v4-20261127` 里），并入时把 `version` 换成对应的 `-final-v4-20261127`，其余 4 个列表同样核对一遍命中数。
+  权重合计 1.7956，占 K0 SFT 总权重 192.19 的 0.93%。列表按 `split:record_id` 选；v4 只改文本，id 不变（抽查 emilia2_short：281 条全部在 `short-lance-20261023-final-v4-20261127` 里；11-28 PR #322 原地修正后又核了一遍，文件 sha256 和修正后的注册表一致，仍是 281 / 281）。这 4 个来源的 v4 都在 #322 原地修正的 44 个版本里，版本名不变、内容和 sha 变了，引用时重新读注册表，不用 #322 之前缓存的索引或哈希，并入时把 `version` 换成对应的 `-final-v4-20261127`，其余 4 个列表同样核对一遍命中数。
 - **配置片段**（主线数据配置 `train:` 下加；版本换成主线当时的 v4 名）：
 
   ```yaml
@@ -157,7 +157,7 @@ K0 = K 那一轮去掉纠偏部分，其余完全照 K 的实际配置（`script
     context_targets:
     - /workspace/data/datasets/context_correction_clean_zh/versions/grpo-targets-v2-20261121/targets.jsonl
   ```
-- **数据版本**：`grpo-targets-v2-20261121`，7,011 条。其中 5,901 条是合成说字数据（train 2,984、train_ts 2,917），约 1,110 条是带说明的真实录音（wenetspeech 320、emilia2_mix 404、emilia2_dialog 215、emilia2_short 143 等）。targets 按 final-v1 版本名和字符位置记录。v4 把数字换成阿拉伯数字后位置会变，**并入前要在 v4 上重建 targets**（新版本，不能沿用 v2）。只用真实录音部分时，ctx 计划会小很多（kgrpo 的 plan-ctx 是 4,149 条）。
+- **数据版本**：`grpo-targets-v2-20261121`，7,011 条。其中 5,901 条是合成说字数据（train 2,984、train_ts 2,917），约 1,110 条是带说明的真实录音（wenetspeech 320、emilia2_mix 404、emilia2_dialog 215、emilia2_short 143 等）。targets 按 final-v1 版本名和字符位置记录。v4 把数字换成阿拉伯数字后位置会变，**并入前要在 v4 上重建 targets**（新版本，不能沿用 v2；按 PR #322 修正后的文本建，真实录音来源的 v4 在 #322 里改过，合成数据的 4 个 v4 没改）。只用真实录音部分时，ctx 计划会小很多（kgrpo 的 plan-ctx 是 4,149 条）。
 - **收益**：这一包（合成说字数据 + think + GRPO 纠偏）的净收益：Emilia 需要纠正 · 明确说明 +2.13 [+0.19, +4.07]（k0grpo 基线）、+2.52 [+0.39, +4.65]（k0s2grpo 基线），两个 K0 之间只差 -0.39（不显著），约 +2.3 个点。合成题 correct 率 +13 到 +33 个点。
 - **已知代价**（同一包，对两个 K0 基线都显著且 > 0.5 的才列）：
   - 西语 TS 误触发 v1 / v2 约 4.4 → 9.3 / 4.3 → 9.0（+4.7 到 +4.9），出在 K 的 SFT（合成数据 + think），全部不在场场景一起翻倍；
