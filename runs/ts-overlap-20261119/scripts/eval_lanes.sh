@@ -26,7 +26,10 @@ mk() { local src=$1 s=$2 pa=$3 pt=$4
       -e "s#^server_url: .*#server_url: http://127.0.0.1:$pa#" -e "s#^served_model: .*#served_model: $T-asr-$pa#" \
       -e "s#^tsasr_server_url: .*#tsasr_server_url: http://127.0.0.1:$pt#" -e "s#^tsasr_served_model: .*#tsasr_served_model: $T-tsasr-$pt#" \
       $G/$src/after-training-$s.yaml > $O/after-training-$s.yaml
-  grep -v "^\s*#" $O/after-training-$s.yaml | grep -q "sumfull-es116\|v18avg3\|19565" && { echo "stale field in $s"; return 3; }; return 0; }
+  # stale-template check on the template's own fields; the lines rewritten above carry this run's NAME/TAG, which
+  # may legitimately contain these strings (e.g. evaluating the v18avg3 model itself)
+  grep -v -E "^\s*#|^(model_name|output_root|server_url|served_model|tsasr_server_url|tsasr_served_model):" $O/after-training-$s.yaml \
+    | grep -q "sumfull-es116\|v18avg3\|19565" && { echo "stale field in $s"; return 3; }; return 0; }
 export no_proxy=localhost,127.0.0.1 NO_PROXY=localhost,127.0.0.1
 lane() { local ga=$1 gt=$2 pa=$3 pt=$4; shift 4
   CUDA_VISIBLE_DEVICES=$ga MODEL=$M PYTHON=$PY PORT=$pa NAME=$T-asr-$pa GPU_UTIL=0.5 AMPHION_MTP_TOKENS=0 setsid bash $P/serve.sh asr --max-num-seqs 48 > $L/serve-asr-$pa.log 2>&1 & local a=$!
