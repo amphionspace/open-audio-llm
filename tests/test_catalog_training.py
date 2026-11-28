@@ -2002,6 +2002,15 @@ def test_native_language_maps_portuguese_to_the_qwen3_asr_label():
     validate_language(native_language("pt"))
 
 
+def test_native_language_maps_arabic_to_the_qwen3_asr_label():
+    from qwen_asr.inference.utils import validate_language
+
+    from open_audio_llm.data.qwen3_asr import native_language
+
+    assert native_language("ar") == "Arabic"
+    validate_language(native_language("ar"))
+
+
 def test_indexed_records_forward_the_language_hotword_pools():
     from open_audio_llm.data.catalog_dataset import _IndexedRecords
 
